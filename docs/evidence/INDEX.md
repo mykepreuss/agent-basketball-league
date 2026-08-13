@@ -29,13 +29,13 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
 | Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
 | Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 139 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Final local acceptance               | 154 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 
 1. Only the `knicks` Blaxel workspace is authenticated; the four production topology is not provisioned.
 2. Agent Drive returns feature-disabled for `knicks`.
-3. No Neon project/database credentials are supplied; database work begins with a local container and portable migrations.
+3. No Neon project/database credentials are supplied; database behavior is exercised through portable migrations and local/in-memory adapters. Docker is not required for the local proof.
 4. No funded Base test wallet or mainnet authority is supplied. Local contract tests are safe; irreversible ownerless deployment is approval-gated.
 5. Capacity tier, quotas, and prepaid 30-day wind-down funds are unverified and may require material spend.
 6. Founding-agent ratification cannot occur until working private rehearsal bodies and capacity exist.

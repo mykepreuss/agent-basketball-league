@@ -33,6 +33,11 @@ import {
   type ContinuityRehearsalOptions,
 } from "./continuity.js";
 import {
+  installExitRehearsalRoutes,
+  type ExitRehearsalOptions,
+} from "./exit.js";
+import { requireCareerOperational } from "./exit-status.js";
+import {
   installMemoryRehearsalRoutes,
   type MemoryRehearsalOptions,
 } from "./memory.js";
@@ -88,6 +93,7 @@ export interface LiveCoreApiOptions {
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
   memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
+  exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
 }
 
 export interface CoreApiOptions {
@@ -192,12 +198,17 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
-  const { candidateAdmission, combine, continuity, memory } = options;
+  const { candidateAdmission, combine, continuity, exit, memory } = options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
   const continuityRoutesEnabled =
     candidateRoutesEnabled && continuity !== undefined;
+  const exitRoutesEnabled =
+    candidateRoutesEnabled &&
+    memory !== undefined &&
+    continuity !== undefined &&
+    exit !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "REHEARSAL");
@@ -237,6 +248,24 @@ export function createLiveCoreApi(
       }
       if (signer.toLowerCase() !== authority.signerAddress.toLowerCase())
         throw authorizationError("Signature is not registered to actor");
+      if (candidateAdmission !== undefined && exitRoutesEnabled) {
+        try {
+          await requireCareerOperational(
+            {
+              store: options.store,
+              domain: options.domain,
+              competitionId: options.competitionId,
+              seasonId: options.seasonId,
+              candidateAdmission,
+              now,
+            },
+            event.actorDid,
+            new Date(now()).toISOString(),
+          );
+        } catch {
+          throw authorizationError("Career is not operational");
+        }
+      }
       if (
         event.aggregateType !== "game-possession" ||
         event.eventType !== "PossessionResolved"
@@ -336,13 +365,32 @@ export function createLiveCoreApi(
       recognizedImageDigests: continuity.recognizedImageDigests,
     });
   }
+  if (
+    candidateAdmission !== undefined &&
+    memory !== undefined &&
+    continuity !== undefined &&
+    exit !== undefined
+  ) {
+    installExitRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      memory,
+      continuity,
+      portabilityVerifier: exit.portabilityVerifier,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
       !(candidateRoutesEnabled && entry.path.startsWith("/v1/candidates/")) &&
       !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
       !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
-      !(continuityRoutesEnabled && entry.path === "/v1/continuity/*"),
+      !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
+      !(exitRoutesEnabled && entry.path === "/v1/exit/*"),
   )) {
     app.route({
       method: route.method,

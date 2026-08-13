@@ -84,6 +84,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement standby, 30-day deletion prerequisites, body manifests, clean-room restore, `BodyDeleted`, `BodyRehydrated`, and `BodyContinuityPolicy`.
 - [x] Require cognition receipts, compatibility evidence, and signed continuity decisions for material changes; never silently substitute.
 - [x] Implement trade access-ordering and signed portable exit/deletion attestations.
+- [x] Carry signed package preparation, clean-room verification, request/cancellation, deletion attestation, and inspection through a canonical portable-exit aggregate; bind current career/memory/body commitments, preserve shared-record references, close operational authority when scheduled/effective, and keep live Blaxel/Drive proof gated.
 - [x] Pass admission, continuity, memory/storage, autonomy, provider-failure, trade, recovery, and exit tests; record evidence.
 
 ## 6. Agent-played full exhibition game [x]

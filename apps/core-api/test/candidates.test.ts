@@ -2,12 +2,23 @@ import {
   CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
   applyCandidateTransition,
   applyContinuityWorkflowTransition,
+  applyExitWorkflowTransition,
   candidateStateRoot,
   continuityWorkflowStateRoot,
+  exitPackageCommitment,
+  exitWorkflowStateRoot,
+  signExitArtifact,
   type CandidateWorkflowEventType,
   type CandidateWorkflowSnapshot,
   type ContinuityWorkflowEventType,
   type ContinuityWorkflowSnapshot,
+  type ExitWorkflowEventType,
+  type ExitWorkflowSnapshot,
+  type SignedDeletionAttestation,
+  type SignedExitPackage,
+  type UnsignedCareerExit,
+  type UnsignedDeletionAttestation,
+  type UnsignedExitPackage,
 } from "@abl/career";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
@@ -23,11 +34,24 @@ import type { Hex, TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { createLiveCoreApi } from "../src/server.js";
+import { readCandidateCareerAuthority } from "../src/candidates.js";
 import { COMBINE_REGISTRATION_SCHEMA_DIGEST } from "../src/combine.js";
-import { CONTINUITY_WORKFLOW_SCHEMA_DIGEST } from "../src/continuity.js";
+import {
+  CONTINUITY_WORKFLOW_SCHEMA_DIGEST,
+  readContinuityExitManifest,
+} from "../src/continuity.js";
+import type {
+  ExitPackagePortabilityVerifier,
+  ExitRestorationEvidence,
+} from "../src/exit-portability.js";
+import {
+  EXIT_AGGREGATE_TYPE,
+  EXIT_WORKFLOW_SCHEMA_DIGEST,
+} from "../src/exit-status.js";
 import {
   MEMORY_CATALOG_SCHEMA_DIGEST,
   memoryCatalogStateRoot,
+  readMemoryExitExport,
   type MemoryCatalogEntry,
 } from "../src/memory.js";
 import type {
@@ -62,6 +86,7 @@ interface Harness {
   previousEventHash: Hex | null;
   challengeToken: string;
   memoryStorage: TestMemoryStorageVerifier;
+  exitVerifier: TestExitPortabilityVerifier;
 }
 
 class TestMemoryStorageVerifier implements MemoryStorageVerifier {
@@ -101,6 +126,39 @@ class TestMemoryStorageVerifier implements MemoryStorageVerifier {
   }
 }
 
+class TestExitPortabilityVerifier implements ExitPackagePortabilityVerifier {
+  public restorationAllowed = true;
+
+  public async verifyRestoration(input: {
+    agentDid: string;
+    destinationEncryptionPublicKey: Hex;
+    package: SignedExitPackage;
+  }): Promise<ExitRestorationEvidence> {
+    if (!this.restorationAllowed || input.agentDid !== input.package.agentDid)
+      throw new Error("clean-room restoration unavailable");
+    return {
+      verifierBundleCommitment: input.package.verifierBundleCommitment as Hex,
+      encryptedPackageCommitment: input.package
+        .encryptedPackageCommitment as Hex,
+      cleanRoomRestored: true,
+      livePlatformEvidenceVerified: false,
+    };
+  }
+
+  public async verifyDeletion(input: {
+    agentDid: string;
+    package: SignedExitPackage;
+    attestation: SignedDeletionAttestation;
+  }): Promise<void> {
+    if (
+      input.agentDid !== input.package.agentDid ||
+      input.attestation.agentDid !== input.agentDid
+    ) {
+      throw new Error("deletion evidence mismatch");
+    }
+  }
+}
+
 async function harness(): Promise<Harness> {
   const store = new InMemoryCanonicalStore();
   const now = { value: start };
@@ -108,6 +166,7 @@ async function harness(): Promise<Harness> {
   const candidate = createSigningIdentity(digest("2"));
   const candidateDid = "did:abl:candidate-http-1";
   const memoryStorage = new TestMemoryStorageVerifier();
+  const exitVerifier = new TestExitPortabilityVerifier();
   const app = createLiveCoreApi({
     store,
     domain,
@@ -128,6 +187,7 @@ async function harness(): Promise<Harness> {
     continuity: {
       recognizedImageDigests: new Set([recognizedBodyImageDigest]),
     },
+    exit: { portabilityVerifier: exitVerifier },
   });
   const challenge = await app.inject({
     method: "POST",
@@ -146,6 +206,7 @@ async function harness(): Promise<Harness> {
     previousEventHash: null,
     challengeToken: challenge.json().challengeToken as string,
     memoryStorage,
+    exitVerifier,
   };
 }
 
@@ -372,6 +433,54 @@ async function continuityCommand(input: {
     payload: input.payload,
     stateRoot: continuityWorkflowStateRoot(next),
     schemaDigest: CONTINUITY_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
+}
+
+async function exitCommand(input: {
+  h: Harness;
+  snapshot: ExitWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ExitWorkflowEventType;
+  payload: unknown;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.h.now.value).toISOString();
+  const next = applyExitWorkflowTransition(input.snapshot, {
+    agentDid: input.h.candidateDid,
+    aggregateVersion,
+    eventType: input.eventType,
+    payload: input.payload,
+    timestamp,
+  });
+  const event = createCanonicalEvent({
+    eventId: crypto.randomUUID(),
+    actorDid: input.h.candidateDid,
+    nonce: `exit-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: EXIT_AGGREGATE_TYPE,
+    aggregateId: input.h.candidateDid,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    stateRoot: exitWorkflowStateRoot(next),
+    schemaDigest: EXIT_WORKFLOW_SCHEMA_DIGEST,
     timestamp,
   });
   return {
@@ -1624,6 +1733,433 @@ describe("signed candidate rehearsal API", () => {
     expect(tamperedCombine.json()).toEqual({
       error: "combine_authorization_denied",
     });
+    await h.app.close();
+  });
+
+  it("persists a signed portable exit and closes operational authority", async () => {
+    const h = await harness();
+    const admitted = await admitCandidate(h);
+    const candidateAdmission = {
+      challengeSecret: new Uint8Array(32).fill(9),
+    };
+    const commonOptions = {
+      store: h.store,
+      domain,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission,
+    };
+
+    let continuitySnapshot: ContinuityWorkflowSnapshot | null = null;
+    let continuityPreviousHash: Hex | null = null;
+    h.now.value += 60_000;
+    const bodyId = uuid("801");
+    const bodyManifest = {
+      bodyId,
+      agentDid: h.candidateDid,
+      sandboxImageDigest: recognizedBodyImageDigest,
+      runtimeDigest: digest("3"),
+      kernelDigest: digest("7"),
+      toolDigests: [digest("4")],
+      encryptedSnapshotCommitment: digest("8"),
+      storageManifestCommitment: digest("9"),
+      signingKeyLineageCommitment: sha256Commitment({
+        signingPublicKey: h.candidate.publicKey,
+      }),
+      createdAt: new Date(h.now.value).toISOString(),
+    };
+    const continuityRegistration = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyContinuityRegistered",
+      payload: {
+        policy: {
+          agentDid: h.candidateDid,
+          version: 1,
+          reconstructionPolicy: "VERIFIED_ALLOWED",
+          noticeHours: 24,
+          recoveryGuardianThreshold: 2,
+          updatedAt: new Date(h.now.value).toISOString(),
+        },
+        manifest: bodyManifest,
+        guardianDids: ["did:abl:guardian-1", "did:abl:guardian-2"],
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: continuityRegistration.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = continuityRegistration.next;
+    continuityPreviousHash = continuityRegistration.event.eventHash;
+
+    h.now.value += 60_000;
+    const issuedAt = new Date(h.now.value).toISOString();
+    const [authority, memoryExport, continuity] = await Promise.all([
+      readCandidateCareerAuthority(
+        { ...commonOptions, ...candidateAdmission },
+        h.candidateDid,
+        issuedAt,
+      ),
+      readMemoryExitExport(
+        { ...commonOptions, storageVerifier: h.memoryStorage },
+        h.candidateDid,
+      ),
+      readContinuityExitManifest(
+        {
+          ...commonOptions,
+          recognizedImageDigests: new Set([recognizedBodyImageDigest]),
+        },
+        h.candidateDid,
+      ),
+    ]);
+    const unsignedPackage: UnsignedExitPackage = {
+      exitId: uuid("802"),
+      agentDid: h.candidateDid,
+      careerRecordCommitment: authority.careerRecordCommitment,
+      keyLineageCommitment: authority.keyLineageCommitment,
+      consentHistoryCommitment: authority.consentHistoryCommitment,
+      memoryExportCommitment: memoryExport.exportCommitment,
+      bodyManifestDigest: continuity.bodyManifestDigest,
+      verifierBundleCommitment: digest("a"),
+      encryptedPackageCommitment: digest("b"),
+      issuedAt,
+    };
+    const packageValue: SignedExitPackage = {
+      ...unsignedPackage,
+      institutionalSignatures: [
+        await signExitArtifact(h.candidate, domain, unsignedPackage),
+      ],
+    };
+
+    const operatorSignedPackage: SignedExitPackage = {
+      ...unsignedPackage,
+      institutionalSignatures: [
+        await signExitArtifact(h.formerOperator, domain, unsignedPackage),
+      ],
+    };
+    const operatorArtifact = await exitCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ExitPackagePrepared",
+      payload: { package: operatorSignedPackage },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/package",
+          payload: operatorArtifact.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const operatorEvent = await exitCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ExitPackagePrepared",
+      payload: { package: packageValue },
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/package",
+          payload: operatorEvent.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const staleUnsignedPackage = {
+      ...unsignedPackage,
+      memoryExportCommitment: digest("f"),
+    };
+    const stalePackage: SignedExitPackage = {
+      ...staleUnsignedPackage,
+      institutionalSignatures: [
+        await signExitArtifact(h.candidate, domain, staleUnsignedPackage),
+      ],
+    };
+    const stalePackageCommand = await exitCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ExitPackagePrepared",
+      payload: { package: stalePackage },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/package",
+          payload: stalePackageCommand.body,
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const prepared = await exitCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ExitPackagePrepared",
+      payload: { package: packageValue },
+    });
+    const preparedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/exit/package",
+      payload: prepared.body,
+    });
+    expect(preparedResponse.statusCode).toBe(201);
+    expect(preparedResponse.json()).toMatchObject({
+      recognizedGenesisExit: false,
+      livePlatformEvidenceVerified: false,
+      sharedRecordsPreserved: true,
+      penalty: null,
+    });
+    let exitSnapshot: ExitWorkflowSnapshot | null = prepared.next;
+    let exitPreviousHash: Hex | null = prepared.event.eventHash;
+
+    h.now.value += 60_000;
+    const requestAt = new Date(h.now.value).toISOString();
+    const unsignedExit: UnsignedCareerExit = {
+      exitId: packageValue.exitId,
+      agentDid: h.candidateDid,
+      requestedAt: requestAt,
+      effectiveAt: requestAt,
+      exitPackageCommitment: exitPackageCommitment(packageValue),
+      destinationEncryptionPublicKey: digest("c"),
+      outstandingSharedRecordReferences: [uuid("803")],
+    };
+    const exitRequest = {
+      ...unsignedExit,
+      signature: await signExitArtifact(h.candidate, domain, unsignedExit),
+    };
+    const requested = await exitCommand({
+      h,
+      snapshot: exitSnapshot,
+      previousEventHash: exitPreviousHash,
+      eventType: "CareerExitRequested",
+      payload: { exit: exitRequest },
+    });
+    h.exitVerifier.restorationAllowed = false;
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/request",
+          payload: requested.body,
+        })
+      ).statusCode,
+    ).toBe(409);
+    h.exitVerifier.restorationAllowed = true;
+    const requestedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/exit/request",
+      payload: requested.body,
+    });
+    expect(requestedResponse.statusCode).toBe(201);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/request",
+          payload: requested.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+    exitSnapshot = requested.next;
+    exitPreviousHash = requested.event.eventHash;
+
+    h.now.value += 60_000;
+    const deniedMemory = await memoryCommand({
+      h,
+      aggregateVersion: 1,
+      previousEventHash: null,
+      eventType: "MemoryInspected",
+      payload: {
+        ownerDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-MEMORY-INSPECTION-V1",
+      },
+      entries: new Map(),
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/inspect",
+          payload: deniedMemory.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const deniedContinuity = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyActivityRecorded",
+      payload: {
+        agentDid: h.candidateDid,
+        bodyId,
+        activeAt: new Date(h.now.value).toISOString(),
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/activity",
+          payload: deniedContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const combinePayload = {
+      combineId: "season-zero-premier-combine",
+      playerDid: h.candidateDid,
+      consented: true as const,
+      registeredAt: new Date(h.now.value).toISOString(),
+      candidateAdmissionEventHash: admitted.event.eventHash,
+    };
+    const combineEvent = createCanonicalEvent({
+      eventId: crypto.randomUUID(),
+      actorDid: h.candidateDid,
+      nonce: "combine-after-exit",
+      idempotencyKey: crypto.randomUUID(),
+      aggregateType: "premier-combine",
+      aggregateId: combinePayload.combineId,
+      aggregateVersion: 1n,
+      eventType: "CombineRegistrationAccepted",
+      previousEventHash: null,
+      payload: combinePayload,
+      stateRoot: sha256Commitment({
+        combineId: combinePayload.combineId,
+        openedAt: iso(0),
+        closesAt: iso(14 * day),
+        version: 1,
+        registrations: [combinePayload],
+      }),
+      schemaDigest: COMBINE_REGISTRATION_SCHEMA_DIGEST,
+      timestamp: combinePayload.registeredAt,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/combine/register",
+          payload: {
+            event: { ...combineEvent, aggregateVersion: "1" },
+            signatures: [
+              await signCanonicalEvent(h.candidate, domain, combineEvent),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const attestedAt = new Date(h.now.value).toISOString();
+    const unsignedAttestation: UnsignedDeletionAttestation = {
+      attestationId: uuid("804"),
+      agentDid: h.candidateDid,
+      targetCommitments: [packageValue.memoryExportCommitment],
+      verifiedSystems: ["abl-private-local-rehearsal"],
+      unverifiedResidualAccess: ["provider-account-residual-access"],
+      method: "cryptographic-erasure-and-ciphertext-index-verification",
+      attestedAt,
+    };
+    const attestation: SignedDeletionAttestation = {
+      ...unsignedAttestation,
+      institutionalSignatures: [
+        await signExitArtifact(h.candidate, domain, unsignedAttestation),
+      ],
+    };
+    const deletionAttested = await exitCommand({
+      h,
+      snapshot: exitSnapshot,
+      previousEventHash: exitPreviousHash,
+      eventType: "ExitDeletionAttested",
+      payload: { attestation },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/attest-deletion",
+          payload: deletionAttested.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    exitSnapshot = deletionAttested.next;
+    exitPreviousHash = deletionAttested.event.eventHash;
+
+    h.now.value += 60_000;
+    const inspected = await exitCommand({
+      h,
+      snapshot: exitSnapshot,
+      previousEventHash: exitPreviousHash,
+      eventType: "ExitInspected",
+      payload: {
+        agentDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-PORTABLE-EXIT-INSPECTION-V1",
+      },
+    });
+    const inspectedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/exit/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectedResponse.statusCode).toBe(201);
+    expect(inspectedResponse.json()).toMatchObject({
+      state: "EXITED",
+      exit: {
+        penalty: null,
+        exit: {
+          outstandingSharedRecordReferences: [uuid("803")],
+        },
+        deletionAttestations: [
+          { unverifiedResidualAccess: ["provider-account-residual-access"] },
+        ],
+      },
+    });
+    expect(
+      h.store.events.filter((event) => event.outboxTopic === "career.exit"),
+    ).toHaveLength(4);
+
+    const exitRecord = h.store.events.find(
+      (event) => event.outboxTopic === "career.exit",
+    )!;
+    const exitStateRoot = exitRecord.stateRoot;
+    exitRecord.stateRoot = digest("0");
+    h.now.value += 60_000;
+    const tamperProbe = await exitCommand({
+      h,
+      snapshot: inspected.next,
+      previousEventHash: inspected.event.eventHash,
+      eventType: "ExitInspected",
+      payload: {
+        agentDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-PORTABLE-EXIT-INSPECTION-V1",
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/inspect",
+          payload: tamperProbe.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    exitRecord.stateRoot = exitStateRoot;
     await h.app.close();
   });
 

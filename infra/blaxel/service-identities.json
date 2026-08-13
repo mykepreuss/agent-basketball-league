@@ -62,6 +62,23 @@
       ]
     },
     {
+      "idPattern": "core-exit-portability-verifier",
+      "workspace": "abl-core",
+      "secretReference": "core-exit-portability-hmac-v1",
+      "allowedTargets": [
+        {
+          "workspace": "abl-private",
+          "capabilities": ["exit:portability:verify"]
+        }
+      ],
+      "forbiddenCapabilities": [
+        "private:ciphertext",
+        "private:plaintext",
+        "drive:raw",
+        "core:command"
+      ]
+    },
+    {
       "idPattern": "private-release-publisher",
       "workspace": "abl-private",
       "secretReference": "private-public-release-hmac-v1",

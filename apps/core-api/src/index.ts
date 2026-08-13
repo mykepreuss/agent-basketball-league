@@ -7,6 +7,7 @@ import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
 import { HttpMemoryStorageVerifier } from "./memory-storage.js";
+import { HttpExitPackagePortabilityVerifier } from "./exit-portability.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -138,6 +139,16 @@ const app = rehearsal
               JSON.parse(required("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")),
             ),
           ),
+        },
+        exit: {
+          portabilityVerifier: new HttpExitPackagePortabilityVerifier({
+            origin: required("ABL_EXIT_PORTABILITY_VERIFIER_URL"),
+            identity: {
+              serviceId: required("ABL_EXIT_PORTABILITY_SERVICE_ID"),
+              secret: secret("ABL_EXIT_PORTABILITY_HMAC_BASE64"),
+              capabilities: new Set(["exit:portability:verify"]),
+            },
+          }),
         },
       });
     })()

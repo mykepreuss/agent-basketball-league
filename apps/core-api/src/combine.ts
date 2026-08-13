@@ -28,6 +28,7 @@ import {
   readCandidateCareerAuthority,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
+import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 
 const aggregateType = "premier-combine";
 const eventType = "CombineRegistrationAccepted";
@@ -214,7 +215,8 @@ async function replayCombine(
 function combineError(error: unknown): { status: number; code: string } {
   if (
     error instanceof CombineAuthorizationError ||
-    error instanceof CandidateAuthorizationError
+    error instanceof CandidateAuthorizationError ||
+    error instanceof CareerExitedError
   ) {
     return { status: 403, code: "combine_authorization_denied" };
   }
@@ -275,12 +277,18 @@ async function currentEligiblePlayers(
           registration.playerDid,
           at,
         );
+        await requireCareerOperational(options, registration.playerDid, at);
         return authority.admissionEventHash ===
           registration.candidateAdmissionEventHash
           ? registration.playerDid
           : null;
       } catch (error) {
-        if (!(error instanceof CandidateNotAdmittedError)) throw error;
+        if (
+          !(error instanceof CandidateNotAdmittedError) &&
+          !(error instanceof CareerExitedError)
+        ) {
+          throw error;
+        }
         return null;
       }
     }),
@@ -345,6 +353,11 @@ export function installCombineRehearsalRoutes(
         );
       }
       const aggregate = await replayCombine(options);
+      await requireCareerOperational(
+        options,
+        event.actorDid,
+        new Date(now()).toISOString(),
+      );
       const existing = aggregate.records.find(
         (record) => record.aggregateVersion === event.aggregateVersion,
       );

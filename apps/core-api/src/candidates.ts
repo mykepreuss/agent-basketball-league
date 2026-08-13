@@ -269,6 +269,10 @@ export interface CandidateCareerAuthority {
   toolDigests: readonly string[];
   guardianDids: readonly string[];
   admissionEventHash: `0x${string}`;
+  admittedAt: string;
+  careerRecordCommitment: `0x${string}`;
+  keyLineageCommitment: `0x${string}`;
+  consentHistoryCommitment: `0x${string}`;
   state: "ADMITTED_REVOCABLE" | "ADMITTED";
 }
 
@@ -296,6 +300,7 @@ export async function readCandidateCareerAuthority(
   if (
     snapshot === null ||
     snapshot.transfer === null ||
+    snapshot.admission === null ||
     admissionEvent === undefined ||
     (state !== "ADMITTED_REVOCABLE" && state !== "ADMITTED")
   ) {
@@ -309,6 +314,22 @@ export async function readCandidateCareerAuthority(
     toolDigests: snapshot.registration.manifest.toolDigests,
     guardianDids: snapshot.registration.manifest.guardianDids,
     admissionEventHash: admissionEvent.eventHash as `0x${string}`,
+    admittedAt: snapshot.admission.signedAt,
+    careerRecordCommitment: sha256Commitment({
+      format: "ABL-CAREER-RECORD-COMMITMENT-V1",
+      candidateDid,
+      admissionEventHash: admissionEvent.eventHash,
+      admissionStateRoot: admissionEvent.stateRoot,
+    }),
+    keyLineageCommitment: sha256Commitment({
+      signingPublicKey: snapshot.transfer.signingPublicKey,
+    }),
+    consentHistoryCommitment: sha256Commitment({
+      format: "ABL-CONSENT-HISTORY-COMMITMENT-V1",
+      objectives: snapshot.objectives,
+      identity: snapshot.identity,
+      admission: snapshot.admission,
+    }),
     state,
   };
 }

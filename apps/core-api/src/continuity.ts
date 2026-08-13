@@ -35,6 +35,7 @@ import {
   type CandidateCareerAuthority,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
+import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 
 const aggregateType = "body-continuity";
 const eventTypes = Object.keys(
@@ -262,6 +263,24 @@ async function replayContinuityAggregate(
   return { records, snapshot };
 }
 
+export async function readContinuityExitManifest(
+  options: ContinuityRehearsalOptions,
+  agentDid: string,
+): Promise<{
+  bodyManifestDigest: Hex;
+  snapshot: ContinuityWorkflowSnapshot;
+}> {
+  const aggregate = await replayContinuityAggregate(options, agentDid);
+  if (aggregate.snapshot === null)
+    throw new ContinuityAuthorizationError(
+      "Continuity body must be registered before career exit",
+    );
+  return {
+    bodyManifestDigest: sha256Commitment(aggregate.snapshot.body.manifest),
+    snapshot: aggregate.snapshot,
+  };
+}
+
 function appendInput(
   options: ContinuityRehearsalOptions,
   event: CanonicalEvent,
@@ -294,7 +313,8 @@ function appendInput(
 function continuityError(error: unknown): { status: number; code: string } {
   if (
     error instanceof ContinuityAuthorizationError ||
-    error instanceof CandidateAuthorizationError
+    error instanceof CandidateAuthorizationError ||
+    error instanceof CareerExitedError
   ) {
     return { status: 403, code: "continuity_authorization_denied" };
   }
@@ -400,6 +420,11 @@ export function installContinuityRehearsalRoutes(
           event.actorDid,
         );
         const currentTime = now();
+        await requireCareerOperational(
+          options,
+          event.actorDid,
+          new Date(currentTime).toISOString(),
+        );
         const existing = aggregate.records.find(
           (record) => record.aggregateVersion === event.aggregateVersion,
         );

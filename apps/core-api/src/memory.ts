@@ -29,6 +29,7 @@ import {
   readCandidateCareerAuthority,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
+import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 import type {
   MemoryStorageReference,
   MemoryStorageVerifier,
@@ -432,7 +433,8 @@ function appendInput(
 function memoryError(error: unknown): { status: number; code: string } {
   if (
     error instanceof MemoryAuthorizationError ||
-    error instanceof CandidateAuthorizationError
+    error instanceof CandidateAuthorizationError ||
+    error instanceof CareerExitedError
   ) {
     return { status: 403, code: "memory_authorization_denied" };
   }
@@ -466,6 +468,14 @@ function exportResponse(
     records,
   };
   return { ...manifest, exportCommitment: sha256Commitment(manifest) };
+}
+
+export async function readMemoryExitExport(
+  options: MemoryRehearsalOptions,
+  ownerDid: string,
+) {
+  const aggregate = await replayMemoryAggregate(options, ownerDid);
+  return exportResponse(ownerDid, aggregate.records.length, aggregate.entries);
 }
 
 export function installMemoryRehearsalRoutes(
@@ -515,6 +525,11 @@ export function installMemoryRehearsalRoutes(
           excludedMemoryId,
         );
         const currentTime = now();
+        await requireCareerOperational(
+          options,
+          event.actorDid,
+          new Date(currentTime).toISOString(),
+        );
         const existing = aggregate.records.find(
           (record) => record.aggregateVersion === event.aggregateVersion,
         );

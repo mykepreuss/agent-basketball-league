@@ -70,6 +70,15 @@ spec:
       - name: ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON
         value: ${ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}
         secret: false
+      - name: ABL_EXIT_PORTABILITY_VERIFIER_URL
+        value: ${ABL_EXIT_PORTABILITY_VERIFIER_URL}
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_SERVICE_ID
+        value: core-exit-portability-verifier
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_HMAC_BASE64
+        value: ${ABL_CORE_EXIT_PORTABILITY_HMAC_BASE64}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -205,6 +214,31 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/continuity/inspect
+    - id: exit-package
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/package
+    - id: exit-request
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/request
+    - id: exit-cancel
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/cancel
+    - id: exit-attest-deletion
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/attest-deletion
+    - id: exit-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/inspect
     - id: health
       type: http
       configuration:

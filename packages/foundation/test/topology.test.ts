@@ -225,6 +225,17 @@ describe("four-workspace topology", () => {
     expect(envMap(coreApi!).get("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")).toBe(
       "${ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}",
     );
+    expect(envMap(coreApi!).get("ABL_EXIT_PORTABILITY_VERIFIER_URL")).toBe(
+      "${ABL_EXIT_PORTABILITY_VERIFIER_URL}",
+    );
+    expect(envMap(coreApi!).get("ABL_EXIT_PORTABILITY_SERVICE_ID")).toBe(
+      "core-exit-portability-verifier",
+    );
+    expect(
+      coreSpec.runtime.envs.find(
+        (entry) => entry.name === "ABL_EXIT_PORTABILITY_HMAC_BASE64",
+      ),
+    ).toMatchObject({ secret: true });
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -253,6 +264,11 @@ describe("four-workspace topology", () => {
         "/v1/continuity/delete",
         "/v1/continuity/rehydrate",
         "/v1/continuity/inspect",
+        "/v1/exit/package",
+        "/v1/exit/request",
+        "/v1/exit/cancel",
+        "/v1/exit/attest-deletion",
+        "/v1/exit/inspect",
       ]),
     );
     expect(
@@ -263,6 +279,15 @@ describe("four-workspace topology", () => {
     ).toContainEqual({
       workspace: "abl-private",
       capabilities: ["private:commitment:verify"],
+    });
+    expect(
+      identities.identities.find(
+        (identity) =>
+          identity.secretReference === "core-exit-portability-hmac-v1",
+      )?.allowedTargets,
+    ).toContainEqual({
+      workspace: "abl-private",
+      capabilities: ["exit:portability:verify"],
     });
     const privateStorage = (await readYamlDirectory("abl-private")).find(
       (resource) =>
