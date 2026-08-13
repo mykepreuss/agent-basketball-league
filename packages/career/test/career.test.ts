@@ -271,6 +271,19 @@ describe("memory and autonomy rights", () => {
     expect(
       catalog.delete("memory-1", "did:abl:agent-a", iso(day)),
     ).toMatchObject({ version: 3, deletedAt: iso(day) });
+    expect(() =>
+      catalog.persist(
+        {
+          ...first,
+          version: 4,
+          previousVersionCommitment: digest("2"),
+        },
+        "did:abl:agent-a",
+      ),
+    ).toThrow("cannot be reused");
+    expect(() =>
+      catalog.delete("memory-1", "did:abl:agent-a", "not-a-date"),
+    ).toThrow("time is invalid");
 
     catalog.persist(
       { ...first, memoryId: "shared", sharedRecord: true },
@@ -283,6 +296,19 @@ describe("memory and autonomy rights", () => {
       { ...first, memoryId: "case", caseRetainUntil: iso(2 * day) },
       "did:abl:agent-a",
     );
+    expect(() =>
+      catalog.persist(
+        {
+          ...first,
+          memoryId: "case",
+          version: 2,
+          previousVersionCommitment: first.ciphertextCommitment,
+          ciphertextCommitment: digest("3"),
+          caseRetainUntil: iso(day),
+        },
+        "did:abl:agent-a",
+      ),
+    ).toThrow("cannot be shortened");
     expect(() => catalog.delete("case", "did:abl:agent-a", iso(day))).toThrow(
       "Case retention",
     );

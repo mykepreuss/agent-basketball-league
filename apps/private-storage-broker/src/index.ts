@@ -20,7 +20,9 @@ const BootstrapSchema = z.strictObject({
       serviceId: z.string().min(1),
       actorDid: z.string().startsWith("did:"),
       secretBase64: z.string().min(1),
-      capabilities: z.array(z.literal("private:ciphertext")).min(1),
+      capabilities: z
+        .array(z.enum(["private:ciphertext", "private:commitment:verify"]))
+        .min(1),
     }),
   ),
   policies: z.array(z.custom<StorageDomainPolicy>()),

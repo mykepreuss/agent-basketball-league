@@ -24,6 +24,11 @@ const identity: ServiceRequestIdentity = {
   secret: new TextEncoder().encode("private-broker-transport-secret-0001"),
   capabilities: new Set(["private:ciphertext"]),
 };
+const verificationIdentity: ServiceRequestIdentity = {
+  serviceId: "core-memory-verifier",
+  secret: new TextEncoder().encode("memory-verifier-transport-secret-0001"),
+  capabilities: new Set(["private:commitment:verify"]),
+};
 const policy: StorageDomainPolicy = {
   domainId: "personal:agent-a",
   kind: "PERSONAL",
@@ -51,6 +56,21 @@ class FailOnceRepository extends DriveCiphertextRepository {
   }
 }
 
+class FailEraseOnceRepository extends DriveCiphertextRepository {
+  #shouldFail = true;
+
+  public override async eraseCiphertext(
+    domainId: string,
+    objectId: string,
+  ): Promise<void> {
+    if (this.#shouldFail) {
+      this.#shouldFail = false;
+      throw new Error("simulated ciphertext erasure failure");
+    }
+    await super.eraseCiphertext(domainId, objectId);
+  }
+}
+
 async function fixture(
   binding = "did:abl:agent-a",
   repositoryFactory: (root: string) => DriveCiphertextRepository = (root) =>
@@ -65,7 +85,9 @@ async function fixture(
   const app = createPrivateStorageBroker({
     broker,
     repository,
-    verifier: new ServiceRequestVerifier([identity], { now: () => now }),
+    verifier: new ServiceRequestVerifier([identity, verificationIdentity], {
+      now: () => now,
+    }),
     serviceActorBindings: new Map([[identity.serviceId, binding]]),
   });
   apps.push(app);
@@ -88,6 +110,25 @@ function signed(
       timestamp: new Date(now).toISOString(),
       expectedVersion,
       capability: "private:ciphertext",
+    }),
+  };
+}
+
+function verificationHeaders(
+  body: unknown,
+  nonce: string,
+  path: string,
+  expectedVersion = "1",
+): Record<string, string> {
+  return {
+    ...signServiceRequest(verificationIdentity, {
+      method: "POST",
+      path,
+      body: new TextEncoder().encode(JSON.stringify(body)),
+      nonce,
+      timestamp: new Date(now).toISOString(),
+      expectedVersion,
+      capability: "private:commitment:verify",
     }),
   };
 }
@@ -236,7 +277,9 @@ describe("private ciphertext broker service", () => {
     const restartedApp = createPrivateStorageBroker({
       broker: CiphertextBroker.restore(await repository.loadState()),
       repository,
-      verifier: new ServiceRequestVerifier([identity], { now: () => now }),
+      verifier: new ServiceRequestVerifier([identity, verificationIdentity], {
+        now: () => now,
+      }),
       serviceActorBindings: new Map([[identity.serviceId, "did:abl:agent-a"]]),
     });
     apps.push(restartedApp);
@@ -259,5 +302,210 @@ describe("private ciphertext broker service", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(blob);
+  });
+
+  it("proves commitments to core and durably deletes only on the bound agent's request", async () => {
+    const { app, repository } = await fixture();
+    const blob = await encryptContent({
+      key: await generateDomainKey(),
+      objectId: "memory-delete-http",
+      domainId: policy.domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("opaque deletion payload"),
+      createdAt: new Date(now).toISOString(),
+    });
+    const putBody = { callerDid: "did:abl:agent-a", blob };
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/ciphertext",
+          headers: signed(putBody, "service-nonce-storage-0008", "0"),
+          payload: putBody,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    const proofBody = {
+      ownerDid: "did:abl:agent-a",
+      domainId: blob.domainId,
+      objectId: blob.objectId,
+      version: blob.version,
+      ciphertextCommitment: blob.ciphertextCommitment,
+    };
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/commitments/verify",
+          headers: verificationHeaders(
+            proofBody,
+            "core-memory-proof-0001",
+            "/v1/commitments/verify",
+          ),
+          payload: proofBody,
+        })
+      ).json(),
+    ).toEqual({ verified: true });
+
+    const deleteBody = {
+      callerDid: "did:abl:agent-a",
+      domainId: blob.domainId,
+      objectId: blob.objectId,
+      expectedVersion: 1,
+      deletedAt: new Date(now).toISOString(),
+    };
+    const deleted = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext/delete",
+      headers: signed(
+        deleteBody,
+        "service-nonce-storage-0009",
+        "1",
+        "/v1/ciphertext/delete",
+      ),
+      payload: deleteBody,
+    });
+    expect(deleted.statusCode).toBe(201);
+    expect(deleted.json()).toMatchObject({
+      deleted: true,
+      receipt: { providerResidualDeletionVerified: false },
+    });
+    const duplicateDeletion = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext/delete",
+      headers: signed(
+        deleteBody,
+        "service-nonce-storage-0010",
+        "1",
+        "/v1/ciphertext/delete",
+      ),
+      payload: deleteBody,
+    });
+    expect(duplicateDeletion.statusCode).toBe(200);
+    expect(duplicateDeletion.json()).toMatchObject({
+      deleted: true,
+      duplicate: true,
+      physicalCiphertextRemoved: true,
+      physicalRemovalStatus: "REMOVED_OR_ABSENT",
+      receipt: {
+        deletionCommitment: deleted.json().receipt.deletionCommitment,
+      },
+    });
+    await expect(
+      repository.getCiphertext(blob.domainId, blob.objectId, 1),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+
+    const deletionProofBody = {
+      ownerDid: "did:abl:agent-a",
+      receipt: deleted.json().receipt,
+    };
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/deletions/verify",
+          headers: verificationHeaders(
+            deletionProofBody,
+            "core-memory-proof-0002",
+            "/v1/deletions/verify",
+          ),
+          payload: deletionProofBody,
+        })
+      ).json(),
+    ).toEqual({ verified: true });
+    const forgedDeletionProof = structuredClone(deletionProofBody);
+    forgedDeletionProof.receipt.deletionCommitment = `0x${"f".repeat(64)}`;
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/deletions/verify",
+          headers: verificationHeaders(
+            forgedDeletionProof,
+            "core-memory-proof-0003",
+            "/v1/deletions/verify",
+          ),
+          payload: forgedDeletionProof,
+        })
+      ).statusCode,
+    ).toBe(409);
+  });
+
+  it("retries physical removal after a durable deletion tombstone", async () => {
+    const { app, repository } = await fixture(
+      "did:abl:agent-a",
+      (root) => new FailEraseOnceRepository(root),
+    );
+    const blob = await encryptContent({
+      key: await generateDomainKey(),
+      objectId: "memory-delete-retry",
+      domainId: policy.domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("opaque deletion retry payload"),
+      createdAt: new Date(now).toISOString(),
+    });
+    const putBody = { callerDid: "did:abl:agent-a", blob };
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/ciphertext",
+          headers: signed(putBody, "service-nonce-storage-0011", "0"),
+          payload: putBody,
+        })
+      ).statusCode,
+    ).toBe(201);
+    const deleteBody = {
+      callerDid: "did:abl:agent-a",
+      domainId: blob.domainId,
+      objectId: blob.objectId,
+      expectedVersion: 1,
+      deletedAt: new Date(now).toISOString(),
+    };
+    const first = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext/delete",
+      headers: signed(
+        deleteBody,
+        "service-nonce-storage-0012",
+        "1",
+        "/v1/ciphertext/delete",
+      ),
+      payload: deleteBody,
+    });
+    expect(first.json()).toMatchObject({
+      deleted: true,
+      duplicate: false,
+      physicalCiphertextRemoved: false,
+    });
+    await expect(
+      repository.getCiphertext(blob.domainId, blob.objectId, blob.version),
+    ).resolves.toEqual(blob);
+
+    const retried = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext/delete",
+      headers: signed(
+        deleteBody,
+        "service-nonce-storage-0013",
+        "1",
+        "/v1/ciphertext/delete",
+      ),
+      payload: deleteBody,
+    });
+    expect(retried.json()).toMatchObject({
+      deleted: true,
+      duplicate: true,
+      physicalCiphertextRemoved: true,
+      physicalRemovalStatus: "REMOVED_OR_ABSENT",
+    });
+    await expect(
+      repository.getCiphertext(blob.domainId, blob.objectId, blob.version),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 });

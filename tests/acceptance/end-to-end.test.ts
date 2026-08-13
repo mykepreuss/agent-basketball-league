@@ -597,7 +597,7 @@ describe("complete local acceptance", () => {
     expect(report.events).toHaveLength(16);
     expect(report.events.every((event) => event.outcome === "PASS")).toBe(true);
     expect(report.eventRoot).toBe(
-      "0xc78f8d0f0f5653028ad665884de67870579f8ba0d18b94f2ee6b16da677e4c09",
+      "0x87b2da9edf0f2b46646d778c7d94447c9aae88af3e809f960242981e558b4f44",
     );
   });
 

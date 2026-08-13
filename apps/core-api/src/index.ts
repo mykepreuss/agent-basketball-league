@@ -6,6 +6,7 @@ import {
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
+import { HttpMemoryStorageVerifier } from "./memory-storage.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -117,6 +118,16 @@ const app = rehearsal
         combine: {
           combineId: required("ABL_COMBINE_ID"),
           openedAt: required("ABL_COMBINE_OPENED_AT"),
+        },
+        memory: {
+          storageVerifier: new HttpMemoryStorageVerifier({
+            origin: required("ABL_PRIVATE_STORAGE_URL"),
+            identity: {
+              serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
+              secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
+              capabilities: new Set(["private:commitment:verify"]),
+            },
+          }),
         },
       });
     })()

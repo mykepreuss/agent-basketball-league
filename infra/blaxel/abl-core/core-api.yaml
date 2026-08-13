@@ -58,6 +58,15 @@ spec:
       - name: ABL_COMBINE_OPENED_AT
         value: ${ABL_COMBINE_OPENED_AT}
         secret: false
+      - name: ABL_PRIVATE_STORAGE_URL
+        value: ${ABL_PRIVATE_STORAGE_URL}
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_SERVICE_ID
+        value: core-memory-verifier
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_HMAC_BASE64
+        value: ${ABL_CORE_PRIVATE_STORAGE_HMAC_BASE64}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -123,6 +132,31 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/combine/status
+    - id: memory-persist
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/persist
+    - id: memory-correct
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/correct
+    - id: memory-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/delete
+    - id: memory-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/inspect
+    - id: memory-export
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/export
     - id: health
       type: http
       configuration:

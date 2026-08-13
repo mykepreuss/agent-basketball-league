@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { EncryptedBlob, GuardianWrappedKey } from "./crypto.js";
 
 export type StorageDomainKind =
@@ -21,6 +23,19 @@ export interface CiphertextBrokerState {
   policies: readonly StorageDomainPolicy[];
   objects: readonly EncryptedBlob[];
   guardianEnvelopes: readonly GuardianWrappedKey[];
+  deletions: readonly CiphertextDeletionReceipt[];
+}
+
+export interface CiphertextDeletionReceipt {
+  format: "ABL-CIPHERTEXT-DELETION-V1";
+  domainId: string;
+  objectId: string;
+  actorDid: string;
+  deletedVersion: number;
+  lastCiphertextCommitment: string;
+  deletedAt: string;
+  providerResidualDeletionVerified: false;
+  deletionCommitment: string;
 }
 
 export class StorageAuthorizationError extends Error {
@@ -35,10 +50,60 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
+function objectKey(domainId: string, objectId: string): string {
+  return `${domainId}:${objectId}`;
+}
+
+function deletionCommitment(
+  receipt: Omit<CiphertextDeletionReceipt, "deletionCommitment">,
+): string {
+  const canonicalReceipt = {
+    format: receipt.format,
+    domainId: receipt.domainId,
+    objectId: receipt.objectId,
+    actorDid: receipt.actorDid,
+    deletedVersion: receipt.deletedVersion,
+    lastCiphertextCommitment: receipt.lastCiphertextCommitment,
+    deletedAt: receipt.deletedAt,
+    providerResidualDeletionVerified: receipt.providerResidualDeletionVerified,
+  };
+  return `0x${createHash("sha256").update(JSON.stringify(canonicalReceipt)).digest("hex")}`;
+}
+
+function isCanonicalTimestamp(value: string): boolean {
+  const timestamp = Date.parse(value);
+  return (
+    Number.isFinite(timestamp) && value === new Date(timestamp).toISOString()
+  );
+}
+
+export function verifyCiphertextDeletionReceipt(
+  receipt: CiphertextDeletionReceipt,
+): void {
+  const { deletionCommitment: supplied, ...content } = receipt;
+  if (
+    receipt.format !== "ABL-CIPHERTEXT-DELETION-V1" ||
+    receipt.domainId.length < 1 ||
+    receipt.objectId.length < 1 ||
+    !receipt.actorDid.startsWith("did:") ||
+    !Number.isInteger(receipt.deletedVersion) ||
+    receipt.deletedVersion < 1 ||
+    !/^0x[0-9a-f]{64}$/.test(receipt.lastCiphertextCommitment) ||
+    !isCanonicalTimestamp(receipt.deletedAt) ||
+    receipt.providerResidualDeletionVerified !== false ||
+    supplied !== deletionCommitment(content)
+  ) {
+    throw new StorageVersionConflictError(
+      "Ciphertext deletion receipt is invalid",
+    );
+  }
+}
+
 export class CiphertextBroker {
   readonly #policies = new Map<string, StorageDomainPolicy>();
   readonly #objects = new Map<string, EncryptedBlob[]>();
   readonly #guardianEnvelopes = new Map<string, GuardianWrappedKey[]>();
+  readonly #deletions = new Map<string, CiphertextDeletionReceipt>();
 
   public static restore(state: CiphertextBrokerState): CiphertextBroker {
     const broker = new CiphertextBroker();
@@ -73,7 +138,7 @@ export class CiphertextBroker {
           `Durable object references unknown domain ${blob.domainId}`,
         );
       }
-      const key = `${blob.domainId}:${blob.objectId}`;
+      const key = objectKey(blob.domainId, blob.objectId);
       const versions = objectsByKey.get(key) ?? [];
       versions.push(clone(blob));
       objectsByKey.set(key, versions);
@@ -93,6 +158,34 @@ export class CiphertextBroker {
         }
       });
       broker.#objects.set(key, clone(versions));
+    }
+
+    for (const receipt of state.deletions) {
+      verifyCiphertextDeletionReceipt(receipt);
+      const policy = broker.#policies.get(receipt.domainId);
+      if (policy === undefined)
+        throw new StorageAuthorizationError(
+          `Durable deletion references unknown domain ${receipt.domainId}`,
+        );
+      broker.#assertPersonalOwner(policy, receipt.actorDid);
+      const key = objectKey(receipt.domainId, receipt.objectId);
+      if (broker.#deletions.has(key))
+        throw new StorageVersionConflictError(
+          `Durable deletion is duplicated for ${key}`,
+        );
+      const versions = broker.#objects.get(key);
+      const latest = versions?.at(-1);
+      if (
+        latest !== undefined &&
+        (latest.version !== receipt.deletedVersion ||
+          latest.ciphertextCommitment !== receipt.lastCiphertextCommitment)
+      ) {
+        throw new StorageVersionConflictError(
+          `Durable deletion does not match ciphertext history for ${key}`,
+        );
+      }
+      broker.#objects.delete(key);
+      broker.#deletions.set(key, clone(receipt));
     }
 
     for (const envelope of state.guardianEnvelopes) {
@@ -154,7 +247,11 @@ export class CiphertextBroker {
   public put(callerDid: string, blob: EncryptedBlob): () => void {
     const policy = this.#policy(blob.domainId);
     this.#assertAccess(policy, callerDid, "WRITE");
-    const key = `${blob.domainId}:${blob.objectId}`;
+    const key = objectKey(blob.domainId, blob.objectId);
+    if (this.#deletions.has(key))
+      throw new StorageVersionConflictError(
+        "Deleted ciphertext object identifiers cannot be reused",
+      );
     const versions = this.#objects.get(key) ?? [];
     const prior = versions.at(-1);
     const expectedVersion = (prior?.version ?? 0) + 1;
@@ -196,7 +293,7 @@ export class CiphertextBroker {
   ): EncryptedBlob {
     const policy = this.#policy(domainId);
     this.#assertAccess(policy, callerDid, "READ");
-    const versions = this.#objects.get(`${domainId}:${objectId}`) ?? [];
+    const versions = this.#objects.get(objectKey(domainId, objectId)) ?? [];
     const blob =
       version === undefined
         ? versions.at(-1)
@@ -204,6 +301,107 @@ export class CiphertextBroker {
     if (blob === undefined)
       throw new Error("Ciphertext object/version not found");
     return clone(blob);
+  }
+
+  public verifyObjectCommitment(input: {
+    ownerDid: string;
+    domainId: string;
+    objectId: string;
+    version: number;
+    ciphertextCommitment: string;
+  }): void {
+    const policy = this.#policy(input.domainId);
+    this.#assertPersonalOwner(policy, input.ownerDid);
+    const blob = this.get(
+      input.ownerDid,
+      input.domainId,
+      input.objectId,
+      input.version,
+    );
+    if (blob.ciphertextCommitment !== input.ciphertextCommitment)
+      throw new StorageAuthorizationError(
+        "Ciphertext commitment does not match durable storage",
+      );
+  }
+
+  public prepareDeletion(
+    callerDid: string,
+    domainId: string,
+    objectId: string,
+    deletedAt: string,
+  ): CiphertextDeletionReceipt {
+    const policy = this.#policy(domainId);
+    this.#assertPersonalOwner(policy, callerDid);
+    if (!isCanonicalTimestamp(deletedAt))
+      throw new StorageVersionConflictError(
+        "Ciphertext deletion time must be canonical",
+      );
+    const key = objectKey(domainId, objectId);
+    if (this.#deletions.has(key))
+      throw new StorageVersionConflictError(
+        "Ciphertext object has already been deleted",
+      );
+    const latest = this.#objects.get(key)?.at(-1);
+    if (latest === undefined) throw new Error("Ciphertext object not found");
+    const content = {
+      format: "ABL-CIPHERTEXT-DELETION-V1" as const,
+      domainId,
+      objectId,
+      actorDid: callerDid,
+      deletedVersion: latest.version,
+      lastCiphertextCommitment: latest.ciphertextCommitment,
+      deletedAt,
+      providerResidualDeletionVerified: false as const,
+    };
+    return { ...content, deletionCommitment: deletionCommitment(content) };
+  }
+
+  public applyDeletion(receipt: CiphertextDeletionReceipt): void {
+    verifyCiphertextDeletionReceipt(receipt);
+    const expected = this.prepareDeletion(
+      receipt.actorDid,
+      receipt.domainId,
+      receipt.objectId,
+      receipt.deletedAt,
+    );
+    if (expected.deletionCommitment !== receipt.deletionCommitment)
+      throw new StorageVersionConflictError(
+        "Ciphertext deletion no longer matches the live object",
+      );
+    const key = objectKey(receipt.domainId, receipt.objectId);
+    this.#objects.delete(key);
+    this.#deletions.set(key, clone(receipt));
+  }
+
+  public verifyDeletionReceipt(
+    ownerDid: string,
+    receipt: CiphertextDeletionReceipt,
+  ): void {
+    verifyCiphertextDeletionReceipt(receipt);
+    const policy = this.#policy(receipt.domainId);
+    this.#assertPersonalOwner(policy, ownerDid);
+    if (receipt.actorDid !== ownerDid)
+      throw new StorageAuthorizationError(
+        "Ciphertext deletion belongs to another actor",
+      );
+    const durable = this.#deletions.get(
+      objectKey(receipt.domainId, receipt.objectId),
+    );
+    if (durable?.deletionCommitment !== receipt.deletionCommitment)
+      throw new StorageAuthorizationError(
+        "Ciphertext deletion receipt is not durable",
+      );
+  }
+
+  public deletionReceipt(
+    ownerDid: string,
+    domainId: string,
+    objectId: string,
+  ): CiphertextDeletionReceipt | undefined {
+    const policy = this.#policy(domainId);
+    this.#assertPersonalOwner(policy, ownerDid);
+    const receipt = this.#deletions.get(objectKey(domainId, objectId));
+    return receipt === undefined ? undefined : clone(receipt);
   }
 
   public putGuardianEnvelope(
@@ -255,6 +453,16 @@ export class CiphertextBroker {
           createdAt: value.createdAt,
         })),
       })),
+      deletions: [...this.#deletions.values()].map((receipt) => ({
+        domainId: receipt.domainId,
+        objectId: receipt.objectId,
+        actorDid: receipt.actorDid,
+        deletedVersion: receipt.deletedVersion,
+        lastCiphertextCommitment: receipt.lastCiphertextCommitment,
+        deletedAt: receipt.deletedAt,
+        deletionCommitment: receipt.deletionCommitment,
+        providerResidualDeletionVerified: false,
+      })),
     };
   }
 
@@ -276,5 +484,13 @@ export class CiphertextBroker {
       throw new StorageAuthorizationError(
         `Caller lacks ${required} access to ${policy.kind} domain`,
       );
+  }
+
+  #assertPersonalOwner(policy: StorageDomainPolicy, ownerDid: string): void {
+    if (policy.kind !== "PERSONAL")
+      throw new StorageAuthorizationError(
+        "Personal memory operations require a PERSONAL storage domain",
+      );
+    this.#assertAccess(policy, ownerDid, "ADMIN");
   }
 }

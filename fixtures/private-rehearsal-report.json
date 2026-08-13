@@ -29,7 +29,7 @@
     }
   },
   "scenarioCount": 16,
-  "eventRoot": "0xc78f8d0f0f5653028ad665884de67870579f8ba0d18b94f2ee6b16da677e4c09",
+  "eventRoot": "0x87b2da9edf0f2b46646d778c7d94447c9aae88af3e809f960242981e558b4f44",
   "scenarios": [
     "accelerated-premier-season",
     "accelerated-development-season",

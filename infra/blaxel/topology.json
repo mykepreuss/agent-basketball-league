@@ -109,6 +109,11 @@
       "capabilities": ["append-signed-projection-event"]
     },
     {
+      "from": "abl-core",
+      "to": "abl-private",
+      "capabilities": ["verify-personal-ciphertext-commitment-only"]
+    },
+    {
       "from": "abl-private",
       "to": "abl-public",
       "capabilities": ["append-policy-released-ciphertext-only"]

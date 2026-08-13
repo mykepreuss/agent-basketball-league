@@ -36,6 +36,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement serializable canonical state, per-aggregate versions/hash chains, UUIDv7 events, atomic outbox, constraints, and partitions.
 - [x] Implement the ciphertext-only private-storage broker, domain keys/manifests/version chains, guardian recovery envelopes, and authorization metadata.
 - [x] Reconstruct storage policy, ciphertext-version, and guardian-envelope state from immutable durable records after restart; fail closed on path/chain corruption and roll memory back after failed writes.
+- [x] Persist personal-ciphertext deletion tombstones, remove local ciphertext versions, recover the deleted state after restart, and expose only capability-scoped commitment/deletion proofs to core without returning ciphertext.
 - [x] Implement the unprivileged custom sandbox image source with fixed broker, immutable trust roots/executables, no agent-visible Drive/model/database credentials, and OS-level egress setup.
 - [x] Define applications, sandboxes, agents, MCP servers, jobs, model endpoints, revisions, observability opt-outs, quota targets, and region placement.
 - [x] Prepare and dry-run the repository-root Blaxel custom-image project; no local Docker daemon is required.
@@ -77,6 +78,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry candidate registration, transfer, reflection/progress, admission, revocation/withdrawal, status, and portable export through strict signed rehearsal routes, canonical transactional persistence, exact replay, expected-version/idempotency enforcement, and restart verification; keep recognized genesis admission false.
 - [x] Reject undeclared context and former-operator signatures; allow refusal/withdrawal/export without penalty.
 - [x] Implement credential rotation, guardians, delegation, recovery, selective memory persistence/correction/deletion/export, and storage authorization.
+- [x] Carry `PERSONAL_UNSUBMITTED` memory persistence, correction, inspection, commitment export, and deletion through the admitted career key, canonical event/state-root replay, and metadata-only private-storage verification; fail closed after revocation or storage/canonical tampering and never accept plaintext in core.
 - [x] Implement protected autonomy scheduling, overload floor, rollover, make-good, and dormant weekly inspection.
 - [x] Implement standby, 30-day deletion prerequisites, body manifests, clean-room restore, `BodyDeleted`, `BodyRehydrated`, and `BodyContinuityPolicy`.
 - [x] Require cognition receipts, compatibility evidence, and signed continuity decisions for material changes; never silently substitute.

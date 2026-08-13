@@ -156,6 +156,9 @@ importers:
       "@abl/database":
         specifier: workspace:*
         version: link:../../packages/database
+      "@abl/foundation":
+        specifier: workspace:*
+        version: link:../../packages/foundation
       "@abl/institutions":
         specifier: workspace:*
         version: link:../../packages/institutions
@@ -165,6 +168,12 @@ importers:
       "@abl/recognition":
         specifier: workspace:*
         version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      "@abl/storage":
+        specifier: workspace:*
+        version: link:../../packages/storage
       fastify:
         specifier: "catalog:"
         version: 5.11.3

@@ -230,6 +230,69 @@ describe("ciphertext-only Agent Drive layout", () => {
     expect(() => restarted.put("did:abl:agent-a", second)).not.toThrow();
   });
 
+  it("durably tombstones a personal object without claiming provider residual deletion", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-drive-delete-"));
+    const repository = new DriveCiphertextRepository(root);
+    await repository.initialize();
+    const domainPolicy = policy();
+    await repository.putPolicy(domainPolicy);
+    const broker = new CiphertextBroker();
+    broker.registerDomain("did:abl:agent-a", domainPolicy);
+    const blob = await encryptContent({
+      key: await generateDomainKey(),
+      objectId: "memory-to-delete",
+      domainId: domainPolicy.domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("private memory"),
+      createdAt: "2026-08-13T08:30:00.000Z",
+    });
+    broker.put("did:abl:agent-a", blob);
+    await repository.putCiphertext(blob);
+
+    const receipt = broker.prepareDeletion(
+      "did:abl:agent-a",
+      domainPolicy.domainId,
+      blob.objectId,
+      "2026-08-13T09:00:00.000Z",
+    );
+    expect(receipt).toMatchObject({
+      deletedVersion: 1,
+      lastCiphertextCommitment: blob.ciphertextCommitment,
+      providerResidualDeletionVerified: false,
+    });
+    const reorderedReceipt = {
+      deletionCommitment: receipt.deletionCommitment,
+      deletedAt: receipt.deletedAt,
+      providerResidualDeletionVerified:
+        receipt.providerResidualDeletionVerified,
+      lastCiphertextCommitment: receipt.lastCiphertextCommitment,
+      deletedVersion: receipt.deletedVersion,
+      actorDid: receipt.actorDid,
+      objectId: receipt.objectId,
+      domainId: receipt.domainId,
+      format: receipt.format,
+    };
+    expect(() =>
+      broker.verifyDeletionReceipt("did:abl:agent-a", reorderedReceipt),
+    ).toThrow("not durable");
+    await repository.putDeletion(receipt);
+    broker.applyDeletion(receipt);
+    await repository.eraseCiphertext(blob.domainId, blob.objectId);
+    expect(() =>
+      broker.get("did:abl:agent-a", blob.domainId, blob.objectId),
+    ).toThrow("not found");
+
+    const restarted = CiphertextBroker.restore(await repository.loadState());
+    expect(() =>
+      restarted.verifyDeletionReceipt("did:abl:agent-a", reorderedReceipt),
+    ).not.toThrow();
+    expect(() => restarted.put("did:abl:agent-a", blob)).toThrow(
+      "cannot be reused",
+    );
+  });
+
   it("fails closed when recovered ciphertext metadata is not contiguous", async () => {
     const key = await generateDomainKey();
     const blob = await encryptContent({
@@ -247,6 +310,7 @@ describe("ciphertext-only Agent Drive layout", () => {
         policies: [policy()],
         objects: [blob],
         guardianEnvelopes: [],
+        deletions: [],
       }),
     ).toThrow(StorageVersionConflictError);
   });

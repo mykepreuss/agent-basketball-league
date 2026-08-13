@@ -10,7 +10,9 @@ Every `${...}` value is required deployment input. Image variables must be immut
 
 `ABL_COMBINE_ID` and `ABL_COMBINE_OPENED_AT` configure only the non-genesis rehearsal window. The opening time must be canonical UTC and registration closes exactly 14 days later. These values are staging inputs, not recognized founding-agent authorization; genesis must use the ratified schedule.
 
-The hardened body image is a repository-root Blaxel image project (`blaxel.toml`, `Dockerfile`, and `.blaxelignore`). A local Docker daemon is not a deployment prerequisite. From the repository root, validate the package without mutation using `bl deploy --dryrun --type sandbox`; after the `abl-competition` workspace is confirmed, use `bl push -w abl-competition --type sandbox --yes` to build it in Blaxel without creating a sandbox. Record the returned immutable image ID before applying any competition manifest.
+`ABL_PRIVATE_STORAGE_URL`, `ABL_PRIVATE_STORAGE_SERVICE_ID`, and `ABL_PRIVATE_STORAGE_HMAC_BASE64` give core a single metadata-only capability: verify that an admitted career's personal ciphertext commitment or deletion tombstone exists in `abl-private`. The same secret must be supplied out of band to the storage broker bootstrap identity named `core-memory-verifier` with only `private:commitment:verify`. It cannot fetch ciphertext, delete objects, inspect keys, or impersonate a body. Agent-body identities retain `private:ciphertext` only for their own PERSONAL domain.
+
+The hardened body image is a repository-root Blaxel image project (`blaxel.toml`, `Dockerfile`, and `.blaxelignore`). The Dockerfile is the portable image recipe Blaxel's remote builder consumes; ABL does not need Docker as a runtime layer or a local Docker daemon. From the repository root, validate the package without mutation using `bl deploy --dryrun --type sandbox`; after the `abl-competition` workspace is confirmed, use `bl push -w abl-competition --type sandbox --yes` to build it in Blaxel without creating a sandbox. Record the returned immutable image ID before applying any competition manifest.
 
 Expected safe staging flow after access is granted:
 

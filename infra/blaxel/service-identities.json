@@ -45,6 +45,23 @@
       ]
     },
     {
+      "idPattern": "core-memory-verifier",
+      "workspace": "abl-core",
+      "secretReference": "core-private-storage-hmac-v1",
+      "allowedTargets": [
+        {
+          "workspace": "abl-private",
+          "capabilities": ["private:commitment:verify"]
+        }
+      ],
+      "forbiddenCapabilities": [
+        "private:ciphertext",
+        "private:plaintext",
+        "drive:raw",
+        "agent:invoke"
+      ]
+    },
+    {
       "idPattern": "private-release-publisher",
       "workspace": "abl-private",
       "secretReference": "private-public-release-hmac-v1",

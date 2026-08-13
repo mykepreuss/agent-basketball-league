@@ -49,6 +49,26 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/ciphertext
+    - id: ciphertext-get
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/ciphertext/get
+    - id: ciphertext-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/ciphertext/delete
+    - id: commitment-verify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/commitments/verify
+    - id: deletion-verify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/deletions/verify
     - id: health
       type: http
       configuration:

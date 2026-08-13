@@ -211,6 +211,17 @@ describe("four-workspace topology", () => {
     expect(envMap(coreApi!).get("ABL_COMBINE_OPENED_AT")).toBe(
       "${ABL_COMBINE_OPENED_AT}",
     );
+    expect(envMap(coreApi!).get("ABL_PRIVATE_STORAGE_URL")).toBe(
+      "${ABL_PRIVATE_STORAGE_URL}",
+    );
+    expect(envMap(coreApi!).get("ABL_PRIVATE_STORAGE_SERVICE_ID")).toBe(
+      "core-memory-verifier",
+    );
+    expect(
+      coreSpec.runtime.envs.find(
+        (entry) => entry.name === "ABL_PRIVATE_STORAGE_HMAC_BASE64",
+      ),
+    ).toMatchObject({ secret: true });
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -225,6 +236,39 @@ describe("four-workspace topology", () => {
         "/v1/candidates/status",
         "/v1/combine/register",
         "/v1/combine/status",
+        "/v1/memory/persist",
+        "/v1/memory/correct",
+        "/v1/memory/delete",
+        "/v1/memory/inspect",
+        "/v1/memory/export",
+      ]),
+    );
+    expect(
+      identities.identities.find(
+        (identity) =>
+          identity.secretReference === "core-private-storage-hmac-v1",
+      )?.allowedTargets,
+    ).toContainEqual({
+      workspace: "abl-private",
+      capabilities: ["private:commitment:verify"],
+    });
+    const privateStorage = (await readYamlDirectory("abl-private")).find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-private-storage-broker",
+    );
+    const privateSpec = privateStorage!.spec as {
+      triggers: Array<{ configuration: { path: string } }>;
+    };
+    expect(
+      privateSpec.triggers.map((trigger) => trigger.configuration.path),
+    ).toEqual(
+      expect.arrayContaining([
+        "/v1/ciphertext",
+        "/v1/ciphertext/get",
+        "/v1/ciphertext/delete",
+        "/v1/commitments/verify",
+        "/v1/deletions/verify",
       ]),
     );
 

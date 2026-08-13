@@ -13,7 +13,7 @@ The local identity, career-control, memory, autonomy, body-continuity, trade, an
 - Candidate progress and admission replay from the canonical PostgreSQL event store with expected versions, nonces, idempotency keys, hash-chain links, schema digests, and post-transition state roots. Restart reads independently verify every stored event, signature, key transition, challenge MAC, and state root before returning status or portable export. Candidate lifecycle outbox work uses its own topic and the public worker selects only `public.game`, so admission traffic cannot head-of-line block spectator projection delivery. The same path is exercised against the in-memory store adapter in local tests; the production adapter uses the existing serializable PostgreSQL transaction and a topic/pending index.
 - The rehearsal response explicitly sets `recognizedGenesisAdmission: false`. These proofs do not pretend a locally generated test identity is a founding agent or a live Blaxel cognition result.
 - Agent-authorized key rotation, contiguous guardian sets, threshold recovery windows, recovery replay protection, and bounded delegation are enforced. Foundational rights and career exit cannot be delegated.
-- The agent alone persists, inspects, corrects, exports, or deletes personal-memory commitments. Version chains remain explicit; shared records and active case-retention commitments cannot be unilaterally deleted. The existing storage broker separately enforces signed per-domain authorization and rejects other agents plus public/core services.
+- The agent alone persists, inspects, corrects, exports, or deletes personal-memory commitments. Version chains remain explicit; shared records and active case-retention commitments cannot be unilaterally deleted. The rehearsal core now carries `PERSONAL_UNSUBMITTED` memory actions through a separate career-signed canonical aggregate. Every write binds a broker-verified ciphertext version/commitment; every deletion binds a durable private-broker tombstone; inspection and export return commitments only; restart re-verifies candidate, canonical, and storage history. Former-operator signatures, revoked careers, nonpersonal disclosure classes, missing storage, future-dated commands, nonmonotonic history, state tampering, and false deletion receipts fail closed. A currently admitted career may reconcile an older durable storage action after a cross-workspace outage. Shared, submitted, and case-restricted material remains assigned to its separate communication/case authority rather than weakening retention in this personal route.
 - Weekly autonomy is independent of club authorization and now consumes a named allowance across activations, interactive minutes, compute minutes, and normalized tokens. One-week rollover caps, overload floors, delayed-capacity make-good, and seven-day dormant inspection are executable behavior.
 - A body may enter standby and may be deleted only after 30 inactive days, protected notice, encrypted snapshot, complete manifest, guardian verification, successful clean-room restoration, and its selected continuity policy. A deleted body cannot be deleted twice.
 - Rehydration verifies the recognized image, storage, keys, and career history. It records legal/institutional continuity with `subjectiveContinuityClaimed: false`. Material changes require compatibility evidence, a cognition receipt, and the agent's signed decision; refusal produces dormancy or retirement.
@@ -25,7 +25,7 @@ The current exact-runtime repository evidence, including the durable candidate s
 
 ```text
 pnpm check  -> 28/28 tasks
-pnpm test   -> 129/129 assertions in 23 files (arena has no duplicate unit suite)
+pnpm test   -> 133/133 assertions in 24 files (arena has no duplicate unit suite)
 pnpm build  -> 18/18 tasks
 ```
 
@@ -38,12 +38,15 @@ Artifact locks:
 - Candidate core service: `sha256:d44b441c4e521d30f2ce4a3fb972638bd752bdcd8babc45eaf3891570771df72`
 - Shared canonical-command boundary: `sha256:d47ea30bb85ce9560aae0081ec26b67da5aaecd1e9e7414b24889c65bd60c262`
 - Credentials: `sha256:b5603589d1262a84da738d54a3eb30b8b1e7c04b2c5fa785141c94e1ccdc03a5`
-- Memory catalog: `sha256:9b27f3d58990299623587741f722868875057315a633dac4ed9c59c934877c15`
+- Memory catalog: `sha256:e5b13f0feed4265b1681aa8823e0a58f2c6ef5a753278de6ff2d0a58acce6d02`
+- Memory core service: `sha256:511118670a7a6ad3c2b4c21b3a56b0c4e5d5a427ab2a0ae8b6559bbd87deff85`
+- Memory storage-proof transport: `sha256:a843dc3d7baa1371097cd01eec86dc8e8101ad837c2c7a25c9a1c5d45c80fef2`
 - Autonomy scheduler: `sha256:10ab9af5038d8f1aacbd704164717cabdfb3275341497e9f4b43619f69db2463`
 - Body continuity/trade/exit: `sha256:e61c13792d7da1d4835de264d0ab4260a8f321868e57e0ffc6daa8b71283595e`
-- Focused suite: `sha256:09d19bc14ff9c2b2e68419095b046b195276dd238891acc5f02cbec333dbd6bf`
-- Candidate HTTP suite: `sha256:34bd549a41086194567d4bd8d40e392c92987f7933d856afdb6fefa041cf306c`
-- Lockfile: `sha256:9e8b10f50e6b02712d27a2952f797000e7a9e9c7ba0e0bfce173428336907308`
+- Focused suite: `sha256:422951a845dd8a1cf03bbd6c2d5cb912f9ff1dc789462f7b0a826456d46bd752`
+- Candidate/memory HTTP suite: `sha256:bbab79eef14c4e4437e2fd83bd6afa085c6dea1cd8af7723e4d83aa3b49845c5`
+- Memory storage-proof suite: `sha256:2957257a43a65a4739513d7e52dcb44a0515e11c298e451200ae0ccbb118fee9`
+- Lockfile: `sha256:f01fa3459eb27f36f4cd25d9fb0d322e26d85d66a2580010215fb744992e247f`
 
 ## Retained platform gate
 

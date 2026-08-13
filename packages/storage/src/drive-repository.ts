@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { link, mkdir, open, readFile, readdir, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import type { CiphertextBrokerState, StorageDomainPolicy } from "./broker.js";
+import type {
+  CiphertextBrokerState,
+  CiphertextDeletionReceipt,
+  StorageDomainPolicy,
+} from "./broker.js";
 import type { EncryptedBlob, GuardianWrappedKey } from "./crypto.js";
 
 function segment(value: string): string {
@@ -109,6 +113,57 @@ export class DriveCiphertextRepository {
     );
   }
 
+  public async putDeletion(receipt: CiphertextDeletionReceipt): Promise<void> {
+    const directory = join(
+      this.#root,
+      "domains",
+      segment(receipt.domainId),
+      "deletions",
+    );
+    assertInside(this.#root, directory);
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    await writeImmutableJson(
+      join(directory, `${segment(receipt.objectId)}.json`),
+      receipt,
+    );
+  }
+
+  public async getDeletion(
+    domainId: string,
+    objectId: string,
+  ): Promise<CiphertextDeletionReceipt> {
+    const path = join(
+      this.#root,
+      "domains",
+      segment(domainId),
+      "deletions",
+      `${segment(objectId)}.json`,
+    );
+    assertInside(this.#root, path);
+    return readJson<CiphertextDeletionReceipt>(path);
+  }
+
+  public async eraseCiphertext(
+    domainId: string,
+    objectId: string,
+  ): Promise<void> {
+    const directory = join(
+      this.#root,
+      "domains",
+      segment(domainId),
+      "objects",
+      segment(objectId),
+    );
+    assertInside(this.#root, directory);
+    await rm(directory, { recursive: true, force: true });
+    const parent = await open(dirname(directory), "r");
+    try {
+      await parent.sync();
+    } finally {
+      await parent.close();
+    }
+  }
+
   public async getCiphertext(
     domainId: string,
     objectId: string,
@@ -130,6 +185,7 @@ export class DriveCiphertextRepository {
     const policies: StorageDomainPolicy[] = [];
     const objects: EncryptedBlob[] = [];
     const guardianEnvelopes: GuardianWrappedKey[] = [];
+    const deletions: CiphertextDeletionReceipt[] = [];
     const domainsRoot = join(this.#root, "domains");
     for (const domainEntry of (await entries(domainsRoot)).sort((left, right) =>
       left.name.localeCompare(right.name),
@@ -220,7 +276,27 @@ export class DriveCiphertextRepository {
           guardianEnvelopes.push(envelope);
         }
       }
+      for (const deletionEntry of (
+        await entries(join(domainRoot, "deletions"))
+      ).sort((left, right) => left.name.localeCompare(right.name))) {
+        if (
+          !deletionEntry.isFile() ||
+          !/^[0-9a-f]{64}\.json$/.test(deletionEntry.name)
+        ) {
+          throw new Error("Durable storage contains an invalid deletion path");
+        }
+        const receipt = await readJson<CiphertextDeletionReceipt>(
+          join(domainRoot, "deletions", deletionEntry.name),
+        );
+        if (
+          segment(receipt.domainId) !== domainEntry.name ||
+          `${segment(receipt.objectId)}.json` !== deletionEntry.name
+        ) {
+          throw new Error("Durable deletion path does not match its metadata");
+        }
+        deletions.push(receipt);
+      }
     }
-    return { policies, objects, guardianEnvelopes };
+    return { policies, objects, guardianEnvelopes, deletions };
   }
 }

@@ -14,11 +14,21 @@ import {
   type SigningIdentity,
 } from "@abl/recognition";
 import type { FastifyInstance } from "fastify";
+import type { CiphertextDeletionReceipt } from "@abl/storage";
 import type { Hex, TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { createLiveCoreApi } from "../src/server.js";
 import { COMBINE_REGISTRATION_SCHEMA_DIGEST } from "../src/combine.js";
+import {
+  MEMORY_CATALOG_SCHEMA_DIGEST,
+  memoryCatalogStateRoot,
+  type MemoryCatalogEntry,
+} from "../src/memory.js";
+import type {
+  MemoryStorageReference,
+  MemoryStorageVerifier,
+} from "../src/memory-storage.js";
 
 const hour = 60 * 60 * 1_000;
 const day = 24 * hour;
@@ -45,6 +55,44 @@ interface Harness {
   snapshot: CandidateWorkflowSnapshot | null;
   previousEventHash: Hex | null;
   challengeToken: string;
+  memoryStorage: TestMemoryStorageVerifier;
+}
+
+class TestMemoryStorageVerifier implements MemoryStorageVerifier {
+  readonly #commitments = new Set<string>();
+  readonly #deletions = new Set<string>();
+
+  public store(reference: MemoryStorageReference): void {
+    this.#commitments.add(this.#referenceKey(reference));
+  }
+
+  public delete(receipt: CiphertextDeletionReceipt): void {
+    for (const key of this.#commitments) {
+      if (key.startsWith(`${receipt.domainId}:${receipt.objectId}:`))
+        this.#commitments.delete(key);
+    }
+    this.#deletions.add(receipt.deletionCommitment);
+  }
+
+  public async verifyCommitment(
+    _ownerDid: string,
+    reference: MemoryStorageReference,
+  ): Promise<void> {
+    if (!this.#commitments.has(this.#referenceKey(reference)))
+      throw new Error("commitment is not durable");
+  }
+
+  public async verifyDeletion(
+    _ownerDid: string,
+    receipt: CiphertextDeletionReceipt,
+  ): Promise<void> {
+    if (!this.#deletions.has(receipt.deletionCommitment))
+      throw new Error("deletion is not durable");
+  }
+
+  #referenceKey(reference: MemoryStorageReference): string {
+    return `${reference.domainId}:${reference.objectId}:${reference.version}:${reference.ciphertextCommitment}`;
+  }
 }
 
 async function harness(): Promise<Harness> {
@@ -53,6 +101,7 @@ async function harness(): Promise<Harness> {
   const formerOperator = createSigningIdentity(digest("1"));
   const candidate = createSigningIdentity(digest("2"));
   const candidateDid = "did:abl:candidate-http-1";
+  const memoryStorage = new TestMemoryStorageVerifier();
   const app = createLiveCoreApi({
     store,
     domain,
@@ -69,6 +118,7 @@ async function harness(): Promise<Harness> {
       combineId: "season-zero-premier-combine",
       openedAt: iso(0),
     },
+    memory: { storageVerifier: memoryStorage },
   });
   const challenge = await app.inject({
     method: "POST",
@@ -86,6 +136,7 @@ async function harness(): Promise<Harness> {
     snapshot: null,
     previousEventHash: null,
     challengeToken: challenge.json().challengeToken as string,
+    memoryStorage,
   };
 }
 
@@ -226,6 +277,57 @@ async function submit(
     h.previousEventHash = command.event.eventHash;
   }
   return { ...command, response };
+}
+
+async function memoryCommand(input: {
+  h: Harness;
+  aggregateVersion: number;
+  previousEventHash: Hex | null;
+  eventType:
+    | "MemoryPersisted"
+    | "MemoryCorrected"
+    | "MemoryDeleted"
+    | "MemoryInspected"
+    | "MemoryExported";
+  payload: unknown;
+  entries: ReadonlyMap<string, MemoryCatalogEntry>;
+  signer?: SigningIdentity;
+}) {
+  const event = createCanonicalEvent({
+    eventId: crypto.randomUUID(),
+    actorDid: input.h.candidateDid,
+    nonce: `memory-${input.aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: "career-memory-catalog",
+    aggregateId: input.h.candidateDid,
+    aggregateVersion: BigInt(input.aggregateVersion),
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    stateRoot: memoryCatalogStateRoot(
+      input.h.candidateDid,
+      input.aggregateVersion,
+      input.entries,
+    ),
+    schemaDigest: MEMORY_CATALOG_SCHEMA_DIGEST,
+    timestamp: new Date(input.h.now.value).toISOString(),
+  });
+  return {
+    event,
+    body: {
+      event: {
+        ...event,
+        aggregateVersion: event.aggregateVersion.toString(),
+      },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
 }
 
 async function registerAndTransfer(h: Harness): Promise<void> {
@@ -472,6 +574,285 @@ describe("signed candidate rehearsal API", () => {
       recognizedGenesisAdmission: false,
     });
 
+    const memoryId = uuid("101");
+    const memoryEntries = new Map<string, MemoryCatalogEntry>();
+    let memoryVersion = 1;
+    let memoryPreviousHash: Hex | null = null;
+    h.now.value += 60_000;
+    const firstStorage: MemoryStorageReference = {
+      domainId: `personal:${h.candidateDid}`,
+      objectId: memoryId,
+      version: 1,
+      ciphertextCommitment: digest("a"),
+    };
+    const firstMemory = {
+      memoryId,
+      ownerDid: h.candidateDid,
+      domain: "AUTOBIOGRAPHICAL" as const,
+      disclosureClass: "PERSONAL_UNSUBMITTED" as const,
+      ciphertextCommitment: firstStorage.ciphertextCommitment,
+      version: 1,
+      previousVersionCommitment: null,
+      selectivelyPersisted: true,
+      createdAt: new Date(h.now.value).toISOString(),
+      deletedAt: null,
+    };
+    memoryEntries.set(memoryId, {
+      memory: firstMemory,
+      storage: firstStorage,
+      storageDeletion: null,
+    });
+    const persisted = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryPersisted",
+      payload: { memory: firstMemory, storage: firstStorage },
+      entries: memoryEntries,
+    });
+    h.now.value -= 60_001;
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: persisted.body,
+        })
+      ).statusCode,
+    ).toBe(400);
+    h.now.value += 60_001;
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: persisted.body,
+        })
+      ).statusCode,
+    ).toBe(409);
+    h.memoryStorage.store(firstStorage);
+    const submittedMemory = {
+      ...firstMemory,
+      disclosureClass: "SEALED_30D" as const,
+    };
+    const submittedEntries = new Map<string, MemoryCatalogEntry>([
+      [
+        memoryId,
+        {
+          memory: submittedMemory,
+          storage: firstStorage,
+          storageDeletion: null,
+        },
+      ],
+    ]);
+    const submittedMemoryCommand = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryPersisted",
+      payload: { memory: submittedMemory, storage: firstStorage },
+      entries: submittedEntries,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: submittedMemoryCommand.body,
+        })
+      ).statusCode,
+    ).toBe(400);
+    const operatorMemory = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryPersisted",
+      payload: { memory: firstMemory, storage: firstStorage },
+      entries: memoryEntries,
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: operatorMemory.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    h.now.value += 5 * 60_000;
+    const persistedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/memory/persist",
+      payload: persisted.body,
+    });
+    expect(persistedResponse.statusCode).toBe(201);
+    expect(persistedResponse.json()).toMatchObject({
+      recognizedGenesisMemory: false,
+      privateContentAccepted: false,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: persisted.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+    memoryPreviousHash = persisted.event.eventHash;
+
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const secondStorage: MemoryStorageReference = {
+      ...firstStorage,
+      version: 2,
+      ciphertextCommitment: digest("b"),
+    };
+    h.memoryStorage.store(secondStorage);
+    const correctedMemory = {
+      ...firstMemory,
+      version: 2,
+      previousVersionCommitment: firstMemory.ciphertextCommitment,
+      ciphertextCommitment: secondStorage.ciphertextCommitment,
+      createdAt: new Date(h.now.value).toISOString(),
+    };
+    memoryEntries.set(memoryId, {
+      memory: correctedMemory,
+      storage: secondStorage,
+      storageDeletion: null,
+    });
+    const corrected = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryCorrected",
+      payload: { memory: correctedMemory, storage: secondStorage },
+      entries: memoryEntries,
+    });
+    const correctedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/memory/correct",
+      payload: corrected.body,
+    });
+    expect(correctedResponse.statusCode).toBe(201);
+    memoryPreviousHash = corrected.event.eventHash;
+
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const deletionReceipt: CiphertextDeletionReceipt = {
+      format: "ABL-CIPHERTEXT-DELETION-V1",
+      domainId: secondStorage.domainId,
+      objectId: secondStorage.objectId,
+      actorDid: h.candidateDid,
+      deletedVersion: secondStorage.version,
+      lastCiphertextCommitment: secondStorage.ciphertextCommitment,
+      deletedAt: new Date(h.now.value).toISOString(),
+      providerResidualDeletionVerified: false,
+      deletionCommitment: digest("c"),
+    };
+    h.memoryStorage.delete(deletionReceipt);
+    memoryEntries.set(memoryId, {
+      memory: {
+        ...correctedMemory,
+        version: 3,
+        previousVersionCommitment: correctedMemory.ciphertextCommitment,
+        deletedAt: deletionReceipt.deletedAt,
+      },
+      storage: secondStorage,
+      storageDeletion: deletionReceipt,
+    });
+    const deleted = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryDeleted",
+      payload: {
+        ownerDid: h.candidateDid,
+        memoryId,
+        memoryVersion: 3,
+        previousVersionCommitment: correctedMemory.ciphertextCommitment,
+        deletedAt: deletionReceipt.deletedAt,
+        storageDeletion: deletionReceipt,
+      },
+      entries: memoryEntries,
+    });
+    h.now.value += 5 * 60_000;
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/delete",
+          payload: deleted.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    memoryPreviousHash = deleted.event.eventHash;
+
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const inspected = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryInspected",
+      payload: {
+        ownerDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-MEMORY-INSPECTION-V1",
+      },
+      entries: memoryEntries,
+    });
+    const inspectedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/memory/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectedResponse.statusCode).toBe(201);
+    expect(inspectedResponse.json()).toMatchObject({
+      records: [
+        {
+          memory: {
+            memoryId,
+            version: 3,
+            deletedAt: deletionReceipt.deletedAt,
+          },
+          storageDeletion: { providerResidualDeletionVerified: false },
+        },
+      ],
+    });
+    memoryPreviousHash = inspected.event.eventHash;
+
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const exported = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryExported",
+      payload: {
+        ownerDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-MEMORY-COMMITMENT-EXPORT-V1",
+      },
+      entries: memoryEntries,
+    });
+    const exportedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/memory/export",
+      payload: exported.body,
+    });
+    expect(exportedResponse.statusCode).toBe(201);
+    expect(exportedResponse.json()).toMatchObject({
+      export: {
+        format: "ABL-MEMORY-COMMITMENT-EXPORT-V1",
+        ownerDid: h.candidateDid,
+        aggregateVersion: memoryVersion,
+        records: [{ memory: { memoryId, version: 3 } }],
+      },
+    });
+    memoryPreviousHash = exported.event.eventHash;
+
     h.now.value += 60_000;
     const combinePayload = {
       combineId: "season-zero-premier-combine",
@@ -561,6 +942,7 @@ describe("signed candidate rehearsal API", () => {
         combineId: combinePayload.combineId,
         openedAt: iso(0),
       },
+      memory: { storageVerifier: h.memoryStorage },
     });
     const status = await restarted.inject({
       method: "GET",
@@ -584,6 +966,45 @@ describe("signed candidate rehearsal API", () => {
       registeredPlayers: [h.candidateDid],
       eligiblePlayers: [h.candidateDid],
     });
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const restartedInspection = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryInspected",
+      payload: {
+        ownerDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-MEMORY-INSPECTION-V1",
+      },
+      entries: memoryEntries,
+    });
+    const memoryRecord = h.store.events.find(
+      (event) => event.outboxTopic === "career.memory",
+    )!;
+    const memoryStateRoot = memoryRecord.stateRoot;
+    memoryRecord.stateRoot = digest("0");
+    expect(
+      (
+        await restarted.inject({
+          method: "POST",
+          url: "/v1/memory/inspect",
+          payload: restartedInspection.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    memoryRecord.stateRoot = memoryStateRoot;
+    const restartedMemory = await restarted.inject({
+      method: "POST",
+      url: "/v1/memory/inspect",
+      payload: restartedInspection.body,
+    });
+    expect(restartedMemory.statusCode).toBe(201);
+    expect(restartedMemory.json()).toMatchObject({
+      records: [{ memory: { memoryId, version: 3 } }],
+    });
+    memoryPreviousHash = restartedInspection.event.eventHash;
     await restarted.close();
 
     h.now.value += 60_000;
@@ -598,6 +1019,38 @@ describe("signed candidate rehearsal API", () => {
       h.candidate,
     );
     expect(revoked.response.statusCode).toBe(201);
+    h.now.value += 60_000;
+    memoryVersion += 1;
+    const revokedMemory = await memoryCommand({
+      h,
+      aggregateVersion: memoryVersion,
+      previousEventHash: memoryPreviousHash,
+      eventType: "MemoryInspected",
+      payload: {
+        ownerDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-MEMORY-INSPECTION-V1",
+      },
+      entries: memoryEntries,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/inspect",
+          payload: revokedMemory.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/export",
+          payload: exported.body,
+        })
+      ).statusCode,
+    ).toBe(403);
     const revokedStatus = await h.app.inject({
       method: "GET",
       url: `/v1/candidates/status?candidateDid=${h.candidateDid}`,

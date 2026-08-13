@@ -8,7 +8,8 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 - Separate capability-scoped transport identities whose HMAC signatures bind service id, capability, method, path, body hash, nonce, timestamp, expected version, and idempotency metadata. Replays, stale requests, changed bodies, changed routes, and ungranted capabilities fail closed.
 - Serializable PostgreSQL event-store implementation with per-aggregate advisory locks, versions and hash chains, UUIDv7-compatible event keys, actor nonce replay prevention, request idempotency, atomic outbox writes, range-plus-hash partitions, and no global event sequence.
 - Ciphertext-only broker with domain policy, separate XChaCha20-Poly1305 domain keys, immutable object-version chains, X25519 guardian envelopes, hashed Drive paths, immutable `0600` artifacts, and no plaintext key persistence.
-- Restart-safe ciphertext metadata recovery scans durable policies, objects, and guardian envelopes; validates hashed paths and contiguous policy/object chains; fsyncs linked records; and restores broker authorization/version state. A repository failure rolls back the tentative in-memory version, while an uncertain post-link failure is recovered by restart.
+- Restart-safe ciphertext metadata recovery scans durable policies, objects, guardian envelopes, and personal-object deletion tombstones; validates hashed paths, receipt commitments, and contiguous policy/object chains; fsyncs linked records; and restores broker authorization/version/deletion state. A repository failure rolls back the tentative in-memory version, while an uncertain post-link failure is recovered by restart.
+- The private broker exposes a separate HMAC capability that answers only whether a supplied personal ciphertext commitment or deletion receipt is durable. Core cannot retrieve ciphertext through it. Personal deletion writes an immutable tombstone before removing local ciphertext versions, retries physical removal after an interrupted erase, prevents object-ID reuse, and explicitly records `providerResidualDeletionVerified: false`.
 - Fixed body broker with named targets, method/path allowlists, redirect denial, response/body limits, service signatures, broker-only provider credentials, and encryption before private-workspace transport.
 - Digest-pinned Node/Blaxel sandbox sources, exact Alpine package lock, separate broker/agent uids, immutable launcher and trust files, environment allowlisting, and nftables owner rules. Agent uid 10101 is allowed only to the fixed loopback broker; broker uid 10100 is allowed only to boot-resolved HTTPS targets.
 - Blaxel manifests for private Agents, a single-writer public projection Agent with a persistent regional volume, MCP Functions, body/arena Sandboxes, model endpoints, the public spectator Application, recovery Job, release labels, region placement, and explicit telemetry opt-outs.
@@ -22,7 +23,7 @@ Commands completed successfully after formatting:
 ```text
 pnpm --filter @abl/database db:check  -> Everything's fine
 pnpm check                            -> 28/28 tasks
-pnpm test                             -> 125 assertions in 22 files; 28/28 tasks
+pnpm test                             -> 133 assertions in 24 files; 28/28 tasks
 pnpm build                            -> 18/18 tasks
 bl deploy --dryrun --type sandbox     -> Sandbox/abl-body-sandbox-image; no mutation
 ```
@@ -31,7 +32,7 @@ The Blaxel dry run resolved the repository as a generation `mk3`, 4096 MB Sandbo
 
 ## Artifact locks
 
-- pnpm lockfile: `sha256:1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f`
+- pnpm lockfile: `sha256:f01fa3459eb27f36f4cd25d9fb0d322e26d85d66a2580010215fb744992e247f`
 - foundation migration: `sha256:d759112b690fa2249ca007d1839e1aea33c52f8a613f3c1e08eddc124046ce19`
 - sandbox Dockerfile: `sha256:497245355eeaff08b7259eadff7066a798daec37c2cf532740469dfe013e5321`
 - Blaxel image project: `sha256:13169a49bc5e005fb62086038add8bab5f769f91b6c22fdeab25c0a8698c48ac`
@@ -39,8 +40,13 @@ The Blaxel dry run resolved the repository as a generation `mk3`, 4096 MB Sandbo
 - sandbox init: `sha256:4f2aeee195ef476a21381091bbd3a01a63724abd5d4309464201d3b1c754ae12`
 - Alpine package lock: `sha256:1aa5c3df3967aaeb46d60016628bf2eed2704dadf2295b700146cd9eabce408a`
 - Alpine 3.24 x86_64 main index used to verify package versions: `sha256:fa580c49571a006348b321733da67fab6dd9a4646cd09da0bb6a9d433eafb2e9`
-- workspace topology: `sha256:042ba8c370d0b9b0e66d669ce17a99a9543bcff18a6bb8f0e0b1e9789eb8bb0d`
-- service identity policy: `sha256:cef0291d16a9f55cddd3b8380c07c6f8925d4047cf7aad446b1f3595e62fdec8`
+- Ciphertext broker state machine: `sha256:ddc54d86de115dfec0dc13e4222fd801960f3139532f545c06ccbca690f124f5`
+- Durable ciphertext repository: `sha256:d46126b350633b892218ce5ccf55f3738964ada359567c8d1d3557c9847b115c`
+- Private broker service: `sha256:70c6b8bca25a4a7938c05abbe7d737c7e0c97dd7b84a946e467e9736d127c796`
+- Storage suite: `sha256:fe1b24beb20e600ce76570fed949d2d0db0dce967cb851202158cb372a670296`
+- Private broker suite: `sha256:c48bba2e846964759849d3150ddeca29d15dfd0ddf856b4931d6e346a28b01c4`
+- Workspace topology: `sha256:a5ca1a4f11b9bee4da187c8731b113efb7a6b3180aafbec1b8367aa2aa12b331`
+- Service identity policy: `sha256:f77b491a39cd6cdd3c388c380c2caca152026d20d3982c10ad499c659c79772b`
 
 ## External staging gates
 

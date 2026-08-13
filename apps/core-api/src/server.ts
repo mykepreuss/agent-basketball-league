@@ -28,6 +28,10 @@ import {
   installCombineRehearsalRoutes,
   type CombineRehearsalOptions,
 } from "./combine.js";
+import {
+  installMemoryRehearsalRoutes,
+  type MemoryRehearsalOptions,
+} from "./memory.js";
 
 export interface CoreRouteCatalogEntry {
   method: "GET" | "POST";
@@ -78,6 +82,7 @@ export interface LiveCoreApiOptions {
     "challengeSecret" | "challengeId" | "challengeBytes"
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
+  memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
 }
 
 export interface CoreApiOptions {
@@ -182,6 +187,10 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
+  const { candidateAdmission, combine, memory } = options;
+  const candidateRoutesEnabled = candidateAdmission !== undefined;
+  const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
+  const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "REHEARSAL");
@@ -277,42 +286,44 @@ export function createLiveCoreApi(
       return reply.code(response.status).send({ error: response.code });
     }
   });
-  if (options.candidateAdmission !== undefined) {
+  if (candidateAdmission !== undefined) {
     installCandidateRehearsalRoutes(app, {
       store: options.store,
       domain: options.domain,
       competitionId: options.competitionId,
       seasonId: options.seasonId,
       now,
-      ...options.candidateAdmission,
+      ...candidateAdmission,
     });
   }
-  if (
-    options.candidateAdmission !== undefined &&
-    options.combine !== undefined
-  ) {
+  if (candidateAdmission !== undefined && combine !== undefined) {
     installCombineRehearsalRoutes(app, {
       store: options.store,
       domain: options.domain,
       competitionId: options.competitionId,
       seasonId: options.seasonId,
       now,
-      candidateAdmission: options.candidateAdmission,
-      ...options.combine,
+      candidateAdmission,
+      ...combine,
+    });
+  }
+  if (candidateAdmission !== undefined && memory !== undefined) {
+    installMemoryRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      storageVerifier: memory.storageVerifier,
     });
   }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
-      !(
-        options.candidateAdmission !== undefined &&
-        entry.path.startsWith("/v1/candidates/")
-      ) &&
-      !(
-        options.candidateAdmission !== undefined &&
-        options.combine !== undefined &&
-        entry.path === "/v1/combine/*"
-      ),
+      !(candidateRoutesEnabled && entry.path.startsWith("/v1/candidates/")) &&
+      !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
+      !(memoryRoutesEnabled && entry.path === "/v1/memory/*"),
   )) {
     app.route({
       method: route.method,
