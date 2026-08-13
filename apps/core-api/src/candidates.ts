@@ -34,34 +34,18 @@ import type { FastifyInstance } from "fastify";
 import type { Hex, TypedDataDomain } from "viem";
 import { z } from "zod";
 
+import {
+  CanonicalSignatureSchema,
+  SignedCanonicalCommandSchema,
+  canonicalEventFromStored,
+  materializeCanonicalEvent,
+} from "./canonical-command.js";
+
 const aggregateType = "candidate-admission";
 
-const HexSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
-const SignatureSchema = z.string().regex(/^0x[0-9a-f]{130}$/);
 const CandidateDidSchema = z
   .string()
   .regex(/^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/);
-const CanonicalEventSchema = z.strictObject({
-  eventId: z.uuid(),
-  actorDid: z.string().startsWith("did:"),
-  nonce: z.string().min(1).max(78),
-  idempotencyKey: z.uuid(),
-  aggregateType: z.string().min(1).max(100),
-  aggregateId: z.string().min(1).max(200),
-  aggregateVersion: z.string().regex(/^[1-9]\d*$/),
-  eventType: z.string().min(1).max(100),
-  previousEventHash: HexSchema.nullable(),
-  payloadCommitment: HexSchema,
-  payload: z.unknown(),
-  stateRoot: HexSchema,
-  schemaDigest: HexSchema,
-  timestamp: z.iso.datetime({ offset: true }),
-  eventHash: HexSchema,
-});
-const CandidateCommandSchema = z.strictObject({
-  event: CanonicalEventSchema,
-  signatures: z.array(SignatureSchema).length(1),
-});
 const ChallengeRequestSchema = z.strictObject({
   candidateDid: CandidateDidSchema,
 });
@@ -77,9 +61,11 @@ const ChallengeClaimsSchema = z.strictObject({
   nonce: z.string().min(32).max(200),
 });
 
-class CandidateAuthorizationError extends Error {
+export class CandidateAuthorizationError extends Error {
   public override readonly name = "CandidateAuthorizationError";
 }
+
+export class CandidateNotAdmittedError extends CandidateAuthorizationError {}
 
 class CandidateChallengeError extends Error {
   public override readonly name = "CandidateChallengeError";
@@ -161,33 +147,13 @@ function isCandidateEventType(
   return Object.hasOwn(CandidateWorkflowPayloadSchemas, value);
 }
 
-function canonicalEvent(record: StoredCanonicalEvent): CanonicalEvent {
-  return {
-    eventId: record.eventId,
-    actorDid: record.actorDid,
-    nonce: record.nonce,
-    idempotencyKey: record.idempotencyKey,
-    aggregateType: record.aggregateType,
-    aggregateId: record.aggregateId,
-    aggregateVersion: record.aggregateVersion,
-    eventType: record.eventType,
-    previousEventHash: record.previousEventHash as Hex | null,
-    payloadCommitment: record.payloadCommitment as Hex,
-    payload: record.payload,
-    stateRoot: record.stateRoot as Hex,
-    schemaDigest: record.payloadSchemaDigest as Hex,
-    timestamp: record.occurredAt.toISOString(),
-    eventHash: record.eventHash as Hex,
-  };
-}
-
 async function requireSigner(
   domain: TypedDataDomain,
   event: CanonicalEvent,
   rawSignature: unknown,
   expectedAddress: string,
 ): Promise<void> {
-  const parsedSignature = SignatureSchema.safeParse(rawSignature);
+  const parsedSignature = CanonicalSignatureSchema.safeParse(rawSignature);
   if (!parsedSignature.success)
     throw new CandidateAuthorizationError("Candidate signature is malformed");
   let recovered: string;
@@ -241,15 +207,22 @@ async function validateTransitionAuthorization(
 async function replayCandidateAggregate(
   options: CandidateRehearsalOptions,
   candidateDid: string,
+  through?: number,
 ): Promise<CandidateAggregate> {
-  const records = await options.store.readAggregate(
+  const storedRecords = await options.store.readAggregate(
     aggregateType,
     candidateDid,
   );
+  const records =
+    through === undefined
+      ? storedRecords
+      : storedRecords.filter(
+          (record) => record.occurredAt.getTime() <= through,
+        );
   let snapshot: CandidateWorkflowSnapshot | null = null;
   let previousHash: string | null = null;
   for (const record of records) {
-    const event = canonicalEvent(record);
+    const event = canonicalEventFromStored(record);
     if (
       event.actorDid !== candidateDid ||
       event.aggregateType !== aggregateType ||
@@ -286,6 +259,50 @@ async function replayCandidateAggregate(
     previousHash = event.eventHash;
   }
   return { records, snapshot };
+}
+
+export interface CandidateCareerAuthority {
+  candidateDid: string;
+  signingAddress: `0x${string}`;
+  admissionEventHash: `0x${string}`;
+  state: "ADMITTED_REVOCABLE" | "ADMITTED";
+}
+
+export async function readCandidateCareerAuthority(
+  options: CandidateRehearsalOptions,
+  candidateDid: string,
+  at: string,
+): Promise<CandidateCareerAuthority> {
+  const through = Date.parse(at);
+  if (!Number.isFinite(through) || at !== new Date(through).toISOString())
+    throw new CandidateAuthorizationError(
+      "Candidate authority time is invalid",
+    );
+  const aggregate = await replayCandidateAggregate(
+    options,
+    candidateDid,
+    through,
+  );
+  const snapshot = aggregate.snapshot;
+  const state =
+    snapshot === null ? null : effectiveCandidateState(snapshot, at);
+  const admissionEvent = aggregate.records.find(
+    (record) => record.eventType === "CandidateAdmitted",
+  );
+  if (
+    snapshot === null ||
+    snapshot.transfer === null ||
+    admissionEvent === undefined ||
+    (state !== "ADMITTED_REVOCABLE" && state !== "ADMITTED")
+  ) {
+    throw new CandidateNotAdmittedError("Candidate career is not admitted");
+  }
+  return {
+    candidateDid,
+    signingAddress: snapshot.transfer.signingAddress,
+    admissionEventHash: admissionEvent.eventHash as `0x${string}`,
+    state,
+  };
 }
 
 function candidateError(error: unknown): { status: number; code: string } {
@@ -400,11 +417,8 @@ export function installCandidateRehearsalRoutes(
   for (const route of transitionRoutes) {
     app.post(route.path, async (request, reply) => {
       try {
-        const parsed = CandidateCommandSchema.parse(request.body);
-        const event = {
-          ...parsed.event,
-          aggregateVersion: BigInt(parsed.event.aggregateVersion),
-        } as CanonicalEvent;
+        const parsed = SignedCanonicalCommandSchema.parse(request.body);
+        const event = materializeCanonicalEvent(parsed.event);
         try {
           verifyEventContent(event);
         } catch {

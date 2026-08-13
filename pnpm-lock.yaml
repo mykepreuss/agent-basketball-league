@@ -156,6 +156,9 @@ importers:
       "@abl/database":
         specifier: workspace:*
         version: link:../../packages/database
+      "@abl/institutions":
+        specifier: workspace:*
+        version: link:../../packages/institutions
       "@abl/projections":
         specifier: workspace:*
         version: link:../../packages/projections

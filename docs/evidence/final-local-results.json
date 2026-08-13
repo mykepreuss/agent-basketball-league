@@ -62,7 +62,7 @@
       "totalTasks": 18
     }
   ],
-  "recordedAt": "2026-08-13T19:13:10.059Z",
+  "recordedAt": "2026-08-13T19:25:34.889Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -98,28 +98,28 @@
       "testFiles": 0,
       "successfulTasks": 28,
       "totalTasks": 28,
-      "outputSha256": "27dc6026e4f487bc1a84656f9a75c097a02a31ac5d5be0bdd67c108893374540",
+      "outputSha256": "a9c1f441f0ae7262e1f51b895381e0232e6ea223a3c17c5ff278b5c360b42748",
       "outputTail": [
-        "@abl/career:check: cache bypass, force executing df955c7f0e875649",
         "@abl/basketball:check: cache bypass, force executing 376f78ff9a603375",
+        "@abl/institutions:check: cache bypass, force executing 466e0d6686ec87ac",
         "@abl/basketball:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/institutions:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/career:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/core-api:check: cache bypass, force executing b6f249b2fcda0c47",
-        "@abl/public-api:check: cache bypass, force executing 76f13b0a6fd4eae2",
-        "@abl/arena:check: cache bypass, force executing 365a345577748ce7",
-        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/institutions:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/public-api:check: cache bypass, force executing fc53c495cb4508ad",
+        "@abl/arena:check: cache bypass, force executing 8dd334d00f40417d",
         "@abl/arena:check: $ tsc --noEmit",
         "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/rehearsal:check: cache bypass, force executing a317cfcbabf5cc3b",
-        "@abl/assurance:check: cache bypass, force executing 5e14d2d13973eacb",
-        "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/core-api:check: cache bypass, force executing 605c310a509963fc",
+        "@abl/assurance:check: cache bypass, force executing b4183292dcd9c466",
+        "@abl/rehearsal:check: cache bypass, force executing 646c26baca03bc5b",
         "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
         " Tasks:    28 successful, 28 total",
         "Cached:    0 cached, 28 total",
-        "  Time:    16.312s"
+        "  Time:    17.137s"
       ]
     },
     {
@@ -131,9 +131,9 @@
       "testFiles": 23,
       "successfulTasks": 28,
       "totalTasks": 28,
-      "outputSha256": "9805a6995ae02567571ea35bdcba25b85e5ddb01c64763377e087ecbfd296f0b",
+      "outputSha256": "7f26a4c4f692ba12ba33df3de96dbdfdeda0b8bee8d29608a5de462104917349",
       "outputTail": [
-        "  Time:    17.072s ",
+        "  Time:    18.205s ",
         "",
         " WARNING  no output files found for task @abl/arena#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/assurance#test. Please check your `outputs` key in `turbo.json`",
@@ -164,7 +164,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "f7a0f5268be53ed490600e208815da8ff048c4b2525c51fdf659a647b9024e3f",
+      "outputSha256": "dc76f5a96cf8f06f2c88b599ecbc0ee4b5806c64dfaa8619bf10bf7aabab4aa9",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
@@ -173,8 +173,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  7 passed (7)",
-        "   Start at  12:12:59",
-        "   Duration  1.26s (transform 216ms, setup 0ms, import 586ms, tests 609ms, environment 0ms)"
+        "   Start at  12:25:23",
+        "   Duration  1.27s (transform 221ms, setup 0ms, import 586ms, tests 619ms, environment 0ms)"
       ]
     },
     {
@@ -186,7 +186,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "a7c6bba4dfe4015fa6f1557a536f0b40d6a4b4ac303b6566ba8a0c04db88ad05",
+      "outputSha256": "a40a687bae56e45d2ea129bc3d4ca44c8690019a10ccf204e1b7782d89754f44",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
@@ -195,8 +195,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  7 passed (7)",
-        "   Start at  12:13:00",
-        "   Duration  762ms (transform 137ms, setup 0ms, import 636ms, tests 62ms, environment 0ms)"
+        "   Start at  12:25:25",
+        "   Duration  779ms (transform 155ms, setup 0ms, import 653ms, tests 62ms, environment 0ms)"
       ]
     },
     {
@@ -208,13 +208,13 @@
       "testFiles": 0,
       "successfulTasks": 18,
       "totalTasks": 18,
-      "outputSha256": "78287aaf939d6563d290be344d3c82958c17d448ba0bc727d51b9ff7c6cbeeb0",
+      "outputSha256": "d218863fe7b50e60478025920703ce558b019a7910f0a0b27ae7b94167d0ed75",
       "outputTail": [
         "@abl/arena:build:   Running TypeScript ...",
-        "@abl/arena:build:   Finished TypeScript in 1101ms ...",
+        "@abl/arena:build:   Finished TypeScript in 877ms ...",
         "@abl/arena:build:   Collecting page data using 5 workers ...",
         "@abl/arena:build:   Generating static pages using 5 workers (0/3) ...",
-        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 183ms",
+        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 184ms",
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
         "@abl/arena:build: Route (app)",
@@ -229,7 +229,7 @@
         "",
         " Tasks:    18 successful, 18 total",
         "Cached:    0 cached, 18 total",
-        "  Time:    7.683s"
+        "  Time:    7.897s"
       ]
     }
   ],

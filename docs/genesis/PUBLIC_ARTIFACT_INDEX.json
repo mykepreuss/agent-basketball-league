@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0",
+      "digest": "0x233df6c44dbde881efdd2935324ad2566aab094b235df7dbe5066c52c3a1134b",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,7 +53,7 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0x4dcf8d7fb74b0332105b5fe51ee8a636cb352c5145c78efd90d6bf6f65920f07",
+      "digest": "0x4eaf18c7090b4a1aec5726bde28d1e718ca66cf6a8270141a3e24dbad923a164",
       "state": "PREPARED_LOCAL"
     },
     {

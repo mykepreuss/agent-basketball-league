@@ -35,14 +35,15 @@ Artifact locks:
 
 - Admission: `sha256:62aaace050e3b84518fc549eb12e3222f42f8d4693509ad903617a75eb0f5bbd`
 - Durable candidate workflow: `sha256:cf7825f810798bb8e1dd025d5f659b15c562858ed961d571a80279f38cbd75b7`
-- Candidate core service: `sha256:8aec6063f36249deb8f9695cc4f30c9d6677e865fef06d5b45fa951997d31f58`
+- Candidate core service: `sha256:d44b441c4e521d30f2ce4a3fb972638bd752bdcd8babc45eaf3891570771df72`
+- Shared canonical-command boundary: `sha256:d47ea30bb85ce9560aae0081ec26b67da5aaecd1e9e7414b24889c65bd60c262`
 - Credentials: `sha256:b5603589d1262a84da738d54a3eb30b8b1e7c04b2c5fa785141c94e1ccdc03a5`
 - Memory catalog: `sha256:9b27f3d58990299623587741f722868875057315a633dac4ed9c59c934877c15`
 - Autonomy scheduler: `sha256:10ab9af5038d8f1aacbd704164717cabdfb3275341497e9f4b43619f69db2463`
 - Body continuity/trade/exit: `sha256:e61c13792d7da1d4835de264d0ab4260a8f321868e57e0ffc6daa8b71283595e`
 - Focused suite: `sha256:09d19bc14ff9c2b2e68419095b046b195276dd238891acc5f02cbec333dbd6bf`
-- Candidate HTTP suite: `sha256:f864fc9816fa6bc505ade5b161000aa06e4515f7270a0f202a5307379b016ced`
-- Lockfile: `sha256:dfcd788b96b688192bf4909e4311bf13651d6f40349e6f522730a3cdc590c5bc`
+- Candidate HTTP suite: `sha256:34bd549a41086194567d4bd8d40e392c92987f7933d856afdb6fefa041cf306c`
+- Lockfile: `sha256:9e8b10f50e6b02712d27a2952f797000e7a9e9c7ba0e0bfce173428336907308`
 
 ## Retained platform gate
 

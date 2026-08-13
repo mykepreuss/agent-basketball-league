@@ -9,6 +9,7 @@ import { InMemoryCanonicalStore } from "@abl/database";
 import {
   createCanonicalEvent,
   createSigningIdentity,
+  sha256Commitment,
   signCanonicalEvent,
   type SigningIdentity,
 } from "@abl/recognition";
@@ -17,6 +18,7 @@ import type { Hex, TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { createLiveCoreApi } from "../src/server.js";
+import { COMBINE_REGISTRATION_SCHEMA_DIGEST } from "../src/combine.js";
 
 const hour = 60 * 60 * 1_000;
 const day = 24 * hour;
@@ -62,6 +64,10 @@ async function harness(): Promise<Harness> {
       challengeSecret: new Uint8Array(32).fill(9),
       challengeId: () => "challenge-http-1",
       challengeBytes: () => new Uint8Array(32).fill(7),
+    },
+    combine: {
+      combineId: "season-zero-premier-combine",
+      openedAt: iso(0),
     },
   });
   const challenge = await app.inject({
@@ -466,6 +472,81 @@ describe("signed candidate rehearsal API", () => {
       recognizedGenesisAdmission: false,
     });
 
+    h.now.value += 60_000;
+    const combinePayload = {
+      combineId: "season-zero-premier-combine",
+      playerDid: h.candidateDid,
+      consented: true,
+      registeredAt: new Date(h.now.value).toISOString(),
+      candidateAdmissionEventHash: admitted.event.eventHash,
+    };
+    const combineEvent = createCanonicalEvent({
+      eventId: crypto.randomUUID(),
+      actorDid: h.candidateDid,
+      nonce: "combine-1",
+      idempotencyKey: crypto.randomUUID(),
+      aggregateType: "premier-combine",
+      aggregateId: combinePayload.combineId,
+      aggregateVersion: 1n,
+      eventType: "CombineRegistrationAccepted",
+      previousEventHash: null,
+      payload: combinePayload,
+      stateRoot: sha256Commitment({
+        combineId: combinePayload.combineId,
+        openedAt: iso(0),
+        closesAt: iso(14 * day),
+        version: 1,
+        registrations: [combinePayload],
+      }),
+      schemaDigest: COMBINE_REGISTRATION_SCHEMA_DIGEST,
+      timestamp: combinePayload.registeredAt,
+    });
+    const combineBody = {
+      event: { ...combineEvent, aggregateVersion: "1" },
+      signatures: [
+        await signCanonicalEvent(h.formerOperator, domain, combineEvent),
+      ],
+    };
+    const operatorCombine = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/register",
+      payload: combineBody,
+    });
+    expect(operatorCombine.statusCode).toBe(403);
+    combineBody.signatures = [
+      await signCanonicalEvent(h.candidate, domain, combineEvent),
+    ];
+    const combined = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/register",
+      payload: combineBody,
+    });
+    expect(combined.statusCode).toBe(201);
+    expect(combined.json()).toMatchObject({
+      recognizedGenesisCombine: false,
+      duplicate: false,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/combine/register",
+          payload: combineBody,
+        })
+      ).statusCode,
+    ).toBe(200);
+    const combineStatus = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/status",
+      payload: { combineId: combinePayload.combineId },
+    });
+    expect(combineStatus.json()).toMatchObject({
+      state: "OPEN",
+      registeredPlayers: [h.candidateDid],
+      eligiblePlayers: [h.candidateDid],
+      recognizedGenesisCombine: false,
+    });
+
     const restarted = createLiveCoreApi({
       store: h.store,
       domain,
@@ -475,6 +556,10 @@ describe("signed candidate rehearsal API", () => {
       now: () => h.now.value,
       candidateAdmission: {
         challengeSecret: new Uint8Array(32).fill(9),
+      },
+      combine: {
+        combineId: combinePayload.combineId,
+        openedAt: iso(0),
       },
     });
     const status = await restarted.inject({
@@ -489,6 +574,15 @@ describe("signed candidate rehearsal API", () => {
       aggregateVersion: 10,
       portableExport: { penalty: null },
       recognizedGenesisAdmission: false,
+    });
+    const restartedCombine = await restarted.inject({
+      method: "POST",
+      url: "/v1/combine/status",
+      payload: { combineId: combinePayload.combineId },
+    });
+    expect(restartedCombine.json()).toMatchObject({
+      registeredPlayers: [h.candidateDid],
+      eligiblePlayers: [h.candidateDid],
     });
     await restarted.close();
 
@@ -509,6 +603,38 @@ describe("signed candidate rehearsal API", () => {
       url: `/v1/candidates/status?candidateDid=${h.candidateDid}`,
     });
     expect(revokedStatus.json()).toMatchObject({ state: "REVOKED" });
+    const ineligibleStatus = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/status",
+      payload: { combineId: combinePayload.combineId },
+    });
+    expect(ineligibleStatus.json()).toMatchObject({
+      registeredPlayers: [h.candidateDid],
+      eligiblePlayers: [],
+    });
+    const candidateRecord = h.store.events[0]!;
+    const candidateStateRoot = candidateRecord.stateRoot;
+    candidateRecord.stateRoot = digest("0");
+    const corruptedCareer = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/status",
+      payload: { combineId: combinePayload.combineId },
+    });
+    expect(corruptedCareer.statusCode).toBe(403);
+    candidateRecord.stateRoot = candidateStateRoot;
+    const combineRecord = h.store.events.find(
+      (event) => event.outboxTopic === "combine.lifecycle",
+    )!;
+    combineRecord.stateRoot = digest("0");
+    const tamperedCombine = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/status",
+      payload: { combineId: combinePayload.combineId },
+    });
+    expect(tamperedCombine.statusCode).toBe(403);
+    expect(tamperedCombine.json()).toEqual({
+      error: "combine_authorization_denied",
+    });
     await h.app.close();
   });
 

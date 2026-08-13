@@ -114,6 +114,10 @@ const app = rehearsal
         candidateAdmission: {
           challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
         },
+        combine: {
+          combineId: required("ABL_COMBINE_ID"),
+          openedAt: required("ABL_COMBINE_OPENED_AT"),
+        },
       });
     })()
   : createCoreApi();

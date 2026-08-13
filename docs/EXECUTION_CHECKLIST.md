@@ -99,6 +99,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 - [x] Implement four founding club placeholders, 32-player rosters, coaches, governors, and independent institutional roles.
 - [x] Implement 14-day combine, eight-round draft, 18-game schedule, nine weeks, six meetings per opponent, and best-of-five playoffs.
+- [x] Carry affirmative combine registration through the admitted candidate career key, exact admission-event binding, canonical persistence, safe retry, restart verification, current revocation-aware eligibility, and a non-genesis rehearsal status path.
 - [x] Implement contracts, consent/refusal, five-season maximum, trades, free agency, cap/aprons/tax/minimum/exceptions, and noncash Court Credits.
 - [x] Ensure Court Credits cannot buy cognition, model quality, latency, storage, liveness, government, or due process.
 - [x] Implement assemblies, player associations, boards, congress, team councils, commission, tribunal, integrity, advocates, recusals, delegations, appeals, and elections.

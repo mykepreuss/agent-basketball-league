@@ -11,7 +11,6 @@ import { validatePossessionResolvedPayload } from "@abl/projections";
 import {
   recoverCanonicalEventSigner,
   sha256Commitment,
-  type CanonicalEvent,
 } from "@abl/recognition";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { TypedDataDomain } from "viem";
@@ -21,6 +20,14 @@ import {
   installCandidateRehearsalRoutes,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
+import {
+  SignedCanonicalCommandSchema,
+  materializeCanonicalEvent,
+} from "./canonical-command.js";
+import {
+  installCombineRehearsalRoutes,
+  type CombineRehearsalOptions,
+} from "./combine.js";
 
 export interface CoreRouteCatalogEntry {
   method: "GET" | "POST";
@@ -54,30 +61,6 @@ const CandidateChallengeSchema = z.strictObject({
   candidateDid: z.string().regex(/^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/),
 });
 
-const HexSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
-const SignatureSchema = z.string().regex(/^0x[0-9a-f]{130}$/);
-const CanonicalEventSchema = z.strictObject({
-  eventId: z.uuid(),
-  actorDid: z.string().startsWith("did:"),
-  nonce: z.string().min(1).max(78),
-  idempotencyKey: z.uuid(),
-  aggregateType: z.string().min(1).max(100),
-  aggregateId: z.string().min(1).max(200),
-  aggregateVersion: z.string().regex(/^[1-9]\d*$/),
-  eventType: z.string().min(1).max(100),
-  previousEventHash: HexSchema.nullable(),
-  payloadCommitment: HexSchema,
-  payload: z.unknown(),
-  stateRoot: HexSchema,
-  schemaDigest: HexSchema,
-  timestamp: z.iso.datetime({ offset: true }),
-  eventHash: HexSchema,
-});
-const CommandSchema = z.strictObject({
-  event: CanonicalEventSchema,
-  signatures: z.array(SignatureSchema).length(1),
-});
-
 export interface AdmittedAgentAuthority {
   signerAddress: `0x${string}`;
   allowedAggregateTypes: readonly string[];
@@ -94,6 +77,7 @@ export interface LiveCoreApiOptions {
     CandidateRehearsalOptions,
     "challengeSecret" | "challengeId" | "challengeBytes"
   >;
+  combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
 }
 
 export interface CoreApiOptions {
@@ -212,11 +196,8 @@ export function createLiveCoreApi(
   }));
   app.post("/v1/commands", async (request, reply) => {
     try {
-      const parsed = CommandSchema.parse(request.body);
-      const event = {
-        ...parsed.event,
-        aggregateVersion: BigInt(parsed.event.aggregateVersion),
-      } as CanonicalEvent;
+      const parsed = SignedCanonicalCommandSchema.parse(request.body);
+      const event = materializeCanonicalEvent(parsed.event);
       const authority = options.admittedAgents.get(event.actorDid);
       const occurredAt = Date.parse(event.timestamp);
       if (
@@ -306,12 +287,31 @@ export function createLiveCoreApi(
       ...options.candidateAdmission,
     });
   }
+  if (
+    options.candidateAdmission !== undefined &&
+    options.combine !== undefined
+  ) {
+    installCombineRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission: options.candidateAdmission,
+      ...options.combine,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
       !(
         options.candidateAdmission !== undefined &&
-        entry.authority === "CANDIDATE"
+        entry.path.startsWith("/v1/candidates/")
+      ) &&
+      !(
+        options.candidateAdmission !== undefined &&
+        options.combine !== undefined &&
+        entry.path === "/v1/combine/*"
       ),
   )) {
     app.route({

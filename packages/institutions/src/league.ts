@@ -51,7 +51,15 @@ export class PremierCombine {
   }
 
   public register(registration: CombineRegistration): void {
+    if (!/^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/.test(registration.playerDid))
+      throw new Error("Combine player DID is invalid");
     const at = Date.parse(registration.registeredAt);
+    if (
+      !Number.isFinite(at) ||
+      registration.registeredAt !== new Date(at).toISOString()
+    ) {
+      throw new Error("Combine registration time is invalid");
+    }
     if (at < Date.parse(this.openedAt) || at >= Date.parse(this.closesAt))
       throw new Error("Registration is outside the 14-day combine");
     if (!registration.consented)

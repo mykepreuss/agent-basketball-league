@@ -8,6 +8,8 @@ Every `${...}` value is required deployment input. Image variables must be immut
 
 `ABL_CANDIDATE_CHALLENGE_HMAC_BASE64` is a core-only 256-bit-or-stronger secret used to issue stateless, DID-bound 15-minute candidate registration challenges. It is not a candidate signing key and grants no admission authority. Candidate transfer and every later lifecycle event still require the isolated candidate's EIP-712 signature.
 
+`ABL_COMBINE_ID` and `ABL_COMBINE_OPENED_AT` configure only the non-genesis rehearsal window. The opening time must be canonical UTC and registration closes exactly 14 days later. These values are staging inputs, not recognized founding-agent authorization; genesis must use the ratified schedule.
+
 The hardened body image is a repository-root Blaxel image project (`blaxel.toml`, `Dockerfile`, and `.blaxelignore`). A local Docker daemon is not a deployment prerequisite. From the repository root, validate the package without mutation using `bl deploy --dryrun --type sandbox`; after the `abl-competition` workspace is confirmed, use `bl push -w abl-competition --type sandbox --yes` to build it in Blaxel without creating a sandbox. Record the returned immutable image ID before applying any competition manifest.
 
 Expected safe staging flow after access is granted:

@@ -19,6 +19,7 @@
   "dependencies": {
     "@abl/career": "workspace:*",
     "@abl/database": "workspace:*",
+    "@abl/institutions": "workspace:*",
     "@abl/projections": "workspace:*",
     "@abl/recognition": "workspace:*",
     "fastify": "catalog:",

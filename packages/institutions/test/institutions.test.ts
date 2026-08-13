@@ -165,6 +165,20 @@ describe("premier league structure", () => {
         registeredAt: iso(1_000),
       }),
     ).toThrow("consent");
+    expect(() =>
+      new PremierCombine(iso(0)).register({
+        playerDid: "did:abl:invalid-time",
+        consented: true,
+        registeredAt: "not-a-date",
+      }),
+    ).toThrow("time is invalid");
+    expect(() =>
+      new PremierCombine(iso(0)).register({
+        playerDid: "not-a-did",
+        consented: true,
+        registeredAt: iso(1_000),
+      }),
+    ).toThrow("DID is invalid");
 
     const draft = conductEightRoundDraft(clubIds, combine.eligiblePlayers());
     expect(draft).toHaveLength(32);

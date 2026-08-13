@@ -52,6 +52,12 @@ spec:
       - name: ABL_CANDIDATE_CHALLENGE_HMAC_BASE64
         value: ${ABL_CANDIDATE_CHALLENGE_HMAC_BASE64}
         secret: true
+      - name: ABL_COMBINE_ID
+        value: ${ABL_COMBINE_ID}
+        secret: false
+      - name: ABL_COMBINE_OPENED_AT
+        value: ${ABL_COMBINE_OPENED_AT}
+        secret: false
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -107,6 +113,16 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/candidates/status
+    - id: combine-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/register
+    - id: combine-status
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/status
     - id: health
       type: http
       configuration:

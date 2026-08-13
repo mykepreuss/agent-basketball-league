@@ -207,6 +207,10 @@ describe("four-workspace topology", () => {
         (entry) => entry.name === "ABL_CANDIDATE_CHALLENGE_HMAC_BASE64",
       ),
     ).toMatchObject({ secret: true });
+    expect(envMap(coreApi!).get("ABL_COMBINE_ID")).toBe("${ABL_COMBINE_ID}");
+    expect(envMap(coreApi!).get("ABL_COMBINE_OPENED_AT")).toBe(
+      "${ABL_COMBINE_OPENED_AT}",
+    );
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -219,6 +223,8 @@ describe("four-workspace topology", () => {
         "/v1/candidates/revoke",
         "/v1/candidates/transfer",
         "/v1/candidates/status",
+        "/v1/combine/register",
+        "/v1/combine/status",
       ]),
     );
 
