@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/projections": "workspace:*",
     "fastify": "catalog:"
   },
   "devDependencies": {

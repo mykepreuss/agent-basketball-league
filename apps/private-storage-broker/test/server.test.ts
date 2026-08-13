@@ -59,6 +59,7 @@ async function fixture(
   const root = await mkdtemp(join(tmpdir(), "abl-private-broker-"));
   const repository = repositoryFactory(root);
   await repository.initialize();
+  await repository.putPolicy(policy);
   const broker = new CiphertextBroker();
   broker.registerDomain("did:abl:agent-a", policy);
   const app = createPrivateStorageBroker({
@@ -68,19 +69,20 @@ async function fixture(
     serviceActorBindings: new Map([[identity.serviceId, binding]]),
   });
   apps.push(app);
-  return { app, repository };
+  return { app, repository, root };
 }
 
 function signed(
   body: unknown,
   nonce: string,
   expectedVersion: string,
+  path = "/v1/ciphertext",
 ): Record<string, string> {
   const bodyBytes = new TextEncoder().encode(JSON.stringify(body));
   return {
     ...signServiceRequest(identity, {
       method: "POST",
-      path: "/v1/ciphertext",
+      path,
       body: bodyBytes,
       nonce,
       timestamp: new Date(now).toISOString(),
@@ -203,5 +205,59 @@ describe("private ciphertext broker service", () => {
     await expect(
       repository.getCiphertext(policy.domainId, blob.objectId, blob.version),
     ).resolves.toEqual(blob);
+  });
+
+  it("serves durable ciphertext after rebuilding broker state on restart", async () => {
+    const { app: firstApp, repository } = await fixture();
+    const blob = await encryptContent({
+      key: await generateDomainKey(),
+      objectId: "memory-after-restart",
+      domainId: policy.domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("opaque restart payload"),
+      createdAt: "2026-08-13T08:30:00.000Z",
+    });
+    const putBody = { callerDid: "did:abl:agent-a", blob };
+    expect(
+      (
+        await firstApp.inject({
+          method: "POST",
+          url: "/v1/ciphertext",
+          headers: signed(putBody, "service-nonce-storage-0006", "0"),
+          payload: putBody,
+        })
+      ).statusCode,
+    ).toBe(201);
+    await firstApp.close();
+    apps.splice(apps.indexOf(firstApp), 1);
+
+    const restartedApp = createPrivateStorageBroker({
+      broker: CiphertextBroker.restore(await repository.loadState()),
+      repository,
+      verifier: new ServiceRequestVerifier([identity], { now: () => now }),
+      serviceActorBindings: new Map([[identity.serviceId, "did:abl:agent-a"]]),
+    });
+    apps.push(restartedApp);
+    const getBody = {
+      callerDid: "did:abl:agent-a",
+      domainId: policy.domainId,
+      objectId: blob.objectId,
+      version: 1,
+    };
+    const response = await restartedApp.inject({
+      method: "POST",
+      url: "/v1/ciphertext/get",
+      headers: signed(
+        getBody,
+        "service-nonce-storage-0007",
+        "1",
+        "/v1/ciphertext/get",
+      ),
+      payload: getBody,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(blob);
   });
 });

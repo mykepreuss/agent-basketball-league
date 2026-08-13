@@ -120,30 +120,57 @@ export interface SignedPlayerDecision {
   signerAddress: `0x${string}`;
 }
 
-export interface CoachDecision {
+export interface DecisionAuthorization<TDecision> {
+  receipt: CognitionReceipt;
+  authorizationEvent: CanonicalEvent<{
+    decision: TDecision;
+    receiptCommitment: `0x${string}`;
+  }>;
+  eventHash: `0x${string}`;
+  signature: `0x${string}`;
+  signerAddress: `0x${string}`;
+}
+
+export interface CoachDecisionBody {
   coachDid: string;
   team: Team;
   windowId: string;
   instruction: "PACE" | "SPACE" | "SWITCH" | "PROTECT_RIM";
   targetPlayerIds: string[];
-  receipt: CognitionReceipt;
 }
+export type CoachDecision = CoachDecisionBody &
+  DecisionAuthorization<CoachDecisionBody>;
 
-export interface RefereeDecision {
+export interface RefereeDecisionBody {
   refereeDid: string;
+  possessionId: string;
   sequence: number;
   call: "NO_CALL" | "PERSONAL_FOUL" | "OUT_OF_BOUNDS" | "SHOT_CLOCK";
   againstPlayerId: string | null;
   confidenceBps: number;
-  receipt: CognitionReceipt;
 }
+export type RefereeDecision = RefereeDecisionBody &
+  DecisionAuthorization<RefereeDecisionBody>;
 
-export interface ReplayDecision {
+export interface ReplayDecisionBody {
   replayDid: string;
+  possessionId: string;
   reviewable: boolean;
   ruling: "CONFIRM" | "REVERSE" | "NO_REVIEW";
   evidenceCommitment: `0x${string}`;
-  receipt: CognitionReceipt;
+}
+export type ReplayDecision = ReplayDecisionBody &
+  DecisionAuthorization<ReplayDecisionBody>;
+
+export interface CompetitionAuthority {
+  did: string;
+  signerAddress: `0x${string}`;
+}
+
+export interface PossessionAuthorities {
+  coaches: Readonly<Record<Lowercase<Team>, CompetitionAuthority>>;
+  referees: readonly CompetitionAuthority[];
+  replayOfficials: readonly CompetitionAuthority[];
 }
 
 export interface ResolutionEvent {
@@ -153,6 +180,7 @@ export interface ResolutionEvent {
     | "PASS"
     | "SHOT"
     | "REBOUND"
+    | "OUT_OF_BOUNDS"
     | "OFFICIAL_RULING"
     | "POSSESSION_FINAL";
   data: Record<string, string | number | boolean | null>;

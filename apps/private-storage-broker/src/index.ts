@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   ServiceRequestVerifier,
@@ -35,11 +36,20 @@ function required(name: string): string {
 const bootstrap = BootstrapSchema.parse(
   JSON.parse(await readFile(required("ABL_STORAGE_BOOTSTRAP_FILE"), "utf8")),
 );
-const broker = new CiphertextBroker();
 const repository = new DriveCiphertextRepository(required("ABL_DRIVE_MOUNT"));
 await repository.initialize();
+const broker = CiphertextBroker.restore(await repository.loadState());
 for (const policy of bootstrap.policies) {
-  const admin = Object.entries(policy.members).find(([, grants]) =>
+  const durablePolicy = broker.domainPolicy(policy.domainId);
+  if (durablePolicy !== undefined && isDeepStrictEqual(durablePolicy, policy))
+    continue;
+  if (durablePolicy !== undefined && policy.version <= durablePolicy.version) {
+    throw new Error(
+      `Storage policy ${policy.domainId} conflicts with durable version ${durablePolicy.version}`,
+    );
+  }
+  const authorizingPolicy = durablePolicy ?? policy;
+  const admin = Object.entries(authorizingPolicy.members).find(([, grants]) =>
     grants.includes("ADMIN"),
   );
   if (admin === undefined)

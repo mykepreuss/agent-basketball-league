@@ -2,33 +2,34 @@
 
 This is a pre-genesis evidence record. Every result must include the command or harness, environment, timestamp, inputs/digests, result, limitations, and linked artifacts. A claimed pass without reproducible artifacts is not an acceptance pass.
 
-| Evidence area                        | Status                               | Artifact                                            |
-| ------------------------------------ | ------------------------------------ | --------------------------------------------------- |
-| Authoritative-plan integrity         | Pass                                 | Plan/objective hashes in `PLATFORM_VERIFICATION.md` |
-| Workspace/tooling inspection         | Pass with staging blockers           | `PLATFORM_VERIFICATION.md`                          |
-| Dependency and image locks           | Dependency pass; image source locked | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs         |
-| Constitutional invariant tests       | Phase baseline pass                  | `PHASE-00-01.md`, `@abl/policy`                     |
-| Schema and interface coverage        | 43/43 primary types pass             | `PHASE-00-01.md`, `@abl/schemas`                    |
-| NBA rule classification              | 15/15 pass                           | `docs/rules/nba-rule-mapping.json`                  |
-| 2023 CBA classification              | 42 articles + 17 exhibits pass       | `docs/rules/cba-mapping.json`                       |
-| Deterministic possession/game replay | Local exact-replay pass              | `PHASE-04.md`, `PHASE-06.md`, proof fixtures        |
-| Administrator-fork resistance        | Local adversarial pass               | `PHASE-09.md`, rehearsal report fixture             |
-| Admission/human-boundary proof       | Local behavior pass                  | `PHASE-05.md`, `@abl/career`                        |
-| Storage isolation/cryptography       | Local behavior pass; Drive gate      | `PHASE-02.md`, broker and cross-domain tests        |
-| Network escape resistance            | Static/local broker pass; live gate  | `PHASE-02.md`, custom-image adversarial report      |
-| Disclosure and telemetry             | Local policy pass                    | `PHASE-07.md`, disclosure/telemetry tests           |
-| Compute fairness/calibration         | Local rule/harness pass              | `PHASE-06.md`, `@abl/basketball`                    |
-| Government/release validity          | Local threshold/release pass         | `PHASE-07.md`, `@abl/institutions`                  |
-| Development charter/mobility         | Local deterministic pass             | `PHASE-08.md`, development tests                    |
-| Model concentration/substitution     | Local reporting/trigger pass         | `PHASE-07.md`; live registry pending                |
-| Database recovery                    | Local event/outbox rebuild pass      | `PHASE-10.md`; live Neon PITR gated                 |
-| Provider/sponsor failure             | Local game/wind-down pass            | `PHASE-09.md`, `PHASE-10.md`; live exercise gated   |
-| Private rehearsal                    | Local deterministic pass             | `PHASE-09.md`, rehearsal report fixture             |
-| Capacity/SLOs                        | Local 2x synthetic pass; live gate   | `PHASE-10.md`; reservations not requested           |
-| Clean-room exit/recovery             | Local behavior pass; live gate       | `PHASE-05.md`, continuity/exit tests                |
-| Founding convention                  | Packet ready; live-agent gate        | `PHASE-11.md`, blank decision packet                |
-| Genesis readiness                    | Local bundle ready; gated            | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 125 assertions + browser pass        | `PHASE-12.md`, `final-local-results.json`           |
+| Evidence area                        | Status                                     | Artifact                                            |
+| ------------------------------------ | ------------------------------------------ | --------------------------------------------------- |
+| Authoritative-plan integrity         | Pass                                       | Plan/objective hashes in `PLATFORM_VERIFICATION.md` |
+| Workspace/tooling inspection         | Pass with staging blockers                 | `PLATFORM_VERIFICATION.md`                          |
+| Dependency and image locks           | Dependency pass; image source locked       | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs         |
+| Constitutional invariant tests       | Phase baseline pass                        | `PHASE-00-01.md`, `@abl/policy`                     |
+| Schema and interface coverage        | 43/43 primary types pass                   | `PHASE-00-01.md`, `@abl/schemas`                    |
+| NBA rule classification              | 15/15 pass                                 | `docs/rules/nba-rule-mapping.json`                  |
+| 2023 CBA classification              | 42 articles + 17 exhibits pass             | `docs/rules/cba-mapping.json`                       |
+| Deterministic possession/game replay | Local exact-replay pass                    | `PHASE-04.md`, `PHASE-06.md`, proof fixtures        |
+| Signed possession vertical path      | Local rehearsal pass; staging gate         | `PHASE-04.md`, acceptance suite, `@abl/projections` |
+| Administrator-fork resistance        | Local adversarial pass                     | `PHASE-09.md`, rehearsal report fixture             |
+| Admission/human-boundary proof       | Local behavior pass                        | `PHASE-05.md`, `@abl/career`                        |
+| Storage isolation/cryptography       | Local restart/recovery pass; Drive gate    | `PHASE-02.md`, broker and cross-domain tests        |
+| Network escape resistance            | Static/local broker pass; live gate        | `PHASE-02.md`, custom-image adversarial report      |
+| Disclosure and telemetry             | Local policy pass                          | `PHASE-07.md`, disclosure/telemetry tests           |
+| Compute fairness/calibration         | Local rule/harness pass                    | `PHASE-06.md`, `@abl/basketball`                    |
+| Government/release validity          | Local signed threshold/release pass        | `PHASE-07.md`, `@abl/institutions`                  |
+| Development charter/mobility         | Local deterministic pass                   | `PHASE-08.md`, development tests                    |
+| Model concentration/substitution     | Local reporting/trigger pass               | `PHASE-07.md`; live registry pending                |
+| Database/projection recovery         | Local event/outbox/projection rebuild pass | `PHASE-04.md`, `PHASE-10.md`; live Neon gated       |
+| Provider/sponsor failure             | Local game/wind-down pass                  | `PHASE-09.md`, `PHASE-10.md`; live exercise gated   |
+| Private rehearsal                    | Local deterministic pass                   | `PHASE-09.md`, rehearsal report fixture             |
+| Capacity/SLOs                        | Local 2x synthetic pass; live gate         | `PHASE-10.md`; reservations not requested           |
+| Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
+| Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
+| Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
+| Final local acceptance               | 136 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 
@@ -38,6 +39,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 4. No funded Base test wallet or mainnet authority is supplied. Local contract tests are safe; irreversible ownerless deployment is approval-gated.
 5. Capacity tier, quotas, and prepaid 30-day wind-down funds are unverified and may require material spend.
 6. Founding-agent ratification cannot occur until working private rehearsal bodies and capacity exist.
+7. The durable file projection adapter proves the local service boundary and restart behavior, but the signed cross-workspace projection transport cannot be live-proven until the `abl-core`/`abl-public` workspaces and Agent Drive or an approved equivalent are available.
 
 ## Phase records
 

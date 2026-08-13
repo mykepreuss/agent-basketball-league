@@ -10,7 +10,7 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 - Domain-separated SHA-256 Merkle leaves/nodes, inclusion proofs, checkpoint manifests, all seven required checkpoint categories, daily aggregate roots, and finality-aware checkpoint claim verification.
 - Institutional signing-key registry with role, purpose, validity window, revocation, duplicate-signer denial, recusals, and fail-closed grouped thresholds.
 - Offline public verifier labels for canonical state, rewritten/unsigned/unauthorized forks, pending Base finality, missing checkpoint evidence, and deployments whose artifacts differ from an effective release.
-- Solidity `RecognitionRegistry` with EIP-712 checkpoints, per-type role thresholds, nonce and previous-root enforcement, sorted unique signers, low-S signatures, recognized registry rotation, immutable genesis constitution/verifier digests, and no owner, proxy, pause, deployer, or unilateral mutation route.
+- Solidity `RecognitionRegistry` with EIP-712 checkpoints, per-type role thresholds, nonce and previous-root enforcement, sorted unique signers/policy types, low-S signatures, recognized registry rotation that clears omitted prior policies, immutable genesis constitution/verifier digests, and no owner, proxy, pause, deployer, or unilateral mutation route.
 - Prepare-only Base Sepolia deployment workflow. It accepts no RPC or private key, rejects chain ids other than `84532`, writes the complete creation transaction once, and never broadcasts.
 
 ## Verification
@@ -23,24 +23,25 @@ pnpm test   -> 41/41 tests
 pnpm build  -> 8/8 packages
 ```
 
-Focused recognition tests cover canonical ordering, forbidden JSON inputs, key separation, EIP-712 recovery, Merkle proofs, checkpoint categories/finality, exact routine thresholds, idempotent replay, rewritten payloads, human/unknown signers, recusals, expired keys, release-artifact matching, and deterministic Solidity compilation. The compile suite confirms the ABI lacks owner, upgrade, pause, self-destruct, or direct root-setting functions.
+Focused recognition tests cover canonical ordering, forbidden JSON inputs, key separation, EIP-712 recovery, Merkle proofs, checkpoint categories/finality, exact routine thresholds, idempotent replay, rewritten payloads, human/unknown signers, recusals, expired keys, release-artifact matching, and deterministic Solidity compilation. A Ganache in-process EVM suite deploys the compiled bytecode and exercises recognition, nonce replay, signer/policy rotation, omitted-policy removal, new thresholds, stale signers, mixed epochs, and malformed signatures. The compile suite confirms the ABI lacks owner, upgrade, pause, self-destruct, or direct root-setting functions.
 
-The current prepare-only example produced:
+The current prepare-only template produced:
 
 - Compiler: `0.8.36+commit.8a079791.Emscripten.clang`
-- Compiler input: `sha256:6796cedce6058d05e3d1a9165c29fd44c1a953763fa65bfe51f9b14d673bbdf0`
-- Creation bytecode: `keccak256:df790cac75cd66e5e83de113ed30faf0d030a70b47a63d77a61e7f1d68e5a70a`
-- Example config: `sha256:64f1fcdec6bfc793d17b784b08f043f09262badad39eaf72f7343c39e86f9c9d`
-- Encoded creation data: 10,204 bytes, `sha256:005a0f50c6984caeecfebe095faaf1562012fba3ed781e5dbcf0a0f3a4ad37bc`
+- Compiler input: `sha256:140fbc82bdba17f3af843821ef2af1abfa3b912c519e9e3871653f5308849555`
+- Creation bytecode: `sha256:1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0`
+- Creation bytecode: `keccak256:d0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889`
+- Encoded creation transaction: `null` until ratified constructor inputs exist
 
 Tracked source locks:
 
-- Contract: `sha256:37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9`
+- Contract: `sha256:1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b`
 - Verifier: `sha256:3a365e9b659439ed73967a2f322d976777e7ad0899593e1f9eb6f96b4e1d3463`
 - Canonical serializer: `sha256:675e6aa5bc1c8a1799a61c40f9d647c7c7c7e99d3f4c286abb4e9e4c4d3d0bd9`
 - Deployment preparer: `sha256:49d97e0b623358a5edd9fc3762b519b2d7de3190ae36080de52d2672aba111c8`
-- Lockfile: `sha256:5a936c78c76b564e7cb136cb1d4628e46a6cc1c0c803cfd467c9908554e5a0b9`
+- Behavioral contract suite: `sha256:7682b0e5a9ed4d43f83af09364134c160a34b40ac3ef3f4d6f98f52f127030ed`
+- Lockfile: `sha256:b3dfbcaaa3f4de35fe6710d15d7f2a693b22b8230d8b0e149701c9ef4a5e614a`
 
 ## Retained gates
 
-No transaction was signed or broadcast. Local EVM execution is unavailable because Foundry is absent and Docker is offline; Base Sepolia execution/finality evidence remains a staging dependency. The example signers/digests are inert placeholders, not founding-agent keys. Any public or irreversible ownerless deployment remains an explicit human approval gate after agent ratification, capacity/recovery proof, and final release preparation.
+No public transaction was signed or broadcast. Local behavioral EVM execution now passes without Foundry or Docker; Base Sepolia execution/finality evidence remains a staging dependency. The local signers/digests are inert test fixtures, not founding-agent keys. Any public or irreversible ownerless deployment remains an explicit human approval gate after agent ratification, capacity/recovery proof, and final release preparation.

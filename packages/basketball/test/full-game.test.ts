@@ -20,6 +20,7 @@ import {
   replayFullGame,
   resolveChallenge,
   rotateOfficialCrew,
+  runAgentPlayedExhibition,
   runDeterministicExhibition,
   validateCompetitionReceipt,
   validatePointBuy,
@@ -59,6 +60,37 @@ function finishPeriod(engine: FullGameEngine): void {
 }
 
 describe("complete deterministic exhibition rules", () => {
+  it("plays a complete game from persistent signed player, coach, referee, and replay decisions", async () => {
+    const exhibition = await runAgentPlayedExhibition();
+    expect(exhibition.finalState).toMatchObject({
+      phase: "FINAL",
+      winner: "HOME",
+      period: 4,
+      score: { home: 74, away: 72 },
+    });
+    expect(exhibition.possessionProofs).toHaveLength(128);
+    expect(
+      exhibition.possessionProofs.every(
+        (possession) =>
+          possession.playerDecisionHashes.length === 20 &&
+          possession.coachDecisionHashes.length === 4 &&
+          possession.refereeDecisionHashes.length === 3 &&
+          possession.replayDecisionHashes.length === 2,
+      ),
+    ).toBe(true);
+    expect(exhibition.persistentPlayerDecisionVersions).toEqual(
+      Object.fromEntries(
+        ["H1", "H2", "H3", "H4", "H5", "A1", "A2", "A3", "A4", "A5"].map(
+          (playerId) => [playerId, "256"],
+        ),
+      ),
+    );
+    expect(exhibition.replay).toMatchObject({
+      exact: true,
+      inferenceInvocations: 0,
+    });
+  }, 20_000);
+
   it("locks the canonical exhibition transcript to an exactly replayable proof", () => {
     const exhibition = runDeterministicExhibition();
     expect(exhibition.finalState).toMatchObject({
@@ -226,8 +258,28 @@ describe("complete deterministic exhibition rules", () => {
         kind: "PERSONAL",
         freeThrows: 0,
       });
+      if (game.snapshot().pendingFreeThrows !== null) {
+        game.apply({
+          type: "FREE_THROW",
+          team: "HOME",
+          playerId: "H1",
+          made: true,
+        });
+        game.apply({
+          type: "FREE_THROW",
+          team: "HOME",
+          playerId: "H1",
+          made: false,
+        });
+      }
+      if (foul < 5) game.apply({ type: "RESUME" });
     }
     expect(game.snapshot().ejectedPlayerIds).toContain("A1");
+    expect(game.snapshot()).toMatchObject({
+      teamFouls: { home: 0, away: 6 },
+      bonus: { home: true, away: false },
+      freeThrowLaneActive: false,
+    });
     expect(() => game.apply({ type: "RESUME" })).toThrow("five active players");
     game.apply({
       type: "SUBSTITUTE",
@@ -238,7 +290,7 @@ describe("complete deterministic exhibition rules", () => {
     game.apply({ type: "RESUME" });
     expect(game.snapshot()).toMatchObject({
       phase: "LIVE",
-      score: { home: 1, away: 0 },
+      score: { home: 3, away: 0 },
     });
     expect(() =>
       game.apply({
@@ -256,6 +308,65 @@ describe("complete deterministic exhibition rules", () => {
         kind: "TRAVEL",
       }),
     ).toThrow("possessing team");
+  });
+
+  it("models explicit throw-ins, held-ball jump balls, and period bonus reset", () => {
+    const timeout = new FullGameEngine(gameInput());
+    timeout.apply({ type: "TIMEOUT", team: "HOME" });
+    expect(() =>
+      timeout.apply({ type: "JUMP_BALL", winningTeam: "AWAY" }),
+    ).toThrow("not the awarded");
+
+    const game = new FullGameEngine(gameInput());
+    game.apply({ type: "OUT_OF_BOUNDS", lastTouchedBy: "AWAY" });
+    expect(game.snapshot()).toMatchObject({
+      phase: "DEAD",
+      restart: { kind: "THROW_IN", team: "HOME" },
+    });
+    game.apply({ type: "THROW_IN", team: "HOME", playerId: "H2" });
+    expect(game.snapshot()).toMatchObject({
+      phase: "LIVE",
+      possessionTeam: "HOME",
+      restart: null,
+    });
+    game.apply({ type: "HELD_BALL" });
+    expect(game.snapshot().restart).toEqual({ kind: "JUMP_BALL" });
+    game.apply({ type: "JUMP_BALL", winningTeam: "AWAY" });
+    expect(game.snapshot()).toMatchObject({
+      phase: "LIVE",
+      possessionTeam: "AWAY",
+    });
+    for (let foul = 0; foul < 5; foul += 1) {
+      game.apply({
+        type: "FOUL",
+        byTeam: "HOME",
+        playerId: "H1",
+        kind: "PERSONAL",
+        freeThrows: 0,
+      });
+      if (game.snapshot().pendingFreeThrows !== null) {
+        game.apply({
+          type: "FREE_THROW",
+          team: "AWAY",
+          playerId: "A1",
+          made: true,
+        });
+        game.apply({
+          type: "FREE_THROW",
+          team: "AWAY",
+          playerId: "A1",
+          made: false,
+        });
+      }
+      game.apply({ type: "RESUME" });
+    }
+    expect(game.snapshot().bonus.away).toBe(true);
+    game.apply({ type: "TICK", milliseconds: game.snapshot().gameClockMs });
+    game.apply({ type: "END_PERIOD" });
+    expect(game.snapshot()).toMatchObject({
+      teamFouls: { home: 0, away: 0 },
+      bonus: { home: false, away: false },
+    });
   });
 
   it("never accepts a winner command and rejects period finalization before clock expiry", () => {

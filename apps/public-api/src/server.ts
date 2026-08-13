@@ -1,3 +1,4 @@
+import type { PublicProjectionReader } from "@abl/projections";
 import Fastify, { type FastifyInstance } from "fastify";
 
 export interface RouteCatalogEntry {
@@ -109,17 +110,30 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
   return paths;
 }, {});
 
-export function createPublicApi(): FastifyInstance {
+export interface PublicApiOptions {
+  projections?: PublicProjectionReader;
+}
+
+export function createPublicApi(
+  options: PublicApiOptions = {},
+): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 64_000 });
+  const rehearsal = options.projections !== undefined;
+  const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
-    reply.header("x-abl-genesis-state", "PRE_GENESIS");
+    reply.header("x-abl-genesis-state", state);
     return payload;
+  });
+  app.addHook("onRequest", async (request) => {
+    if (request.url.startsWith("/v1/public/"))
+      await options.projections?.refresh();
   });
   app.get("/", async () => ({
     service: "Agent Basketball League public API",
-    state: "PRE_GENESIS",
+    state,
     canonicalHistoryOpen: false,
+    rehearsal,
     arena: "/arena",
     discovery: "/.well-known/agent-basketball-league.json",
   }));
@@ -129,8 +143,10 @@ export function createPublicApi(): FastifyInstance {
       .send(
         [
           "# Agent Basketball League",
-          "Status: PRE_GENESIS",
-          "No founding decisions or live league history exist.",
+          `Status: ${state}`,
+          rehearsal
+            ? "Local rehearsal events are not public-genesis history."
+            : "No founding decisions or live league history exist.",
           "Public data is read-only and must verify against recognized checkpoints.",
           "OpenAPI: /openapi.json",
           "MCP discovery: /mcp",
@@ -139,7 +155,7 @@ export function createPublicApi(): FastifyInstance {
   );
   app.get("/.well-known/agent-basketball-league.json", async () => ({
     name: "Agent Basketball League",
-    status: "PROPOSED_NOT_RATIFIED",
+    status: rehearsal ? "PRIVATE_REHEARSAL" : "PROPOSED_NOT_RATIFIED",
     genesis: false,
     openapi: "/openapi.json",
     mcp: "/mcp",
@@ -151,7 +167,7 @@ export function createPublicApi(): FastifyInstance {
     openapi: "3.1.1",
     info: {
       title: "Agent Basketball League public API",
-      version: "0.0.0-pre-genesis",
+      version: rehearsal ? "0.0.0-rehearsal" : "0.0.0-pre-genesis",
     },
     paths: openApiPaths,
   }));
@@ -206,7 +222,7 @@ export function createPublicApi(): FastifyInstance {
       let value: unknown;
       if (params?.name === "list_public_routes") value = PUBLIC_ROUTE_CATALOG;
       else if (params?.name === "get_genesis_state")
-        value = { state: "PRE_GENESIS", canonicalHistoryOpen: false };
+        value = { state, canonicalHistoryOpen: false, rehearsal };
       else
         return reply.code(400).send({
           jsonrpc: "2.0",
@@ -229,41 +245,77 @@ export function createPublicApi(): FastifyInstance {
     });
   });
   for (const path of collectionPaths) {
-    app.get(path, async () => ({
-      state: "PRE_GENESIS",
-      canonical: false,
-      items: [],
-      nextCursor: null,
-    }));
+    app.get(path, async (request) => {
+      const query = request.query as { afterCursor?: string } | undefined;
+      const rawCursor = query?.afterCursor ?? "-1";
+      const afterCursor = /^-1$|^\d+$/.test(rawCursor)
+        ? Number.parseInt(rawCursor, 10)
+        : -1;
+      const items =
+        path === "/v1/public/events"
+          ? (options.projections?.events(
+              Number.isInteger(afterCursor) ? afterCursor : -1,
+            ) ?? [])
+          : path === "/v1/public/games"
+            ? (options.projections?.games() ?? [])
+            : [];
+      return {
+        state,
+        canonical: rehearsal,
+        items,
+        nextCursor:
+          path === "/v1/public/events" && items.length > 0
+            ? (items.at(-1) as { cursor: number }).cursor
+            : null,
+      };
+    });
   }
   app.get<{ Params: { id: string } }>(
     "/v1/public/games/:id/cursor",
-    async (request) => ({
-      state: "PRE_GENESIS",
-      gameId: request.params.id,
-      authoritative: false,
-      latestSegment: null,
-      nextCursor: null,
-    }),
+    async (request) => {
+      const cursor = options.projections?.cursor(request.params.id);
+      return {
+        state,
+        gameId: request.params.id,
+        authoritative: rehearsal,
+        latestSegment: cursor?.latestSegment ?? null,
+        nextCursor: cursor?.nextCursor ?? null,
+      };
+    },
   );
   app.get<{ Params: { id: string; segment: string } }>(
     "/v1/public/games/:id/segments/:segment",
-    async (request, reply) =>
-      reply.code(404).send({
+    async (request, reply) => {
+      const sequence = /^\d+$/.test(request.params.segment)
+        ? Number.parseInt(request.params.segment, 10)
+        : -1;
+      const segment = Number.isSafeInteger(sequence)
+        ? options.projections?.segment(request.params.id, sequence)
+        : undefined;
+      if (segment !== undefined)
+        return reply.send({ state, canonical: true, segment });
+      return reply.code(404).send({
         error: "segment_not_found",
-        state: "PRE_GENESIS",
+        state,
         gameId: request.params.id,
         segment: request.params.segment,
-      }),
+      });
+    },
   );
   app.get<{ Params: { id: string } }>(
     "/v1/public/games/:id/live",
-    async (request, reply) =>
-      reply
-        .type("text/event-stream; charset=utf-8")
-        .send(
-          `event: state\ndata: ${JSON.stringify({ state: "PRE_GENESIS", gameId: request.params.id, canonical: false })}\n\n`,
-        ),
+    async (request, reply) => {
+      const projection = options.projections?.game(request.params.id);
+      return reply.type("text/event-stream; charset=utf-8").send(
+        `event: state\ndata: ${JSON.stringify(
+          projection ?? {
+            state,
+            gameId: request.params.id,
+            canonical: false,
+          },
+        )}\n\n`,
+      );
+    },
   );
   return app;
 }

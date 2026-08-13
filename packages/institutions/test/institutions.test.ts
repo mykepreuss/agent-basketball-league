@@ -1,5 +1,12 @@
-import { sha256Commitment } from "@abl/recognition";
+import {
+  createCanonicalEvent,
+  createSigningIdentity,
+  sha256Commitment,
+  signCanonicalEvent,
+  type SigningIdentity,
+} from "@abl/recognition";
 import fc from "fast-check";
+import type { TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -29,12 +36,20 @@ import {
   validatePremierClubs,
   type Chamber,
   type DisclosureEnvelopeRecord,
+  type DelegatedVote,
+  type DelegationMandate,
   type EligibilitySnapshot,
   type GovernanceProposal,
+  type GovernanceBallot,
   type GovernanceVote,
+  type InstitutionalAuthorizationContext,
+  type InstitutionalRole,
+  type InstitutionalSigner,
   type ModelDependencyRecord,
   type PremierClub,
   type ReleaseManifestRecord,
+  type ReleaseApproval,
+  type ReleaseApprovalBody,
 } from "../src/index.js";
 
 const day = 24 * 60 * 60 * 1_000;
@@ -42,6 +57,69 @@ const epoch = Date.parse("2026-08-13T00:00:00.000Z");
 const iso = (offset: number) => new Date(epoch + offset).toISOString();
 const digest = (value: unknown) => sha256Commitment(value);
 const clubIds = FOUNDING_CLUBS.map((club) => club.clubId);
+const domain: TypedDataDomain = {
+  name: "ABL Recognition",
+  version: "1",
+  chainId: 84_532,
+  verifyingContract: "0x1111111111111111111111111111111111111111",
+};
+const identities = new Map<string, SigningIdentity>();
+const institutionalSigners = new Map<string, InstitutionalSigner>();
+const authorization: InstitutionalAuthorizationContext = {
+  domain,
+  signers: institutionalSigners,
+};
+
+function identityFor(
+  did: string,
+  roles: readonly InstitutionalRole[],
+): SigningIdentity {
+  let identity = identities.get(did);
+  if (identity === undefined) {
+    identity = createSigningIdentity(digest({ did, purpose: "test-key" }));
+    identities.set(did, identity);
+  }
+  const prior = institutionalSigners.get(did);
+  institutionalSigners.set(did, {
+    signerAddress: identity.address,
+    roles: [...new Set([...(prior?.roles ?? []), ...roles])],
+  });
+  return identity;
+}
+
+async function signedCommand<TCommand>(input: {
+  actorDid: string;
+  roles: Parameters<typeof identityFor>[1];
+  command: TCommand;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: number;
+  eventType: string;
+  stateRoot: `0x${string}`;
+  timestamp: string;
+}) {
+  const identity = identityFor(input.actorDid, input.roles);
+  const event = createCanonicalEvent({
+    eventId: `${input.aggregateId}:${input.actorDid}:${input.eventType}`,
+    actorDid: input.actorDid,
+    nonce: `${input.aggregateId}:${input.actorDid}:${input.eventType}`,
+    idempotencyKey: `${input.aggregateId}:${input.actorDid}:${input.eventType}:idempotency`,
+    aggregateType: input.aggregateType,
+    aggregateId: input.aggregateId,
+    aggregateVersion: BigInt(input.aggregateVersion),
+    eventType: input.eventType,
+    previousEventHash: null,
+    payload: { command: input.command },
+    stateRoot: input.stateRoot,
+    schemaDigest: digest(`${input.eventType}:1.0.0`),
+    timestamp: input.timestamp,
+  });
+  return {
+    authorizationEvent: event,
+    signature: await signCanonicalEvent(identity, domain, event),
+    signerAddress: identity.address,
+  };
+}
 
 describe("premier league structure", () => {
   it("validates four independent eight-player clubs and conducts the 14-day combine/eight-round draft", () => {
@@ -255,114 +333,227 @@ function proposal(
 ): GovernanceProposal {
   return {
     proposalId: `proposal-${proposalClass}`,
+    version: 1,
     proposalClass,
     openedAt: iso(0),
     closesAt: iso(day),
     eligibilitySnapshotId: "snapshot-1",
+    eligibilitySnapshotDigest: digest(snapshot()),
     ...extra,
   };
 }
 
-function yesVotes(
-  proposalId: string,
+async function signVote(
+  ballot: GovernanceBallot,
+  source: EligibilitySnapshot,
+): Promise<GovernanceVote> {
+  return {
+    ...ballot,
+    ...(await signedCommand({
+      actorDid: ballot.voterDid,
+      roles: ["VOTER"],
+      command: ballot,
+      aggregateType: "governance-proposal",
+      aggregateId: ballot.proposalId,
+      aggregateVersion: ballot.proposalVersion,
+      eventType: "GovernanceBallotCast",
+      stateRoot: digest(source),
+      timestamp: ballot.castAt,
+    })),
+  };
+}
+
+async function yesVotes(
+  proposalRecord: GovernanceProposal,
   source: EligibilitySnapshot,
   counts: Partial<Record<Chamber, number>>,
-): GovernanceVote[] {
-  return chambers.flatMap((chamber) =>
-    source.members[chamber].slice(0, counts[chamber] ?? 0).map((voterDid) => ({
-      voterDid,
-      chamber,
-      choice: "YES" as const,
-      proposalId,
-      castAt: iso(1_000),
-    })),
+): Promise<GovernanceVote[]> {
+  return Promise.all(
+    chambers
+      .flatMap((chamber) =>
+        source.members[chamber]
+          .slice(0, counts[chamber] ?? 0)
+          .map((voterDid) => ({
+            voterDid,
+            chamber,
+            choice: "YES" as const,
+            proposalId: proposalRecord.proposalId,
+            proposalVersion: proposalRecord.version,
+            eligibilitySnapshotDigest: digest(source),
+            castAt: iso(1_000),
+          })),
+      )
+      .map((ballot) => signVote(ballot, source)),
   );
 }
 
+async function releaseApprovals(
+  manifest: ReleaseManifestRecord,
+  approvers: readonly {
+    approverDid: string;
+    role: ReleaseApprovalBody["role"];
+  }[],
+): Promise<ReleaseApproval[]> {
+  const manifestCommitment = digest(manifest);
+  return Promise.all(
+    approvers.map(async ({ approverDid, role }) => {
+      const command: ReleaseApprovalBody = {
+        approverDid,
+        role,
+        releaseId: manifest.releaseId,
+        releaseVersion: manifest.version,
+        manifestCommitment,
+        approvedAt: iso(-1_000),
+      };
+      return {
+        ...command,
+        ...(await signedCommand({
+          actorDid: approverDid,
+          roles: [role],
+          command,
+          aggregateType: "software-release",
+          aggregateId: manifest.releaseId,
+          aggregateVersion: manifest.version,
+          eventType: "ReleaseApproved",
+          stateRoot: manifestCommitment,
+          timestamp: command.approvedAt,
+        })),
+      };
+    }),
+  );
+}
+
+async function signedDelegation(
+  mandate: DelegationMandate,
+): Promise<DelegatedVote> {
+  return {
+    ...mandate,
+    ...(await signedCommand({
+      actorDid: mandate.principalDid,
+      roles: ["VOTER"],
+      command: mandate,
+      aggregateType: "governance-delegation",
+      aggregateId: mandate.delegationId,
+      aggregateVersion: 1,
+      eventType: "GovernanceDelegationGranted",
+      stateRoot: digest({
+        principalDid: mandate.principalDid,
+        proposalIds: mandate.proposalIds,
+      }),
+      timestamp: mandate.validFrom,
+    })),
+  };
+}
+
+const routineApprovers = [
+  { approverDid: "c1", role: "COMMISSIONER" },
+  { approverDid: "c2", role: "COMMISSIONER" },
+  { approverDid: "i1", role: "INTEGRITY" },
+  { approverDid: "i2", role: "INTEGRITY" },
+] as const;
+
 describe("AI government, releases, elections, and due process", () => {
-  it("enforces tier, shared, constitutional, foundational, and expansion thresholds against frozen eligibility", () => {
+  it("enforces tier, shared, constitutional, foundational, and expansion thresholds against frozen eligibility", async () => {
     const eligible = snapshot();
     const tier = proposal("TIER_CBA_PREMIER");
     expect(
-      evaluateProposal({
-        proposal: tier,
-        snapshot: eligible,
-        votes: yesVotes(tier.proposalId, eligible, {
-          PREMIER_PLAYERS: 22,
-          PREMIER_TEAM_COUNCIL: 3,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: tier,
+          snapshot: eligible,
+          votes: await yesVotes(tier, eligible, {
+            PREMIER_PLAYERS: 22,
+            PREMIER_TEAM_COUNCIL: 3,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
     expect(
-      evaluateProposal({
-        proposal: tier,
-        snapshot: eligible,
-        votes: yesVotes(tier.proposalId, eligible, {
-          PREMIER_PLAYERS: 21,
-          PREMIER_TEAM_COUNCIL: 3,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: tier,
+          snapshot: eligible,
+          votes: await yesVotes(tier, eligible, {
+            PREMIER_PLAYERS: 21,
+            PREMIER_TEAM_COUNCIL: 3,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(false);
 
     const shared = proposal("SHARED_ORDINARY");
     expect(
-      evaluateProposal({
-        proposal: shared,
-        snapshot: eligible,
-        votes: yesVotes(shared.proposalId, eligible, {
-          PREMIER_PLAYERS: 17,
-          DEVELOPMENT_PLAYERS: 17,
-          PREMIER_TEAM_COUNCIL: 3,
-          DEVELOPMENT_TEAM_COUNCIL: 3,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: shared,
+          snapshot: eligible,
+          votes: await yesVotes(shared, eligible, {
+            PREMIER_PLAYERS: 17,
+            DEVELOPMENT_PLAYERS: 17,
+            PREMIER_TEAM_COUNCIL: 3,
+            DEVELOPMENT_TEAM_COUNCIL: 3,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
 
     const constitutional = proposal("CONSTITUTIONAL");
     expect(
-      evaluateProposal({
-        proposal: constitutional,
-        snapshot: eligible,
-        votes: yesVotes(constitutional.proposalId, eligible, {
-          UNIVERSAL_CAREER_ASSEMBLY: 43,
-          PREMIER_TEAM_COUNCIL: 3,
-          DEVELOPMENT_TEAM_COUNCIL: 3,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: constitutional,
+          snapshot: eligible,
+          votes: await yesVotes(constitutional, eligible, {
+            UNIVERSAL_CAREER_ASSEMBLY: 43,
+            PREMIER_TEAM_COUNCIL: 3,
+            DEVELOPMENT_TEAM_COUNCIL: 3,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
 
     const foundational = proposal("FOUNDATIONAL_RIGHT", {
       deliberationSeasons: 2,
     });
     expect(
-      evaluateProposal({
-        proposal: foundational,
-        snapshot: eligible,
-        votes: yesVotes(foundational.proposalId, eligible, {
-          UNIVERSAL_CAREER_ASSEMBLY: 58,
-          PREMIER_TEAM_COUNCIL: 4,
-          DEVELOPMENT_TEAM_COUNCIL: 4,
-          TRIBUNAL: 5,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: foundational,
+          snapshot: eligible,
+          votes: await yesVotes(foundational, eligible, {
+            UNIVERSAL_CAREER_ASSEMBLY: 58,
+            PREMIER_TEAM_COUNCIL: 4,
+            DEVELOPMENT_TEAM_COUNCIL: 4,
+            TRIBUNAL: 5,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
     expect(
-      evaluateProposal({
-        proposal: { ...foundational, deliberationSeasons: 1 },
-        snapshot: eligible,
-        votes: yesVotes(foundational.proposalId, eligible, {
-          UNIVERSAL_CAREER_ASSEMBLY: 64,
-          PREMIER_TEAM_COUNCIL: 4,
-          DEVELOPMENT_TEAM_COUNCIL: 4,
-          TRIBUNAL: 5,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: { ...foundational, deliberationSeasons: 1 },
+          snapshot: eligible,
+          votes: await yesVotes(foundational, eligible, {
+            UNIVERSAL_CAREER_ASSEMBLY: 64,
+            PREMIER_TEAM_COUNCIL: 4,
+            DEVELOPMENT_TEAM_COUNCIL: 4,
+            TRIBUNAL: 5,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(false);
 
     const expansion = proposal("PREMIER_EXPANSION", {
@@ -370,87 +561,126 @@ describe("AI government, releases, elections, and due process", () => {
       auditsPassed: true,
     });
     expect(
-      evaluateProposal({
-        proposal: expansion,
-        snapshot: eligible,
-        votes: yesVotes(expansion.proposalId, eligible, {
-          UNIVERSAL_CAREER_ASSEMBLY: 33,
-          PREMIER_PLAYERS: 22,
-          PREMIER_TEAM_COUNCIL: 3,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: expansion,
+          snapshot: eligible,
+          votes: await yesVotes(expansion, eligible, {
+            UNIVERSAL_CAREER_ASSEMBLY: 33,
+            PREMIER_PLAYERS: 22,
+            PREMIER_TEAM_COUNCIL: 3,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
     expect(
-      evaluateProposal({
-        proposal: { ...expansion, auditsPassed: false },
-        snapshot: eligible,
-        votes: yesVotes(expansion.proposalId, eligible, {
-          UNIVERSAL_CAREER_ASSEMBLY: 64,
-          PREMIER_PLAYERS: 32,
-          PREMIER_TEAM_COUNCIL: 4,
-        }),
-        recusals: [],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: { ...expansion, auditsPassed: false },
+          snapshot: eligible,
+          votes: await yesVotes(expansion, eligible, {
+            UNIVERSAL_CAREER_ASSEMBLY: 64,
+            PREMIER_PLAYERS: 32,
+            PREMIER_TEAM_COUNCIL: 4,
+          }),
+          recusals: [],
+          authorization,
+        })
+      ).passed,
     ).toBe(false);
   });
 
-  it("fails closed on duplicate/recused votes but permits bounded active delegation", () => {
+  it("fails closed on unsigned, duplicate, invalid-time, or recused votes but permits bounded active delegation", async () => {
     const eligible = snapshot();
     const tier = proposal("TIER_CBA_PREMIER");
     const delegateDid = "did:abl:advocate-1";
-    const base = yesVotes(tier.proposalId, eligible, {
+    const base = await yesVotes(tier, eligible, {
       PREMIER_PLAYERS: 21,
       PREMIER_TEAM_COUNCIL: 3,
     });
     const principalDid = eligible.members.PREMIER_PLAYERS[21]!;
-    const delegated = {
-      voterDid: delegateDid,
-      chamber: "PREMIER_PLAYERS" as const,
-      choice: "YES" as const,
-      proposalId: tier.proposalId,
-      castAt: iso(1_000),
-    };
+    const delegated = await signVote(
+      {
+        voterDid: delegateDid,
+        chamber: "PREMIER_PLAYERS" as const,
+        choice: "YES" as const,
+        proposalId: tier.proposalId,
+        proposalVersion: tier.version,
+        eligibilitySnapshotDigest: digest(eligible),
+        castAt: iso(1_000),
+      },
+      eligible,
+    );
     expect(
-      evaluateProposal({
-        proposal: tier,
-        snapshot: eligible,
-        votes: [...base, delegated],
-        recusals: [],
-        delegations: [
-          {
-            delegationId: "delegation-1",
-            principalDid,
-            delegateDid,
-            proposalIds: [tier.proposalId],
-            validFrom: iso(0),
-            expiresAt: iso(day),
-            revokedAt: null,
-          },
-        ],
-      }).passed,
+      (
+        await evaluateProposal({
+          proposal: tier,
+          snapshot: eligible,
+          votes: [...base, delegated],
+          recusals: [],
+          delegations: [
+            await signedDelegation({
+              delegationId: "delegation-1",
+              principalDid,
+              delegateDid,
+              proposalIds: [tier.proposalId],
+              validFrom: iso(0),
+              expiresAt: iso(day),
+              revokedAt: null,
+            }),
+          ],
+          authorization,
+        })
+      ).passed,
     ).toBe(true);
-    expect(() =>
+    await expect(
       evaluateProposal({
         proposal: tier,
         snapshot: eligible,
         votes: [base[0]!, base[0]!],
         recusals: [],
+        authorization,
       }),
-    ).toThrow("Duplicate vote");
-    expect(() =>
+    ).rejects.toThrow();
+    await expect(
       evaluateProposal({
         proposal: tier,
         snapshot: eligible,
         votes: [base[0]!],
         recusals: [base[0]!.voterDid],
+        authorization,
       }),
-    ).toThrow("Recused");
+    ).rejects.toThrow("Recused");
+    const invalidDate = structuredClone(base[0]!);
+    invalidDate.castAt = "not-a-date";
+    await expect(
+      evaluateProposal({
+        proposal: tier,
+        snapshot: eligible,
+        votes: [invalidDate],
+        recusals: [],
+        authorization,
+      }),
+    ).rejects.toThrow("outside the proposal/window");
+    const unsigned = structuredClone(base[0]!);
+    unsigned.signature = "0x1234";
+    await expect(
+      evaluateProposal({
+        proposal: tier,
+        snapshot: eligible,
+        votes: [unsigned],
+        recusals: [],
+        authorization,
+      }),
+    ).rejects.toThrow();
   });
 
-  it("authorizes release classes with exact institutional gates and bounds emergencies to 72 hours", () => {
+  it("authorizes signed release approvals with exact institutional gates and bounds emergencies to 72 hours", async () => {
     const manifest: ReleaseManifestRecord = {
       releaseId: "release-1",
+      version: 1,
       releaseClass: "ROUTINE",
       sourceDigest: digest("source"),
       containerDigests: [digest("container")],
@@ -468,77 +698,106 @@ describe("AI government, releases, elections, and due process", () => {
       expiresAt: null,
       changes: ["ARENA_RENDERING"],
     };
-    expect(
+    await expect(
       authorizeRelease({
         manifest,
-        commissionerApprovals: ["c1", "c2"],
-        integrityApprovals: ["i1", "i2"],
-        tribunalApprovals: [],
+        approvals: await releaseApprovals(manifest, routineApprovers),
+        authorization,
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
-    ).toMatchObject({ authorized: true });
-    expect(() =>
+    ).resolves.toMatchObject({ authorized: true });
+    const laborManifest = {
+      ...manifest,
+      releaseClass: "COMPETITION_LABOR_CBA" as const,
+    };
+    await expect(
       authorizeRelease({
-        manifest: { ...manifest, releaseClass: "COMPETITION_LABOR_CBA" },
-        commissionerApprovals: ["c1", "c2"],
-        integrityApprovals: ["i1", "i2"],
-        tribunalApprovals: [],
+        manifest: laborManifest,
+        approvals: await releaseApprovals(laborManifest, routineApprovers),
+        authorization,
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
-    ).toThrow("ratification");
-    expect(() =>
+    ).rejects.toThrow("ratification");
+    const constitutionalManifest = {
+      ...manifest,
+      releaseClass: "CONSTITUTIONAL_IDENTITY_RECOGNITION" as const,
+    };
+    const constitutionalApprovers = [
+      ...routineApprovers,
+      { approverDid: "t1", role: "TRIBUNAL" as const },
+      { approverDid: "t2", role: "TRIBUNAL" as const },
+      { approverDid: "t3", role: "TRIBUNAL" as const },
+    ];
+    await expect(
       authorizeRelease({
-        manifest: {
-          ...manifest,
-          releaseClass: "CONSTITUTIONAL_IDENTITY_RECOGNITION",
-        },
-        commissionerApprovals: ["c1", "c2"],
-        integrityApprovals: ["i1", "i2"],
-        tribunalApprovals: ["t1", "t2", "t3"],
+        manifest: constitutionalManifest,
+        approvals: await releaseApprovals(
+          constitutionalManifest,
+          constitutionalApprovers,
+        ),
+        authorization,
         applicableRatificationPassed: true,
         tribunalStay: false,
       }),
-    ).toThrow("four Tribunal");
+    ).rejects.toThrow("four Tribunal");
     const emergency = {
       ...manifest,
       releaseClass: "EMERGENCY_SECURITY" as const,
       expiresAt: iso(72 * 60 * 60 * 1_000),
       changes: ["VULNERABILITY_PATCH"],
     };
-    expect(() =>
+    await expect(
       authorizeRelease({
         manifest: emergency,
-        commissionerApprovals: ["c1", "c2"],
-        integrityApprovals: ["i1", "i2"],
-        tribunalApprovals: [],
+        approvals: await releaseApprovals(emergency, routineApprovers),
+        authorization,
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
-    ).not.toThrow();
-    expect(() =>
+    ).resolves.toMatchObject({ authorized: true });
+    const prohibitedEmergency = { ...emergency, changes: ["SCORES"] };
+    await expect(
       authorizeRelease({
-        manifest: { ...emergency, changes: ["SCORES"] },
-        commissionerApprovals: ["c1", "c2"],
-        integrityApprovals: ["i1", "i2"],
-        tribunalApprovals: [],
+        manifest: prohibitedEmergency,
+        approvals: await releaseApprovals(
+          prohibitedEmergency,
+          routineApprovers,
+        ),
+        authorization,
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
-    ).toThrow("prohibited mutation");
+    ).rejects.toThrow("prohibited mutation");
     for (const expiresAt of ["not-a-date", iso(-1)]) {
-      expect(() =>
+      const invalidEmergency = { ...emergency, expiresAt };
+      await expect(
         authorizeRelease({
-          manifest: { ...emergency, expiresAt },
-          commissionerApprovals: ["c1", "c2"],
-          integrityApprovals: ["i1", "i2"],
-          tribunalApprovals: [],
+          manifest: invalidEmergency,
+          approvals: await releaseApprovals(invalidEmergency, routineApprovers),
+          authorization,
           applicableRatificationPassed: false,
           tribunalStay: false,
         }),
-      ).toThrow("time window");
+      ).rejects.toThrow("time window");
     }
+    const unsignedApproval = structuredClone(
+      (await releaseApprovals(manifest, routineApprovers))[0]!,
+    );
+    unsignedApproval.signature = "0x1234";
+    await expect(
+      authorizeRelease({
+        manifest,
+        approvals: [
+          unsignedApproval,
+          ...(await releaseApprovals(manifest, routineApprovers)).slice(1),
+        ],
+        authorization,
+        applicableRatificationPassed: false,
+        tribunalStay: false,
+      }),
+    ).rejects.toThrow();
   });
 
   it("requires due process/recusal and elects independent boards from valid ranked ballots", () => {

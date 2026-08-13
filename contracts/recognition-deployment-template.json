@@ -5,12 +5,12 @@
   "exactTransactionCommand": "pnpm contract:prepare -- <ratified-genesis-config.json> <deployment-artifact.json>",
   "compiler": {
     "version": "0.8.36+commit.8a079791.Emscripten.clang",
-    "inputSha256": "6796cedce6058d05e3d1a9165c29fd44c1a953763fa65bfe51f9b14d673bbdf0"
+    "inputSha256": "140fbc82bdba17f3af843821ef2af1abfa3b912c519e9e3871653f5308849555"
   },
   "contract": {
-    "sourceSha256": "37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
-    "creationBytecodeSha256": "915e705db070d46a1e278ba78c368423061a37ec3f1672e561e446203540a6e7",
-    "bytecodeKeccak256": "0xdf790cac75cd66e5e83de113ed30faf0d030a70b47a63d77a61e7f1d68e5a70a",
+    "sourceSha256": "1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
+    "creationBytecodeSha256": "1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0",
+    "bytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
     "callableFunctions": [
       "CHECKPOINT_TYPEHASH",
       "KEY_REGISTRY",
@@ -18,6 +18,7 @@
       "constitutionDigest",
       "currentRegistryRoot",
       "domainSeparator",
+      "getCurrentCheckpointTypes",
       "getCurrentSigners",
       "latestRootBySubject",
       "policies",

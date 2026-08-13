@@ -28,10 +28,14 @@ export interface FullGameState {
   bench: Record<Lowercase<Team>, string[]>;
   timeouts: Record<Lowercase<Team>, number>;
   challenges: Record<Lowercase<Team>, number>;
+  teamFouls: Record<Lowercase<Team>, number>;
+  bonus: Record<Lowercase<Team>, boolean>;
   playerFouls: Record<string, number>;
   ejectedPlayerIds: string[];
   injuredPlayerIds: string[];
   pendingFreeThrows: { team: Team; remaining: number } | null;
+  freeThrowLaneActive: boolean;
+  restart: { kind: "THROW_IN"; team: Team } | { kind: "JUMP_BALL" } | null;
   protests: Array<{ team: Team; reasonCode: string; eventSequence: number }>;
   winner: Team | null;
 }
@@ -55,6 +59,9 @@ export type GameCommand =
       kind: ViolationKind;
     }
   | { type: "OUT_OF_BOUNDS"; lastTouchedBy: Team }
+  | { type: "THROW_IN"; team: Team; playerId: string }
+  | { type: "HELD_BALL" }
+  | { type: "JUMP_BALL"; winningTeam: Team }
   | { type: "GOALTENDING"; byTeam: Team; awardedTeam: Team; points: 2 | 3 }
   | { type: "SUBSTITUTE"; team: Team; outPlayerId: string; inPlayerId: string }
   | { type: "TIMEOUT"; team: Team }
@@ -155,12 +162,16 @@ export class FullGameEngine {
       },
       timeouts: { home: 7, away: 7 },
       challenges: { home: 2, away: 2 },
+      teamFouls: { home: 0, away: 0 },
+      bonus: { home: false, away: false },
       playerFouls: Object.fromEntries(
         allPlayers.map((playerId) => [playerId, 0]),
       ),
       ejectedPlayerIds: [],
       injuredPlayerIds: [],
       pendingFreeThrows: null,
+      freeThrowLaneActive: false,
+      restart: null,
       protests: [],
       winner: null,
     };
@@ -213,6 +224,7 @@ export class FullGameEngine {
           const penalized = this.#state.possessionTeam;
           this.#changePossession(other(penalized));
           this.#state.phase = "DEAD";
+          this.#state.restart = { kind: "THROW_IN", team: other(penalized) };
           this.#record("SHOT_CLOCK_EXPIRED", { team: penalized });
         }
         return;
@@ -223,6 +235,10 @@ export class FullGameEngine {
           this.#state.score[side(command.team)] += command.points;
           this.#changePossession(other(command.team));
           this.#state.phase = "DEAD";
+          this.#state.restart = {
+            kind: "THROW_IN",
+            team: other(command.team),
+          };
         }
         this.#record(command.type, command);
         return;
@@ -237,6 +253,8 @@ export class FullGameEngine {
       case "FREE_THROW": {
         const pending = this.#state.pendingFreeThrows;
         if (
+          this.#state.phase !== "DEAD" ||
+          !this.#state.freeThrowLaneActive ||
           pending === null ||
           pending.team !== command.team ||
           pending.remaining < 1
@@ -245,22 +263,60 @@ export class FullGameEngine {
         this.#assertActive(command.team, command.playerId);
         if (command.made) this.#state.score[side(command.team)] += 1;
         pending.remaining -= 1;
-        if (pending.remaining === 0) this.#state.pendingFreeThrows = null;
+        if (pending.remaining === 0) {
+          this.#state.pendingFreeThrows = null;
+          this.#state.freeThrowLaneActive = false;
+          if (command.made) {
+            const receivingTeam = other(command.team);
+            this.#changePossession(receivingTeam);
+            this.#state.restart = {
+              kind: "THROW_IN",
+              team: receivingTeam,
+            };
+          }
+        }
         this.#record(command.type, command);
         return;
       }
       case "FOUL": {
+        if (
+          this.#state.phase !== "LIVE" ||
+          this.#state.pendingFreeThrows !== null
+        ) {
+          throw new Error("A foul command requires live play");
+        }
         this.#assertActive(command.byTeam, command.playerId);
         const count = (this.#state.playerFouls[command.playerId] ?? 0) + 1;
         this.#state.playerFouls[command.playerId] = count;
         const offended = other(command.byTeam);
-        if (command.freeThrows > 0)
+        if (command.kind !== "TECHNICAL") {
+          const key = side(command.byTeam);
+          this.#state.teamFouls[key] += 1;
+          this.#state.bonus[side(offended)] = this.#state.teamFouls[key] >= 5;
+        }
+        const awardedFreeThrows = Math.max(
+          command.freeThrows,
+          this.#state.bonus[side(offended)] ? 2 : 0,
+        );
+        if (awardedFreeThrows > 0) {
           this.#state.pendingFreeThrows = {
             team: offended,
-            remaining: command.freeThrows,
+            remaining: awardedFreeThrows,
           };
+          this.#state.freeThrowLaneActive = true;
+          this.#state.restart = null;
+        } else {
+          this.#changePossession(offended);
+          this.#state.restart = { kind: "THROW_IN", team: offended };
+        }
         this.#state.phase = "DEAD";
-        this.#record(command.type, { ...command, foulCount: count });
+        this.#record(command.type, {
+          ...command,
+          foulCount: count,
+          teamFouls: this.#state.teamFouls[side(command.byTeam)],
+          bonus: this.#state.bonus[side(offended)],
+          awardedFreeThrows,
+        });
         if (count >= 6 || command.kind === "FLAGRANT_2") {
           if (!this.#state.ejectedPlayerIds.includes(command.playerId))
             this.#state.ejectedPlayerIds.push(command.playerId);
@@ -280,12 +336,57 @@ export class FullGameEngine {
           throw new Error("Violation is charged to the possessing team");
         this.#changePossession(other(command.team));
         this.#state.phase = "DEAD";
+        this.#state.restart = { kind: "THROW_IN", team: other(command.team) };
         this.#record(command.type, command);
         return;
       }
       case "OUT_OF_BOUNDS": {
         this.#changePossession(other(command.lastTouchedBy));
         this.#state.phase = "DEAD";
+        this.#state.restart = {
+          kind: "THROW_IN",
+          team: other(command.lastTouchedBy),
+        };
+        this.#record(command.type, command);
+        return;
+      }
+      case "THROW_IN": {
+        if (
+          this.#state.phase !== "DEAD" ||
+          this.#state.pendingFreeThrows !== null ||
+          this.#state.restart?.kind !== "THROW_IN" ||
+          this.#state.restart.team !== command.team
+        ) {
+          throw new Error(
+            "Throw-in does not match the awarded dead-ball restart",
+          );
+        }
+        this.#assertActive(command.team, command.playerId);
+        this.#changePossession(command.team);
+        this.#state.restart = null;
+        this.#state.phase = "LIVE";
+        this.#record(command.type, command);
+        return;
+      }
+      case "HELD_BALL": {
+        if (this.#state.phase !== "LIVE")
+          throw new Error("Held ball requires live play");
+        this.#state.phase = "DEAD";
+        this.#state.restart = { kind: "JUMP_BALL" };
+        this.#record(command.type, {});
+        return;
+      }
+      case "JUMP_BALL": {
+        if (
+          this.#state.phase !== "DEAD" ||
+          this.#state.pendingFreeThrows !== null ||
+          this.#state.restart?.kind !== "JUMP_BALL"
+        ) {
+          throw new Error("Jump ball is not the awarded dead-ball restart");
+        }
+        this.#changePossession(command.winningTeam);
+        this.#state.restart = null;
+        this.#state.phase = "LIVE";
         this.#record(command.type, command);
         return;
       }
@@ -297,6 +398,10 @@ export class FullGameEngine {
         this.#state.score[side(command.awardedTeam)] += command.points;
         this.#changePossession(command.byTeam);
         this.#state.phase = "DEAD";
+        this.#state.restart = {
+          kind: "THROW_IN",
+          team: command.byTeam,
+        };
         this.#record(command.type, command);
         return;
       }
@@ -413,6 +518,11 @@ export class FullGameEngine {
           this.#state.active.away.length !== 5
         )
           throw new Error("Both teams require five active players");
+        if (this.#state.restart?.kind === "JUMP_BALL")
+          throw new Error("A jump ball must resolve before play resumes");
+        if (this.#state.restart?.kind === "THROW_IN")
+          this.#changePossession(this.#state.restart.team);
+        this.#state.restart = null;
         this.#state.phase = "LIVE";
         this.#record(command.type, {});
         return;
@@ -450,6 +560,11 @@ export class FullGameEngine {
     this.#state.periodKind = kind;
     this.#state.gameClockMs = duration;
     this.#state.shotClockMs = SHOT_CLOCK_MS;
+    this.#state.teamFouls = { home: 0, away: 0 };
+    this.#state.bonus = { home: false, away: false };
+    this.#state.pendingFreeThrows = null;
+    this.#state.freeThrowLaneActive = false;
+    this.#state.restart = null;
     this.#state.possessionTeam =
       period % 2 === 0
         ? other(this.input.openingPossession)

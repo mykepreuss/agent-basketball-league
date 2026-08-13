@@ -1,4 +1,4 @@
-import { and, eq, sql as drizzleSql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql as drizzleSql } from "drizzle-orm";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres, { type Sql } from "postgres";
 
@@ -46,6 +46,32 @@ export interface CanonicalStore {
   append(input: AppendCanonicalEventInput): Promise<AppendCanonicalEventResult>;
 }
 
+export interface ProjectionOutboxEvent {
+  outboxId: bigint;
+  eventId: string;
+  actorDid: string;
+  nonce: string;
+  idempotencyKey: string;
+  topic: string;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: bigint;
+  eventType: string;
+  previousEventHash: string | null;
+  eventHash: string;
+  payloadSchemaDigest: string;
+  payloadCommitment: string;
+  payload: unknown;
+  stateRoot: string;
+  signatures: readonly unknown[];
+  occurredAt: Date;
+}
+
+export interface ProjectionOutboxStore extends CanonicalStore {
+  pendingProjectionEvents(limit?: number): Promise<ProjectionOutboxEvent[]>;
+  markProjected(outboxId: bigint, publishedAt: Date): Promise<void>;
+}
+
 export class CanonicalConflictError extends Error {
   public override readonly name = "CanonicalConflictError";
 }
@@ -68,7 +94,7 @@ function isRetryableSerializationError(error: unknown): boolean {
   return error.code === "40001" || error.code === "40P01";
 }
 
-export class PostgresCanonicalStore implements CanonicalStore {
+export class PostgresCanonicalStore implements ProjectionOutboxStore {
   readonly #client: Sql;
   readonly #db: PostgresJsDatabase<typeof schema>;
   readonly #maxRetries: number;
@@ -249,6 +275,68 @@ export class PostgresCanonicalStore implements CanonicalStore {
       },
     );
   }
+
+  public async pendingProjectionEvents(
+    limit = 100,
+  ): Promise<ProjectionOutboxEvent[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000)
+      throw new Error("Projection outbox limit is invalid");
+    const rows = await this.#db
+      .select({
+        outboxId: outbox.outboxId,
+        eventId: outbox.eventId,
+        actorDid: commandIdempotency.actorDid,
+        nonce: actorNonces.nonce,
+        idempotencyKey: commandIdempotency.idempotencyKey,
+        topic: outbox.topic,
+        aggregateType: recognizedEvents.aggregateType,
+        aggregateId: recognizedEvents.aggregateId,
+        aggregateVersion: recognizedEvents.aggregateVersion,
+        eventType: recognizedEvents.eventType,
+        previousEventHash: recognizedEvents.previousEventHash,
+        eventHash: recognizedEvents.eventHash,
+        payloadSchemaDigest: recognizedEvents.payloadSchemaDigest,
+        payloadCommitment: recognizedEvents.payloadCommitment,
+        payload: recognizedEvents.payload,
+        stateRoot: recognizedEvents.stateRoot,
+        signatures: recognizedEvents.signatures,
+        occurredAt: recognizedEvents.occurredAt,
+      })
+      .from(outbox)
+      .innerJoin(recognizedEvents, eq(outbox.eventId, recognizedEvents.eventId))
+      .innerJoin(
+        commandIdempotency,
+        eq(outbox.eventId, commandIdempotency.resultEventId),
+      )
+      .innerJoin(
+        actorNonces,
+        and(
+          eq(actorNonces.actorDid, commandIdempotency.actorDid),
+          eq(actorNonces.idempotencyKey, commandIdempotency.idempotencyKey),
+        ),
+      )
+      .where(isNull(outbox.publishedAt))
+      .orderBy(asc(outbox.outboxId))
+      .limit(limit);
+    return rows.map((row) => {
+      if (!Array.isArray(row.signatures))
+        throw new Error("Canonical event signatures are malformed");
+      return { ...row, signatures: row.signatures };
+    });
+  }
+
+  public async markProjected(
+    outboxId: bigint,
+    publishedAt: Date,
+  ): Promise<void> {
+    const updated = await this.#db
+      .update(outbox)
+      .set({ publishedAt })
+      .where(and(eq(outbox.outboxId, outboxId), isNull(outbox.publishedAt)))
+      .returning({ outboxId: outbox.outboxId });
+    if (updated.length !== 1)
+      throw new Error("Projection outbox event is absent or already published");
+  }
 }
 
 interface MemoryHead {
@@ -256,7 +344,7 @@ interface MemoryHead {
   hash: string | null;
 }
 
-export class InMemoryCanonicalStore implements CanonicalStore {
+export class InMemoryCanonicalStore implements ProjectionOutboxStore {
   readonly #heads = new Map<string, MemoryHead>();
   readonly #idempotency = new Map<
     string,
@@ -265,6 +353,7 @@ export class InMemoryCanonicalStore implements CanonicalStore {
   readonly #nonces = new Set<string>();
   readonly events: AppendCanonicalEventInput[] = [];
   readonly outboxEvents: Array<{ eventId: string; topic: string }> = [];
+  readonly #projectedOutboxIds = new Set<bigint>();
 
   public async append(
     input: AppendCanonicalEventInput,
@@ -321,5 +410,48 @@ export class InMemoryCanonicalStore implements CanonicalStore {
       requestHash: input.requestHash,
     });
     return result;
+  }
+
+  public async pendingProjectionEvents(
+    limit = 100,
+  ): Promise<ProjectionOutboxEvent[]> {
+    return this.events
+      .map((event, index) => ({ event, outboxId: BigInt(index + 1) }))
+      .filter(({ outboxId }) => !this.#projectedOutboxIds.has(outboxId))
+      .slice(0, limit)
+      .map(({ event, outboxId }) => ({
+        outboxId,
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        topic: event.outboxTopic,
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        aggregateVersion: event.expectedVersion + 1n,
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.payloadSchemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: structuredClone(event.payload),
+        stateRoot: event.stateRoot,
+        signatures: structuredClone(event.signatures),
+        occurredAt: new Date(event.occurredAt),
+      }));
+  }
+
+  public async markProjected(
+    outboxId: bigint,
+    _publishedAt: Date,
+  ): Promise<void> {
+    if (
+      outboxId < 1n ||
+      outboxId > BigInt(this.outboxEvents.length) ||
+      this.#projectedOutboxIds.has(outboxId)
+    ) {
+      throw new Error("Projection outbox event is absent or already published");
+    }
+    this.#projectedOutboxIds.add(outboxId);
   }
 }

@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
-      "fileCount": 77,
+      "digest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
+      "fileCount": 82,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -10,7 +10,7 @@
         },
         {
           "path": "apps/arena/app/data.ts",
-          "digest": "0xabdfe05540d66bfd3d7356299ca69791fecb2e475c37e3e37a18159ccc186851"
+          "digest": "0xca4fe65ce60a0b2e5a29b9e38f3db160e4d2b7de63e45f6f752dbbf5f404a87a"
         },
         {
           "path": "apps/arena/app/layout.tsx",
@@ -26,7 +26,7 @@
         },
         {
           "path": "apps/arena/app/page.tsx",
-          "digest": "0x66d43a7a46380d639fd91eb98b71e315704c7ed1d26fc6a694137c02a33a1d39"
+          "digest": "0x56f27b1b8f2660336ae5f8d723816659ddf81f6cda4599dc069ab8f6b39e59ff"
         },
         {
           "path": "apps/body-broker/src/index.ts",
@@ -38,15 +38,15 @@
         },
         {
           "path": "apps/core-api/src/index.ts",
-          "digest": "0xaac7fc6b438e41d19a69a6accefda5263381c5d14e56e6ec1357daeeb005b5f8"
+          "digest": "0xf4c41117993dc8919bb04079e2c175b7ab88da30ac00b1710e14fd93377e5f7a"
         },
         {
           "path": "apps/core-api/src/server.ts",
-          "digest": "0x46f4f54024af665d98379821af06b5f85f408c73068925c967f1c3e72899b155"
+          "digest": "0x218ff1540b8f4a4563a7a665e0f257f0be059888c4dea9e611abe3d746ede842"
         },
         {
           "path": "apps/private-storage-broker/src/index.ts",
-          "digest": "0x3f76408bb431726f8b5f85845043f9039411f3327819113881f781916cc573b0"
+          "digest": "0x41850ba9281be16f97fbfcad12bdb5b942c5a1721c3be553c12f071e6a9511a8"
         },
         {
           "path": "apps/private-storage-broker/src/server.ts",
@@ -54,15 +54,15 @@
         },
         {
           "path": "apps/public-api/src/index.ts",
-          "digest": "0xf5aef0fb8d2255e681a7fba6ac1d6cfc44a8e2c8a5d18642526a93e32a079eca"
+          "digest": "0x80fc2eb145be80191c0028a5d02678c45f22352aeb80b20071176fbf1f049c4e"
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0x8106af93442954a8789d0de6f1bf543b93c8f3390ca98cc2a86fa2d45640d56a"
+          "digest": "0x0a1476f2b218d17209c05b0d345ff6e4e413fc50e29baadcb14c1b1ac2eacc1e"
         },
         {
           "path": "contracts/RecognitionRegistry.sol",
-          "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9"
+          "digest": "0x1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b"
         },
         {
           "path": "packages/assurance/src/capacity.ts",
@@ -85,12 +85,16 @@
           "digest": "0x6e20917e33fa153d9127db5744eb0414e9d83ee06796519feda66ead19bdb9bc"
         },
         {
+          "path": "packages/basketball/src/agent-game.ts",
+          "digest": "0x58de4c2679e17774d9b485e4c27e8ad89bcb8680fad244567f3b900ebafb1a13"
+        },
+        {
           "path": "packages/basketball/src/avatars.ts",
           "digest": "0xb4a97f19e9501be9293047e7f88901a8de04723a0899504764cc543c35a1df1e"
         },
         {
           "path": "packages/basketball/src/bodies.ts",
-          "digest": "0xef043bdac9c4368b98319953980bc9fb8d6a2f71f5d2d9eabe0448ab4d51102c"
+          "digest": "0x95470d73620e564e6ba00c43b129f08f6898be91640f2e47d56859ff695d96bc"
         },
         {
           "path": "packages/basketball/src/broadcast.ts",
@@ -98,7 +102,7 @@
         },
         {
           "path": "packages/basketball/src/engine.ts",
-          "digest": "0x8cfd085a18a89d3e4492eddbbe61768d3075e100964f46222329b1533c5918bb"
+          "digest": "0x6842f2acb2c6722f5f49db6a5a7a7a0a2de570ef27f3aea934b1f074110dd6c0"
         },
         {
           "path": "packages/basketball/src/exhibition.ts",
@@ -110,11 +114,11 @@
         },
         {
           "path": "packages/basketball/src/full-game.ts",
-          "digest": "0xa8156c4da8f59e7eddcb680f2629120e0d04fdd59b2f49b8dad04893e6392114"
+          "digest": "0x87f886f712db94c757172d891e784e520e0b526f36695921e3b81b509b2ba422"
         },
         {
           "path": "packages/basketball/src/index.ts",
-          "digest": "0xc13bffe0679e3abb5b77022f884467415bb90c25ee51faddb2d2c43d2257401c"
+          "digest": "0x25f27800418d7993c5682cf80ca30825493631b5b5c61b858a751fa2386aa668"
         },
         {
           "path": "packages/basketball/src/observations.ts",
@@ -133,12 +137,16 @@
           "digest": "0x7145ace91a9f3d4d64a6e26c3d1d9833f1376f9ea2f61dbc8017896ee19d9ddf"
         },
         {
+          "path": "packages/basketball/src/rehearsal-possession.ts",
+          "digest": "0x14fbdc26a131dde17bb8d3072c8ac44ad87896de475cfeab4e22ed71266299c4"
+        },
+        {
           "path": "packages/basketball/src/replay.ts",
           "digest": "0x5dd237424d07b57949e1a1029566c97a6a810fed3b310bb69b387d0b388ad189"
         },
         {
           "path": "packages/basketball/src/types.ts",
-          "digest": "0xdf066323a20c344aa6f62d15544f1ccd1c88dec7e153943297404a7d6f162115"
+          "digest": "0xd07959f263b5876723be2f69791f1199a2f695198eb9ee58c35173ceea62f6df"
         },
         {
           "path": "packages/career/src/admission.ts",
@@ -174,7 +182,7 @@
         },
         {
           "path": "packages/database/src/store.ts",
-          "digest": "0x069b83d96c715af50c896c9a8b115df5cb5ffbd4b41f2d402589de3049cc390e"
+          "digest": "0x8f4808351c83160ffecc25994611cb1943491b0ed85cc303351cae78433b5f5e"
         },
         {
           "path": "packages/foundation/src/index.ts",
@@ -206,7 +214,7 @@
         },
         {
           "path": "packages/genesis/src/readiness.ts",
-          "digest": "0x80527b44d944b0501ca7b114f40b6bdb337772d2dae27256b0ddcf762ae9b276"
+          "digest": "0x06dfea1eff48396df04a9bb24ceb3d72dcf5b0d426edac2d5776a047f469df04"
         },
         {
           "path": "packages/institutions/src/development.ts",
@@ -222,7 +230,7 @@
         },
         {
           "path": "packages/institutions/src/governance.ts",
-          "digest": "0xe58eb27febc74315a9d180700e32e34bbeb819ad28c77cd269a954d36efef4a3"
+          "digest": "0x1ab5e906e8f15cf5b6c61d9a5e5d7418a5b5a268d80c60af70abc6356cd6c830"
         },
         {
           "path": "packages/institutions/src/index.ts",
@@ -239,6 +247,18 @@
         {
           "path": "packages/policy/src/index.ts",
           "digest": "0x7b7c7058b4d0c7b2d8dc7003a74e6d367b8f78ec849ff1f7c3b1f8e24ce77b51"
+        },
+        {
+          "path": "packages/projections/src/index.ts",
+          "digest": "0x709edd9344192ca3fa7a93687b3166376b3a68110f1e5354aaddca0f79a2240e"
+        },
+        {
+          "path": "packages/projections/src/repository.ts",
+          "digest": "0x08b765dbb3f7e213978e489803fa9474786a06b504ac41a1a586d9a1fb461dcc"
+        },
+        {
+          "path": "packages/projections/src/worker.ts",
+          "digest": "0x11cd7f64e400fd4b91c227b668fd94cb82dd37171d9d87bd09680196743a690b"
         },
         {
           "path": "packages/recognition/src/canonical.ts",
@@ -282,11 +302,11 @@
         },
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0xab17f6c71d4fe7218efa68e9e9854932022d49b3cd171c900dd884a0f56a6d60"
+          "digest": "0x279d2137764f906a5ec8d48eb4176a5c6d8ce66d1f7ce82180db026cbc258bce"
         },
         {
           "path": "packages/storage/src/broker.ts",
-          "digest": "0x121a68a6115ed701cb8f2d9b135aabef55bb93778b17523ba0db556705412cc3"
+          "digest": "0xbce5a4562bce8a4b133e06df03e1908a6c643ab69939b4c281816b6c4268fed6"
         },
         {
           "path": "packages/storage/src/crypto.ts",
@@ -294,7 +314,7 @@
         },
         {
           "path": "packages/storage/src/drive-repository.ts",
-          "digest": "0xc03cd0a6592b94ed9c910ca37b9bce300ec70dfb6d5cb11723368b4fc58d4d76"
+          "digest": "0x60e14bac1a9fe76064b87c4a7df852660763b05eb37b745156872b5a9a7e1be6"
         },
         {
           "path": "packages/storage/src/index.ts",
@@ -302,7 +322,7 @@
         },
         {
           "path": "scripts/evidence.ts",
-          "digest": "0x3d692e6e0a5b768695404c31ff3594d9093117c3f76d940f15218c4f9e9dd2ec"
+          "digest": "0xafce5f3fb32945313d993894c80162dbe25682359d9d50b6996030b39204ff25"
         },
         {
           "path": "scripts/prepare-genesis-readiness.ts",
@@ -355,7 +375,7 @@
       ]
     },
     "tools": {
-      "digest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
+      "digest": "0x97b4730cff7e4442428759c4e41e52273aca66ef1365893303d89383a5133c9b",
       "fileCount": 6,
       "files": [
         {
@@ -368,11 +388,11 @@
         },
         {
           "path": "pnpm-lock.yaml",
-          "digest": "0xd1daa0c2cdf949f69fce52e216cca3d60f6f780cb29051a9f90062b09b2d6fef"
+          "digest": "0xb3dfbcaaa3f4de35fe6710d15d7f2a693b22b8230d8b0e149701c9ef4a5e614a"
         },
         {
           "path": "pnpm-workspace.yaml",
-          "digest": "0x79264602c400fd43c69fb1b5eb0408c4e0f529f8dd7f8236dd6efc5a2d44e46b"
+          "digest": "0x3daaabeb30f7ceaf91c9786b24a475d0d8655ae9cc0a1a5d821def62fd9b79d6"
         },
         {
           "path": "tsconfig.base.json",
@@ -385,12 +405,12 @@
       ]
     },
     "schemas": {
-      "digest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+      "digest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
       "fileCount": 1,
       "files": [
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0xab17f6c71d4fe7218efa68e9e9854932022d49b3cd171c900dd884a0f56a6d60"
+          "digest": "0x279d2137764f906a5ec8d48eb4176a5c6d8ce66d1f7ce82180db026cbc258bce"
         }
       ]
     },
@@ -417,8 +437,8 @@
       ]
     },
     "testSuite": {
-      "digest": "0x678f23b60222e0a408b70329ebf4ee9470c27fd4d52b0f34a093ddbcc498b468",
-      "fileCount": 24,
+      "digest": "0x2f25a0ea8ed89af8acf12c8267ea596b9d6dd9ee413f4a1e8a69b3af821226f9",
+      "fileCount": 25,
       "files": [
         {
           "path": "apps/body-broker/test/server.test.ts",
@@ -430,7 +450,7 @@
         },
         {
           "path": "apps/private-storage-broker/test/server.test.ts",
-          "digest": "0x42249bb3c85dda5357a237b2c680b1cc86c02144bbcd0a0341366faa019caea5"
+          "digest": "0x2f7faafb15c683b6560a3b2e2424ad96f50308bc14afcf44089a7ef4b0a2edca"
         },
         {
           "path": "apps/public-api/test/server.test.ts",
@@ -442,11 +462,11 @@
         },
         {
           "path": "packages/basketball/test/full-game.test.ts",
-          "digest": "0x7dc88458563158a721ada89bb0ce50e0068cce0e4dbab1bc495f9c6a9654245b"
+          "digest": "0x4aaba892068843f50dc8244a565750c61d10e6109eb4233bcba0356c6dacd45c"
         },
         {
           "path": "packages/basketball/test/possession.test.ts",
-          "digest": "0x26ccac1c93d3f011d7c1601340a6cb2439146f2ffafd1fac21dcca70da72ec67"
+          "digest": "0xe37a0eacb2f5e66c74c37adc027d802180a44da33a910db1fad96100c0b14083"
         },
         {
           "path": "packages/career/test/career.test.ts",
@@ -454,7 +474,7 @@
         },
         {
           "path": "packages/database/test/store.test.ts",
-          "digest": "0x8d0a5f8359c32d00fb4b75a9445b9635149c92209b35c19d612cb1cf10073d3b"
+          "digest": "0x096d1be5f229f5ad671b72926f33739a8b0511f6b20201f09b9a2e1fd0390318"
         },
         {
           "path": "packages/foundation/test/service-auth.test.ts",
@@ -466,7 +486,7 @@
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
-          "digest": "0xc862ffcaa3f21e2257e9386654b2b545500093e05e6d09319570c2ff8846a9bf"
+          "digest": "0x2a9d592fe7f1d4857072215aefb65974af349bb71b67173c322bebb59cd99909"
         },
         {
           "path": "packages/institutions/test/development.test.ts",
@@ -474,15 +494,19 @@
         },
         {
           "path": "packages/institutions/test/institutions.test.ts",
-          "digest": "0x449fa027a49eda9eb1d80abadf2d23bc3fe0ce30b7e46808fd05907cd652bba5"
+          "digest": "0xfca19caffa0f4a9e1739b2161235a2c95fd88857b6b9b4b7c57e336cc85633f9"
         },
         {
           "path": "packages/policy/test/mappings.test.ts",
           "digest": "0x111eeb430beb2edc88c40c9f732e40b8bbf79fad2c730adcd9da6c8b811b48b9"
         },
         {
+          "path": "packages/projections/test/repository.test.ts",
+          "digest": "0x99863efa2489e9a9e2b0bc25035d9c4eb521e91f5766a3188de366f3c9d0b741"
+        },
+        {
           "path": "packages/recognition/test/contract.test.ts",
-          "digest": "0xaded9bcf24a2c91c22c1424844580497c996c6bdcc24a1d15822d4a80af8f0d8"
+          "digest": "0x7682b0e5a9ed4d43f83af09364134c160a34b40ac3ef3f4d6f98f52f127030ed"
         },
         {
           "path": "packages/recognition/test/recognition.test.ts",
@@ -498,11 +522,11 @@
         },
         {
           "path": "packages/storage/test/storage.test.ts",
-          "digest": "0xa109b87787a2e4f6fe1f82368fc14f89e381c01baa6a3ecbd72396bc708b1dce"
+          "digest": "0xc4d9727b88d5c9167254a6008e3d631d7998c6c1d3fd3bdf4eb756087a8d1e6c"
         },
         {
           "path": "tests/acceptance/end-to-end.test.ts",
-          "digest": "0x758f8675a77ab3fa4ad1d01415af353f50b531c62e5b83364cb7c9275da4a7c3"
+          "digest": "0x0bae574ff2f7c7539fd0bd96214c84189c1b9818e6524b08ff3d83d5d58b3cf0"
         },
         {
           "path": "tests/adversarial/boundaries.test.ts",
@@ -519,12 +543,12 @@
       ]
     },
     "verifier": {
-      "digest": "0x21c33c9c8f605f93c8d615ebbdd23ea99972fe1d4b8b36b03ed1fee08b9fd77e",
+      "digest": "0x7eb8a95a280e2f6180b678c53dffd7621cd3f18c9c797d62cedf9d677b63ffa0",
       "fileCount": 5,
       "files": [
         {
           "path": "contracts/RecognitionRegistry.sol",
-          "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9"
+          "digest": "0x1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b"
         },
         {
           "path": "docs/architecture/VERIFIER_RULES.md",
@@ -611,7 +635,7 @@
       ]
     },
     "publicProjection": {
-      "digest": "0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f",
+      "digest": "0x7ede7d680a959139fb5b258f1c746e19b360ebd11ec7d2bfa6ecbab1a1c3744b",
       "fileCount": 7,
       "files": [
         {
@@ -620,11 +644,11 @@
         },
         {
           "path": "apps/arena/app/data.ts",
-          "digest": "0xabdfe05540d66bfd3d7356299ca69791fecb2e475c37e3e37a18159ccc186851"
+          "digest": "0xca4fe65ce60a0b2e5a29b9e38f3db160e4d2b7de63e45f6f752dbbf5f404a87a"
         },
         {
           "path": "apps/arena/app/globals.css",
-          "digest": "0xace748c8c6519f016f73d9e8286cefd45a912f92c7ae62298e65bf34a484ef84"
+          "digest": "0x07e0255b823877876af724dc36d8bb1272df73b9fda9a88be74fe6f040e84011"
         },
         {
           "path": "apps/arena/app/layout.tsx",
@@ -640,11 +664,11 @@
         },
         {
           "path": "apps/arena/app/page.tsx",
-          "digest": "0x66d43a7a46380d639fd91eb98b71e315704c7ed1d26fc6a694137c02a33a1d39"
+          "digest": "0x56f27b1b8f2660336ae5f8d723816659ddf81f6cda4599dc069ab8f6b39e59ff"
         }
       ]
     },
-    "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+    "testResultDigest": "0xfa281c02d08e705fb3a2c72f8b5331227776c7e528410b66f83b400a73775a47",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_DOCKER_GATE"
   },
@@ -813,17 +837,18 @@
     "schemaValid": false,
     "candidate": {
       "releaseId": null,
+      "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+      "sourceDigest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
       "containerDigests": [
         "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e"
       ],
       "imageDigests": [],
       "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-      "toolDigest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
-      "schemaDigest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+      "toolDigest": "0x97b4730cff7e4442428759c4e41e52273aca66ef1365893303d89383a5133c9b",
+      "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
       "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
-      "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+      "testResultDigest": "0xfa281c02d08e705fb3a2c72f8b5331227776c7e528410b66f83b400a73775a47",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -849,12 +874,12 @@
     "exactTransactionCommand": "pnpm contract:prepare -- <ratified-genesis-config.json> <deployment-artifact.json>",
     "compiler": {
       "version": "0.8.36+commit.8a079791.Emscripten.clang",
-      "inputSha256": "6796cedce6058d05e3d1a9165c29fd44c1a953763fa65bfe51f9b14d673bbdf0"
+      "inputSha256": "140fbc82bdba17f3af843821ef2af1abfa3b912c519e9e3871653f5308849555"
     },
     "contract": {
-      "sourceSha256": "37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
-      "creationBytecodeSha256": "915e705db070d46a1e278ba78c368423061a37ec3f1672e561e446203540a6e7",
-      "bytecodeKeccak256": "0xdf790cac75cd66e5e83de113ed30faf0d030a70b47a63d77a61e7f1d68e5a70a",
+      "sourceSha256": "1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
+      "creationBytecodeSha256": "1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0",
+      "bytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
       "callableFunctions": [
         "CHECKPOINT_TYPEHASH",
         "KEY_REGISTRY",
@@ -862,6 +887,7 @@
         "constitutionDigest",
         "currentRegistryRoot",
         "domainSeparator",
+        "getCurrentCheckpointTypes",
         "getCurrentSigners",
         "latestRootBySubject",
         "policies",
@@ -902,7 +928,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+        "digest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -926,7 +952,7 @@
       {
         "name": "NBA rules mapping",
         "path": "docs/rules/nba-rule-mapping.json",
-        "digest": "0xeea27ca0fb979ec0561cf96471979fe5de091ce6d951f69f615b0226984527c4",
+        "digest": "0xf03fc82721b65e7e04f4daa18d57ea329b30b82a57ca8083ee9d095985cba5f1",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -956,19 +982,19 @@
       {
         "name": "public projections",
         "path": "apps/arena/app/",
-        "digest": "0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f",
+        "digest": "0x7ede7d680a959139fb5b258f1c746e19b360ebd11ec7d2bfa6ecbab1a1c3744b",
         "state": "PREPARED_LOCAL"
       },
       {
         "name": "public verifier",
         "path": "packages/recognition/src/verifier.ts",
-        "digest": "0x21c33c9c8f605f93c8d615ebbdd23ea99972fe1d4b8b36b03ed1fee08b9fd77e",
+        "digest": "0x7eb8a95a280e2f6180b678c53dffd7621cd3f18c9c797d62cedf9d677b63ffa0",
         "state": "PREPARED_LOCAL"
       },
       {
         "name": "Base recognition contract",
         "path": "contracts/RecognitionRegistry.sol",
-        "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
+        "digest": "0x1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
         "state": "PREPARED_LOCAL"
       },
       {

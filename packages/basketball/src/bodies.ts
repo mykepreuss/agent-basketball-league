@@ -115,4 +115,8 @@ export class PersistentPlayerBody {
   public exportLessons(): readonly string[] {
     return [...this.#lessons];
   }
+
+  public decisionVersion(): bigint {
+    return this.#version;
+  }
 }

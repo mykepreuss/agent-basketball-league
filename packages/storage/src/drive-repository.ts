@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, open, readFile, rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { link, mkdir, open, readFile, readdir, rm } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 
-import type { StorageDomainPolicy } from "./broker.js";
+import type { CiphertextBrokerState, StorageDomainPolicy } from "./broker.js";
 import type { EncryptedBlob, GuardianWrappedKey } from "./crypto.js";
 
 function segment(value: string): string {
@@ -27,10 +27,32 @@ async function writeImmutableJson(path: string, value: unknown): Promise<void> {
     await handle.close();
     handle = undefined;
     await link(temporaryPath, path);
+    const directory = await open(dirname(path), "r");
+    try {
+      await directory.sync();
+    } finally {
+      await directory.close();
+    }
   } finally {
     if (handle !== undefined) await handle.close().catch(() => undefined);
     await rm(temporaryPath, { force: true }).catch(() => undefined);
   }
+}
+
+async function entries(path: string) {
+  try {
+    return await readdir(path, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function readJson<T>(path: string): Promise<T> {
+  const value: unknown = JSON.parse(await readFile(path, "utf8"));
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`Durable storage record is not an object: ${path}`);
+  return value as T;
 }
 
 export class DriveCiphertextRepository {
@@ -102,5 +124,103 @@ export class DriveCiphertextRepository {
     );
     assertInside(this.#root, path);
     return JSON.parse(await readFile(path, "utf8")) as EncryptedBlob;
+  }
+
+  public async loadState(): Promise<CiphertextBrokerState> {
+    const policies: StorageDomainPolicy[] = [];
+    const objects: EncryptedBlob[] = [];
+    const guardianEnvelopes: GuardianWrappedKey[] = [];
+    const domainsRoot = join(this.#root, "domains");
+    for (const domainEntry of (await entries(domainsRoot)).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )) {
+      if (
+        !domainEntry.isDirectory() ||
+        !/^[0-9a-f]{64}$/.test(domainEntry.name)
+      )
+        throw new Error("Durable storage contains an invalid domain path");
+      const domainRoot = join(domainsRoot, domainEntry.name);
+      for (const policyEntry of (
+        await entries(join(domainRoot, "policies"))
+      ).sort((left, right) => left.name.localeCompare(right.name))) {
+        if (!policyEntry.isFile() || !/^\d+\.json$/.test(policyEntry.name))
+          throw new Error("Durable storage contains an invalid policy path");
+        const policy = await readJson<StorageDomainPolicy>(
+          join(domainRoot, "policies", policyEntry.name),
+        );
+        if (
+          segment(policy.domainId) !== domainEntry.name ||
+          `${policy.version}.json` !== policyEntry.name
+        ) {
+          throw new Error("Durable policy path does not match its metadata");
+        }
+        policies.push(policy);
+      }
+      for (const objectEntry of (
+        await entries(join(domainRoot, "objects"))
+      ).sort((left, right) => left.name.localeCompare(right.name))) {
+        if (
+          !objectEntry.isDirectory() ||
+          !/^[0-9a-f]{64}$/.test(objectEntry.name)
+        )
+          throw new Error("Durable storage contains an invalid object path");
+        const objectRoot = join(domainRoot, "objects", objectEntry.name);
+        for (const versionEntry of (await entries(objectRoot)).sort(
+          (left, right) => left.name.localeCompare(right.name),
+        )) {
+          if (!versionEntry.isFile() || !/^\d+\.json$/.test(versionEntry.name))
+            throw new Error("Durable storage contains an invalid version path");
+          const blob = await readJson<EncryptedBlob>(
+            join(objectRoot, versionEntry.name),
+          );
+          if (
+            segment(blob.domainId) !== domainEntry.name ||
+            segment(blob.objectId) !== objectEntry.name ||
+            `${blob.version}.json` !== versionEntry.name
+          ) {
+            throw new Error(
+              "Durable ciphertext path does not match its metadata",
+            );
+          }
+          objects.push(blob);
+        }
+      }
+      for (const guardianEntry of (
+        await entries(join(domainRoot, "guardians"))
+      ).sort((left, right) => left.name.localeCompare(right.name))) {
+        if (
+          !guardianEntry.isDirectory() ||
+          !/^[0-9a-f]{64}$/.test(guardianEntry.name)
+        )
+          throw new Error("Durable storage contains an invalid guardian path");
+        const guardianRoot = join(domainRoot, "guardians", guardianEntry.name);
+        for (const envelopeEntry of (await entries(guardianRoot)).sort(
+          (left, right) => left.name.localeCompare(right.name),
+        )) {
+          if (
+            !envelopeEntry.isFile() ||
+            !/^[0-9a-f]{64}\.json$/.test(envelopeEntry.name)
+          ) {
+            throw new Error(
+              "Durable storage contains an invalid envelope path",
+            );
+          }
+          const envelope = await readJson<GuardianWrappedKey>(
+            join(guardianRoot, envelopeEntry.name),
+          );
+          if (
+            segment(envelope.domainId) !== domainEntry.name ||
+            segment(envelope.guardianDid) !== guardianEntry.name ||
+            `${envelope.commitment.slice(2)}.json` !== envelopeEntry.name
+          ) {
+            throw new Error(
+              "Durable guardian path does not match its metadata",
+            );
+          }
+          guardianEnvelopes.push(envelope);
+        }
+      }
+    }
+    return { policies, objects, guardianEnvelopes };
   }
 }

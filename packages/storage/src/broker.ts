@@ -17,6 +17,12 @@ export interface StorageDomainPolicy {
   manifestCommitment: string;
 }
 
+export interface CiphertextBrokerState {
+  policies: readonly StorageDomainPolicy[];
+  objects: readonly EncryptedBlob[];
+  guardianEnvelopes: readonly GuardianWrappedKey[];
+}
+
 export class StorageAuthorizationError extends Error {
   public override readonly name = "StorageAuthorizationError";
 }
@@ -33,6 +39,89 @@ export class CiphertextBroker {
   readonly #policies = new Map<string, StorageDomainPolicy>();
   readonly #objects = new Map<string, EncryptedBlob[]>();
   readonly #guardianEnvelopes = new Map<string, GuardianWrappedKey[]>();
+
+  public static restore(state: CiphertextBrokerState): CiphertextBroker {
+    const broker = new CiphertextBroker();
+    const policiesByDomain = new Map<string, StorageDomainPolicy[]>();
+    for (const policy of state.policies) {
+      const policies = policiesByDomain.get(policy.domainId) ?? [];
+      policies.push(clone(policy));
+      policiesByDomain.set(policy.domainId, policies);
+    }
+    for (const [domainId, policies] of policiesByDomain) {
+      policies.sort((left, right) => left.version - right.version);
+      policies.forEach((policy, index) => {
+        if (
+          policy.domainId !== domainId ||
+          policy.version !== index + 1 ||
+          !Object.values(policy.members).some((grants) =>
+            grants.includes("ADMIN"),
+          )
+        ) {
+          throw new StorageVersionConflictError(
+            `Durable policy chain is invalid for ${domainId}`,
+          );
+        }
+      });
+      broker.#policies.set(domainId, clone(policies.at(-1)!));
+    }
+
+    const objectsByKey = new Map<string, EncryptedBlob[]>();
+    for (const blob of state.objects) {
+      if (!broker.#policies.has(blob.domainId)) {
+        throw new StorageAuthorizationError(
+          `Durable object references unknown domain ${blob.domainId}`,
+        );
+      }
+      const key = `${blob.domainId}:${blob.objectId}`;
+      const versions = objectsByKey.get(key) ?? [];
+      versions.push(clone(blob));
+      objectsByKey.set(key, versions);
+    }
+    for (const [key, versions] of objectsByKey) {
+      versions.sort((left, right) => left.version - right.version);
+      versions.forEach((blob, index) => {
+        const prior = versions[index - 1];
+        if (
+          blob.version !== index + 1 ||
+          blob.previousVersionCommitment !==
+            (prior?.ciphertextCommitment ?? null)
+        ) {
+          throw new StorageVersionConflictError(
+            `Durable ciphertext chain is invalid for ${key}`,
+          );
+        }
+      });
+      broker.#objects.set(key, clone(versions));
+    }
+
+    for (const envelope of state.guardianEnvelopes) {
+      const policy = broker.#policies.get(envelope.domainId);
+      if (
+        policy === undefined ||
+        !policy.guardianEnvelopeCommitments.includes(envelope.commitment)
+      ) {
+        throw new StorageAuthorizationError(
+          "Durable guardian envelope is absent from its domain policy",
+        );
+      }
+      const envelopes = broker.#guardianEnvelopes.get(envelope.domainId) ?? [];
+      if (
+        envelopes.some(
+          (candidate) =>
+            candidate.guardianDid === envelope.guardianDid ||
+            candidate.commitment === envelope.commitment,
+        )
+      ) {
+        throw new StorageVersionConflictError(
+          "Durable guardian envelope is duplicated",
+        );
+      }
+      envelopes.push(clone(envelope));
+      broker.#guardianEnvelopes.set(envelope.domainId, envelopes);
+    }
+    return broker;
+  }
 
   public registerDomain(callerDid: string, policy: StorageDomainPolicy): void {
     const prior = this.#policies.get(policy.domainId);
@@ -55,6 +144,11 @@ export class CiphertextBroker {
       }
     }
     this.#policies.set(policy.domainId, clone(policy));
+  }
+
+  public domainPolicy(domainId: string): StorageDomainPolicy | undefined {
+    const policy = this.#policies.get(domainId);
+    return policy === undefined ? undefined : clone(policy);
   }
 
   public put(callerDid: string, blob: EncryptedBlob): () => void {

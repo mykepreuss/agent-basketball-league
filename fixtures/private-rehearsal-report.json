@@ -7,7 +7,7 @@
       "gameCount": 36,
       "replayExactCount": 36,
       "inferenceInvocations": 0,
-      "seasonRoot": "0xd049768ba17801a427c3675fcbaa0ddda493e0ba0b5980b02dcd3d881fc34f74",
+      "seasonRoot": "0x865030ef4bbd028ee908823c6f611747c1f71f08e0c6cf5d5d1b91ca6454c16c",
       "standings": [
         { "clubId": "premier-club-2", "wins": 10, "losses": 8 },
         { "clubId": "premier-club-3", "wins": 9, "losses": 9 },
@@ -19,7 +19,7 @@
       "gameCount": 36,
       "replayExactCount": 36,
       "inferenceInvocations": 0,
-      "seasonRoot": "0x2f6a7d41ae1844402105703050a37b12796a3a91389534cb23169103383acd02",
+      "seasonRoot": "0x4c140c709f94f119d834b6ff59c302c09dbcc05831b4b0b3f744fa8a8eacbf69",
       "standings": [
         { "clubId": "development-club-2", "wins": 10, "losses": 8 },
         { "clubId": "development-club-3", "wins": 9, "losses": 9 },
@@ -29,7 +29,7 @@
     }
   },
   "scenarioCount": 16,
-  "eventRoot": "0x6f3ea9a7a8b475d89b72a3f05853cfec2a15db9781c8372436e0e9a305a43df9",
+  "eventRoot": "0xc78f8d0f0f5653028ad665884de67870579f8ba0d18b94f2ee6b16da677e4c09",
   "scenarios": [
     "accelerated-premier-season",
     "accelerated-development-season",

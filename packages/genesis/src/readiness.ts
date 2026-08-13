@@ -75,6 +75,7 @@ export interface PendingReleaseManifestCandidate {
   schemaValid: false;
   candidate: {
     releaseId: null;
+    version: null;
     releaseClass: "IDENTITY_CONSTITUTIONAL";
     sourceDigest: Sha256Digest;
     containerDigests: readonly Sha256Digest[];
@@ -101,6 +102,7 @@ export function buildPendingReleaseManifest(
 ): PendingReleaseManifestCandidate {
   const candidate = {
     releaseId: null,
+    version: null,
     releaseClass: "IDENTITY_CONSTITUTIONAL" as const,
     sourceDigest: digests.source.digest,
     containerDigests: [digests.containerSource.digest],

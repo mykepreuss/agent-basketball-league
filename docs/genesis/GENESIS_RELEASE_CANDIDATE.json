@@ -3,17 +3,18 @@
   "schemaValid": false,
   "candidate": {
     "releaseId": null,
+    "version": null,
     "releaseClass": "IDENTITY_CONSTITUTIONAL",
-    "sourceDigest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+    "sourceDigest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
     "containerDigests": [
       "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e"
     ],
     "imageDigests": [],
     "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-    "toolDigest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
-    "schemaDigest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+    "toolDigest": "0x97b4730cff7e4442428759c4e41e52273aca66ef1365893303d89383a5133c9b",
+    "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
     "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
-    "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+    "testResultDigest": "0xfa281c02d08e705fb3a2c72f8b5331227776c7e528410b66f83b400a73775a47",
     "applicableLawEventIds": [],
     "ratificationEventIds": [],
     "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",

@@ -13,7 +13,7 @@
       "title": "Court Dimensions - Equipment",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 1",
-      "rationale": "ABL models a fixed-point two-dimensional court, baskets, boundary, ball, and clocks rather than physical equipment.",
+      "rationale": "ABL models a fixed-point two-dimensional court, baskets, boundary, ball, and clocks rather than physical equipment; ball-handler boundary exits are derived from attempted movement.",
       "implementationRef": "packages/basketball/src/engine.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/possession.test.ts"]
@@ -23,8 +23,8 @@
       "title": "Duties of the Officials",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 2",
-      "rationale": "Three fallible referee agents and two bounded replay agents perform separated structured duties with signed calls.",
-      "implementationRef": "packages/basketball/src/officiating.ts",
+      "rationale": "Three fallible referee agents and two bounded replay agents perform separated structured duties; assigned identities, evidence context, cognition receipts, and EIP-712 calls are verified before resolution.",
+      "implementationRef": "packages/basketball/src/engine.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
     },
@@ -63,7 +63,7 @@
       "title": "Putting Ball in Play - Live/Dead Ball",
       "classification": "IMPLEMENTED",
       "citation": "NBA Official Rulebook, Rule 6",
-      "rationale": "The engine explicitly transitions jump, throw-in, live-ball, dead-ball, possession, and clock states.",
+      "rationale": "The game state machine explicitly records held balls, jump-ball winners, awarded throw-ins, live/dead transitions, possession, and clocks.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -83,7 +83,7 @@
       "title": "Out-of-Bounds and Throw-In",
       "classification": "IMPLEMENTED",
       "citation": "NBA Official Rulebook, Rule 8",
-      "rationale": "Fixed-point boundaries, last touch, possession awards, and structured throw-ins are deterministic.",
+      "rationale": "Ball-handler boundary exits are derived from fixed-point movement; signed official last-touch calls award an explicit team-bound throw-in restart.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -93,7 +93,7 @@
       "title": "Free Throws and Penalties",
       "classification": "IMPLEMENTED",
       "citation": "NBA Official Rulebook, Rule 9",
-      "rationale": "Foul penalties, attempts, lane state, possession effects, and deterministic shot resolution are modeled.",
+      "rationale": "Foul penalties, team-foul bonus thresholds, explicit free-throw lane activity, attempts, possession restarts, and deterministic shot resolution are modeled.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -103,7 +103,7 @@
       "title": "Violations and Penalties",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 10",
-      "rationale": "Travel, dribble, timing, lane, backcourt, and delay violations map to simulation-observable state.",
+      "rationale": "The engine derives clock and ball-handler boundary violations. Other enumerated violations are versioned signed officiating decisions applied deterministically; it does not claim continuous-physics derivation for every violation subtype.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -113,7 +113,7 @@
       "title": "Basket Interference - Goaltending",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 11",
-      "rationale": "Ball trajectory, basket cylinder, legal touch timing, and resulting points are deterministic simulation facts.",
+      "rationale": "Goaltending is a reviewable signed officiating fact whose points, possession, challenge, and reversal effects are deterministic. Season Zero does not claim a continuous ball-trajectory physics model.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -123,7 +123,7 @@
       "title": "Fouls and Penalties",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 12",
-      "rationale": "Contact and conduct events support personal/team fouls, bonuses, technicals, flagrants, ejections, and fallible calls.",
+      "rationale": "Signed contact/conduct calls drive personal and per-period team fouls, bonus free throws, technicals, flagrants, ejections, and deterministic penalties.",
       "implementationRef": "packages/basketball/src/full-game.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]
@@ -143,7 +143,7 @@
       "title": "Coach's Challenge",
       "classification": "AGENT_EQUIVALENT",
       "citation": "NBA Official Rulebook, Rule 14",
-      "rationale": "Coaches submit signed challenge intents subject to eligibility, timeout, reviewability, and ruling rules.",
+      "rationale": "The command state machine enforces available challenges, latest-event targeting, reviewable classes, and exact replay correction; coach identities use signed decision authority at the competition boundary.",
       "implementationRef": "packages/basketball/src/officiating.ts",
       "governingBody": "Competition Rules Committee",
       "tests": ["packages/basketball/test/full-game.test.ts"]

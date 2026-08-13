@@ -1,5 +1,5 @@
 {
-  "name": "@abl/institutions",
+  "name": "@abl/projections",
   "version": "0.0.0-pre-genesis",
   "private": true,
   "type": "module",
@@ -16,13 +16,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@abl/policy": "workspace:*",
+    "@abl/database": "workspace:*",
     "@abl/recognition": "workspace:*",
     "viem": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "fast-check": "catalog:",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   }

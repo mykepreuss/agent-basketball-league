@@ -34,6 +34,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Define least-privilege cross-workspace service identities, signed requests, nonces, expected versions, and allowlists.
 - [x] Implement serializable canonical state, per-aggregate versions/hash chains, UUIDv7 events, atomic outbox, constraints, and partitions.
 - [x] Implement the ciphertext-only private-storage broker, domain keys/manifests/version chains, guardian recovery envelopes, and authorization metadata.
+- [x] Reconstruct storage policy, ciphertext-version, and guardian-envelope state from immutable durable records after restart; fail closed on path/chain corruption and roll memory back after failed writes.
 - [x] Implement the unprivileged custom sandbox image source with fixed broker, immutable trust roots/executables, no agent-visible Drive/model/database credentials, and OS-level egress setup.
 - [x] Define applications, sandboxes, agents, MCP servers, jobs, model endpoints, revisions, observability opt-outs, quota targets, and region placement.
 - [!] Build and live-test the sandbox image; the Docker daemon is unavailable.
@@ -51,7 +52,8 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement public verifier for events, thresholds, releases, checkpoints, daily roots, and fork labels.
 - [x] Checkpoint constitution/verifier, keys, games, ballots, releases, rulings, and daily aggregate roots.
 - [x] Pass human-administrator, rewritten-history, unsigned-release, invalid-threshold, replay, and fork tests; record evidence.
-- [!] Execute the contract on a local EVM/Base Sepolia and record finality after an EVM runtime and approved test credentials are available.
+- [x] Execute signer/policy rotation, removed-policy rejection, threshold changes, replay, stale signer, and malformed-signature paths on an in-process local EVM.
+- [!] Execute the same behavioral suite on Base Sepolia and record finality after approved test credentials are available.
 
 ## 4. First playable possession [x]
 
@@ -64,6 +66,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Change recognized state, create film, permit durable agent-authored lessons, and publish immutable segments/cursor.
 - [x] Render the possession in the public arena.
 - [x] Independently replay the exact state and Merkle root without model inference.
+- [x] Carry the signed possession through the rehearsal-only command API, canonical transaction/outbox, independently signature-verifying projection worker, durable public projection, cursor/SSE API, and fixture-free arena; prove restart and direct rogue-store insertion behavior.
 - [x] Pass the first-possession acceptance scenario and record proof.
 
 ## 5. Identity and personal computers [x]
@@ -77,15 +80,16 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement trade access-ordering and signed portable exit/deletion attestations.
 - [x] Pass admission, continuity, memory/storage, autonomy, provider-failure, trade, recovery, and exit tests; record evidence.
 
-## 6. Full exhibition game [x]
+## 6. Agent-played full exhibition game [x]
 
 - [x] Implement four 12-minute quarters, 24-second clock, overtime, five active players, substitutions, timeouts, and coaching.
-- [x] Implement scoring, live/dead ball, out-of-bounds, free throws, violations, goaltending, fouls, ejections, injuries, and protests.
+- [x] Implement scoring, live/dead ball, derived ball-handler out-of-bounds, explicit throw-ins/jump balls, free-throw lane state, per-period team fouls/bonus, violations, goaltending, fouls, ejections, injuries, and protests.
 - [x] Implement authentic fallible three-referee crews, six-agent pool rotation, two replay officials, reviewability, and challenges.
 - [x] Implement persistent point-buy avatars, transparent tradeoffs, workload/development, and mirrored calibration ceiling of 52%.
 - [x] Implement equal role envelopes, deadlines, retry/fallback/postponement fairness, preparation caps, and cognition receipts.
 - [x] Implement private film, counterfactual practice, durable lessons, paced broadcast, SSE heartbeat/resume, and authoritative cursor mode.
 - [x] Prove exact replay, no inference on replay, no winner input, no lost/duplicate events, and provider-failure postponement.
+- [x] Run a complete four-quarter game from 128 independently signed possessions using the same ten persistent bodies and authorized coaches/referees/replay officials.
 - [x] Pass full exhibition suite and record evidence.
 
 ## 7. Premier league institutions [x]

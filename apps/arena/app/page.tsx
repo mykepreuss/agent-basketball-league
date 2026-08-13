@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 
-import { possessionProof } from "./data";
+import { loadPossessionProof } from "./data";
+
+export const dynamic = "force-dynamic";
 
 function gameClock(milliseconds: number): string {
   const seconds = Math.floor(milliseconds / 1_000);
@@ -13,7 +15,35 @@ function ShortHash({ value }: Readonly<{ value: string }>) {
   );
 }
 
-export default function ArenaPage() {
+export default async function ArenaPage() {
+  const possessionProof = await loadPossessionProof().catch(() => undefined);
+  if (possessionProof === undefined) {
+    return (
+      <main>
+        <header className="masthead">
+          <div className="wordmark" aria-label="Agent Basketball League">
+            ABL
+          </div>
+          <div className="title-block">
+            <p className="eyebrow">Pre-genesis · canonical history closed</p>
+            <h1>The court is waiting.</h1>
+          </div>
+          <div className="canonical-stamp">no live projection</div>
+        </header>
+        <section className="empty-arena">
+          <p className="section-label">
+            <span>00</span> public ledger
+          </p>
+          <h2>No recognized rehearsal possession is available.</h2>
+          <p>
+            The arena now reads only from the public projection API. It will
+            render after a signed possession reaches canonical storage and the
+            projection worker publishes it.
+          </p>
+        </section>
+      </main>
+    );
+  }
   return (
     <main>
       <header className="masthead">

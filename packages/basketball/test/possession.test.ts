@@ -1,4 +1,10 @@
-import { createSigningIdentity, sha256Commitment } from "@abl/recognition";
+import {
+  createCanonicalEvent,
+  createSigningIdentity,
+  sha256Commitment,
+  signCanonicalEvent,
+  type SigningIdentity,
+} from "@abl/recognition";
 import { readFile } from "node:fs/promises";
 import type { Hex, TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
@@ -8,17 +14,25 @@ import {
   assertNoWinnerInput,
   commitRandomShare,
   deriveRandomSeed,
+  officialDecisionContextRoot,
   observePlayer,
   replayPossession,
+  roleObservationCommitment,
+  runFirstPossessionRehearsal,
   resolvePossession,
   stateRoot,
   type BasketballState,
   type CoachDecision,
+  type CoachDecisionBody,
+  type CompetitionAuthority,
   type CognitionReceipt,
+  type DecisionAuthorization,
   type DecisionWindow,
   type PlayerState,
   type RefereeDecision,
+  type RefereeDecisionBody,
   type ReplayDecision,
+  type ReplayDecisionBody,
 } from "../src/index.js";
 
 const domain: TypedDataDomain = {
@@ -73,6 +87,7 @@ function receipt(
   did: string,
   role: CognitionReceipt["role"],
   subject: string,
+  observationHash = sha256Commitment(subject),
 ): CognitionReceipt {
   return {
     receiptId: `${subject}:receipt:${did}`,
@@ -82,7 +97,7 @@ function receipt(
     provider: "fixture",
     modelFamily: "structured-policy",
     modelRevision: "1",
-    observationHash: sha256Commitment(subject),
+    observationHash,
     contextManifestHash: sha256Commitment({ subject }),
     kernelHash: sha256Commitment("basketball-kernel-v1"),
     toolHash: sha256Commitment("no-tools"),
@@ -95,8 +110,61 @@ function receipt(
   };
 }
 
+async function authorizeDecision<TDecision>(input: {
+  body: TDecision;
+  identity: SigningIdentity;
+  actorDid: string;
+  receipt: CognitionReceipt;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: bigint;
+  eventType: string;
+  contextRoot: `0x${string}`;
+}): Promise<TDecision & DecisionAuthorization<TDecision>> {
+  const event = createCanonicalEvent({
+    eventId: `${input.aggregateId}:${input.actorDid}:${input.aggregateVersion}`,
+    actorDid: input.actorDid,
+    nonce: `${input.aggregateId}:${input.aggregateVersion}`,
+    idempotencyKey: `${input.aggregateId}:${input.actorDid}:${input.aggregateVersion}:idempotency`,
+    aggregateType: input.aggregateType,
+    aggregateId: input.aggregateId,
+    aggregateVersion: input.aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: null,
+    payload: {
+      decision: input.body,
+      receiptCommitment: sha256Commitment(input.receipt),
+    },
+    stateRoot: input.contextRoot,
+    schemaDigest: sha256Commitment(`${input.eventType}:1.0.0`),
+    timestamp: "2026-08-13T10:00:00.000Z",
+  });
+  return {
+    ...input.body,
+    receipt: input.receipt,
+    authorizationEvent: event,
+    eventHash: event.eventHash,
+    signature: await signCanonicalEvent(input.identity, domain, event),
+    signerAddress: input.identity.address,
+  };
+}
+
 async function fixture() {
   const initial = initialState();
+  const coachIdentities = {
+    HOME: createSigningIdentity(`0x${(101).toString(16).padStart(64, "0")}`),
+    AWAY: createSigningIdentity(`0x${(102).toString(16).padStart(64, "0")}`),
+  } as const;
+  const refereeIdentities = Array.from({ length: 3 }, (_, index) =>
+    createSigningIdentity(
+      `0x${(index + 103).toString(16).padStart(64, "0")}` as Hex,
+    ),
+  );
+  const replayIdentities = Array.from({ length: 2 }, (_, index) =>
+    createSigningIdentity(
+      `0x${(index + 106).toString(16).padStart(64, "0")}` as Hex,
+    ),
+  );
   const bodyById = new Map(
     initial.players.map((player, index) => {
       const privateKey =
@@ -145,20 +213,39 @@ async function fixture() {
           .decide(observePlayer(observationState, player.playerId), domain),
       ),
     );
-    const coaches: CoachDecision[] = (["HOME", "AWAY"] as const).map(
-      (team) => ({
-        coachDid: `did:abl:coach-${team.toLowerCase()}`,
-        team,
-        windowId: `${initial.possessionId}:w${index}`,
-        instruction: team === "HOME" ? "SPACE" : "PROTECT_RIM",
-        targetPlayerIds: observationState.players
-          .filter((player) => player.team === team)
-          .map((player) => player.playerId),
-        receipt: receipt(
+    const coaches: CoachDecision[] = await Promise.all(
+      (["HOME", "AWAY"] as const).map(async (team) => {
+        const body: CoachDecisionBody = {
+          coachDid: `did:abl:coach-${team.toLowerCase()}`,
+          team,
+          windowId: `${initial.possessionId}:w${index}`,
+          instruction: team === "HOME" ? "SPACE" : "PROTECT_RIM",
+          targetPlayerIds: observationState.players
+            .filter((player) => player.team === team)
+            .map((player) => player.playerId),
+        };
+        const contextRoot = stateRoot(observationState);
+        const coachReceipt = receipt(
           `did:abl:coach-${team.toLowerCase()}`,
           "COACH",
           `${initial.possessionId}:w${index}`,
-        ),
+          roleObservationCommitment(
+            "COACH",
+            contextRoot,
+            `${initial.possessionId}:w${index}`,
+          ),
+        );
+        return authorizeDecision({
+          body,
+          identity: coachIdentities[team],
+          actorDid: body.coachDid,
+          receipt: coachReceipt,
+          aggregateType: "coach-decision",
+          aggregateId: body.windowId,
+          aggregateVersion: BigInt(index + 1),
+          eventType: "CoachInstructionSubmitted",
+          contextRoot,
+        });
       }),
     );
     windows.push({
@@ -183,33 +270,98 @@ async function fixture() {
     reveals,
     requiredParties,
   );
-  const refereeDecisions: RefereeDecision[] = Array.from(
-    { length: 3 },
-    (_, index) => ({
-      refereeDid: `did:abl:referee-${index + 1}`,
-      sequence: index,
-      call: "NO_CALL",
-      againstPlayerId: null,
-      confidenceBps: 8_000 - index * 300,
-      receipt: receipt(
+  const authorities = {
+    coaches: {
+      home: {
+        did: "did:abl:coach-home",
+        signerAddress: coachIdentities.HOME.address,
+      },
+      away: {
+        did: "did:abl:coach-away",
+        signerAddress: coachIdentities.AWAY.address,
+      },
+    },
+    referees: refereeIdentities.map(
+      (identity, index): CompetitionAuthority => ({
+        did: `did:abl:referee-${index + 1}`,
+        signerAddress: identity.address,
+      }),
+    ),
+    replayOfficials: replayIdentities.map(
+      (identity, index): CompetitionAuthority => ({
+        did: `did:abl:replay-${index + 1}`,
+        signerAddress: identity.address,
+      }),
+    ),
+  };
+  const officialContext = officialDecisionContextRoot({
+    initialState: initial,
+    windows,
+    randomSeed,
+  });
+  const refereeDecisions: RefereeDecision[] = await Promise.all(
+    Array.from({ length: 3 }, async (_, index) => {
+      const body: RefereeDecisionBody = {
+        refereeDid: `did:abl:referee-${index + 1}`,
+        possessionId: initial.possessionId,
+        sequence: index,
+        call: "NO_CALL",
+        againstPlayerId: null,
+        confidenceBps: 8_000 - index * 300,
+      };
+      const refereeReceipt = receipt(
         `did:abl:referee-${index + 1}`,
         "REFEREE",
         `official:${index}`,
-      ),
+        roleObservationCommitment(
+          "REFEREE",
+          officialContext,
+          initial.possessionId,
+        ),
+      );
+      return authorizeDecision({
+        body,
+        identity: refereeIdentities[index]!,
+        actorDid: body.refereeDid,
+        receipt: refereeReceipt,
+        aggregateType: "referee-decision",
+        aggregateId: initial.possessionId,
+        aggregateVersion: 1n,
+        eventType: "RefereeDecisionSubmitted",
+        contextRoot: officialContext,
+      });
     }),
   );
-  const replayDecisions: ReplayDecision[] = Array.from(
-    { length: 2 },
-    (_, index) => ({
-      replayDid: `did:abl:replay-${index + 1}`,
-      reviewable: false,
-      ruling: "NO_REVIEW",
-      evidenceCommitment: sha256Commitment({ windows: 3, official: index }),
-      receipt: receipt(
+  const replayDecisions: ReplayDecision[] = await Promise.all(
+    Array.from({ length: 2 }, async (_, index) => {
+      const body: ReplayDecisionBody = {
+        replayDid: `did:abl:replay-${index + 1}`,
+        possessionId: initial.possessionId,
+        reviewable: false,
+        ruling: "NO_REVIEW",
+        evidenceCommitment: officialContext,
+      };
+      const replayReceipt = receipt(
         `did:abl:replay-${index + 1}`,
         "REPLAY",
         `replay:${index}`,
-      ),
+        roleObservationCommitment(
+          "REPLAY",
+          officialContext,
+          initial.possessionId,
+        ),
+      );
+      return authorizeDecision({
+        body,
+        identity: replayIdentities[index]!,
+        actorDid: body.replayDid,
+        receipt: replayReceipt,
+        aggregateType: "replay-decision",
+        aggregateId: initial.possessionId,
+        aggregateVersion: 1n,
+        eventType: "ReplayDecisionSubmitted",
+        contextRoot: officialContext,
+      });
     }),
   );
   const input = {
@@ -221,6 +373,7 @@ async function fixture() {
         body.signingIdentity.address,
       ]),
     ),
+    authorities,
     domain,
     randomSeed,
     refereeDecisions,
@@ -381,6 +534,20 @@ describe("first independently verifiable possession", () => {
     await expect(resolvePossession(tampered)).rejects.toThrow(
       "Decision signer is not registered",
     );
+    const tamperedCoach = structuredClone(input);
+    tamperedCoach.windows[0]!.coaches[0]!.instruction = "PACE";
+    await expect(resolvePossession(tamperedCoach)).rejects.toThrow(
+      "COACH decision lacks recognized authority",
+    );
+    const unsignedReferee = structuredClone(input);
+    unsignedReferee.refereeDecisions[0]!.signature = "0x1234";
+    await expect(resolvePossession(unsignedReferee)).rejects.toThrow();
+    const substitutedReplayOfficial = structuredClone(input);
+    substitutedReplayOfficial.replayDecisions[0]!.replayDid =
+      "did:abl:replay-substitute";
+    await expect(resolvePossession(substitutedReplayOfficial)).rejects.toThrow(
+      "REPLAY decision lacks recognized authority",
+    );
 
     const badReveals = structuredClone(reveals);
     badReveals[0]!.share = `0x${"f".repeat(64)}`;
@@ -395,5 +562,25 @@ describe("first independently verifiable possession", () => {
     expect(() =>
       assertNoWinnerInput({ ...input, winner: "HOME" } as never),
     ).toThrow("Winner input is forbidden");
+  });
+
+  it("derives a ball-handler boundary turnover from fixed-point movement", async () => {
+    const rehearsal = await runFirstPossessionRehearsal({
+      ballHandlerBoundaryExit: true,
+    });
+    expect(
+      rehearsal.result.events.find(({ type }) => type === "OUT_OF_BOUNDS"),
+    ).toMatchObject({
+      data: {
+        playerId: "H1",
+        team: "HOME",
+        derivedFromFixedPointMovement: true,
+      },
+    });
+    expect(rehearsal.result.finalState).toMatchObject({
+      phase: "FINAL",
+      possessionTeam: "AWAY",
+      ball: { possessorId: null },
+    });
   });
 });

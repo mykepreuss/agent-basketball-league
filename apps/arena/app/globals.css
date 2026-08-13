@@ -135,6 +135,22 @@ h1 {
   grid-template-columns: minmax(0, 1.65fr) minmax(360px, 0.75fr);
   border-bottom: 2px solid var(--ink);
 }
+.empty-arena {
+  min-height: calc(100vh - 190px);
+  padding: clamp(40px, 8vw, 120px);
+  background: var(--paper-deep);
+}
+.empty-arena h2 {
+  max-width: 900px;
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 8rem);
+  line-height: 0.9;
+}
+.empty-arena > p:last-child {
+  max-width: 680px;
+  margin-top: 36px;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
 .court-shell {
   padding: 34px;
   border-right: 2px solid var(--ink);

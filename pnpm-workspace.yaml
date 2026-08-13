@@ -4,7 +4,9 @@ packages:
   - tooling/*
 
 allowBuilds:
+  bufferutil: false
   esbuild: true
+  utf-8-validate: false
 
 catalog:
   "@blaxel/core": 0.3.11

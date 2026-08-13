@@ -185,6 +185,71 @@ describe("ciphertext-only Agent Drive layout", () => {
     expect(stored).not.toContain(Buffer.from(key).toString("base64url"));
     expect(stored).toContain(blob.ciphertextCommitment);
   });
+
+  it("reconstructs authorization and version metadata after a restart", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-drive-restart-"));
+    const repository = new DriveCiphertextRepository(root);
+    await repository.initialize();
+    const domainPolicy = policy();
+    const original = new CiphertextBroker();
+    original.registerDomain("did:abl:agent-a", domainPolicy);
+    await repository.putPolicy(domainPolicy);
+    const key = await generateDomainKey();
+    const first = await encryptContent({
+      key,
+      objectId: "restart-memory",
+      domainId: domainPolicy.domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("durable ciphertext version one"),
+      createdAt,
+    });
+    original.put("did:abl:agent-a", first);
+    await repository.putCiphertext(first);
+
+    const restarted = CiphertextBroker.restore(await repository.loadState());
+    expect(
+      restarted.get(
+        "did:abl:agent-a",
+        domainPolicy.domainId,
+        first.objectId,
+        1,
+      ),
+    ).toEqual(first);
+    const second = await encryptContent({
+      key,
+      objectId: first.objectId,
+      domainId: domainPolicy.domainId,
+      version: 2,
+      previousVersionCommitment: first.ciphertextCommitment,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("durable ciphertext version two"),
+      createdAt,
+    });
+    expect(() => restarted.put("did:abl:agent-a", second)).not.toThrow();
+  });
+
+  it("fails closed when recovered ciphertext metadata is not contiguous", async () => {
+    const key = await generateDomainKey();
+    const blob = await encryptContent({
+      key,
+      objectId: "corrupt-chain",
+      domainId: "personal:agent-a",
+      version: 2,
+      previousVersionCommitment: `0x${"f".repeat(64)}`,
+      contentType: "text/plain",
+      plaintext: new TextEncoder().encode("opaque"),
+      createdAt,
+    });
+    expect(() =>
+      CiphertextBroker.restore({
+        policies: [policy()],
+        objects: [blob],
+        guardianEnvelopes: [],
+      }),
+    ).toThrow(StorageVersionConflictError);
+  });
 });
 
 function createObjectSegment(value: string): string {

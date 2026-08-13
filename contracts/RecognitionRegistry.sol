@@ -47,6 +47,7 @@ contract RecognitionRegistry {
     mapping(bytes32 subjectId => bytes32 root) public latestRootBySubject;
     mapping(bytes32 nonce => bool used) public usedNonces;
     address[] private currentSigners;
+    bytes32[] private currentCheckpointTypes;
 
     event CheckpointRecognized(
         bytes32 indexed checkpointType,
@@ -117,6 +118,10 @@ contract RecognitionRegistry {
         _recognize(checkpoint, signatures);
         for (uint256 i = 0; i < currentSigners.length; i++) signerRoles[currentSigners[i]] = 0;
         delete currentSigners;
+        for (uint256 i = 0; i < currentCheckpointTypes.length; i++) {
+            delete policies[currentCheckpointTypes[i]];
+        }
+        delete currentCheckpointTypes;
         _installRegistry(newSigners, newRoleMasks);
         _installPolicies(checkpointTypes, newPolicies);
         currentRegistryRoot = checkpoint.root;
@@ -125,6 +130,10 @@ contract RecognitionRegistry {
 
     function getCurrentSigners() external view returns (address[] memory) {
         return currentSigners;
+    }
+
+    function getCurrentCheckpointTypes() external view returns (bytes32[] memory) {
+        return currentCheckpointTypes;
     }
 
     function _recognize(Checkpoint calldata checkpoint, bytes[] calldata signatures) internal {
@@ -184,14 +193,23 @@ contract RecognitionRegistry {
 
     function _installPolicies(bytes32[] memory checkpointTypes, Policy[] memory newPolicies) internal {
         require(checkpointTypes.length == newPolicies.length && checkpointTypes.length > 0, "invalid policies");
+        bytes32 prior;
         for (uint256 i = 0; i < checkpointTypes.length; i++) {
+            require(checkpointTypes[i] > prior, "policies must be unique and sorted");
+            prior = checkpointTypes[i];
             Policy memory policy = newPolicies[i];
             require(
                 policy.commissioners + policy.integrity + policy.tribunal + policy.officials > 0,
                 "empty policy"
             );
             policies[checkpointTypes[i]] = policy;
+            currentCheckpointTypes.push(checkpointTypes[i]);
         }
+        Policy memory registryPolicy = policies[KEY_REGISTRY];
+        require(
+            registryPolicy.commissioners + registryPolicy.integrity + registryPolicy.tribunal + registryPolicy.officials > 0,
+            "key registry policy required"
+        );
     }
 
     function _recover(bytes32 digest, bytes calldata signature) internal pure returns (address) {

@@ -1,4 +1,5 @@
 export * from "./bodies.js";
+export * from "./agent-game.js";
 export * from "./engine.js";
 export * from "./exhibition.js";
 export * from "./avatars.js";
@@ -9,5 +10,6 @@ export * from "./observations.js";
 export * from "./officiating.js";
 export * from "./practice.js";
 export * from "./randomness.js";
+export * from "./rehearsal-possession.js";
 export * from "./replay.js";
 export * from "./types.js";

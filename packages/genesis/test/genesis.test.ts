@@ -120,6 +120,7 @@ describe("genesis artifact preparation", () => {
       schemaValid: false,
       candidate: {
         releaseId: null,
+        version: null,
         imageDigests: [],
         testResultDigest: digests.testResultDigest,
         ratificationEventIds: [],
@@ -159,6 +160,7 @@ describe("genesis artifact preparation", () => {
       "constitutionDigest",
       "currentRegistryRoot",
       "domainSeparator",
+      "getCurrentCheckpointTypes",
       "getCurrentSigners",
       "latestRootBySubject",
       "policies",

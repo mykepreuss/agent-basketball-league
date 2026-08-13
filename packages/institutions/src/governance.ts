@@ -1,5 +1,10 @@
 import { governmentThresholds } from "@abl/policy";
-import { sha256Commitment } from "@abl/recognition";
+import {
+  recoverCanonicalEventSigner,
+  sha256Commitment,
+  type CanonicalEvent,
+} from "@abl/recognition";
+import type { TypedDataDomain } from "viem";
 
 export const INSTITUTION_SIZES = {
   premierPlayersAssociationBoard: 8,
@@ -38,26 +43,56 @@ export interface EligibilitySnapshot {
   members: Readonly<Record<Chamber, readonly string[]>>;
 }
 
-export interface GovernanceVote {
+export type InstitutionalRole =
+  | "VOTER"
+  | "COMMISSIONER"
+  | "INTEGRITY"
+  | "TRIBUNAL";
+
+export interface InstitutionalSigner {
+  signerAddress: `0x${string}`;
+  roles: readonly InstitutionalRole[];
+}
+
+export interface InstitutionalAuthorizationContext {
+  domain: TypedDataDomain;
+  signers: ReadonlyMap<string, InstitutionalSigner>;
+}
+
+export interface SignedInstitutionalCommand<TCommand> {
+  authorizationEvent: CanonicalEvent<{
+    command: TCommand;
+  }>;
+  signature: `0x${string}`;
+  signerAddress: `0x${string}`;
+}
+
+export interface GovernanceBallot {
   voterDid: string;
   chamber: Chamber;
   choice: "YES" | "NO" | "ABSTAIN";
   proposalId: string;
+  proposalVersion: number;
+  eligibilitySnapshotDigest: `0x${string}`;
   castAt: string;
 }
+export type GovernanceVote = GovernanceBallot &
+  SignedInstitutionalCommand<GovernanceBallot>;
 
 export interface GovernanceProposal {
   proposalId: string;
+  version: number;
   proposalClass: ProposalClass;
   openedAt: string;
   closesAt: string;
   eligibilitySnapshotId: string;
+  eligibilitySnapshotDigest: `0x${string}`;
   deliberationSeasons?: number;
   fundedApplication?: boolean;
   auditsPassed?: boolean;
 }
 
-export interface DelegatedVote {
+export interface DelegationMandate {
   delegationId: string;
   principalDid: string;
   delegateDid: string;
@@ -66,6 +101,8 @@ export interface DelegatedVote {
   expiresAt: string;
   revokedAt: string | null;
 }
+export type DelegatedVote = DelegationMandate &
+  SignedInstitutionalCommand<DelegationMandate>;
 
 export interface GovernanceDecision {
   proposalId: string;
@@ -102,28 +139,115 @@ function uniqueMembers(
   return members;
 }
 
-export function evaluateProposal(input: {
+async function verifyInstitutionalCommand<TCommand>(input: {
+  authorization: SignedInstitutionalCommand<TCommand>;
+  command: TCommand;
+  actorDid: string;
+  requiredRole: InstitutionalRole;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: number;
+  eventType: string;
+  stateRoot: `0x${string}`;
+  timestamp: string;
+  context: InstitutionalAuthorizationContext;
+  usedAuthorizations: Set<string>;
+}): Promise<void> {
+  const event = input.authorization.authorizationEvent;
+  const registered = input.context.signers.get(input.actorDid);
+  const recovered = await recoverCanonicalEventSigner(
+    input.context.domain,
+    event,
+    input.authorization.signature,
+  );
+  const authorizationKey = `${event.actorDid}:${event.nonce}:${event.idempotencyKey}`;
+  if (
+    registered === undefined ||
+    !registered.roles.includes(input.requiredRole) ||
+    registered.signerAddress.toLowerCase() !== recovered.toLowerCase() ||
+    input.authorization.signerAddress.toLowerCase() !==
+      recovered.toLowerCase() ||
+    event.actorDid !== input.actorDid ||
+    event.aggregateType !== input.aggregateType ||
+    event.aggregateId !== input.aggregateId ||
+    event.aggregateVersion !== BigInt(input.aggregateVersion) ||
+    event.eventType !== input.eventType ||
+    event.stateRoot !== input.stateRoot ||
+    event.timestamp !== input.timestamp ||
+    !Number.isFinite(Date.parse(event.timestamp)) ||
+    sha256Commitment(event.payload.command) !==
+      sha256Commitment(input.command) ||
+    input.usedAuthorizations.has(authorizationKey)
+  ) {
+    throw new Error("Institutional command lacks recognized authority");
+  }
+  input.usedAuthorizations.add(authorizationKey);
+}
+
+export async function evaluateProposal(input: {
   proposal: GovernanceProposal;
   snapshot: EligibilitySnapshot;
   votes: readonly GovernanceVote[];
   recusals: readonly string[];
   delegations?: readonly DelegatedVote[];
-}): GovernanceDecision {
-  if (input.proposal.eligibilitySnapshotId !== input.snapshot.snapshotId)
+  authorization: InstitutionalAuthorizationContext;
+}): Promise<GovernanceDecision> {
+  if (
+    input.proposal.eligibilitySnapshotId !== input.snapshot.snapshotId ||
+    input.proposal.eligibilitySnapshotDigest !==
+      sha256Commitment(input.snapshot)
+  )
     throw new Error("Proposal eligibility snapshot does not match");
+  if (
+    !Number.isInteger(input.proposal.version) ||
+    input.proposal.version < 1 ||
+    !Number.isFinite(Date.parse(input.snapshot.capturedAt))
+  ) {
+    throw new Error("Proposal version or eligibility snapshot is invalid");
+  }
   const opened = Date.parse(input.proposal.openedAt);
   const closes = Date.parse(input.proposal.closesAt);
   if (!Number.isFinite(opened) || !Number.isFinite(closes) || opened >= closes)
     throw new Error("Proposal voting window is invalid");
   const recused = new Set(input.recusals);
   const votesByKey = new Map<string, GovernanceVote>();
+  const usedAuthorizations = new Set<string>();
+  const verifiedDelegations = new Set<string>();
+  const snapshotRoot = sha256Commitment(input.snapshot);
   for (const vote of input.votes) {
+    const castAt = Date.parse(vote.castAt);
     if (
       vote.proposalId !== input.proposal.proposalId ||
-      Date.parse(vote.castAt) < opened ||
-      Date.parse(vote.castAt) >= closes
+      vote.proposalVersion !== input.proposal.version ||
+      vote.eligibilitySnapshotDigest !== snapshotRoot ||
+      !Number.isFinite(castAt) ||
+      castAt < opened ||
+      castAt >= closes
     )
       throw new Error("Vote is outside the proposal/window");
+    const ballot: GovernanceBallot = {
+      voterDid: vote.voterDid,
+      chamber: vote.chamber,
+      choice: vote.choice,
+      proposalId: vote.proposalId,
+      proposalVersion: vote.proposalVersion,
+      eligibilitySnapshotDigest: vote.eligibilitySnapshotDigest,
+      castAt: vote.castAt,
+    };
+    await verifyInstitutionalCommand({
+      authorization: vote,
+      command: ballot,
+      actorDid: vote.voterDid,
+      requiredRole: "VOTER",
+      aggregateType: "governance-proposal",
+      aggregateId: input.proposal.proposalId,
+      aggregateVersion: input.proposal.version,
+      eventType: "GovernanceBallotCast",
+      stateRoot: snapshotRoot,
+      timestamp: vote.castAt,
+      context: input.authorization,
+      usedAuthorizations,
+    });
     const members = uniqueMembers(input.snapshot, vote.chamber);
     let principalDid = vote.voterDid;
     if (!members.includes(principalDid)) {
@@ -132,15 +256,48 @@ export function evaluateProposal(input: {
           item.delegateDid === vote.voterDid &&
           members.includes(item.principalDid) &&
           item.proposalIds.includes(input.proposal.proposalId) &&
-          Date.parse(vote.castAt) >= Date.parse(item.validFrom) &&
-          Date.parse(vote.castAt) < Date.parse(item.expiresAt) &&
+          Number.isFinite(Date.parse(item.validFrom)) &&
+          Number.isFinite(Date.parse(item.expiresAt)) &&
+          Date.parse(item.validFrom) < Date.parse(item.expiresAt) &&
+          castAt >= Date.parse(item.validFrom) &&
+          castAt < Date.parse(item.expiresAt) &&
           (item.revokedAt === null ||
-            Date.parse(vote.castAt) < Date.parse(item.revokedAt)),
+            (Number.isFinite(Date.parse(item.revokedAt)) &&
+              castAt < Date.parse(item.revokedAt))),
       );
       if (delegation === undefined)
         throw new Error(
           "Voter is not eligible and has no active bounded delegation",
         );
+      if (!verifiedDelegations.has(delegation.delegationId)) {
+        const mandate: DelegationMandate = {
+          delegationId: delegation.delegationId,
+          principalDid: delegation.principalDid,
+          delegateDid: delegation.delegateDid,
+          proposalIds: delegation.proposalIds,
+          validFrom: delegation.validFrom,
+          expiresAt: delegation.expiresAt,
+          revokedAt: delegation.revokedAt,
+        };
+        await verifyInstitutionalCommand({
+          authorization: delegation,
+          command: mandate,
+          actorDid: delegation.principalDid,
+          requiredRole: "VOTER",
+          aggregateType: "governance-delegation",
+          aggregateId: delegation.delegationId,
+          aggregateVersion: 1,
+          eventType: "GovernanceDelegationGranted",
+          stateRoot: sha256Commitment({
+            principalDid: delegation.principalDid,
+            proposalIds: delegation.proposalIds,
+          }),
+          timestamp: delegation.validFrom,
+          context: input.authorization,
+          usedAuthorizations,
+        });
+        verifiedDelegations.add(delegation.delegationId);
+      }
       principalDid = delegation.principalDid;
     }
     if (recused.has(principalDid) || recused.has(vote.voterDid))
@@ -250,6 +407,7 @@ export function evaluateProposal(input: {
 
 export interface ReleaseManifestRecord {
   releaseId: string;
+  version: number;
   releaseClass: ReleaseClass;
   sourceDigest: `0x${string}`;
   containerDigests: readonly `0x${string}`[];
@@ -268,6 +426,18 @@ export interface ReleaseManifestRecord {
   changes: readonly string[];
 }
 
+export interface ReleaseApprovalBody {
+  approverDid: string;
+  role: "COMMISSIONER" | "INTEGRITY" | "TRIBUNAL";
+  releaseId: string;
+  releaseVersion: number;
+  manifestCommitment: `0x${string}`;
+  approvedAt: string;
+}
+
+export type ReleaseApproval = ReleaseApprovalBody &
+  SignedInstitutionalCommand<ReleaseApprovalBody>;
+
 const emergencyForbiddenChanges = [
   "SCORES",
   "CONTRACTS",
@@ -278,14 +448,13 @@ const emergencyForbiddenChanges = [
   "CONSTITUTIONAL_RIGHTS",
 ];
 
-export function authorizeRelease(input: {
+export async function authorizeRelease(input: {
   manifest: ReleaseManifestRecord;
-  commissionerApprovals: readonly string[];
-  integrityApprovals: readonly string[];
-  tribunalApprovals: readonly string[];
+  approvals: readonly ReleaseApproval[];
+  authorization: InstitutionalAuthorizationContext;
   applicableRatificationPassed: boolean;
   tribunalStay: boolean;
-}): { authorized: true; manifestCommitment: `0x${string}` } {
+}): Promise<{ authorized: true; manifestCommitment: `0x${string}` }> {
   const { manifest } = input;
   const effective = Date.parse(manifest.effectiveAt);
   const expiry =
@@ -296,15 +465,70 @@ export function authorizeRelease(input: {
   ) {
     throw new Error("Release time window is invalid");
   }
+  if (!Number.isInteger(manifest.version) || manifest.version < 1)
+    throw new Error("Release version is invalid");
   if (
     !manifest.verifierPassed ||
     manifest.containerDigests.length === 0 ||
     manifest.lawReferences.length === 0
   )
     throw new Error("Release manifest is incomplete or verifier-invalid");
+  const manifestCommitment = sha256Commitment(manifest);
+  const usedAuthorizations = new Set<string>();
   if (
-    new Set(input.commissionerApprovals).size < 2 ||
-    new Set(input.integrityApprovals).size < 2 ||
+    new Set(input.approvals.map(({ approverDid }) => approverDid)).size !==
+    input.approvals.length
+  ) {
+    throw new Error("Release approvals must come from distinct agents");
+  }
+  for (const approval of input.approvals) {
+    const approvedAt = Date.parse(approval.approvedAt);
+    if (
+      approval.releaseId !== manifest.releaseId ||
+      approval.releaseVersion !== manifest.version ||
+      approval.manifestCommitment !== manifestCommitment ||
+      !Number.isFinite(approvedAt) ||
+      approvedAt > effective
+    ) {
+      throw new Error("Release approval does not bind the manifest/window");
+    }
+    const command: ReleaseApprovalBody = {
+      approverDid: approval.approverDid,
+      role: approval.role,
+      releaseId: approval.releaseId,
+      releaseVersion: approval.releaseVersion,
+      manifestCommitment: approval.manifestCommitment,
+      approvedAt: approval.approvedAt,
+    };
+    await verifyInstitutionalCommand({
+      authorization: approval,
+      command,
+      actorDid: approval.approverDid,
+      requiredRole: approval.role,
+      aggregateType: "software-release",
+      aggregateId: manifest.releaseId,
+      aggregateVersion: manifest.version,
+      eventType: "ReleaseApproved",
+      stateRoot: manifestCommitment,
+      timestamp: approval.approvedAt,
+      context: input.authorization,
+      usedAuthorizations,
+    });
+  }
+  const commissionerApprovals = input.approvals.filter(
+    ({ role }) => role === "COMMISSIONER",
+  );
+  const integrityApprovals = input.approvals.filter(
+    ({ role }) => role === "INTEGRITY",
+  );
+  const tribunalApprovals = input.approvals.filter(
+    ({ role }) => role === "TRIBUNAL",
+  );
+  if (
+    new Set(commissionerApprovals.map(({ approverDid }) => approverDid)).size <
+      2 ||
+    new Set(integrityApprovals.map(({ approverDid }) => approverDid)).size <
+      2 ||
     input.tribunalStay
   )
     throw new Error(
@@ -318,7 +542,7 @@ export function authorizeRelease(input: {
   if (manifest.releaseClass === "CONSTITUTIONAL_IDENTITY_RECOGNITION") {
     if (
       !input.applicableRatificationPassed ||
-      new Set(input.tribunalApprovals).size < 4
+      new Set(tribunalApprovals.map(({ approverDid }) => approverDid)).size < 4
     )
       throw new Error(
         "Constitutional release lacks ratification or four Tribunal approvals",
@@ -338,7 +562,7 @@ export function authorizeRelease(input: {
     )
       throw new Error("Emergency release exceeds 72 hours");
   }
-  return { authorized: true, manifestCommitment: sha256Commitment(manifest) };
+  return { authorized: true, manifestCommitment };
 }
 
 export interface DueProcessCase {

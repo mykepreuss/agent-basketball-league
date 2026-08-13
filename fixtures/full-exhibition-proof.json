@@ -20,9 +20,9 @@
   "commandCount": 16,
   "eventCount": 17,
   "proof": {
-    "finalStateRoot": "0x04d8570343f4bcbc81244035575e1a04264a27a90882b9e550b2daee755451af",
-    "eventMerkleRoot": "0x3e33325ebc7e34298c4a28f75af2c25db9f4a79da730d6b5b977166b5992f4d6",
-    "finalEventHash": "0x6bd8276e2d21ca87ed1ed1ba2823f30ff8c18842bc42dfd152b0dc7121521618",
+    "finalStateRoot": "0xec312e8943bcbba0f82834aeb08365bd0504234a5914a4eb160e39dd62ccf017",
+    "eventMerkleRoot": "0x4dd92e86eb5b9bb2ac4f1571b5310600990982c25d36f6e41a0543e36a3d6ab9",
+    "finalEventHash": "0x1f1c39d001f4c6af1edf8f9e300e43b967be5692f015a0f86c69d6ceee9ad42c",
     "winner": "HOME",
     "replayInferenceInvocations": 0
   }

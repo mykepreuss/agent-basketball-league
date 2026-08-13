@@ -554,6 +554,7 @@ export const ContractTransactionSchema = z.strictObject({
 
 export const GovernanceProposalSchema = z.strictObject({
   proposalId: UuidV7Schema,
+  version: z.number().int().positive(),
   proposerDid: DidSchema,
   institution: z.string().min(1),
   proposalClass: z.enum([
@@ -574,6 +575,8 @@ export const GovernanceProposalSchema = z.strictObject({
 export const BallotSchema = z.strictObject({
   ballotId: UuidV7Schema,
   proposalId: UuidV7Schema,
+  proposalVersion: z.number().int().positive(),
+  eligibilitySnapshotDigest: Sha256Schema,
   voterDid: DidSchema,
   constituency: z.string().min(1),
   choice: z.enum(["YES", "NO", "ABSTAIN"]),
@@ -604,6 +607,7 @@ export const TribunalRulingSchema = z.strictObject({
 
 export const ReleaseManifestSchema = z.strictObject({
   releaseId: UuidV7Schema,
+  version: z.number().int().positive(),
   releaseClass: z.enum([
     "ROUTINE",
     "COMPETITION_LABOR",

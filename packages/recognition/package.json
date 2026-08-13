@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "ganache": "7.9.2",
     "solc": "catalog:",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

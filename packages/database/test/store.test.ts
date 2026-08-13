@@ -58,6 +58,16 @@ describe("canonical event and outbox transaction contract", () => {
     expect(store.outboxEvents).toEqual([
       { eventId: input.eventId, topic: "canonical.game" },
     ]);
+    expect(await store.pendingProjectionEvents()).toMatchObject([
+      {
+        outboxId: 1n,
+        eventId: input.eventId,
+        aggregateVersion: 1n,
+        eventHash: input.eventHash,
+      },
+    ]);
+    await store.markProjected(1n, new Date());
+    expect(await store.pendingProjectionEvents()).toEqual([]);
   });
 
   it("returns the original result for an exact idempotent retry", async () => {

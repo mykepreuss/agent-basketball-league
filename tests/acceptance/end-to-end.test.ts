@@ -1,19 +1,43 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { loadPossessionProof } from "../../apps/arena/app/data.js";
 import {
   CORE_ROUTE_CATALOG,
   createCoreApi,
+  createLiveCoreApi,
 } from "../../apps/core-api/src/server.js";
 import {
   PUBLIC_ROUTE_CATALOG,
   createPublicApi,
 } from "../../apps/public-api/src/server.js";
 import { runLocalCapacityProof } from "../../packages/assurance/src/index.js";
+import {
+  REHEARSAL_RECOGNITION_DOMAIN,
+  runFirstPossessionRehearsal,
+} from "../../packages/basketball/src/index.js";
+import { InMemoryCanonicalStore } from "../../packages/database/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
+import {
+  FilePublicProjectionRepository,
+  PublicProjectionWorker,
+  type PublicGameProjectionSource,
+} from "../../packages/projections/src/index.js";
+import {
+  createCanonicalEvent,
+  createCheckpointManifest,
+  createSigningIdentity,
+  checkpointManifestDigest,
+  InstitutionalKeyRegistry,
+  PublicVerifier,
+  sha256Commitment,
+  signCanonicalEvent,
+  verifyCheckpointClaim,
+} from "../../packages/recognition/src/index.js";
 import { runPrivateRehearsal } from "../../packages/rehearsal/src/index.js";
 import {
   exportJsonSchemas,
@@ -23,6 +47,285 @@ import {
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 describe("complete local acceptance", () => {
+  it("carries a signed agent possession through command persistence, projections, public streaming, and arena data", async () => {
+    const rehearsal = await runFirstPossessionRehearsal();
+    const { result } = rehearsal;
+    const finalSegmentHash = result.segments.at(-1)?.segmentHash;
+    if (finalSegmentHash === undefined)
+      throw new Error("Possession did not produce a public segment");
+    const source: PublicGameProjectionSource = {
+      gameId: result.finalState.gameId,
+      possessionId: result.finalState.possessionId,
+      score: result.finalState.score,
+      gameClockMs: result.finalState.gameClockMs,
+      shotClockMs: result.finalState.shotClockMs,
+      players: result.finalState.players.map(
+        ({ playerId, team, position, xCm, yCm }) => ({
+          playerId,
+          team,
+          position,
+          xCm,
+          yCm,
+        }),
+      ),
+      events: result.events.map((event) => ({
+        ...event,
+        label: `${event.type.toLowerCase().replaceAll("_", " ")} resolved`,
+      })),
+      segments: result.segments,
+      finalStateRoot: result.finalStateRoot,
+      eventMerkleRoot: result.eventMerkleRoot,
+      filmCommitment: result.filmCommitment,
+      finalSegmentHash,
+    };
+    const submittingBody = rehearsal.bodies.get("H1")!;
+    const event = createCanonicalEvent({
+      eventId: "0198a000-0000-7000-8000-000000000301",
+      actorDid: submittingBody.did,
+      nonce: "possession-resolution-1",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000302",
+      aggregateType: "game-possession",
+      aggregateId: result.finalState.gameId,
+      aggregateVersion: 1n,
+      eventType: "PossessionResolved",
+      previousEventHash: null,
+      payload: { source, decisionProof: rehearsal.decisionProof },
+      stateRoot: result.finalStateRoot,
+      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      timestamp: "2026-08-13T10:05:00.000Z",
+    });
+    const signature = await signCanonicalEvent(
+      submittingBody.signingIdentity,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      event,
+    );
+    const verification = await new PublicVerifier().verifyAndApply({
+      event,
+      signatures: [signature],
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      registry: new InstitutionalKeyRegistry([
+        {
+          address: submittingBody.signingIdentity.address,
+          did: submittingBody.did,
+          role: "CAREER_AGENT",
+          validFrom: "2026-08-01T00:00:00.000Z",
+          validUntil: null,
+          revokedAt: null,
+          purpose: "SIGNING",
+        },
+      ]),
+      threshold: {
+        policyId: "LOCAL_REHEARSAL_PLAYER_COMMAND",
+        groups: [{ role: "CAREER_AGENT", required: 1 }],
+      },
+      now: event.timestamp,
+    });
+    expect(verification.label).toBe("CANONICAL");
+    const checkpoint = createCheckpointManifest({
+      manifestId: "0198a000-0000-7000-8000-000000000303",
+      checkpointType: "GAME",
+      subjectId: result.finalState.gameId,
+      eventHashes: [event.eventHash],
+      institutionalKeyRegistryDigest: sha256Commitment({
+        did: submittingBody.did,
+        address: submittingBody.signingIdentity.address,
+      }),
+      verifierDigest: sha256Commitment("public-verifier-v1"),
+      previousManifestDigest: null,
+      createdAt: event.timestamp,
+    });
+    expect(
+      verifyCheckpointClaim({
+        manifest: checkpoint,
+        manifestDigest: checkpointManifestDigest(checkpoint),
+        claimedRoot: checkpoint.merkleRoot,
+        transactionHash: sha256Commitment("local-evm-transaction"),
+        blockNumber: 1n,
+        confirmations: 12,
+        requiredConfirmations: 12,
+      }).label,
+    ).toBe("CANONICAL");
+    const store = new InMemoryCanonicalStore();
+    const coreApi = createLiveCoreApi({
+      store,
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          submittingBody.did,
+          {
+            signerAddress: submittingBody.signingIdentity.address,
+            allowedAggregateTypes: ["game-possession"],
+          },
+        ],
+      ]),
+      competitionId: "season-zero-rehearsal",
+      seasonId: "season-zero",
+      now: () => Date.parse("2026-08-13T10:05:00.000Z"),
+    });
+    const command = {
+      event: { ...event, aggregateVersion: event.aggregateVersion.toString() },
+      signatures: [signature],
+    };
+    const accepted = await coreApi.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: command,
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(accepted.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      aggregateVersion: "1",
+    });
+    const rogue = createSigningIdentity(`0x${"9".repeat(64)}`);
+    const rogueSignature = await signCanonicalEvent(
+      rogue,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      event,
+    );
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: { ...command, signatures: [rogueSignature] },
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: { event: command.event, signatures: [] },
+        })
+      ).statusCode,
+    ).toBe(400);
+    const malformedEvent = createCanonicalEvent({
+      eventId: "0198a000-0000-7000-8000-000000000304",
+      actorDid: submittingBody.did,
+      nonce: "possession-resolution-2",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000305",
+      aggregateType: "game-possession",
+      aggregateId: result.finalState.gameId,
+      aggregateVersion: 2n,
+      eventType: "PossessionResolved",
+      previousEventHash: event.eventHash,
+      payload: {
+        source: { ...source, score: { home: -1, away: 0 } },
+        decisionProof: rehearsal.decisionProof,
+      },
+      stateRoot: result.finalStateRoot,
+      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      timestamp: "2026-08-13T10:05:00.000Z",
+    });
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            event: {
+              ...malformedEvent,
+              aggregateVersion: malformedEvent.aggregateVersion.toString(),
+            },
+            signatures: [
+              await signCanonicalEvent(
+                submittingBody.signingIdentity,
+                REHEARSAL_RECOGNITION_DOMAIN,
+                malformedEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const directWriteStore = new InMemoryCanonicalStore();
+    await directWriteStore.append({
+      ...store.events[0]!,
+      signatures: [rogueSignature],
+    });
+    const rejectedProjectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-rejected-projections-"),
+    );
+    const rejectedProjections = new FilePublicProjectionRepository(
+      rejectedProjectionRoot,
+    );
+    await rejectedProjections.initialize();
+    const unauthorizedWorker = new PublicProjectionWorker({
+      store: directWriteStore,
+      writer: rejectedProjections,
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          submittingBody.did,
+          {
+            signerAddress: submittingBody.signingIdentity.address,
+            allowedAggregateTypes: ["game-possession"],
+          },
+        ],
+      ]),
+    });
+    await expect(unauthorizedWorker.drain()).rejects.toThrow("not registered");
+    expect(rejectedProjections.games()).toEqual([]);
+
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-vertical-projections-"),
+    );
+    const projections = new FilePublicProjectionRepository(projectionRoot);
+    await projections.initialize();
+    const publicProjections = new FilePublicProjectionRepository(
+      projectionRoot,
+    );
+    await publicProjections.initialize();
+    const worker = new PublicProjectionWorker({
+      store,
+      writer: projections,
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          submittingBody.did,
+          {
+            signerAddress: submittingBody.signingIdentity.address,
+            allowedAggregateTypes: ["game-possession"],
+          },
+        ],
+      ]),
+      now: () => new Date("2026-08-13T10:05:01.000Z"),
+    });
+    expect(await worker.drain()).toBe(1);
+    expect(await worker.drain()).toBe(0);
+    const publicApi = createPublicApi({ projections: publicProjections });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const arenaProjection = await loadPossessionProof(publicAddress);
+      expect(arenaProjection).toMatchObject({
+        gameId: result.finalState.gameId,
+        canonical: true,
+        score: result.finalState.score,
+        finalStateRoot: result.finalStateRoot,
+        eventMerkleRoot: result.eventMerkleRoot,
+      });
+      const stream = await publicApi.inject({
+        method: "GET",
+        url: `/v1/public/games/${result.finalState.gameId}/live`,
+      });
+      expect(stream.body).toContain(result.finalStateRoot);
+      expect(stream.body).toContain('"canonical":true');
+    } finally {
+      await Promise.all([publicApi.close(), coreApi.close()]);
+    }
+    const restarted = new FilePublicProjectionRepository(projectionRoot);
+    await restarted.initialize();
+    expect(restarted.game(result.finalState.gameId)?.finalStateRoot).toBe(
+      result.finalStateRoot,
+    );
+  });
+
   it("replays both accelerated seasons and every cross-domain rehearsal scenario exactly", async () => {
     const report = await runPrivateRehearsal();
     expect(report.passed).toBe(true);
@@ -31,19 +334,19 @@ describe("complete local acceptance", () => {
       replayExactCount: 36,
       inferenceInvocations: 0,
       seasonRoot:
-        "0xd049768ba17801a427c3675fcbaa0ddda493e0ba0b5980b02dcd3d881fc34f74",
+        "0x865030ef4bbd028ee908823c6f611747c1f71f08e0c6cf5d5d1b91ca6454c16c",
     });
     expect(report.development).toMatchObject({
       gameCount: 36,
       replayExactCount: 36,
       inferenceInvocations: 0,
       seasonRoot:
-        "0x2f6a7d41ae1844402105703050a37b12796a3a91389534cb23169103383acd02",
+        "0x4c140c709f94f119d834b6ff59c302c09dbcc05831b4b0b3f744fa8a8eacbf69",
     });
     expect(report.events).toHaveLength(16);
     expect(report.events.every((event) => event.outcome === "PASS")).toBe(true);
     expect(report.eventRoot).toBe(
-      "0x6f3ea9a7a8b475d89b72a3f05853cfec2a15db9781c8372436e0e9a305a43df9",
+      "0xc78f8d0f0f5653028ad665884de67870579f8ba0d18b94f2ee6b16da677e4c09",
     );
   });
 

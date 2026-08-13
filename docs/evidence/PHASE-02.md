@@ -8,6 +8,7 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 - Separate capability-scoped transport identities whose HMAC signatures bind service id, capability, method, path, body hash, nonce, timestamp, expected version, and idempotency metadata. Replays, stale requests, changed bodies, changed routes, and ungranted capabilities fail closed.
 - Serializable PostgreSQL event-store implementation with per-aggregate advisory locks, versions and hash chains, UUIDv7-compatible event keys, actor nonce replay prevention, request idempotency, atomic outbox writes, range-plus-hash partitions, and no global event sequence.
 - Ciphertext-only broker with domain policy, separate XChaCha20-Poly1305 domain keys, immutable object-version chains, X25519 guardian envelopes, hashed Drive paths, immutable `0600` artifacts, and no plaintext key persistence.
+- Restart-safe ciphertext metadata recovery scans durable policies, objects, and guardian envelopes; validates hashed paths and contiguous policy/object chains; fsyncs linked records; and restores broker authorization/version state. A repository failure rolls back the tentative in-memory version, while an uncertain post-link failure is recovered by restart.
 - Fixed body broker with named targets, method/path allowlists, redirect denial, response/body limits, service signatures, broker-only provider credentials, and encryption before private-workspace transport.
 - Digest-pinned Node/Blaxel sandbox sources, exact Alpine package lock, separate broker/agent uids, immutable launcher and trust files, environment allowlisting, and nftables owner rules. Agent uid 10101 is allowed only to the fixed loopback broker; broker uid 10100 is allowed only to boot-resolved HTTPS targets.
 - Blaxel manifests for private Agents, MCP Functions, body/arena Sandboxes, model endpoints, public Applications, recovery Job, release labels, region placement, and explicit telemetry opt-outs.
@@ -46,6 +47,6 @@ These results are explicitly not represented as completed platform proofs:
 3. Agent Drive returns `403` because the feature is not enabled. The local filesystem emulator validates encrypted layout behavior but is not a live Drive security proof.
 4. No project Neon URL or local PostgreSQL server is available. Drizzle migration consistency and store logic pass; a real serializable migration, contention, partition, outbox, and point-in-time-recovery run remains required.
 5. Quota reservation and `minScale` deployment can incur recurring spend. No reservation or paid deployment was requested.
-6. The host is Node `24.7.0`, while source and container inputs pin `24.18.0`. The exact runtime must pass the complete suite in the built image before release.
+6. The complete local suite now passes through the exact pinned Node `24.18.0` binary. The custom image must independently repeat that proof after a Docker daemon or target sandbox becomes available.
 
 Safe local implementation proceeds while these gates remain open. Public genesis, production exposure, ownerless deployment, recovery-control removal, and material spend remain prohibited without the required approval.
