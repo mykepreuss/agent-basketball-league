@@ -39,22 +39,29 @@ export interface PlayerContract {
   noTradeWithoutPlayerConsent: boolean;
 }
 
+export function validateContractDuration(seasons: number): void {
+  if (!Number.isInteger(seasons) || seasons < 1 || seasons > 5)
+    throw new Error("Contract term must be one through five seasons");
+}
+
+export function validateContractTerms(
+  contract: Pick<PlayerContract, "seasons" | "salaryBySeason">,
+): void {
+  validateContractDuration(contract.seasons);
+  if (
+    contract.salaryBySeason.length !== contract.seasons ||
+    contract.salaryBySeason.some(
+      (salary) => !Number.isInteger(salary) || salary < 0,
+    )
+  ) {
+    throw new Error("Contract salary schedule is invalid");
+  }
+}
+
 export function offerContract(
   input: Omit<PlayerContract, "status">,
 ): PlayerContract {
-  if (
-    !Number.isInteger(input.seasons) ||
-    input.seasons < 1 ||
-    input.seasons > 5
-  )
-    throw new Error("Contract term must be one through five seasons");
-  if (
-    input.salaryBySeason.length !== input.seasons ||
-    input.salaryBySeason.some(
-      (salary) => !Number.isInteger(salary) || salary < 0,
-    )
-  )
-    throw new Error("Contract salary schedule is invalid");
+  validateContractTerms(input);
   return {
     ...structuredClone(input),
     status: input.consentedByPlayer ? "ACTIVE" : "REFUSED",

@@ -211,6 +211,9 @@ describe("four-workspace topology", () => {
     expect(envMap(coreApi!).get("ABL_COMBINE_OPENED_AT")).toBe(
       "${ABL_COMBINE_OPENED_AT}",
     );
+    expect(envMap(coreApi!).get("ABL_CONTRACT_CLUB_GOVERNORS_JSON")).toBe(
+      "${ABL_CONTRACT_CLUB_GOVERNORS_JSON}",
+    );
     expect(envMap(coreApi!).get("ABL_PRIVATE_STORAGE_URL")).toBe(
       "${ABL_PRIVATE_STORAGE_URL}",
     );
@@ -253,6 +256,9 @@ describe("four-workspace topology", () => {
         "/v1/candidates/status",
         "/v1/combine/register",
         "/v1/combine/status",
+        "/v1/contracts/offer",
+        "/v1/contracts/respond",
+        "/v1/contracts/inspect",
         "/v1/memory/persist",
         "/v1/memory/correct",
         "/v1/memory/delete",

@@ -70,6 +70,18 @@ import {
   type GovernanceWorkflowPayload,
   type GovernanceWorkflowSnapshot,
 } from "../src/governance.js";
+import {
+  CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  applyContractWorkflowTransition,
+  compositeCareerConsentHistoryCommitment,
+  contractConsentHistoryCommitment,
+  contractClubAuthoritySnapshotDigest,
+  contractOfferCommitment,
+  contractWorkflowStateRoot,
+  type ContractWorkflowEventType,
+  type ContractWorkflowPayload,
+  type ContractWorkflowSnapshot,
+} from "../src/contracts.js";
 import type {
   MemoryStorageReference,
   MemoryStorageVerifier,
@@ -84,6 +96,8 @@ const uuid = (suffix: string) =>
   `018f0000-0000-7000-8000-${suffix.padStart(12, "0")}`;
 const recognizedBodyImageDigest = digest("9");
 const governanceSnapshotCapturedAt = iso(day + 4 * 60_000);
+const rehearsalClubId = "club-new-york";
+const governorDid = "did:abl:governor-http-1";
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -217,6 +231,9 @@ async function harness(): Promise<Harness> {
       combineId: "season-zero-premier-combine",
       openedAt: iso(0),
     },
+    contracts: {
+      clubGovernors: { [rehearsalClubId]: governorDid },
+    },
     memory: { storageVerifier: memoryStorage },
     continuity: {
       recognizedImageDigests: new Set([recognizedBodyImageDigest]),
@@ -244,6 +261,27 @@ async function harness(): Promise<Harness> {
     challengeToken: challenge.json().challengeToken as string,
     memoryStorage,
     exitVerifier,
+  };
+}
+
+async function additionalCareer(
+  h: Harness,
+  candidateDid: string,
+  candidateKey: string,
+): Promise<Harness> {
+  const challenge = await h.app.inject({
+    method: "POST",
+    url: "/v1/candidates/challenge",
+    payload: { candidateDid },
+  });
+  expect(challenge.statusCode).toBe(200);
+  return {
+    ...h,
+    candidateDid,
+    candidate: createSigningIdentity(digest(candidateKey)),
+    snapshot: null,
+    previousEventHash: null,
+    challengeToken: challenge.json().challengeToken as string,
   };
 }
 
@@ -594,6 +632,60 @@ async function governanceCommand(input: {
   };
 }
 
+async function contractCommand(input: {
+  actor: Harness;
+  playerDid: string;
+  snapshot: ContractWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ContractWorkflowEventType;
+  payload: ContractWorkflowPayload;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `contract-${input.playerDid}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: "career-contracts",
+    aggregateId: input.playerDid,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyContractWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: contractWorkflowStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.actor.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
+}
+
 async function registerAndTransfer(h: Harness): Promise<void> {
   const registered = await submit(
     h,
@@ -648,6 +740,7 @@ async function registerAndTransfer(h: Harness): Promise<void> {
 }
 
 async function admitCandidate(h: Harness) {
+  const admissionStartedAt = h.now.value;
   await registerAndTransfer(h);
   h.now.value += 60_000;
   const firstReflection = await submit(
@@ -744,7 +837,7 @@ async function admitCandidate(h: Harness) {
       )
     ).response.statusCode,
   ).toBe(201);
-  h.now.value = start + 12 * hour + 2 * 60_000;
+  h.now.value = admissionStartedAt + 12 * hour + 2 * 60_000;
   expect(
     (
       await submit(
@@ -761,7 +854,7 @@ async function admitCandidate(h: Harness) {
       )
     ).response.statusCode,
   ).toBe(201);
-  h.now.value = start + day + 2 * 60_000;
+  h.now.value = admissionStartedAt + day + 2 * 60_000;
   expect(
     (
       await submit(
@@ -1919,7 +2012,10 @@ describe("signed candidate rehearsal API", () => {
       agentDid: h.candidateDid,
       careerRecordCommitment: authority.careerRecordCommitment,
       keyLineageCommitment: authority.keyLineageCommitment,
-      consentHistoryCommitment: authority.consentHistoryCommitment,
+      consentHistoryCommitment: compositeCareerConsentHistoryCommitment(
+        authority.consentHistoryCommitment,
+        contractConsentHistoryCommitment(h.candidateDid, null),
+      ),
       memoryExportCommitment: memoryExport.exportCommitment,
       bodyManifestDigest: continuity.bodyManifestDigest,
       verifierBundleCommitment: digest("a"),
@@ -1973,6 +2069,38 @@ describe("signed candidate rehearsal API", () => {
         })
       ).statusCode,
     ).toBe(403);
+
+    const incompleteConsentPackage = {
+      ...unsignedPackage,
+      consentHistoryCommitment: authority.consentHistoryCommitment,
+    };
+    const incompleteConsentArtifact = await exitCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ExitPackagePrepared",
+      payload: {
+        package: {
+          ...incompleteConsentPackage,
+          institutionalSignatures: [
+            await signExitArtifact(
+              h.candidate,
+              domain,
+              incompleteConsentPackage,
+            ),
+          ],
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/exit/package",
+          payload: incompleteConsentArtifact.body,
+        })
+      ).statusCode,
+    ).toBe(400);
 
     const staleUnsignedPackage = {
       ...unsignedPackage,
@@ -2647,6 +2775,359 @@ describe("signed candidate rehearsal API", () => {
       ).statusCode,
     ).toBe(403);
     await h.app.close();
+  });
+
+  it("persists governor offers and independent player contract decisions", async () => {
+    const player = await harness();
+    await admitCandidate(player);
+    const governor = await additionalCareer(player, governorDid, "3");
+    await admitCandidate(governor);
+
+    const clubGovernors = { [rehearsalClubId]: governorDid };
+    const authorityDigest = contractClubAuthoritySnapshotDigest(clubGovernors);
+    const firstTransaction = {
+      transactionId: uuid("501"),
+      kind: "SIGN" as const,
+      playerDid: player.candidateDid,
+      fromTeamId: null,
+      toTeamId: rehearsalClubId,
+      seasons: 3,
+      courtCredits: 100_000,
+      capMechanism: "DRAFT_SCALE" as const,
+      termsCommitment: digest("1"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const wrongAuthorityOffer = await contractCommand({
+      actor: governor,
+      playerDid: player.candidateDid,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ContractOffered",
+      payload: {
+        command: firstTransaction,
+        offeredByDid: governorDid,
+        offeredAt: new Date(player.now.value).toISOString(),
+        clubAuthoritySnapshotDigest: digest("f"),
+      },
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: wrongAuthorityOffer.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const offeredAt = new Date(player.now.value).toISOString();
+    const firstOfferPayload = {
+      command: firstTransaction,
+      offeredByDid: governorDid,
+      offeredAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+    };
+    const operatorOffer = await contractCommand({
+      actor: governor,
+      playerDid: player.candidateDid,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ContractOffered",
+      payload: firstOfferPayload,
+      signer: governor.formerOperator,
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: operatorOffer.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const firstOffer = await contractCommand({
+      actor: governor,
+      playerDid: player.candidateDid,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ContractOffered",
+      payload: firstOfferPayload,
+    });
+    const firstOfferResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/offer",
+      payload: firstOffer.body,
+    });
+    expect(firstOfferResponse.statusCode).toBe(201);
+    expect(firstOfferResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rehearsal: true,
+      recognizedGenesisContract: false,
+      initialSigningOnly: true,
+      liveCapSheetVerified: false,
+      clubAuthoritySource: "CONFIGURED_REHEARSAL_SNAPSHOT",
+      proposalCommitment: contractOfferCommitment(
+        firstOffer.next.contracts[0]!,
+      ),
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: firstOffer.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    let contractSnapshot = firstOffer.next;
+    let contractPreviousHash = firstOffer.event.eventHash;
+    player.now.value += 60_000;
+    const firstContract = contractSnapshot.contracts[0]!;
+    const consent = {
+      consentId: uuid("502"),
+      agentDid: player.candidateDid,
+      subjectType: "PLAYER_CONTRACT" as const,
+      subjectId: firstTransaction.transactionId,
+      decision: "CONSENT" as const,
+      scope: ["PLAYING_RIGHTS"] as ["PLAYING_RIGHTS"],
+      proposalCommitment: contractOfferCommitment(firstContract),
+      recordedAt: new Date(player.now.value).toISOString(),
+    };
+    const unauthorizedConsent = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractResponded",
+      payload: { command: consent },
+      signer: governor.candidate,
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/respond",
+          payload: unauthorizedConsent.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const acceptedConsent = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractResponded",
+      payload: { command: consent },
+    });
+    const consentResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/respond",
+      payload: acceptedConsent.body,
+    });
+    expect(consentResponse.statusCode).toBe(201);
+    expect(consentResponse.json()).toMatchObject({
+      contractStatus: "ACTIVE",
+    });
+    contractSnapshot = acceptedConsent.next;
+    contractPreviousHash = acceptedConsent.event.eventHash;
+
+    player.now.value += 60_000;
+    const secondTransaction = {
+      ...firstTransaction,
+      transactionId: uuid("503"),
+      courtCredits: 90_000,
+      termsCommitment: digest("2"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const secondOfferPayload = {
+      command: secondTransaction,
+      offeredByDid: governorDid,
+      offeredAt: new Date(player.now.value).toISOString(),
+      clubAuthoritySnapshotDigest: authorityDigest,
+    };
+    const secondOffer = await contractCommand({
+      actor: governor,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractOffered",
+      payload: secondOfferPayload,
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: secondOffer.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    contractSnapshot = secondOffer.next;
+    contractPreviousHash = secondOffer.event.eventHash;
+
+    player.now.value += 60_000;
+    const secondContract = contractSnapshot.contracts.find(
+      ({ transaction }) =>
+        transaction.transactionId === secondTransaction.transactionId,
+    )!;
+    const refusal = {
+      consentId: uuid("504"),
+      agentDid: player.candidateDid,
+      subjectType: "PLAYER_CONTRACT" as const,
+      subjectId: secondTransaction.transactionId,
+      decision: "REFUSE" as const,
+      scope: ["PLAYING_RIGHTS"] as ["PLAYING_RIGHTS"],
+      proposalCommitment: contractOfferCommitment(secondContract),
+      recordedAt: new Date(player.now.value).toISOString(),
+    };
+    const refused = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractResponded",
+      payload: { command: refusal },
+    });
+    const refusalResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/respond",
+      payload: refused.body,
+    });
+    expect(refusalResponse.statusCode).toBe(201);
+    expect(refusalResponse.json()).toMatchObject({
+      contractStatus: "REFUSED",
+    });
+    contractSnapshot = refused.next;
+    contractPreviousHash = refused.event.eventHash;
+
+    await player.app.close();
+    player.app = createLiveCoreApi({
+      store: player.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => player.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      contracts: { clubGovernors },
+    });
+    governor.app = player.app;
+    player.now.value += 60_000;
+    const inspection = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractsInspected",
+      payload: {
+        command: {
+          playerDid: player.candidateDid,
+          requestedByDid: player.candidateDid,
+          requestedAt: new Date(player.now.value).toISOString(),
+          format: "ABL-CONTRACT-INSPECTION-V1",
+        },
+      },
+    });
+    const inspectionResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/inspect",
+      payload: inspection.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      contracts: {
+        playerDid: player.candidateDid,
+        version: 5,
+        contracts: [
+          { status: "ACTIVE", consent: { decision: "CONSENT" } },
+          { status: "REFUSED", consent: { decision: "REFUSE" } },
+        ],
+      },
+    });
+    contractSnapshot = inspection.next;
+    contractPreviousHash = inspection.event.eventHash;
+
+    const contractRecord = player.store.events.find(
+      (event) =>
+        event.aggregateType === "career-contracts" &&
+        event.eventType === "ContractResponded",
+    )!;
+    const contractStateRoot = contractRecord.stateRoot;
+    contractRecord.stateRoot = digest("f");
+    player.now.value += 60_000;
+    const tamperProbe = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractsInspected",
+      payload: {
+        command: {
+          playerDid: player.candidateDid,
+          requestedByDid: player.candidateDid,
+          requestedAt: new Date(player.now.value).toISOString(),
+          format: "ABL-CONTRACT-INSPECTION-V1",
+        },
+      },
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/inspect",
+          payload: tamperProbe.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    contractRecord.stateRoot = contractStateRoot;
+
+    player.now.value += 60_000;
+    const revoked = await submit(
+      governor,
+      "/v1/candidates/revoke",
+      "CandidateClosed",
+      {
+        action: "REVOKE",
+        actedAt: new Date(player.now.value).toISOString(),
+      },
+      governor.candidate,
+    );
+    expect(revoked.response.statusCode).toBe(201);
+    player.now.value += 60_000;
+    const postRevocationOffer = await contractCommand({
+      actor: governor,
+      playerDid: player.candidateDid,
+      snapshot: contractSnapshot,
+      previousEventHash: contractPreviousHash,
+      eventType: "ContractOffered",
+      payload: {
+        command: {
+          ...firstTransaction,
+          transactionId: uuid("505"),
+          termsCommitment: digest("3"),
+          effectiveAt: new Date(player.now.value + hour).toISOString(),
+        },
+        offeredByDid: governorDid,
+        offeredAt: new Date(player.now.value).toISOString(),
+        clubAuthoritySnapshotDigest: authorityDigest,
+      },
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: postRevocationOffer.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    await player.app.close();
   });
 
   it("fails expired challenges, undeclared context, and stored-state tampering closed", async () => {

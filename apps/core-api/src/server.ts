@@ -33,6 +33,10 @@ import {
   type ContinuityRehearsalOptions,
 } from "./continuity.js";
 import {
+  installContractRehearsalRoutes,
+  type ContractRehearsalOptions,
+} from "./contracts.js";
+import {
   installExitRehearsalRoutes,
   type ExitRehearsalOptions,
 } from "./exit.js";
@@ -95,6 +99,7 @@ export interface LiveCoreApiOptions {
     "challengeSecret" | "challengeId" | "challengeBytes"
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
+  contracts?: Pick<ContractRehearsalOptions, "clubGovernors">;
   memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
@@ -203,17 +208,27 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
-  const { candidateAdmission, combine, continuity, exit, governance, memory } =
-    options;
+  const {
+    candidateAdmission,
+    combine,
+    continuity,
+    contracts,
+    exit,
+    governance,
+    memory,
+  } = options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
   const continuityRoutesEnabled =
     candidateRoutesEnabled && continuity !== undefined;
+  const contractRoutesEnabled =
+    candidateRoutesEnabled && contracts !== undefined;
   const exitRoutesEnabled =
     candidateRoutesEnabled &&
     memory !== undefined &&
     continuity !== undefined &&
+    contracts !== undefined &&
     exit !== undefined;
   const governanceRoutesEnabled =
     candidateRoutesEnabled && governance !== undefined;
@@ -351,6 +366,17 @@ export function createLiveCoreApi(
       ...combine,
     });
   }
+  if (candidateAdmission !== undefined && contracts !== undefined) {
+    installContractRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      clubGovernors: contracts.clubGovernors,
+    });
+  }
   if (candidateAdmission !== undefined && memory !== undefined) {
     installMemoryRehearsalRoutes(app, {
       store: options.store,
@@ -377,6 +403,7 @@ export function createLiveCoreApi(
     candidateAdmission !== undefined &&
     memory !== undefined &&
     continuity !== undefined &&
+    contracts !== undefined &&
     exit !== undefined
   ) {
     installExitRehearsalRoutes(app, {
@@ -388,6 +415,7 @@ export function createLiveCoreApi(
       candidateAdmission,
       memory,
       continuity,
+      contracts,
       portabilityVerifier: exit.portabilityVerifier,
     });
   }
@@ -407,6 +435,7 @@ export function createLiveCoreApi(
       entry.path !== "/v1/commands" &&
       !(candidateRoutesEnabled && entry.path.startsWith("/v1/candidates/")) &&
       !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
+      !(contractRoutesEnabled && entry.path === "/v1/contracts/*") &&
       !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&

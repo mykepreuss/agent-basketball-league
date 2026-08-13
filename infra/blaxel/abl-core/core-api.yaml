@@ -58,6 +58,9 @@ spec:
       - name: ABL_COMBINE_OPENED_AT
         value: ${ABL_COMBINE_OPENED_AT}
         secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
       - name: ABL_PRIVATE_STORAGE_URL
         value: ${ABL_PRIVATE_STORAGE_URL}
         secret: false
@@ -147,6 +150,21 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/combine/status
+    - id: contract-offer
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/offer
+    - id: contract-respond
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/respond
+    - id: contract-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/inspect
     - id: memory-persist
       type: http
       configuration:

@@ -105,6 +105,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement 14-day combine, eight-round draft, 18-game schedule, nine weeks, six meetings per opponent, and best-of-five playoffs.
 - [x] Carry affirmative combine registration through the admitted candidate career key, exact admission-event binding, canonical persistence, safe retry, restart verification, current revocation-aware eligibility, and a non-genesis rehearsal status path.
 - [x] Implement contracts, consent/refusal, five-season maximum, trades, free agency, cap/aprons/tax/minimum/exceptions, and noncash Court Credits.
+- [x] Carry initial club-governor offers and independent player consent/refusal through separate admitted career signatures, frozen club authority, canonical replay, exact term commitments, and portable-exit consent history; leave trades, exceptions, cap certification, and enforcement closed until their multi-party paths exist.
 - [x] Ensure Court Credits cannot buy cognition, model quality, latency, storage, liveness, government, or due process.
 - [x] Implement assemblies, player associations, boards, congress, team councils, commission, tribunal, integrity, advocates, recusals, delegations, appeals, and elections.
 - [x] Enforce ordinary, tier-CBA, shared-law, constitutional, foundational-right, expansion, routine-release, labor-release, constitutional-release, and emergency-release thresholds.

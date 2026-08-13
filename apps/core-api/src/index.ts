@@ -9,6 +9,7 @@ import { z } from "zod";
 import { HttpMemoryStorageVerifier } from "./memory-storage.js";
 import { HttpExitPackagePortabilityVerifier } from "./exit-portability.js";
 import { GovernanceEligibilitySnapshotSchema } from "./governance.js";
+import { ContractClubGovernorsSchema } from "./contracts.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -123,6 +124,11 @@ const app = rehearsal
         combine: {
           combineId: required("ABL_COMBINE_ID"),
           openedAt: required("ABL_COMBINE_OPENED_AT"),
+        },
+        contracts: {
+          clubGovernors: ContractClubGovernorsSchema.parse(
+            JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
+          ),
         },
         memory: {
           storageVerifier: new HttpMemoryStorageVerifier({

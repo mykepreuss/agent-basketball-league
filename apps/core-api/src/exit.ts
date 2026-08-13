@@ -34,6 +34,11 @@ import {
   readContinuityExitManifest,
   type ContinuityRehearsalOptions,
 } from "./continuity.js";
+import {
+  compositeCareerConsentHistoryCommitment,
+  readContractConsentHistory,
+  type ContractRehearsalOptions,
+} from "./contracts.js";
 import type {
   ExitPackagePortabilityVerifier,
   ExitRestorationEvidence,
@@ -62,6 +67,7 @@ class ExitPortabilityVerificationError extends Error {
 export interface ExitRehearsalOptions extends ExitStatusOptions {
   memory: Pick<MemoryRehearsalOptions, "storageVerifier">;
   continuity: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
+  contracts: Pick<ContractRehearsalOptions, "clubGovernors">;
   portabilityVerifier: ExitPackagePortabilityVerifier;
 }
 
@@ -104,28 +110,50 @@ function continuityOptions(
   return options.now === undefined ? common : { ...common, now: options.now };
 }
 
+function contractOptions(
+  options: ExitRehearsalOptions,
+): ContractRehearsalOptions {
+  const common = {
+    store: options.store,
+    domain: options.domain,
+    competitionId: options.competitionId,
+    seasonId: options.seasonId,
+    candidateAdmission: options.candidateAdmission,
+    clubGovernors: options.contracts.clubGovernors,
+  };
+  return options.now === undefined ? common : { ...common, now: options.now };
+}
+
 async function validatePackageBindings(
   options: ExitRehearsalOptions,
   packageValue: SignedExitPackage,
   at: string,
 ): Promise<void> {
-  const [authority, memoryExport, continuity] = await Promise.all([
-    readCandidateCareerAuthority(
-      candidateOptions(options),
-      packageValue.agentDid,
-      at,
-    ),
-    readMemoryExitExport(memoryOptions(options), packageValue.agentDid),
-    readContinuityExitManifest(
-      continuityOptions(options),
-      packageValue.agentDid,
-    ),
-  ]);
+  const [authority, memoryExport, continuity, contractConsent] =
+    await Promise.all([
+      readCandidateCareerAuthority(
+        candidateOptions(options),
+        packageValue.agentDid,
+        at,
+      ),
+      readMemoryExitExport(memoryOptions(options), packageValue.agentDid),
+      readContinuityExitManifest(
+        continuityOptions(options),
+        packageValue.agentDid,
+      ),
+      readContractConsentHistory(
+        contractOptions(options),
+        packageValue.agentDid,
+      ),
+    ]);
+  const consentHistoryCommitment = compositeCareerConsentHistoryCommitment(
+    authority.consentHistoryCommitment,
+    contractConsent,
+  );
   if (
     packageValue.careerRecordCommitment !== authority.careerRecordCommitment ||
     packageValue.keyLineageCommitment !== authority.keyLineageCommitment ||
-    packageValue.consentHistoryCommitment !==
-      authority.consentHistoryCommitment ||
+    packageValue.consentHistoryCommitment !== consentHistoryCommitment ||
     packageValue.memoryExportCommitment !== memoryExport.exportCommitment ||
     packageValue.bodyManifestDigest !== continuity.bodyManifestDigest
   ) {
