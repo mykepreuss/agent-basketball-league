@@ -23,7 +23,7 @@ Commands completed successfully after formatting:
 ```text
 pnpm --filter @abl/database db:check  -> Everything's fine
 pnpm check                            -> 28/28 tasks
-pnpm test                             -> 133 assertions in 24 files; 28/28 tasks
+pnpm test                             -> 136 assertions in 24 files; 28/28 tasks
 pnpm build                            -> 18/18 tasks
 bl deploy --dryrun --type sandbox     -> Sandbox/abl-body-sandbox-image; no mutation
 ```

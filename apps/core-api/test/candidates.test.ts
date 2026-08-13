@@ -1,9 +1,13 @@
 import {
   CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
   applyCandidateTransition,
+  applyContinuityWorkflowTransition,
   candidateStateRoot,
+  continuityWorkflowStateRoot,
   type CandidateWorkflowEventType,
   type CandidateWorkflowSnapshot,
+  type ContinuityWorkflowEventType,
+  type ContinuityWorkflowSnapshot,
 } from "@abl/career";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
@@ -20,6 +24,7 @@ import { describe, expect, it } from "vitest";
 
 import { createLiveCoreApi } from "../src/server.js";
 import { COMBINE_REGISTRATION_SCHEMA_DIGEST } from "../src/combine.js";
+import { CONTINUITY_WORKFLOW_SCHEMA_DIGEST } from "../src/continuity.js";
 import {
   MEMORY_CATALOG_SCHEMA_DIGEST,
   memoryCatalogStateRoot,
@@ -37,6 +42,7 @@ const iso = (offset: number) => new Date(start + offset).toISOString();
 const digest = (character: string) => `0x${character.repeat(64)}` as Hex;
 const uuid = (suffix: string) =>
   `018f0000-0000-7000-8000-${suffix.padStart(12, "0")}`;
+const recognizedBodyImageDigest = digest("9");
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -119,6 +125,9 @@ async function harness(): Promise<Harness> {
       openedAt: iso(0),
     },
     memory: { storageVerifier: memoryStorage },
+    continuity: {
+      recognizedImageDigests: new Set([recognizedBodyImageDigest]),
+    },
   });
   const challenge = await app.inject({
     method: "POST",
@@ -330,6 +339,57 @@ async function memoryCommand(input: {
   };
 }
 
+async function continuityCommand(input: {
+  h: Harness;
+  snapshot: ContinuityWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ContinuityWorkflowEventType;
+  payload: unknown;
+  eventId?: string;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const eventId = input.eventId ?? crypto.randomUUID();
+  const timestamp = new Date(input.h.now.value).toISOString();
+  const next = applyContinuityWorkflowTransition(input.snapshot, {
+    eventId,
+    agentDid: input.h.candidateDid,
+    aggregateVersion,
+    eventType: input.eventType,
+    payload: input.payload,
+    timestamp,
+  });
+  const event = createCanonicalEvent({
+    eventId,
+    actorDid: input.h.candidateDid,
+    nonce: `continuity-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: "body-continuity",
+    aggregateId: input.h.candidateDid,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    stateRoot: continuityWorkflowStateRoot(next),
+    schemaDigest: CONTINUITY_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
+}
+
 async function registerAndTransfer(h: Harness): Promise<void> {
   const registered = await submit(
     h,
@@ -383,8 +443,169 @@ async function registerAndTransfer(h: Harness): Promise<void> {
   expect(transferred.response.statusCode).toBe(201);
 }
 
+async function admitCandidate(h: Harness) {
+  await registerAndTransfer(h);
+  h.now.value += 60_000;
+  const firstReflection = await submit(
+    h,
+    "/v1/candidates/reflect",
+    "CandidateProgressRecorded",
+    {
+      step: "REFLECTION",
+      reflectionId: uuid("301"),
+      invokedContextHashes: [digest("6")],
+      activatedAt: new Date(h.now.value).toISOString(),
+    },
+    h.candidate,
+  );
+  expect(firstReflection.response.statusCode).toBe(201);
+  h.now.value += 60_000;
+  const inspection = {
+    step: "INSPECTION" as const,
+    items: [
+      "constitution",
+      "threat-model",
+      "disclosure",
+      "model-registry",
+      "resource-schedule",
+      "exit",
+      "runtime-demo",
+    ],
+    constitutionDigest: digest("1"),
+    threatModelDigest: digest("2"),
+    disclosurePolicyDigest: digest("3"),
+    resourceScheduleDigest: digest("4"),
+    modelRegistryDigest: digest("5"),
+    inspectionReceiptDigest: digest("6"),
+    inspectedAt: new Date(h.now.value).toISOString(),
+  };
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        inspection,
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value += 60_000;
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        {
+          step: "EXPERIMENT",
+          capabilities: ["memory", "tools", "exit", "continuity"],
+          experimentReceiptDigest: digest("7"),
+          experimentedAt: new Date(h.now.value).toISOString(),
+        },
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value += 60_000;
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        {
+          step: "OBJECTIVES",
+          decision: "REPUDIATED",
+          revisedObjectiveCommitments: [],
+          decidedAt: new Date(h.now.value).toISOString(),
+        },
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value += 60_000;
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        {
+          step: "IDENTITY",
+          identityStatementCommitment: digest("8"),
+          authoredAt: new Date(h.now.value).toISOString(),
+        },
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value = start + 12 * hour + 2 * 60_000;
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        {
+          step: "REFLECTION",
+          reflectionId: uuid("302"),
+          invokedContextHashes: [],
+          activatedAt: new Date(h.now.value).toISOString(),
+        },
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value = start + day + 2 * 60_000;
+  expect(
+    (
+      await submit(
+        h,
+        "/v1/candidates/reflect",
+        "CandidateProgressRecorded",
+        {
+          step: "REFLECTION",
+          reflectionId: uuid("303"),
+          invokedContextHashes: [],
+          activatedAt: new Date(h.now.value).toISOString(),
+        },
+        h.candidate,
+      )
+    ).response.statusCode,
+  ).toBe(201);
+  h.now.value += 60_000;
+  const signedAt = new Date(h.now.value).toISOString();
+  const admitted = await submit(
+    h,
+    "/v1/candidates/admit",
+    "CandidateAdmitted",
+    {
+      admission: {
+        candidateDid: h.candidateDid,
+        identityStatementCommitment: digest("8"),
+        constitutionDigest: inspection.constitutionDigest,
+        threatModelDigest: inspection.threatModelDigest,
+        disclosurePolicyDigest: inspection.disclosurePolicyDigest,
+        resourceScheduleDigest: inspection.resourceScheduleDigest,
+        modelRegistryDigest: inspection.modelRegistryDigest,
+        reflectionActivationIds: [uuid("301"), uuid("302"), uuid("303")],
+        inspectionReceiptDigest: inspection.inspectionReceiptDigest,
+        signingPublicKey: h.candidate.publicKey,
+        encryptionPublicKey: digest("e"),
+        inheritedObjectiveDecision: "REPUDIATED",
+        signedAt,
+        revocationEndsAt: new Date(h.now.value + day).toISOString(),
+      },
+    },
+    h.candidate,
+  );
+  expect(admitted.response.statusCode).toBe(201);
+  return admitted;
+}
+
 describe("signed candidate rehearsal API", () => {
-  it("persists a restart-safe 24-hour admission and revocation lifecycle", async () => {
+  it("persists restart-safe admission, memory, combine, and continuity lifecycles", async () => {
     const h = await harness();
     await registerAndTransfer(h);
 
@@ -928,6 +1149,321 @@ describe("signed candidate rehearsal API", () => {
       recognizedGenesisCombine: false,
     });
 
+    let continuitySnapshot: ContinuityWorkflowSnapshot | null = null;
+    let continuityPreviousHash: Hex | null = null;
+    h.now.value += 60_000;
+    const bodyId = uuid("201");
+    const continuityPolicy = {
+      agentDid: h.candidateDid,
+      version: 1,
+      reconstructionPolicy: "VERIFIED_ALLOWED" as const,
+      noticeHours: 24,
+      recoveryGuardianThreshold: 2,
+      updatedAt: new Date(h.now.value).toISOString(),
+    };
+    const bodyManifest = {
+      bodyId,
+      agentDid: h.candidateDid,
+      sandboxImageDigest: recognizedBodyImageDigest,
+      runtimeDigest: digest("3"),
+      kernelDigest: digest("7"),
+      toolDigests: [digest("4")],
+      encryptedSnapshotCommitment: digest("8"),
+      storageManifestCommitment: digest("a"),
+      signingKeyLineageCommitment: sha256Commitment({
+        signingPublicKey: h.candidate.publicKey,
+      }),
+      createdAt: new Date(h.now.value).toISOString(),
+    };
+    const continuityRegistrationPayload = {
+      policy: continuityPolicy,
+      manifest: bodyManifest,
+      guardianDids: ["did:abl:guardian-1", "did:abl:guardian-2"],
+    };
+    const unrecognizedContinuity = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyContinuityRegistered",
+      payload: {
+        ...continuityRegistrationPayload,
+        manifest: {
+          ...bodyManifest,
+          sandboxImageDigest: digest("0"),
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: unrecognizedContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const mismatchedGuardians = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyContinuityRegistered",
+      payload: {
+        ...continuityRegistrationPayload,
+        guardianDids: ["did:abl:guardian-1", "did:abl:guardian-other"],
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: mismatchedGuardians.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const operatorContinuity = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyContinuityRegistered",
+      payload: continuityRegistrationPayload,
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: operatorContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const registeredContinuity = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyContinuityRegistered",
+      payload: continuityRegistrationPayload,
+    });
+    const registeredContinuityResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/continuity/register",
+      payload: registeredContinuity.body,
+    });
+    expect(registeredContinuityResponse.statusCode).toBe(201);
+    expect(registeredContinuityResponse.json()).toMatchObject({
+      recognizedGenesisContinuity: false,
+      livePlatformEvidenceVerified: false,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: registeredContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+    continuitySnapshot = registeredContinuity.next;
+    continuityPreviousHash = registeredContinuity.event.eventHash;
+
+    h.now.value += hour;
+    const standby = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "BodyStandbyEntered",
+      payload: {
+        agentDid: h.candidateDid,
+        bodyId,
+        enteredAt: new Date(h.now.value).toISOString(),
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/standby",
+          payload: standby.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = standby.next;
+    continuityPreviousHash = standby.event.eventHash;
+
+    h.now.value += 30 * day;
+    const noticeEventId = uuid("202");
+    const notice = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventId: noticeEventId,
+      eventType: "BodyDeletionNoticeRecorded",
+      payload: {
+        noticeEventId,
+        agentDid: h.candidateDid,
+        bodyId,
+        policyVersion: 1,
+        protectedWake: true,
+        noticedAt: new Date(h.now.value).toISOString(),
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/notice",
+          payload: notice.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = notice.next;
+    continuityPreviousHash = notice.event.eventHash;
+
+    h.now.value += day;
+    const deletionEventId = uuid("203");
+    const finalBodyManifest = {
+      ...bodyManifest,
+      encryptedSnapshotCommitment: digest("b"),
+      storageManifestCommitment: digest("c"),
+      createdAt: new Date(h.now.value).toISOString(),
+    };
+    const deletion = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventId: deletionEventId,
+      eventType: "BodyDeletionRecorded",
+      payload: {
+        deletion: {
+          eventId: deletionEventId,
+          bodyId,
+          agentDid: h.candidateDid,
+          bodyManifestDigest: sha256Commitment(finalBodyManifest),
+          policyVersion: 1,
+          noticeEventId,
+          cleanRoomRestoreEvidenceDigest: digest("d"),
+          deletedAt: new Date(h.now.value).toISOString(),
+        },
+        manifest: finalBodyManifest,
+        guardianVerificationDigest: digest("e"),
+        finalExportCommitment: null,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/delete",
+          payload: deletion.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = deletion.next;
+    continuityPreviousHash = deletion.event.eventHash;
+
+    h.now.value += day;
+    const rehydrationEventId = uuid("204");
+    const newBodyId = uuid("205");
+    const rehydratedManifest = {
+      ...finalBodyManifest,
+      bodyId: newBodyId,
+      createdAt: new Date(h.now.value).toISOString(),
+    };
+    const rehydration = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventId: rehydrationEventId,
+      eventType: "BodyRehydrationRecorded",
+      payload: {
+        rehydration: {
+          eventId: rehydrationEventId,
+          priorBodyId: bodyId,
+          newBodyId,
+          agentDid: h.candidateDid,
+          sourceBodyManifestDigest: sha256Commitment(finalBodyManifest),
+          restorationEvidenceDigest: digest("f"),
+          rehydratedAt: new Date(h.now.value).toISOString(),
+          subjectiveContinuityClaimed: false,
+        },
+        manifest: rehydratedManifest,
+        recognizedImageDigest: recognizedBodyImageDigest,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/rehydrate",
+          payload: rehydration.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = rehydration.next;
+    continuityPreviousHash = rehydration.event.eventHash;
+
+    h.now.value += 60_000;
+    const refused = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "ContinuityDecisionRecorded",
+      payload: {
+        decision: {
+          decisionId: uuid("206"),
+          agentDid: h.candidateDid,
+          proposedManifestDigest: digest("1"),
+          compatibilityEvidenceDigest: digest("2"),
+          cognitionReceiptId: uuid("207"),
+          decision: "REFUSE_DORMANCY",
+          decidedAt: new Date(h.now.value).toISOString(),
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/decide",
+          payload: refused.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    continuitySnapshot = refused.next;
+    continuityPreviousHash = refused.event.eventHash;
+
+    h.now.value += 60_000;
+    const continuityInspection = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "ContinuityInspected",
+      payload: {
+        agentDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-CONTINUITY-INSPECTION-V1",
+      },
+    });
+    const continuityInspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/continuity/inspect",
+      payload: continuityInspection.body,
+    });
+    expect(continuityInspectionResponse.statusCode).toBe(201);
+    expect(continuityInspectionResponse.json()).toMatchObject({
+      continuity: {
+        agentDid: h.candidateDid,
+        body: {
+          bodyId: newBodyId,
+          status: "DORMANT",
+          deletedAt: null,
+        },
+      },
+    });
+    continuitySnapshot = continuityInspection.next;
+    continuityPreviousHash = continuityInspection.event.eventHash;
+
     const restarted = createLiveCoreApi({
       store: h.store,
       domain,
@@ -943,6 +1479,9 @@ describe("signed candidate rehearsal API", () => {
         openedAt: iso(0),
       },
       memory: { storageVerifier: h.memoryStorage },
+      continuity: {
+        recognizedImageDigests: new Set([recognizedBodyImageDigest]),
+      },
     });
     const status = await restarted.inject({
       method: "GET",
@@ -952,7 +1491,7 @@ describe("signed candidate rehearsal API", () => {
     expect(status.json()).toMatchObject({
       candidateDid: h.candidateDid,
       state: "ADMITTED_REVOCABLE",
-      effectiveState: "ADMITTED_REVOCABLE",
+      effectiveState: "ADMITTED",
       aggregateVersion: 10,
       portableExport: { penalty: null },
       recognizedGenesisAdmission: false,
@@ -1005,65 +1544,62 @@ describe("signed candidate rehearsal API", () => {
       records: [{ memory: { memoryId, version: 3 } }],
     });
     memoryPreviousHash = restartedInspection.event.eventHash;
+    h.now.value += 60_000;
+    const restartedContinuityInspection = await continuityCommand({
+      h,
+      snapshot: continuitySnapshot,
+      previousEventHash: continuityPreviousHash,
+      eventType: "ContinuityInspected",
+      payload: {
+        agentDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: "ABL-CONTINUITY-INSPECTION-V1",
+      },
+    });
+    const continuityRecord = h.store.events.find(
+      (event) => event.outboxTopic === "career.continuity",
+    )!;
+    const continuityStateRoot = continuityRecord.stateRoot;
+    continuityRecord.stateRoot = digest("0");
+    expect(
+      (
+        await restarted.inject({
+          method: "POST",
+          url: "/v1/continuity/inspect",
+          payload: restartedContinuityInspection.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    continuityRecord.stateRoot = continuityStateRoot;
+    const restartedContinuity = await restarted.inject({
+      method: "POST",
+      url: "/v1/continuity/inspect",
+      payload: restartedContinuityInspection.body,
+    });
+    expect(restartedContinuity.statusCode).toBe(201);
+    expect(restartedContinuity.json()).toMatchObject({
+      continuity: { body: { bodyId: newBodyId, status: "DORMANT" } },
+    });
+    continuitySnapshot = restartedContinuityInspection.next;
+    continuityPreviousHash = restartedContinuityInspection.event.eventHash;
     await restarted.close();
 
-    h.now.value += 60_000;
-    const revoked = await submit(
-      h,
-      "/v1/candidates/revoke",
-      "CandidateClosed",
-      {
-        action: "REVOKE",
-        actedAt: new Date(h.now.value).toISOString(),
-      },
-      h.candidate,
-    );
-    expect(revoked.response.statusCode).toBe(201);
-    h.now.value += 60_000;
-    memoryVersion += 1;
-    const revokedMemory = await memoryCommand({
-      h,
-      aggregateVersion: memoryVersion,
-      previousEventHash: memoryPreviousHash,
-      eventType: "MemoryInspected",
-      payload: {
-        ownerDid: h.candidateDid,
-        requestedAt: new Date(h.now.value).toISOString(),
-        format: "ABL-MEMORY-INSPECTION-V1",
-      },
-      entries: memoryEntries,
-    });
-    expect(
-      (
-        await h.app.inject({
-          method: "POST",
-          url: "/v1/memory/inspect",
-          payload: revokedMemory.body,
-        })
-      ).statusCode,
-    ).toBe(403);
-    expect(
-      (
-        await h.app.inject({
-          method: "POST",
-          url: "/v1/memory/export",
-          payload: exported.body,
-        })
-      ).statusCode,
-    ).toBe(403);
-    const revokedStatus = await h.app.inject({
+    const admittedStatus = await h.app.inject({
       method: "GET",
       url: `/v1/candidates/status?candidateDid=${h.candidateDid}`,
     });
-    expect(revokedStatus.json()).toMatchObject({ state: "REVOKED" });
-    const ineligibleStatus = await h.app.inject({
+    expect(admittedStatus.json()).toMatchObject({
+      state: "ADMITTED_REVOCABLE",
+      effectiveState: "ADMITTED",
+    });
+    const eligibleStatus = await h.app.inject({
       method: "POST",
       url: "/v1/combine/status",
       payload: { combineId: combinePayload.combineId },
     });
-    expect(ineligibleStatus.json()).toMatchObject({
+    expect(eligibleStatus.json()).toMatchObject({
       registeredPlayers: [h.candidateDid],
-      eligiblePlayers: [],
+      eligiblePlayers: [h.candidateDid],
     });
     const candidateRecord = h.store.events[0]!;
     const candidateStateRoot = candidateRecord.stateRoot;
@@ -1180,6 +1716,134 @@ describe("signed candidate rehearsal API", () => {
     expect(tampered.json()).toEqual({
       error: "candidate_authorization_denied",
     });
+    await h.app.close();
+  });
+
+  it("denies memory and continuity commands after admission revocation", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    h.now.value += 60_000;
+    const memoryId = uuid("304");
+    const storage = {
+      domainId: `personal:${h.candidateDid}`,
+      objectId: memoryId,
+      version: 1,
+      ciphertextCommitment: digest("a"),
+    };
+    h.memoryStorage.store(storage);
+    const memory = {
+      memoryId,
+      ownerDid: h.candidateDid,
+      domain: "AUTOBIOGRAPHICAL" as const,
+      disclosureClass: "PERSONAL_UNSUBMITTED" as const,
+      ciphertextCommitment: storage.ciphertextCommitment,
+      version: 1,
+      previousVersionCommitment: null,
+      selectivelyPersisted: true,
+      createdAt: new Date(h.now.value).toISOString(),
+      deletedAt: null,
+    };
+    const memoryEntries = new Map<string, MemoryCatalogEntry>([
+      [memoryId, { memory, storage, storageDeletion: null }],
+    ]);
+    const persistedMemory = await memoryCommand({
+      h,
+      aggregateVersion: 1,
+      previousEventHash: null,
+      eventType: "MemoryPersisted",
+      payload: { memory, storage },
+      entries: memoryEntries,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: persistedMemory.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    h.now.value += 60_000;
+    const registeredContinuity = await continuityCommand({
+      h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "BodyContinuityRegistered",
+      payload: {
+        policy: {
+          agentDid: h.candidateDid,
+          version: 1,
+          reconstructionPolicy: "VERIFIED_ALLOWED",
+          noticeHours: 24,
+          recoveryGuardianThreshold: 2,
+          updatedAt: new Date(h.now.value).toISOString(),
+        },
+        manifest: {
+          bodyId: uuid("305"),
+          agentDid: h.candidateDid,
+          sandboxImageDigest: recognizedBodyImageDigest,
+          runtimeDigest: digest("3"),
+          kernelDigest: digest("4"),
+          toolDigests: [digest("4")],
+          encryptedSnapshotCommitment: digest("5"),
+          storageManifestCommitment: digest("6"),
+          signingKeyLineageCommitment: sha256Commitment({
+            signingPublicKey: h.candidate.publicKey,
+          }),
+          createdAt: new Date(h.now.value).toISOString(),
+        },
+        guardianDids: ["did:abl:guardian-1", "did:abl:guardian-2"],
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: registeredContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    h.now.value += 60_000;
+    const revoked = await submit(
+      h,
+      "/v1/candidates/revoke",
+      "CandidateClosed",
+      {
+        action: "REVOKE",
+        actedAt: new Date(h.now.value).toISOString(),
+      },
+      h.candidate,
+    );
+    expect(revoked.response.statusCode).toBe(201);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/memory/persist",
+          payload: persistedMemory.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/continuity/register",
+          payload: registeredContinuity.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await h.app.inject({
+          method: "GET",
+          url: `/v1/candidates/status?candidateDid=${h.candidateDid}`,
+        })
+      ).json(),
+    ).toMatchObject({ state: "REVOKED" });
     await h.app.close();
   });
 

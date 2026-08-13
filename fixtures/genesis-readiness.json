@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0xe787863b6e8d0e2886a620e6df547dfb20b34493d4625ca488469ee49a510d17",
-      "fileCount": 91,
+      "digest": "0xe6f7fd622e2b3802171966802b9177bf3b8fb0737b299ab4dd7c643c2f2db1b1",
+      "fileCount": 93,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -38,7 +38,7 @@
         },
         {
           "path": "apps/core-api/src/candidates.ts",
-          "digest": "0xd44b441c4e521d30f2ce4a3fb972638bd752bdcd8babc45eaf3891570771df72"
+          "digest": "0x32863da365a191dc2cee9977df48a6466149e05c39b0b7a8169cfe64ff8881d2"
         },
         {
           "path": "apps/core-api/src/canonical-command.ts",
@@ -49,8 +49,12 @@
           "digest": "0x71b459e3f2b3e9f7e3c8ef6bffd95711be953a864e3382fcf5404c34457b2d7c"
         },
         {
+          "path": "apps/core-api/src/continuity.ts",
+          "digest": "0x8624fd150c785cddae495c3908762585cd38105d0c1da1e1b18bac91051f4683"
+        },
+        {
           "path": "apps/core-api/src/index.ts",
-          "digest": "0x9bc06eb0b03a8f5f764e08f10fbf82a3b05db6bcc079e581be4cf9e718007ef8"
+          "digest": "0x2b73ef28ef56ae9d518cc3a8e705e9a8d41e46e510cdccf1521a14c70aa68b60"
         },
         {
           "path": "apps/core-api/src/memory-storage.ts",
@@ -62,7 +66,7 @@
         },
         {
           "path": "apps/core-api/src/server.ts",
-          "digest": "0xe8ef5be355a5ee0117e76006110ee82fe0b69fb80b8044ac1f7cf01cd9e98f3e"
+          "digest": "0xe5638af5db47fa36cab53dc9a2a7301619d33491138084e4ea3d18ede9fdea37"
         },
         {
           "path": "apps/private-storage-broker/src/index.ts",
@@ -181,8 +185,12 @@
           "digest": "0xcf7825f810798bb8e1dd025d5f659b15c562858ed961d571a80279f38cbd75b7"
         },
         {
+          "path": "packages/career/src/continuity-workflow.ts",
+          "digest": "0xb17cdc7275bdf4bba3cb335f9071bf5c7ac72bfcae87265d3e46d587228b4304"
+        },
+        {
           "path": "packages/career/src/continuity.ts",
-          "digest": "0xe61c13792d7da1d4835de264d0ab4260a8f321868e57e0ffc6daa8b71283595e"
+          "digest": "0x5d8dd63a8d4d3e5301383774b046248b6a5738aaa004a500688d61d4dace3c0e"
         },
         {
           "path": "packages/career/src/credentials.ts",
@@ -190,7 +198,7 @@
         },
         {
           "path": "packages/career/src/index.ts",
-          "digest": "0x51e058cc637fcd03d8c9363e743d4d8b14da9ef4d4ee7d431b0e6649dd133cc4"
+          "digest": "0x422980e129cbcfba10abe96cdae16616f56e2f47a9b80864e8392762c4822da4"
         },
         {
           "path": "packages/career/src/memory.ts",
@@ -481,7 +489,7 @@
       ]
     },
     "testSuite": {
-      "digest": "0x0691c9f41ad9c529e920cada38869a18c3845b90fa50f0169eeb22f156b237fd",
+      "digest": "0xc16fc97be156dbc5a144347156a25377fd1728e7cd51eb8b03bd42a75fa263de",
       "fileCount": 28,
       "files": [
         {
@@ -490,7 +498,7 @@
         },
         {
           "path": "apps/core-api/test/candidates.test.ts",
-          "digest": "0xbbab79eef14c4e4437e2fd83bd6afa085c6dea1cd8af7723e4d83aa3b49845c5"
+          "digest": "0x07ecceed889f97f3a243b402271fb68f9e023bc5d0d3ffaba78df8165954ba5a"
         },
         {
           "path": "apps/core-api/test/memory-storage.test.ts",
@@ -522,7 +530,7 @@
         },
         {
           "path": "packages/career/test/career.test.ts",
-          "digest": "0x422951a845dd8a1cf03bbd6c2d5cb912f9ff1dc789462f7b0a826456d46bd752"
+          "digest": "0x3f92b4562f21508dcd675ca833924aa2c7127daf3e83db6b17ec3b3c7a8c1c23"
         },
         {
           "path": "packages/database/test/store.test.ts",
@@ -534,7 +542,7 @@
         },
         {
           "path": "packages/foundation/test/topology.test.ts",
-          "digest": "0xddf107d0fc935d06bddbe47b9ce7c234e742c9efa418257f1f88a6963632525b"
+          "digest": "0xf791a182afe4c7ea0ce9d3e7a6408e98d924b6235036a11d4e65a7d19d87cc8a"
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
@@ -625,7 +633,7 @@
       ]
     },
     "deploymentManifests": {
-      "digest": "0xcc72eaff682ae3084d0febf538891cd7397f8caafedb9fc6bbfd9e2239561aee",
+      "digest": "0x870e02d7c5366529b066281cc2bbbac6a0c4de6d32d3bf8c7ad5964678c48295",
       "fileCount": 15,
       "files": [
         {
@@ -650,7 +658,7 @@
         },
         {
           "path": "infra/blaxel/abl-core/core-api.yaml",
-          "digest": "0x57be2c850276ef272d7ef5a841704e7309b61bd6f15ab7d7e30998a990000047"
+          "digest": "0xd250ddd07ad7b5c474ae7ce6d06eb1559bea20eccd96fc3c12bfeaad098da6a6"
         },
         {
           "path": "infra/blaxel/abl-core/government-mcp.yaml",
@@ -756,7 +764,7 @@
         }
       ]
     },
-    "testResultDigest": "0x71f478749b3429e33284f0797694fbbe6c1bcef70442a7762f275243a859dc1b",
+    "testResultDigest": "0x785b2f6e438e14f8913c907b5e469e6085fe5f5b9c12041118c92c86a3aba3bb",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -927,7 +935,7 @@
       "releaseId": null,
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0xe787863b6e8d0e2886a620e6df547dfb20b34493d4625ca488469ee49a510d17",
+      "sourceDigest": "0xe6f7fd622e2b3802171966802b9177bf3b8fb0737b299ab4dd7c643c2f2db1b1",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
@@ -936,7 +944,7 @@
       "toolDigest": "0x98e6bcbd4c0c079b730d63d3ca0966889a0a9061732be9701b23c1fcdf1069a3",
       "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
       "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-      "testResultDigest": "0x71f478749b3429e33284f0797694fbbe6c1bcef70442a7762f275243a859dc1b",
+      "testResultDigest": "0x785b2f6e438e14f8913c907b5e469e6085fe5f5b9c12041118c92c86a3aba3bb",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -1015,7 +1023,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0xe787863b6e8d0e2886a620e6df547dfb20b34493d4625ca488469ee49a510d17",
+        "digest": "0xe6f7fd622e2b3802171966802b9177bf3b8fb0737b299ab4dd7c643c2f2db1b1",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1063,7 +1071,7 @@
       {
         "name": "Blaxel deployment manifests",
         "path": "infra/blaxel/",
-        "digest": "0xcc72eaff682ae3084d0febf538891cd7397f8caafedb9fc6bbfd9e2239561aee",
+        "digest": "0x870e02d7c5366529b066281cc2bbbac6a0c4de6d32d3bf8c7ad5964678c48295",
         "state": "PREPARED_LOCAL"
       },
       {

@@ -29,6 +29,10 @@ import {
   type CombineRehearsalOptions,
 } from "./combine.js";
 import {
+  installContinuityRehearsalRoutes,
+  type ContinuityRehearsalOptions,
+} from "./continuity.js";
+import {
   installMemoryRehearsalRoutes,
   type MemoryRehearsalOptions,
 } from "./memory.js";
@@ -83,6 +87,7 @@ export interface LiveCoreApiOptions {
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
   memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
+  continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
 }
 
 export interface CoreApiOptions {
@@ -187,10 +192,12 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
-  const { candidateAdmission, combine, memory } = options;
+  const { candidateAdmission, combine, continuity, memory } = options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
+  const continuityRoutesEnabled =
+    candidateRoutesEnabled && continuity !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "REHEARSAL");
@@ -318,12 +325,24 @@ export function createLiveCoreApi(
       storageVerifier: memory.storageVerifier,
     });
   }
+  if (candidateAdmission !== undefined && continuity !== undefined) {
+    installContinuityRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      recognizedImageDigests: continuity.recognizedImageDigests,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
       !(candidateRoutesEnabled && entry.path.startsWith("/v1/candidates/")) &&
       !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
-      !(memoryRoutesEnabled && entry.path === "/v1/memory/*"),
+      !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
+      !(continuityRoutesEnabled && entry.path === "/v1/continuity/*"),
   )) {
     app.route({
       method: route.method,

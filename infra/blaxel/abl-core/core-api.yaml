@@ -67,6 +67,9 @@ spec:
       - name: ABL_PRIVATE_STORAGE_HMAC_BASE64
         value: ${ABL_CORE_PRIVATE_STORAGE_HMAC_BASE64}
         secret: true
+      - name: ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON
+        value: ${ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}
+        secret: false
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -157,6 +160,51 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/memory/export
+    - id: continuity-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/register
+    - id: continuity-policy
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/policy
+    - id: continuity-activity
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/activity
+    - id: continuity-standby
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/standby
+    - id: continuity-notice
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/notice
+    - id: continuity-decide
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/decide
+    - id: continuity-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/delete
+    - id: continuity-rehydrate
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/rehydrate
+    - id: continuity-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/inspect
     - id: health
       type: http
       configuration:

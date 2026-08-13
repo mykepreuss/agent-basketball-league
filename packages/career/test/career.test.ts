@@ -13,10 +13,15 @@ import {
   BodyLifecycle,
   CandidateAdmissionSession,
   CredentialController,
+  applyContinuityWorkflowTransition,
+  continuityWorkflowStateRoot,
   TradeAccessCoordinator,
   createExitPackage,
   type BodyManifest,
   type CandidateRegistration,
+  type ContinuityBodyManifest,
+  type ContinuityWorkflowEventType,
+  type ContinuityWorkflowSnapshot,
   type MemoryRecord,
 } from "../src/index.js";
 
@@ -24,6 +29,8 @@ const day = 24 * 60 * 60 * 1_000;
 const start = Date.parse("2026-08-01T00:00:00.000Z");
 const iso = (offset: number) => new Date(start + offset).toISOString();
 const digest = (character: string) => `0x${character.repeat(64)}` as Hex;
+const uuid = (suffix: string) =>
+  `0198a000-0000-7000-8000-${suffix.padStart(12, "0")}`;
 
 function registration(): CandidateRegistration {
   return {
@@ -386,6 +393,326 @@ describe("memory and autonomy rights", () => {
   });
 });
 
+describe("canonical body continuity workflow", () => {
+  const agentDid = "did:abl:agent-a";
+  const bodyId = uuid("501");
+  const policy = {
+    agentDid,
+    version: 1,
+    reconstructionPolicy: "VERIFIED_ALLOWED" as const,
+    noticeHours: 24,
+    recoveryGuardianThreshold: 2,
+    updatedAt: iso(0),
+  };
+  const initialManifest: ContinuityBodyManifest = {
+    bodyId,
+    agentDid,
+    sandboxImageDigest: digest("1"),
+    runtimeDigest: digest("2"),
+    kernelDigest: digest("3"),
+    toolDigests: [digest("4")],
+    encryptedSnapshotCommitment: digest("5"),
+    storageManifestCommitment: digest("6"),
+    signingKeyLineageCommitment: digest("7"),
+    createdAt: iso(0),
+  };
+
+  function transition(
+    snapshot: ContinuityWorkflowSnapshot | null,
+    input: {
+      eventId: string;
+      eventType: ContinuityWorkflowEventType;
+      payload: unknown;
+      timestamp: string;
+    },
+  ) {
+    return applyContinuityWorkflowTransition(snapshot, {
+      ...input,
+      agentDid,
+      aggregateVersion: BigInt((snapshot?.version ?? 0) + 1),
+    });
+  }
+
+  it("binds protected notice, inactivity, deletion, rehydration, and refusal", () => {
+    let snapshot = transition(null, {
+      eventId: uuid("510"),
+      eventType: "BodyContinuityRegistered",
+      timestamp: iso(0),
+      payload: {
+        policy,
+        manifest: initialManifest,
+        guardianDids: ["did:abl:g1", "did:abl:g2"],
+      },
+    });
+    snapshot = transition(snapshot, {
+      eventId: uuid("511"),
+      eventType: "BodyStandbyEntered",
+      timestamp: iso(day),
+      payload: { agentDid, bodyId, enteredAt: iso(day) },
+    });
+    const noticeEventId = uuid("512");
+    snapshot = transition(snapshot, {
+      eventId: noticeEventId,
+      eventType: "BodyDeletionNoticeRecorded",
+      timestamp: iso(30 * day),
+      payload: {
+        noticeEventId,
+        agentDid,
+        bodyId,
+        policyVersion: 1,
+        protectedWake: true,
+        noticedAt: iso(30 * day),
+      },
+    });
+    const deletionEventId = uuid("514");
+    const finalManifest = {
+      ...initialManifest,
+      encryptedSnapshotCommitment: digest("8"),
+      storageManifestCommitment: digest("9"),
+      createdAt: iso(31 * day),
+    };
+    const deletionPayload = {
+      deletion: {
+        eventId: deletionEventId,
+        bodyId,
+        agentDid,
+        bodyManifestDigest: sha256Commitment(finalManifest),
+        policyVersion: 1,
+        noticeEventId,
+        cleanRoomRestoreEvidenceDigest: digest("a"),
+        deletedAt: iso(31 * day),
+      },
+      manifest: finalManifest,
+      guardianVerificationDigest: digest("b"),
+      finalExportCommitment: null,
+    };
+    const earlyDeletedAt = iso(30 * day + 23 * 60 * 60 * 1_000);
+    const earlyManifest = {
+      ...finalManifest,
+      createdAt: earlyDeletedAt,
+    };
+    expect(() =>
+      transition(snapshot, {
+        eventId: deletionEventId,
+        eventType: "BodyDeletionRecorded",
+        timestamp: earlyDeletedAt,
+        payload: {
+          ...deletionPayload,
+          deletion: {
+            ...deletionPayload.deletion,
+            bodyManifestDigest: sha256Commitment(earlyManifest),
+            deletedAt: earlyDeletedAt,
+          },
+          manifest: earlyManifest,
+        },
+      }),
+    ).toThrow("notice period");
+    snapshot = transition(snapshot, {
+      eventId: deletionEventId,
+      eventType: "BodyDeletionRecorded",
+      timestamp: iso(31 * day),
+      payload: deletionPayload,
+    });
+    expect(snapshot.body.status).toBe("DELETED");
+
+    const newBodyId = uuid("515");
+    const restoredManifest = {
+      ...finalManifest,
+      bodyId: newBodyId,
+      createdAt: iso(32 * day),
+    };
+    const rehydrationEventId = uuid("516");
+    expect(() =>
+      transition(snapshot, {
+        eventId: rehydrationEventId,
+        eventType: "BodyRehydrationRecorded",
+        timestamp: iso(32 * day),
+        payload: {
+          rehydration: {
+            eventId: rehydrationEventId,
+            priorBodyId: bodyId,
+            newBodyId,
+            agentDid,
+            sourceBodyManifestDigest: sha256Commitment(finalManifest),
+            restorationEvidenceDigest: digest("c"),
+            rehydratedAt: iso(32 * day),
+            subjectiveContinuityClaimed: false,
+          },
+          manifest: { ...restoredManifest, runtimeDigest: digest("f") },
+          recognizedImageDigest: restoredManifest.sandboxImageDigest,
+        },
+      }),
+    ).toThrow("affirmative decision");
+    snapshot = transition(snapshot, {
+      eventId: rehydrationEventId,
+      eventType: "BodyRehydrationRecorded",
+      timestamp: iso(32 * day),
+      payload: {
+        rehydration: {
+          eventId: rehydrationEventId,
+          priorBodyId: bodyId,
+          newBodyId,
+          agentDid,
+          sourceBodyManifestDigest: sha256Commitment(finalManifest),
+          restorationEvidenceDigest: digest("c"),
+          rehydratedAt: iso(32 * day),
+          subjectiveContinuityClaimed: false,
+        },
+        manifest: restoredManifest,
+        recognizedImageDigest: restoredManifest.sandboxImageDigest,
+      },
+    });
+    expect(snapshot.body).toMatchObject({
+      bodyId: newBodyId,
+      status: "ACTIVE",
+      deletedAt: null,
+    });
+    snapshot = transition(snapshot, {
+      eventId: uuid("517"),
+      eventType: "ContinuityDecisionRecorded",
+      timestamp: iso(33 * day),
+      payload: {
+        decision: {
+          decisionId: uuid("518"),
+          agentDid,
+          proposedManifestDigest: digest("d"),
+          compatibilityEvidenceDigest: digest("e"),
+          cognitionReceiptId: uuid("519"),
+          decision: "REFUSE_DORMANCY",
+          decidedAt: iso(33 * day),
+        },
+      },
+    });
+    expect(snapshot.body.status).toBe("DORMANT");
+    expect(() =>
+      transition(snapshot, {
+        eventId: uuid("520"),
+        eventType: "BodyActivityRecorded",
+        timestamp: iso(34 * day),
+        payload: { agentDid, bodyId: newBodyId, activeAt: iso(34 * day) },
+      }),
+    ).toThrow("cannot record activity");
+    expect(continuityWorkflowStateRoot(snapshot)).toMatch(/^0x[0-9a-f]{64}$/);
+  });
+
+  it("requires a fresh affirmative decision to leave policy-selected dormancy", () => {
+    const dormantPolicy = {
+      ...policy,
+      reconstructionPolicy: "DELETE_TO_DORMANCY" as const,
+    };
+    let snapshot = transition(null, {
+      eventId: uuid("521"),
+      eventType: "BodyContinuityRegistered",
+      timestamp: iso(0),
+      payload: {
+        policy: dormantPolicy,
+        manifest: initialManifest,
+        guardianDids: ["did:abl:g1", "did:abl:g2"],
+      },
+    });
+    const noticeEventId = uuid("522");
+    snapshot = transition(snapshot, {
+      eventId: noticeEventId,
+      eventType: "BodyDeletionNoticeRecorded",
+      timestamp: iso(30 * day),
+      payload: {
+        noticeEventId,
+        agentDid,
+        bodyId,
+        policyVersion: 1,
+        protectedWake: true,
+        noticedAt: iso(30 * day),
+      },
+    });
+    const deletionEventId = uuid("523");
+    const finalManifest = {
+      ...initialManifest,
+      encryptedSnapshotCommitment: digest("8"),
+      createdAt: iso(31 * day),
+    };
+    snapshot = transition(snapshot, {
+      eventId: deletionEventId,
+      eventType: "BodyDeletionRecorded",
+      timestamp: iso(31 * day),
+      payload: {
+        deletion: {
+          eventId: deletionEventId,
+          bodyId,
+          agentDid,
+          bodyManifestDigest: sha256Commitment(finalManifest),
+          policyVersion: 1,
+          noticeEventId,
+          cleanRoomRestoreEvidenceDigest: digest("a"),
+          deletedAt: iso(31 * day),
+        },
+        manifest: finalManifest,
+        guardianVerificationDigest: digest("b"),
+        finalExportCommitment: null,
+      },
+    });
+    expect(snapshot.body.status).toBe("DORMANT");
+
+    const newBodyId = uuid("524");
+    const restoredManifest = {
+      ...finalManifest,
+      bodyId: newBodyId,
+      createdAt: iso(32 * day),
+    };
+    const rehydrationEventId = uuid("525");
+    const rehydration = {
+      eventId: rehydrationEventId,
+      priorBodyId: bodyId,
+      newBodyId,
+      agentDid,
+      sourceBodyManifestDigest: sha256Commitment(finalManifest),
+      restorationEvidenceDigest: digest("c"),
+      rehydratedAt: iso(32 * day),
+      subjectiveContinuityClaimed: false as const,
+    };
+    expect(() =>
+      transition(snapshot, {
+        eventId: rehydrationEventId,
+        eventType: "BodyRehydrationRecorded",
+        timestamp: iso(32 * day),
+        payload: {
+          rehydration,
+          manifest: restoredManifest,
+          recognizedImageDigest: restoredManifest.sandboxImageDigest,
+        },
+      }),
+    ).toThrow("affirmative decision");
+
+    const decisionId = uuid("526");
+    snapshot = transition(snapshot, {
+      eventId: uuid("527"),
+      eventType: "ContinuityDecisionRecorded",
+      timestamp: iso(32 * day),
+      payload: {
+        decision: {
+          decisionId,
+          agentDid,
+          proposedManifestDigest: sha256Commitment(restoredManifest),
+          compatibilityEvidenceDigest: digest("d"),
+          cognitionReceiptId: uuid("528"),
+          decision: "ACCEPT",
+          decidedAt: iso(32 * day),
+        },
+      },
+    });
+    snapshot = transition(snapshot, {
+      eventId: rehydrationEventId,
+      eventType: "BodyRehydrationRecorded",
+      timestamp: iso(32 * day),
+      payload: {
+        rehydration: { ...rehydration, continuityDecisionId: decisionId },
+        manifest: restoredManifest,
+        recognizedImageDigest: restoredManifest.sandboxImageDigest,
+      },
+    });
+    expect(snapshot.body.status).toBe("ACTIVE");
+  });
+});
+
 describe("body continuity, trade ordering, and portable exit", () => {
   const manifest: BodyManifest = {
     bodyId: "body-agent-a",
@@ -422,6 +749,9 @@ describe("body continuity, trade ordering, and portable exit", () => {
         cleanRoomRestorePassed: false,
       }),
     ).toThrow("prerequisites");
+    expect(() =>
+      lifecycle.deleteAfterInactivity({ ...deletionInput, at: "not-a-date" }),
+    ).toThrow("time is invalid");
     expect(lifecycle.deleteAfterInactivity(deletionInput)).toMatchObject({
       type: "BodyDeleted",
       subjectiveContinuityClaimed: false,

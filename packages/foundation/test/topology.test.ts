@@ -222,6 +222,9 @@ describe("four-workspace topology", () => {
         (entry) => entry.name === "ABL_PRIVATE_STORAGE_HMAC_BASE64",
       ),
     ).toMatchObject({ secret: true });
+    expect(envMap(coreApi!).get("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")).toBe(
+      "${ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}",
+    );
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -241,6 +244,15 @@ describe("four-workspace topology", () => {
         "/v1/memory/delete",
         "/v1/memory/inspect",
         "/v1/memory/export",
+        "/v1/continuity/register",
+        "/v1/continuity/policy",
+        "/v1/continuity/activity",
+        "/v1/continuity/standby",
+        "/v1/continuity/notice",
+        "/v1/continuity/decide",
+        "/v1/continuity/delete",
+        "/v1/continuity/rehydrate",
+        "/v1/continuity/inspect",
       ]),
     );
     expect(

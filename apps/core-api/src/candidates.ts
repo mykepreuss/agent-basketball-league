@@ -264,6 +264,10 @@ async function replayCandidateAggregate(
 export interface CandidateCareerAuthority {
   candidateDid: string;
   signingAddress: `0x${string}`;
+  signingPublicKey: string;
+  runtimeDigest: string;
+  toolDigests: readonly string[];
+  guardianDids: readonly string[];
   admissionEventHash: `0x${string}`;
   state: "ADMITTED_REVOCABLE" | "ADMITTED";
 }
@@ -300,6 +304,10 @@ export async function readCandidateCareerAuthority(
   return {
     candidateDid,
     signingAddress: snapshot.transfer.signingAddress,
+    signingPublicKey: snapshot.transfer.signingPublicKey,
+    runtimeDigest: snapshot.registration.manifest.runtimeDigest,
+    toolDigests: snapshot.registration.manifest.toolDigests,
+    guardianDids: snapshot.registration.manifest.guardianDids,
     admissionEventHash: admissionEvent.eventHash as `0x${string}`,
     state,
   };

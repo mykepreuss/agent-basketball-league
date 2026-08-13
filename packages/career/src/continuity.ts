@@ -32,6 +32,13 @@ export interface ContinuityEvent {
   subjectiveContinuityClaimed: false;
 }
 
+function instant(value: string): number {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed) || value !== new Date(parsed).toISOString())
+    throw new Error("Body continuity time is invalid");
+  return parsed;
+}
+
 export class BodyLifecycle {
   readonly agentDid: string;
   readonly bodyId: string;
@@ -49,6 +56,7 @@ export class BodyLifecycle {
     this.agentDid = agentDid;
     this.bodyId = bodyId;
     this.#policy = policy;
+    instant(lastActiveAt);
     this.#lastActiveAt = lastActiveAt;
   }
 
@@ -71,10 +79,8 @@ export class BodyLifecycle {
     if (!new Set<BodyStatus>(["ACTIVE", "STANDBY"]).has(this.#status)) {
       throw new Error("Body is not eligible for deletion");
     }
-    if (
-      Date.parse(input.at) - Date.parse(this.#lastActiveAt) <
-      30 * 24 * 60 * 60 * 1_000
-    )
+    const deletedAt = instant(input.at);
+    if (deletedAt - instant(this.#lastActiveAt) < 30 * 24 * 60 * 60 * 1_000)
       throw new Error("Body has not been inactive for 30 days");
     if (
       !input.noticeDuringProtectedWake ||
@@ -127,6 +133,7 @@ export class BodyLifecycle {
     careerHistoryVerified: boolean;
     signedDecision: "ACCEPT" | "REFUSE_DORMANCY" | "REFUSE_RETIREMENT" | null;
   }): ContinuityEvent {
+    instant(input.at);
     if (!["DELETED", "DORMANT", "RETIRED"].includes(this.#status))
       throw new Error("Body is not eligible for reconstruction");
     if (

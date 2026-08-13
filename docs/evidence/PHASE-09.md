@@ -29,7 +29,7 @@ After repository-wide formatting:
 ```text
 pnpm format:check -> pass
 pnpm check        -> 28/28 tasks
-pnpm test         -> 133/133 assertions in 24 files (arena has no duplicate unit suite)
+pnpm test         -> 136/136 assertions in 24 files (arena has no duplicate unit suite)
 pnpm build        -> 18/18 tasks
 ```
 

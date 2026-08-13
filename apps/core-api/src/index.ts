@@ -36,6 +36,9 @@ const AdmittedAgentsSchema = z.record(
     allowedAggregateTypes: z.array(z.literal("game-possession")).length(1),
   }),
 );
+const RecognizedBodyImagesSchema = z
+  .array(z.string().regex(/^0x[0-9a-f]{64}$/))
+  .min(1);
 
 function rehearsalAuthority(): {
   domain: TypedDataDomain;
@@ -128,6 +131,13 @@ const app = rehearsal
               capabilities: new Set(["private:commitment:verify"]),
             },
           }),
+        },
+        continuity: {
+          recognizedImageDigests: new Set(
+            RecognizedBodyImagesSchema.parse(
+              JSON.parse(required("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")),
+            ),
+          ),
         },
       });
     })()

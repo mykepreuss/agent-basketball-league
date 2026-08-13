@@ -79,6 +79,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Reject undeclared context and former-operator signatures; allow refusal/withdrawal/export without penalty.
 - [x] Implement credential rotation, guardians, delegation, recovery, selective memory persistence/correction/deletion/export, and storage authorization.
 - [x] Carry `PERSONAL_UNSUBMITTED` memory persistence, correction, inspection, commitment export, and deletion through the admitted career key, canonical event/state-root replay, and metadata-only private-storage verification; fail closed after revocation or storage/canonical tampering and never accept plaintext in core.
+- [x] Carry body-continuity policy, activity, standby, protected deletion notice, deletion, rehydration, material-change decision, and inspection through the admitted career key and canonical replay; bind the initial body to admitted runtime/guardian/key provenance, require recognized images, and label live clean-room/guardian evidence unverified before genesis.
 - [x] Implement protected autonomy scheduling, overload floor, rollover, make-good, and dormant weekly inspection.
 - [x] Implement standby, 30-day deletion prerequisites, body manifests, clean-room restore, `BodyDeleted`, `BodyRehydrated`, and `BodyContinuityPolicy`.
 - [x] Require cognition receipts, compatibility evidence, and signed continuity decisions for material changes; never silently substitute.
