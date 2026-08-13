@@ -1,7 +1,7 @@
 {
   "digests": {
     "source": {
-      "digest": "0xf149e8e7ed800fafbeb7d1c64955003cc927aa8e3327a44130959232b3f2e56e",
+      "digest": "0xe028f9d3c12ff50710b9634688a4134d5cc300979191d644e871fb8d70e4b25e",
       "fileCount": 106,
       "files": [
         {
@@ -102,7 +102,7 @@
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0x57ef8ab7e6b36156a89c4dd2b25b744b455ebe3b7ab43935bc8e925446f70ba0"
+          "digest": "0xaa9cf6bb7db75a7a6069c3a6634a9106183d38df953a21ce3d67cc0769c66a93"
         },
         {
           "path": "contracts/RecognitionRegistry.sol",
@@ -318,7 +318,7 @@
         },
         {
           "path": "packages/projections/src/contract-repository.ts",
-          "digest": "0x1be4e4a033972e1a13be525b09ecf1a0228f7199a9767da90243e7cbd1eaa5dc"
+          "digest": "0x5eefa3850f04abba201ba10374c99a61b4441193ee58d4619599c16f389f4a26"
         },
         {
           "path": "packages/projections/src/envelope.ts",
@@ -541,7 +541,7 @@
       ]
     },
     "testSuite": {
-      "digest": "0x2b0a91d45bde3f6efe9268747dae9a6a1e98cec7c4c6bd45268bc353982b06a4",
+      "digest": "0xaf2d0c276d9009bda50c8b4dfbb05bf2c4022ab688a8d514393dcc41541091ec",
       "fileCount": 32,
       "files": [
         {
@@ -570,7 +570,7 @@
         },
         {
           "path": "apps/public-api/test/server.test.ts",
-          "digest": "0xef9915bfb7ff12eb166381c0818e58e02f3ab3af83e213443a2da0ef569f3d30"
+          "digest": "0xf5ab569298c7ef77d0d71813d57553616fa2d17bffc7194a8adef8a79652a6a6"
         },
         {
           "path": "packages/assurance/test/assurance.test.ts",
@@ -622,7 +622,7 @@
         },
         {
           "path": "packages/projections/test/contract-repository.test.ts",
-          "digest": "0xe3407eeaccb8bcce5a1dd98a506964d7efaffd62a91d286ee366dbd4a8090ab0"
+          "digest": "0x52028a9bf7208ffe7b23fc4b2e64b48131f15f1b197eba4e84d5f15e3f6e2047"
         },
         {
           "path": "packages/projections/test/governance-repository.test.ts",
@@ -658,7 +658,7 @@
         },
         {
           "path": "tests/acceptance/end-to-end.test.ts",
-          "digest": "0x551f471cd30cb8071ce53b36b133fe2cd148fce663def601c35b5b802f183e4a"
+          "digest": "0x4aef0380b0a01945e54a367c2e4136905907250083d5a929d036573c88082e87"
         },
         {
           "path": "tests/adversarial/boundaries.test.ts",
@@ -767,7 +767,7 @@
       ]
     },
     "publicProjection": {
-      "digest": "0x8cf35a071b312bf14d640cb0a83d256d447a1e656076207b02a446ae7daa73cb",
+      "digest": "0xba681d488a6d46c929ec6de9073567199bc8613a87ba2215027e6dee4ecc4999",
       "fileCount": 20,
       "files": [
         {
@@ -804,7 +804,7 @@
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0x57ef8ab7e6b36156a89c4dd2b25b744b455ebe3b7ab43935bc8e925446f70ba0"
+          "digest": "0xaa9cf6bb7db75a7a6069c3a6634a9106183d38df953a21ce3d67cc0769c66a93"
         },
         {
           "path": "packages/projections/src/contract-envelope.ts",
@@ -812,7 +812,7 @@
         },
         {
           "path": "packages/projections/src/contract-repository.ts",
-          "digest": "0x1be4e4a033972e1a13be525b09ecf1a0228f7199a9767da90243e7cbd1eaa5dc"
+          "digest": "0x5eefa3850f04abba201ba10374c99a61b4441193ee58d4619599c16f389f4a26"
         },
         {
           "path": "packages/projections/src/envelope.ts",
@@ -1023,7 +1023,7 @@
       "releaseId": null,
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0xf149e8e7ed800fafbeb7d1c64955003cc927aa8e3327a44130959232b3f2e56e",
+      "sourceDigest": "0xe028f9d3c12ff50710b9634688a4134d5cc300979191d644e871fb8d70e4b25e",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
@@ -1111,7 +1111,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0xf149e8e7ed800fafbeb7d1c64955003cc927aa8e3327a44130959232b3f2e56e",
+        "digest": "0xe028f9d3c12ff50710b9634688a4134d5cc300979191d644e871fb8d70e4b25e",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1165,7 +1165,7 @@
       {
         "name": "public projections",
         "path": null,
-        "digest": "0x8cf35a071b312bf14d640cb0a83d256d447a1e656076207b02a446ae7daa73cb",
+        "digest": "0xba681d488a6d46c929ec6de9073567199bc8613a87ba2215027e6dee4ecc4999",
         "state": "PREPARED_LOCAL"
       },
       {

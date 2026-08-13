@@ -133,6 +133,17 @@ describe("public API", () => {
             projectedAt: "2026-08-13T10:00:00.000Z",
           },
         ],
+        rosters: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL",
+            clubId: "club-public-contract",
+            players: [],
+            rosterCommitment: `0x${"c".repeat(64)}`,
+            projectedAt: "2026-08-13T10:00:00.000Z",
+          },
+        ],
       },
     });
     const response = await app.inject({
@@ -153,6 +164,18 @@ describe("public API", () => {
       ],
     });
     expect(refreshes).toBe(1);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/public/rosters",
+        })
+      ).json(),
+    ).toMatchObject({
+      canonical: true,
+      items: [{ clubId: "club-public-contract", canonical: true }],
+    });
+    expect(refreshes).toBe(2);
     await app.close();
   });
 

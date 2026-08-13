@@ -181,6 +181,7 @@ describe("durable public contract projections", () => {
     expect((await store.publish(offered.envelope, "99")).cursor).toBe(
       first.cursor,
     );
+    expect(store.rosters()).toEqual([]);
 
     const offeredContract = offered.next.contracts[0]!;
     const timestamp = "2026-08-13T10:01:00.000Z";
@@ -214,10 +215,27 @@ describe("durable public contract projections", () => {
         contracts: [{ status: "ACTIVE", consent: { decision: "CONSENT" } }],
       },
     ]);
+    expect(store.rosters()).toMatchObject([
+      {
+        state: "REHEARSAL",
+        canonical: true,
+        verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL",
+        clubId: "club-projection",
+        players: [
+          {
+            playerDid,
+            transactionId: offeredContract.transaction.transactionId,
+            consentId: uuid(102),
+            canonicalContractHeadHash: responded.event.eventHash,
+          },
+        ],
+      },
+    ]);
 
     const restarted = repository(root);
     await restarted.initialize();
     expect(restarted.contracts()).toEqual(store.contracts());
+    expect(restarted.rosters()).toEqual(store.rosters());
   });
 
   it("drains signed contract outbox events through the projection worker", async () => {

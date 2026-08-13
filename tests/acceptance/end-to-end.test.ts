@@ -821,6 +821,27 @@ describe("complete local acceptance", () => {
           },
         ],
       });
+      const rosters = await publicApi.inject({
+        method: "GET",
+        url: "/v1/public/rosters",
+      });
+      expect(rosters.json()).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            clubId: "club-contract-acceptance",
+            players: [
+              {
+                playerDid,
+                transactionId: offerPayload.command.transactionId,
+                consentId: responsePayload.command.consentId,
+                canonicalContractHeadHash: responseEvent.eventHash,
+              },
+            ],
+          },
+        ],
+      });
     } finally {
       await publicApi.close();
     }

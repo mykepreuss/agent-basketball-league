@@ -27,6 +27,28 @@ export interface PublicContractProjection {
   projectedAt: string;
 }
 
+export interface PublicRosterPlayer {
+  playerDid: string;
+  transactionId: string;
+  consentId: string;
+  offeredByDid: string;
+  effectiveAt: string;
+  seasons: number;
+  courtCredits: number;
+  capMechanism: string;
+  canonicalContractHeadHash: `0x${string}`;
+}
+
+export interface PublicRosterProjection {
+  state: "REHEARSAL";
+  canonical: true;
+  verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL";
+  clubId: string;
+  players: PublicRosterPlayer[];
+  rosterCommitment: `0x${string}`;
+  projectedAt: string;
+}
+
 export interface ContractProjectionRecord {
   cursor: number;
   previousRecordHash: `0x${string}` | null;
@@ -38,6 +60,7 @@ export interface ContractProjectionRecord {
 export interface PublicContractProjectionReader {
   refresh(): Promise<void>;
   contracts(): readonly PublicContractProjection[];
+  rosters(): readonly PublicRosterProjection[];
 }
 
 export interface PublicContractProjectionWriter {
@@ -303,5 +326,60 @@ export class FilePublicContractProjectionRepository
     for (const { projection } of this.#records)
       latest.set(projection.playerDid, projection);
     return structuredClone([...latest.values()]);
+  }
+
+  public rosters(): readonly PublicRosterProjection[] {
+    const playersByClub = new Map<
+      string,
+      Array<{ player: PublicRosterPlayer; projectedAt: string }>
+    >();
+    for (const projection of this.contracts()) {
+      for (const contract of projection.contracts) {
+        if (contract.status !== "ACTIVE" || contract.consent === null) continue;
+        const clubId = contract.transaction.toTeamId;
+        const players = playersByClub.get(clubId) ?? [];
+        players.push({
+          player: {
+            playerDid: projection.playerDid,
+            transactionId: contract.transaction.transactionId,
+            consentId: contract.consent.consentId,
+            offeredByDid: contract.offeredByDid,
+            effectiveAt: contract.transaction.effectiveAt,
+            seasons: contract.transaction.seasons,
+            courtCredits: contract.transaction.courtCredits,
+            capMechanism: contract.transaction.capMechanism,
+            canonicalContractHeadHash: projection.canonicalEventHash,
+          },
+          projectedAt: projection.projectedAt,
+        });
+        playersByClub.set(clubId, players);
+      }
+    }
+    return [...playersByClub.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([clubId, sources]) => {
+        const players = sources
+          .map(({ player }) => player)
+          .sort((left, right) => left.playerDid.localeCompare(right.playerDid));
+        const projectedAt = sources
+          .map((source) => source.projectedAt)
+          .sort()
+          .at(-1);
+        if (projectedAt === undefined)
+          throw new Error("Active roster lacks a source projection");
+        return {
+          state: "REHEARSAL",
+          canonical: true,
+          verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL",
+          clubId,
+          players,
+          rosterCommitment: sha256Commitment({
+            format: "ABL-PUBLIC-ROSTER-PROJECTION-V1",
+            clubId,
+            players,
+          }),
+          projectedAt,
+        };
+      });
   }
 }

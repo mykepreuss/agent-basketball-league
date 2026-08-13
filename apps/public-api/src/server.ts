@@ -447,6 +447,8 @@ export function createPublicApi(
         items = options.projections?.games() ?? [];
       } else if (path === "/v1/public/contracts") {
         items = options.contractProjections?.contracts() ?? [];
+      } else if (path === "/v1/public/rosters") {
+        items = options.contractProjections?.rosters() ?? [];
       } else if (path === "/v1/public/governance") {
         items = options.governanceProjections?.governance() ?? [];
       }
