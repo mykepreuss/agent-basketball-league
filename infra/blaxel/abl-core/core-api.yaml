@@ -85,6 +85,12 @@ spec:
       - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON
         value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}
         secret: false
+      - name: ABL_CASE_TRIBUNAL_DIDS_JSON
+        value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
+        secret: false
+      - name: ABL_CASE_APPELLATE_DIDS_JSON
+        value: ${ABL_CASE_APPELLATE_DIDS_JSON}
+        secret: false
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -280,6 +286,51 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/governance/proposals/inspect
+    - id: case-file
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/file
+    - id: case-notice-serve
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/notice/serve
+    - id: case-representative-appoint
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/representatives/appoint
+    - id: case-evidence-grant
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/evidence/grant
+    - id: case-response-submit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/responses/submit
+    - id: case-ruling-issue
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/rulings/issue
+    - id: case-appeal-file
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/appeals/file
+    - id: case-appeal-rule
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/appeals/rule
+    - id: case-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/inspect
     - id: health
       type: http
       configuration:

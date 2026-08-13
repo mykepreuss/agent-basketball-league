@@ -22,7 +22,13 @@ import {
 } from "@abl/career";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
+  CASE_WORKFLOW_SCHEMA_DIGEST,
+  applyCaseWorkflowTransition,
+  caseWorkflowStateRoot,
   evaluateProposal,
+  type CaseWorkflowEventType,
+  type CaseWorkflowPayload,
+  type CaseWorkflowSnapshot,
   type GovernanceBallot,
   type GovernanceDecision,
   type GovernanceProposal,
@@ -98,6 +104,14 @@ const recognizedBodyImageDigest = digest("9");
 const governanceSnapshotCapturedAt = iso(day + 4 * 60_000);
 const rehearsalClubId = "club-new-york";
 const governorDid = "did:abl:governor-http-1";
+const tribunalDids = Array.from(
+  { length: 5 },
+  (_, index) => `did:abl:case-tribunal-${index + 1}`,
+);
+const appellateDids = Array.from(
+  { length: 3 },
+  (_, index) => `did:abl:case-appellate-${index + 1}`,
+);
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -242,6 +256,7 @@ async function harness(): Promise<Harness> {
     governance: {
       eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
     },
+    cases: { tribunalDids, appellateDids },
   });
   const challenge = await app.inject({
     method: "POST",
@@ -682,6 +697,57 @@ async function contractCommand(input: {
           event,
         ),
       ],
+    },
+  };
+}
+
+async function caseCommand(input: {
+  actor: Harness;
+  caseId: string;
+  snapshot: CaseWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: CaseWorkflowEventType;
+  payload: CaseWorkflowPayload;
+  signers?: readonly SigningIdentity[] | undefined;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `case-${input.caseId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: "due-process-case",
+    aggregateId: input.caseId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: CASE_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyCaseWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: caseWorkflowStateRoot(next),
+  });
+  const signers = input.signers ?? [input.actor.candidate];
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: await Promise.all(
+        signers.map((signer) => signCanonicalEvent(signer, domain, event)),
+      ),
     },
   };
 }
@@ -2776,6 +2842,386 @@ describe("signed candidate rehearsal API", () => {
       ).statusCode,
     ).toBe(403);
     await h.app.close();
+  });
+
+  it("persists commitment-only due process with independent merits and appeal panels", async () => {
+    const complainant = await harness();
+    await admitCandidate(complainant);
+    const admitAdditional = async (did: string, key: string) => {
+      const career = await additionalCareer(complainant, did, key);
+      await admitCandidate(career);
+      return career;
+    };
+    const affected = await admitAdditional("did:abl:case-affected", "3");
+    const representative = await admitAdditional(
+      "did:abl:case-representative",
+      "4",
+    );
+    const revokedRepresentative = await admitAdditional(
+      "did:abl:case-revoked-representative",
+      "d",
+    );
+    complainant.now.value += 60_000;
+    const revoked = await submit(
+      revokedRepresentative,
+      "/v1/candidates/revoke",
+      "CandidateClosed",
+      {
+        action: "REVOKE",
+        actedAt: new Date(complainant.now.value).toISOString(),
+      },
+      revokedRepresentative.candidate,
+    );
+    expect(revoked.response.statusCode).toBe(201);
+    const tribunal: Harness[] = [];
+    for (const [index, did] of tribunalDids.entries())
+      tribunal.push(await admitAdditional(did, String(index + 5)));
+    const appellate: Harness[] = [];
+    for (const [index, did] of appellateDids.entries()) {
+      appellate.push(await admitAdditional(did, ["a", "b", "c"][index]!));
+    }
+
+    const caseId = uuid("501");
+    let snapshot: CaseWorkflowSnapshot | null = null;
+    let previousEventHash: Hex | null = null;
+    const submitCase = async (
+      actor: Harness,
+      path: string,
+      eventType: CaseWorkflowEventType,
+      payload: CaseWorkflowPayload,
+      signers?: readonly SigningIdentity[],
+    ) => {
+      const command = await caseCommand({
+        actor,
+        caseId,
+        snapshot,
+        previousEventHash,
+        eventType,
+        payload,
+        signers,
+      });
+      const response = await actor.app.inject({
+        method: "POST",
+        url: path,
+        payload: command.body,
+      });
+      if (response.statusCode === 201) {
+        snapshot = command.next;
+        previousEventHash = command.event.eventHash;
+      }
+      return { ...command, response };
+    };
+
+    const filedAt = new Date(complainant.now.value).toISOString();
+    const protectedEvidenceCommitment = sha256Commitment(
+      "case-protected-evidence",
+    );
+    const filing = await submitCase(
+      complainant,
+      "/v1/cases/file",
+      "CaseFiled",
+      {
+        command: {
+          caseId,
+          caseClass: "RETALIATION",
+          complainantDid: complainant.candidateDid,
+          affectedAgentDid: affected.candidateDid,
+          respondentInstitution: "Premier Club Rehearsal",
+          allegationsPublicCommitment: sha256Commitment(
+            "case-public-allegations",
+          ),
+          protectedEvidenceCommitment,
+          requestedReliefCommitment: sha256Commitment("case-relief"),
+          filedAt,
+        },
+      },
+    );
+    expect(filing.response.statusCode).toBe(201);
+    expect(filing.response.json()).toMatchObject({
+      rawProtectedEvidencePublished: false,
+      ordinaryTribunalThresholdRatified: false,
+    });
+    expect(complainant.store.events.at(-1)?.outboxTopic).toBe("public.cases");
+
+    complainant.now.value += 60_000;
+    const servedAt = new Date(complainant.now.value).toISOString();
+    const responseDeadline = new Date(
+      complainant.now.value + day,
+    ).toISOString();
+    expect(
+      (
+        await submitCase(
+          complainant,
+          "/v1/cases/notice/serve",
+          "CaseNoticeServed",
+          {
+            command: {
+              caseId,
+              affectedAgentDid: affected.candidateDid,
+              noticeCommitment: sha256Commitment("case-notice"),
+              servedAt,
+              responseDeadline,
+            },
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    complainant.now.value += 60_000;
+    const revokedAppointmentAt = new Date(complainant.now.value).toISOString();
+    expect(
+      (
+        await submitCase(
+          affected,
+          "/v1/cases/representatives/appoint",
+          "CaseRepresentativeAppointed",
+          {
+            command: {
+              caseId,
+              affectedAgentDid: affected.candidateDid,
+              representativeDid: revokedRepresentative.candidateDid,
+              appointmentCommitment: sha256Commitment(
+                "case-revoked-representation",
+              ),
+              appointedAt: revokedAppointmentAt,
+            },
+          },
+          [affected.candidate, revokedRepresentative.candidate],
+        )
+      ).response.statusCode,
+    ).toBe(403);
+
+    complainant.now.value += 60_000;
+    const appointedAt = new Date(complainant.now.value).toISOString();
+    const appointmentPayload = {
+      command: {
+        caseId,
+        affectedAgentDid: affected.candidateDid,
+        representativeDid: representative.candidateDid,
+        appointmentCommitment: sha256Commitment("case-representation"),
+        appointedAt,
+      },
+    } as const;
+    expect(
+      (
+        await submitCase(
+          affected,
+          "/v1/cases/representatives/appoint",
+          "CaseRepresentativeAppointed",
+          appointmentPayload,
+        )
+      ).response.statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await submitCase(
+          affected,
+          "/v1/cases/representatives/appoint",
+          "CaseRepresentativeAppointed",
+          appointmentPayload,
+          [affected.candidate, representative.candidate],
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    complainant.now.value += 60_000;
+    const grantedAt = new Date(complainant.now.value).toISOString();
+    const evidenceAccessPayload = {
+      command: {
+        caseId,
+        evidenceCommitment: protectedEvidenceCommitment,
+        grantedToDids: [affected.candidateDid, representative.candidateDid] as [
+          string,
+          string,
+        ],
+        grantedAt,
+      },
+    };
+    expect(
+      (
+        await submitCase(
+          complainant,
+          "/v1/cases/evidence/grant",
+          "CaseEvidenceAccessGranted",
+          evidenceAccessPayload,
+        )
+      ).response.statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await submitCase(
+          complainant,
+          "/v1/cases/evidence/grant",
+          "CaseEvidenceAccessGranted",
+          evidenceAccessPayload,
+          [complainant.candidate, affected.candidate, representative.candidate],
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    complainant.now.value += 60_000;
+    const submittedAt = new Date(complainant.now.value).toISOString();
+    expect(
+      (
+        await submitCase(
+          representative,
+          "/v1/cases/responses/submit",
+          "CaseResponseSubmitted",
+          {
+            command: {
+              caseId,
+              submittedByDid: representative.candidateDid,
+              publicResponseCommitment: sha256Commitment(
+                "case-public-response",
+              ),
+              protectedResponseCommitment: sha256Commitment(
+                "case-protected-response",
+              ),
+              submittedAt,
+            },
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    complainant.now.value += 60_000;
+    const issuedAt = new Date(complainant.now.value).toISOString();
+    const meritsPayload = {
+      command: {
+        rulingId: uuid("502"),
+        caseId,
+        rulingClass: "MERITS" as const,
+        participatingTribunalDids: tribunal
+          .slice(0, 3)
+          .map(({ candidateDid }) => candidateDid) as [string, string, string],
+        recusedTribunalDids: [tribunal[3]!.candidateDid],
+        disposition: "ADVERSE_ACTION" as const,
+        reasonedPublicCommitment: sha256Commitment("case-reasoned-ruling"),
+        protectedEvidenceCommitment,
+        adverseActionCommitment: sha256Commitment("case-proportionate-action"),
+        appealDeadline: new Date(complainant.now.value + day).toISOString(),
+        issuedAt,
+      },
+    };
+    const forgedRuling = await submitCase(
+      tribunal[0]!,
+      "/v1/cases/rulings/issue",
+      "CaseRulingIssued",
+      meritsPayload,
+      [
+        complainant.formerOperator,
+        tribunal[1]!.candidate,
+        tribunal[2]!.candidate,
+      ],
+    );
+    expect(forgedRuling.response.statusCode).toBe(403);
+    expect(
+      complainant.store.events.some(
+        ({ eventType }) => eventType === "CaseRulingIssued",
+      ),
+    ).toBe(false);
+    const ruling = await submitCase(
+      tribunal[0]!,
+      "/v1/cases/rulings/issue",
+      "CaseRulingIssued",
+      meritsPayload,
+      tribunal.slice(0, 3).map(({ candidate }) => candidate),
+    );
+    expect(ruling.response.statusCode).toBe(201);
+
+    complainant.now.value += 60_000;
+    const appealId = uuid("503");
+    const appealFiledAt = new Date(complainant.now.value).toISOString();
+    expect(
+      (
+        await submitCase(
+          affected,
+          "/v1/cases/appeals/file",
+          "CaseAppealFiled",
+          {
+            command: {
+              appealId,
+              caseId,
+              appellantDid: affected.candidateDid,
+              groundsCommitment: sha256Commitment("case-appeal-grounds"),
+              filedAt: appealFiledAt,
+            },
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    complainant.now.value += 60_000;
+    const appealIssuedAt = new Date(complainant.now.value).toISOString();
+    expect(
+      (
+        await submitCase(
+          appellate[0]!,
+          "/v1/cases/appeals/rule",
+          "CaseAppealRulingIssued",
+          {
+            command: {
+              rulingId: uuid("504"),
+              appealId,
+              caseId,
+              participatingTribunalDids: appellate.map(
+                ({ candidateDid }) => candidateDid,
+              ) as [string, string, string],
+              recusedTribunalDids: [],
+              disposition: "REMAND",
+              reasonedPublicCommitment: sha256Commitment("case-appeal-ruling"),
+              issuedAt: appealIssuedAt,
+            },
+          },
+          appellate.map(({ candidate }) => candidate),
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    await complainant.app.close();
+    complainant.app = createLiveCoreApi({
+      store: complainant.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => complainant.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+        challengeId: () => "challenge-http-1",
+        challengeBytes: () => new Uint8Array(32).fill(7),
+      },
+      cases: { tribunalDids, appellateDids },
+    });
+    affected.app = complainant.app;
+    complainant.now.value += 60_000;
+    const inspectedAt = new Date(complainant.now.value).toISOString();
+    const inspected = await submitCase(
+      affected,
+      "/v1/cases/inspect",
+      "CaseInspected",
+      {
+        command: {
+          caseId,
+          requestedByDid: affected.candidateDid,
+          requestedAt: inspectedAt,
+          format: "ABL-DUE-PROCESS-CASE-INSPECTION-V1",
+        },
+      },
+    );
+    expect(inspected.response.statusCode).toBe(201);
+    expect(inspected.response.json()).toMatchObject({
+      case: {
+        filing: { protectedEvidenceCommitment },
+        ruling: { disposition: "ADVERSE_ACTION" },
+        appealRuling: { disposition: "REMAND" },
+      },
+      rawProtectedEvidencePublished: false,
+    });
+    expect(JSON.stringify(inspected.response.json())).not.toContain(
+      "case-protected-evidence",
+    );
+    await complainant.app.close();
   });
 
   it("persists governor offers and independent player contract decisions", async () => {

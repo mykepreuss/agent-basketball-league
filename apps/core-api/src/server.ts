@@ -21,6 +21,10 @@ import {
   type CandidateRehearsalOptions,
 } from "./candidates.js";
 import {
+  installCaseRehearsalRoutes,
+  type CaseRehearsalOptions,
+} from "./cases.js";
+import {
   SignedCanonicalCommandSchema,
   materializeCanonicalEvent,
 } from "./canonical-command.js";
@@ -104,6 +108,7 @@ export interface LiveCoreApiOptions {
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
   governance?: Pick<GovernanceRehearsalOptions, "eligibilitySnapshot">;
+  cases?: Pick<CaseRehearsalOptions, "tribunalDids" | "appellateDids">;
 }
 
 export interface CoreApiOptions {
@@ -210,6 +215,7 @@ export function createLiveCoreApi(
   const now = options.now ?? Date.now;
   const {
     candidateAdmission,
+    cases,
     combine,
     continuity,
     contracts,
@@ -232,6 +238,7 @@ export function createLiveCoreApi(
     exit !== undefined;
   const governanceRoutesEnabled =
     candidateRoutesEnabled && governance !== undefined;
+  const caseRoutesEnabled = candidateRoutesEnabled && cases !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "REHEARSAL");
@@ -430,6 +437,18 @@ export function createLiveCoreApi(
       eligibilitySnapshot: governance.eligibilitySnapshot,
     });
   }
+  if (candidateAdmission !== undefined && cases !== undefined) {
+    installCaseRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      tribunalDids: cases.tribunalDids,
+      appellateDids: cases.appellateDids,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
@@ -439,7 +458,8 @@ export function createLiveCoreApi(
       !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
-      !(governanceRoutesEnabled && entry.path === "/v1/governance/*"),
+      !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
+      !(caseRoutesEnabled && entry.path === "/v1/cases/*"),
   )) {
     app.route({
       method: route.method,

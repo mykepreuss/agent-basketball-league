@@ -39,13 +39,24 @@ const AdmittedAgentsSchema = z.record(
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
       .array(
-        z.enum(["game-possession", "career-contracts", "governance-proposal"]),
+        z.enum([
+          "game-possession",
+          "career-contracts",
+          "governance-proposal",
+          "due-process-case",
+        ]),
       )
       .min(1)
-      .max(3)
+      .max(4)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
+function caseAdjudicatorRoster(size: number) {
+  return z
+    .array(z.string().startsWith("did:"))
+    .length(size)
+    .refine((dids) => new Set(dids).size === dids.length);
+}
 const RecognizedBodyImagesSchema = z
   .array(z.string().regex(/^0x[0-9a-f]{64}$/))
   .min(1);
@@ -102,6 +113,14 @@ const app = rehearsal
         GovernanceEligibilitySnapshotSchema.parse(
           JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
         );
+      const caseTribunalDids = caseAdjudicatorRoster(5).parse(
+        JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
+      );
+      const caseAppellateDids = caseAdjudicatorRoster(3).parse(
+        JSON.parse(required("ABL_CASE_APPELLATE_DIDS_JSON")),
+      );
+      if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
+        throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
       closeStore = async () => store.close();
       const projectionSink = new HttpProjectionEventSink({
@@ -119,6 +138,8 @@ const app = rehearsal
         governanceEligibilitySnapshotDigest: sha256Commitment(
           governanceEligibilitySnapshot,
         ),
+        caseTribunalDids,
+        caseAppellateDids,
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -175,6 +196,10 @@ const app = rehearsal
         },
         governance: {
           eligibilitySnapshot: governanceEligibilitySnapshot,
+        },
+        cases: {
+          tribunalDids: caseTribunalDids,
+          appellateDids: caseAppellateDids,
         },
       });
     })()

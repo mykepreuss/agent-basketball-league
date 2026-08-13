@@ -8,10 +8,13 @@ import {
   PROJECTION_APPEND_PATH,
   ProjectionVersionConflictError,
   projectionEnvelopeBytes,
+  verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
+  type PublicCaseProjectionReader,
+  type PublicCaseProjectionWriter,
   type PublicContractProjectionReader,
   type PublicContractProjectionWriter,
   type PublicGovernanceProjectionReader,
@@ -134,12 +137,16 @@ export interface PublicApiOptions {
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
+  caseProjections?: PublicCaseProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
+    caseWriter?: PublicCaseProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
+    caseTribunalDids?: readonly string[];
+    caseAppellateDids?: readonly string[];
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -179,14 +186,16 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ServiceAuthenticationError" ||
     name === "ProjectionAuthorizationError" ||
     name === "ContractWorkflowAuthorizationError" ||
-    name === "GovernanceWorkflowAuthorizationError"
+    name === "GovernanceWorkflowAuthorizationError" ||
+    name === "CaseWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
   if (
     name === "ProjectionValidationError" ||
     name === "ContractWorkflowValidationError" ||
-    name === "GovernanceWorkflowValidationError"
+    name === "GovernanceWorkflowValidationError" ||
+    name === "CaseWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -201,7 +210,8 @@ export function createPublicApi(
   const rehearsal =
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
-    options.governanceProjections !== undefined;
+    options.governanceProjections !== undefined ||
+    options.caseProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -214,6 +224,7 @@ export function createPublicApi(
         options.projections?.refresh(),
         options.contractProjections?.refresh(),
         options.governanceProjections?.refresh(),
+        options.caseProjections?.refresh(),
       ]);
     }
   });
@@ -404,6 +415,38 @@ export function createPublicApi(
             cursor: record.cursor,
           });
         }
+        if (topic === "public.cases") {
+          if (
+            projectionIngress.caseTribunalDids === undefined ||
+            projectionIngress.caseAppellateDids === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Case projection authority is not configured",
+            );
+          }
+          const verified = await verifyCaseProjectionEvent(request.body, {
+            ...projectionIngress,
+            caseTribunalDids: projectionIngress.caseTribunalDids,
+            caseAppellateDids: projectionIngress.caseAppellateDids,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the case event",
+            );
+          }
+          if (projectionIngress.caseWriter === undefined)
+            throw new Error("Case projection writer is not configured");
+          const record = await projectionIngress.caseWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -450,7 +493,15 @@ export function createPublicApi(
       } else if (path === "/v1/public/rosters") {
         items = options.contractProjections?.rosters() ?? [];
       } else if (path === "/v1/public/governance") {
-        items = options.governanceProjections?.governance() ?? [];
+        items = [
+          ...(options.governanceProjections?.governance() ?? []).map(
+            (projection) => ({
+              ...projection,
+              recordType: "GOVERNANCE_PROPOSAL" as const,
+            }),
+          ),
+          ...(options.caseProjections?.cases() ?? []),
+        ];
       }
       return {
         state,

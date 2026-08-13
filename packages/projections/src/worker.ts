@@ -4,6 +4,11 @@ import type {
 } from "@abl/database";
 
 import {
+  caseProjectionEnvelopeFromOutbox,
+  verifyCaseProjectionEvent,
+} from "./case-envelope.js";
+import type { PublicCaseProjectionWriter } from "./case-repository.js";
+import {
   contractProjectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
 } from "./contract-envelope.js";
@@ -26,6 +31,7 @@ type WorkerDestination =
       writer: PublicProjectionWriter;
       contractWriter?: PublicContractProjectionWriter;
       governanceWriter?: PublicGovernanceProjectionWriter;
+      caseWriter?: PublicCaseProjectionWriter;
       sink?: never;
     }
   | {
@@ -33,12 +39,14 @@ type WorkerDestination =
       writer?: never;
       contractWriter?: never;
       governanceWriter?: never;
+      caseWriter?: never;
     };
 
 const projectionTopics = [
   "public.game",
   "public.contracts",
   "public.governance",
+  "public.cases",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 
@@ -48,6 +56,8 @@ export class PublicProjectionWorker {
   readonly #authority: ProjectionVerificationAuthority;
   readonly #contractClubGovernors: Readonly<Record<string, string>> | undefined;
   readonly #governanceEligibilitySnapshotDigest: string | undefined;
+  readonly #caseTribunalDids: readonly string[] | undefined;
+  readonly #caseAppellateDids: readonly string[] | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -57,6 +67,8 @@ export class PublicProjectionWorker {
       now?: () => Date;
       contractClubGovernors?: Readonly<Record<string, string>>;
       governanceEligibilitySnapshotDigest?: string;
+      caseTribunalDids?: readonly string[];
+      caseAppellateDids?: readonly string[];
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -65,7 +77,8 @@ export class PublicProjectionWorker {
       this.#destination = { sink: input.sink };
     } else if (
       input.contractWriter === undefined &&
-      input.governanceWriter === undefined
+      input.governanceWriter === undefined &&
+      input.caseWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -73,6 +86,7 @@ export class PublicProjectionWorker {
         writer: PublicProjectionWriter;
         contractWriter?: PublicContractProjectionWriter;
         governanceWriter?: PublicGovernanceProjectionWriter;
+        caseWriter?: PublicCaseProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -80,6 +94,8 @@ export class PublicProjectionWorker {
         destination.contractWriter = input.contractWriter;
       if (input.governanceWriter !== undefined)
         destination.governanceWriter = input.governanceWriter;
+      if (input.caseWriter !== undefined)
+        destination.caseWriter = input.caseWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -89,6 +105,8 @@ export class PublicProjectionWorker {
     this.#contractClubGovernors = input.contractClubGovernors;
     this.#governanceEligibilitySnapshotDigest =
       input.governanceEligibilitySnapshotDigest;
+    this.#caseTribunalDids = input.caseTribunalDids;
+    this.#caseAppellateDids = input.caseAppellateDids;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -156,6 +174,33 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishCase(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = caseProjectionEnvelopeFromOutbox(event);
+    if (
+      this.#caseTribunalDids === undefined ||
+      this.#caseAppellateDids === undefined
+    ) {
+      throw new Error("Case projection authority is not configured");
+    }
+    const verified = await verifyCaseProjectionEvent(envelope, {
+      ...this.#authority,
+      caseTribunalDids: this.#caseTribunalDids,
+      caseAppellateDids: this.#caseAppellateDids,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.caseWriter === undefined)
+        throw new Error("Case projection writer is not configured");
+      await this.#destination.caseWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -167,6 +212,8 @@ export class PublicProjectionWorker {
         return this.#publishContract(event);
       case "public.governance":
         return this.#publishGovernance(event);
+      case "public.cases":
+        return this.#publishCase(event);
     }
   }
 

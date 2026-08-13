@@ -1,9 +1,11 @@
 import { ServiceRequestVerifier } from "@abl/foundation";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
   verifyContractProjectionEvent,
+  verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
 } from "@abl/projections";
@@ -38,10 +40,15 @@ const AgentRegistrySchema = z.record(
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
       .array(
-        z.enum(["game-possession", "career-contracts", "governance-proposal"]),
+        z.enum([
+          "game-possession",
+          "career-contracts",
+          "governance-proposal",
+          "due-process-case",
+        ]),
       )
       .min(1)
-      .max(3)
+      .max(4)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -49,6 +56,12 @@ const ContractClubGovernorsSchema = z.record(
   z.string().min(1).max(160),
   z.string().startsWith("did:"),
 );
+function caseAdjudicatorRoster(size: number) {
+  return z
+    .array(z.string().startsWith("did:"))
+    .length(size)
+    .refine((dids) => new Set(dids).size === dids.length);
+}
 
 function projectionAuthority(): {
   domain: TypedDataDomain;
@@ -58,6 +71,8 @@ function projectionAuthority(): {
   >;
   contractClubGovernors: Readonly<Record<string, string>>;
   governanceEligibilitySnapshotDigest: string;
+  caseTribunalDids: readonly string[];
+  caseAppellateDids: readonly string[];
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -69,6 +84,12 @@ function projectionAuthority(): {
     .string()
     .regex(/^0x[0-9a-f]{64}$/)
     .parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST"));
+  const caseTribunalDids = caseAdjudicatorRoster(5).parse(
+    JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
+  );
+  const caseAppellateDids = caseAdjudicatorRoster(3).parse(
+    JSON.parse(required("ABL_CASE_APPELLATE_DIDS_JSON")),
+  );
   if (
     Object.keys(contractClubGovernors).length === 0 ||
     new Set(Object.values(contractClubGovernors)).size !==
@@ -78,6 +99,8 @@ function projectionAuthority(): {
       "Contract projection club governors must be nonempty and distinct",
     );
   }
+  if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
+    throw new Error("Case merits and appellate rosters must be disjoint");
   return {
     domain: {
       name: "ABL Recognition",
@@ -104,6 +127,8 @@ function projectionAuthority(): {
     ),
     contractClubGovernors,
     governanceEligibilitySnapshotDigest,
+    caseTribunalDids,
+    caseAppellateDids,
   };
 }
 
@@ -112,6 +137,7 @@ let authority: ReturnType<typeof projectionAuthority> | undefined;
 let projections: FilePublicProjectionRepository | undefined;
 let contractProjections: FilePublicContractProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
+let caseProjections: FilePublicCaseProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   authority = runtimeAuthority;
@@ -140,11 +166,16 @@ if (projectionRoot !== undefined) {
         verifyGovernanceProjectionEvent(authorization, runtimeAuthority),
     },
   );
+  caseProjections = new FilePublicCaseProjectionRepository(projectionRoot, {
+    verifyAuthorization: async (authorization) =>
+      verifyCaseProjectionEvent(authorization, runtimeAuthority),
+  });
 }
 await Promise.all([
   projections?.initialize(),
   contractProjections?.initialize(),
   governanceProjections?.initialize(),
+  caseProjections?.initialize(),
 ]);
 
 let projectionIngress: PublicApiOptions["projectionIngress"];
@@ -152,12 +183,14 @@ if (
   projections !== undefined &&
   contractProjections !== undefined &&
   governanceProjections !== undefined &&
+  caseProjections !== undefined &&
   authority !== undefined
 ) {
   projectionIngress = {
     writer: projections,
     contractWriter: contractProjections,
     governanceWriter: governanceProjections,
+    caseWriter: caseProjections,
     verifier: new ServiceRequestVerifier([
       {
         serviceId: required("ABL_PROJECTION_INGEST_SERVICE_ID"),
@@ -175,6 +208,7 @@ if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;
 if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
+if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

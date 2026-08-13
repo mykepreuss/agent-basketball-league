@@ -4,18 +4,25 @@ import { join } from "node:path";
 
 import { ServiceRequestVerifier, signServiceRequest } from "@abl/foundation";
 import {
+  CASE_WORKFLOW_AGGREGATE_TYPE,
+  CASE_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
   GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
   applyGovernanceWorkflowTransition,
+  applyCaseWorkflowTransition,
+  caseWorkflowStateRoot,
   governanceWorkflowStateRoot,
 } from "@abl/institutions";
 import {
+  FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
   projectionEnvelopeBytes,
   verifyGovernanceProjectionEvent,
+  verifyCaseProjectionEvent,
+  type CaseProjectionEventEnvelope,
   type GovernanceProjectionEventEnvelope,
 } from "@abl/projections";
 import {
@@ -227,6 +234,43 @@ describe("public API", () => {
           },
         ],
       },
+      caseProjections: {
+        refresh: async () => undefined,
+        cases: () => [
+          {
+            recordType: "DUE_PROCESS_CASE",
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            processStatus: "FILED",
+            caseId: "0198a000-0000-7000-8000-000000000703",
+            version: 1,
+            lastTransitionAt: "2026-08-13T08:00:00.000Z",
+            filing: {
+              caseId: "0198a000-0000-7000-8000-000000000703",
+              caseClass: "DISCIPLINE",
+              complainantDid: "did:abl:case-public-complainant",
+              affectedAgentDid: "did:abl:case-public-affected",
+              respondentInstitution: "Public case rehearsal",
+              allegationsPublicCommitment: `0x${"1".repeat(64)}`,
+              protectedEvidenceCommitment: `0x${"2".repeat(64)}`,
+              requestedReliefCommitment: null,
+              filedAt: "2026-08-13T08:00:00.000Z",
+            },
+            notice: null,
+            representative: null,
+            evidenceAccess: null,
+            response: null,
+            ruling: null,
+            appeal: null,
+            appealRuling: null,
+            aggregateVersion: "1",
+            canonicalEventHash: `0x${"3".repeat(64)}`,
+            stateRoot: `0x${"4".repeat(64)}`,
+            projectedAt: "2026-08-13T09:01:00.000Z",
+          },
+        ],
+      },
     });
     const response = await app.inject({
       method: "GET",
@@ -235,7 +279,18 @@ describe("public API", () => {
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
       canonical: true,
-      items: [{ aggregateVersion: "4", canonical: true }],
+      items: [
+        {
+          recordType: "GOVERNANCE_PROPOSAL",
+          aggregateVersion: "4",
+          canonical: true,
+        },
+        {
+          recordType: "DUE_PROCESS_CASE",
+          aggregateVersion: "1",
+          canonical: true,
+        },
+      ],
     });
     await app.close();
   });
@@ -385,6 +440,173 @@ describe("public API", () => {
     ).toMatchObject({
       items: [{ proposalId, aggregateVersion: "1", canonical: true }],
     });
+    await app.close();
+  });
+
+  it("authenticates case ingress and exposes only the public process record", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-public-case-"));
+    const complainantDid = "did:abl:public-case-complainant";
+    const affectedDid = "did:abl:public-case-affected";
+    const caseTribunalDids = Array.from(
+      { length: 5 },
+      (_, index) => `did:abl:public-case-tribunal-${index + 1}`,
+    );
+    const caseAppellateDids = Array.from(
+      { length: 3 },
+      (_, index) => `did:abl:public-case-appellate-${index + 1}`,
+    );
+    const dids = [
+      complainantDid,
+      affectedDid,
+      ...caseTribunalDids,
+      ...caseAppellateDids,
+    ];
+    const signingIdentities = [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "a",
+    ].map((key) => createSigningIdentity(`0x${key.repeat(64)}`));
+    const domain = {
+      name: "ABL Recognition",
+      version: "1",
+      chainId: 84532,
+      verifyingContract: "0x1111111111111111111111111111111111111111" as const,
+    };
+    const caseId = "0198a000-0000-7000-8000-000000000721";
+    const protectedEvidenceCommitment = sha256Commitment(
+      "public-case-protected-evidence",
+    );
+    const payload = {
+      command: {
+        caseId,
+        caseClass: "GRIEVANCE" as const,
+        complainantDid,
+        affectedAgentDid: affectedDid,
+        respondentInstitution: "Public case ingress rehearsal",
+        allegationsPublicCommitment: sha256Commitment(
+          "public-case-allegations",
+        ),
+        protectedEvidenceCommitment,
+        requestedReliefCommitment: null,
+        filedAt: "2026-08-13T08:00:00.000Z",
+      },
+    };
+    const eventInput = {
+      eventId: "0198a000-0000-7000-8000-000000000722",
+      actorDid: complainantDid,
+      nonce: "public-case-ingress",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000723",
+      aggregateType: CASE_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: caseId,
+      aggregateVersion: 1n,
+      eventType: "CaseFiled",
+      previousEventHash: null,
+      payload,
+      stateRoot: sha256Commitment("provisional-public-case"),
+      schemaDigest: CASE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: payload.command.filedAt,
+    };
+    const snapshot = applyCaseWorkflowTransition(
+      null,
+      createCanonicalEvent(eventInput),
+      payload,
+    );
+    const event = createCanonicalEvent({
+      ...eventInput,
+      stateRoot: caseWorkflowStateRoot(snapshot),
+    });
+    const envelope: CaseProjectionEventEnvelope = {
+      version: "1.0.0",
+      topic: "public.cases",
+      event: {
+        ...event,
+        aggregateType: CASE_WORKFLOW_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: "CaseFiled",
+      },
+      signatures: [
+        await signCanonicalEvent(signingIdentities[0]!, domain, event),
+      ],
+    };
+    const authority = {
+      domain,
+      admittedAgents: new Map(
+        dids.map((did, index) => [
+          did,
+          {
+            signerAddress: signingIdentities[index]!.address,
+            allowedAggregateTypes: [CASE_WORKFLOW_AGGREGATE_TYPE],
+          },
+        ]),
+      ),
+      caseTribunalDids,
+      caseAppellateDids,
+    };
+    const games = new FilePublicProjectionRepository(root);
+    const cases = new FilePublicCaseProjectionRepository(root, {
+      verifyAuthorization: async (authorization) =>
+        verifyCaseProjectionEvent(authorization, authority),
+    });
+    await Promise.all([games.initialize(), cases.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T08:00:05.000Z");
+    const serviceIdentity = {
+      serviceId: "case-ingress-test",
+      secret: new TextEncoder().encode("q".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const app = createPublicApi({
+      projections: games,
+      caseProjections: cases,
+      projectionIngress: {
+        writer: games,
+        caseWriter: cases,
+        verifier: new ServiceRequestVerifier([serviceIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const body = projectionEnvelopeBytes(envelope);
+    const headers = signServiceRequest(serviceIdentity, {
+      method: "POST",
+      path: PROJECTION_APPEND_PATH,
+      body,
+      nonce: "case-ingress-service-request",
+      timestamp: new Date(serviceNow).toISOString(),
+      expectedVersion: "0",
+      capability: PROJECTION_APPEND_CAPABILITY,
+    });
+    const accepted = await app.inject({
+      method: "POST",
+      url: PROJECTION_APPEND_PATH,
+      headers: { ...headers, "content-type": "application/json" },
+      payload: Buffer.from(body),
+    });
+    expect(accepted.statusCode).toBe(201);
+    const publicRecord = (
+      await app.inject({ method: "GET", url: "/v1/public/governance" })
+    ).json();
+    expect(publicRecord).toMatchObject({
+      items: [
+        {
+          recordType: "DUE_PROCESS_CASE",
+          caseId,
+          processStatus: "FILED",
+          filing: { protectedEvidenceCommitment },
+        },
+      ],
+    });
+    expect(JSON.stringify(publicRecord)).not.toContain(
+      "public-case-protected-evidence",
+    );
     await app.close();
   });
 });
