@@ -1,0 +1,121 @@
+{
+  "gameId": "0198a000-0000-7000-8000-000000000201",
+  "possessionId": "possession-proof-001",
+  "score": { "home": 2, "away": 0 },
+  "gameClockMs": 714000,
+  "shotClockMs": 18000,
+  "players": [
+    {
+      "playerId": "H1",
+      "team": "HOME",
+      "position": "PG",
+      "xCm": 2500,
+      "yCm": 250
+    },
+    {
+      "playerId": "H2",
+      "team": "HOME",
+      "position": "SG",
+      "xCm": 2418,
+      "yCm": 466
+    },
+    {
+      "playerId": "H3",
+      "team": "HOME",
+      "position": "SF",
+      "xCm": 2241,
+      "yCm": 755
+    },
+    {
+      "playerId": "H4",
+      "team": "HOME",
+      "position": "PF",
+      "xCm": 2064,
+      "yCm": 944
+    },
+    {
+      "playerId": "H5",
+      "team": "HOME",
+      "position": "C",
+      "xCm": 1887,
+      "yCm": 1236
+    },
+    {
+      "playerId": "A1",
+      "team": "AWAY",
+      "position": "PG",
+      "xCm": 705,
+      "yCm": 262
+    },
+    {
+      "playerId": "A2",
+      "team": "AWAY",
+      "position": "SG",
+      "xCm": 882,
+      "yCm": 549
+    },
+    {
+      "playerId": "A3",
+      "team": "AWAY",
+      "position": "SF",
+      "xCm": 1059,
+      "yCm": 740
+    },
+    {
+      "playerId": "A4",
+      "team": "AWAY",
+      "position": "PF",
+      "xCm": 1236,
+      "yCm": 1031
+    },
+    {
+      "playerId": "A5",
+      "team": "AWAY",
+      "position": "C",
+      "xCm": 1413,
+      "yCm": 1219
+    }
+  ],
+  "events": [
+    {
+      "sequence": 0,
+      "type": "WINDOW_RESOLVED",
+      "label": "10 independent actions · window 01",
+      "stateRoot": "0x0e01dd9335cc60bf72b2fb804067152bd5a87c43678e3c080a20abfeb3c32c26"
+    },
+    {
+      "sequence": 1,
+      "type": "WINDOW_RESOLVED",
+      "label": "10 independent actions · window 02",
+      "stateRoot": "0x935ed967019d7b8f9716811f323bcba8f27cc43104754b214e0787c2163d1962"
+    },
+    {
+      "sequence": 2,
+      "type": "SHOT",
+      "label": "H1 · layup · made · +2",
+      "stateRoot": "0x96592a2a58728667c0f71976e0bb36a5bd9e2797dcb0112811b354c6a874d640"
+    },
+    {
+      "sequence": 3,
+      "type": "WINDOW_RESOLVED",
+      "label": "movement resolved · window 03",
+      "stateRoot": "0x4f6c1b20245459f4d0b81ab75a815a9c7d2adc67b8fef133891fa6e345a880ea"
+    },
+    {
+      "sequence": 4,
+      "type": "OFFICIAL_RULING",
+      "label": "3 referees · 2 replay officials · confirmed",
+      "stateRoot": "0x4f6c1b20245459f4d0b81ab75a815a9c7d2adc67b8fef133891fa6e345a880ea"
+    },
+    {
+      "sequence": 5,
+      "type": "POSSESSION_FINAL",
+      "label": "final · replay exact · inference 0",
+      "stateRoot": "0xac1968d9215c56254f4beb3d196f9213ce36fb6a83d3ef81d7a4b1c50c68574a"
+    }
+  ],
+  "finalStateRoot": "0xac1968d9215c56254f4beb3d196f9213ce36fb6a83d3ef81d7a4b1c50c68574a",
+  "eventMerkleRoot": "0xa0af7deae0872feeabb2d7e487fd586c969978693d64aed713519ecf25117235",
+  "filmCommitment": "0x51a2947309d8cf7c655e42d82596a1884f3bb2b8a0df9813b777d2b7cc5fd8d0",
+  "finalSegmentHash": "0xd075bc39a5fe6b441300806707997d15aae6996a8e5b9466b4a2b71b0e5e8afe"
+}

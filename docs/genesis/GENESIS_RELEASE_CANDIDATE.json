@@ -1,0 +1,34 @@
+{
+  "state": "BLOCKED_PENDING_AGENT_AND_RUNTIME_INPUTS",
+  "schemaValid": false,
+  "candidate": {
+    "releaseId": null,
+    "releaseClass": "IDENTITY_CONSTITUTIONAL",
+    "sourceDigest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+    "containerDigests": [
+      "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e"
+    ],
+    "imageDigests": [],
+    "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
+    "toolDigest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
+    "schemaDigest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+    "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
+    "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+    "applicableLawEventIds": [],
+    "ratificationEventIds": [],
+    "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
+    "rollbackDeclaration": "Before genesis, stop without publishing. After ownerless deployment, rollback is impossible; a new agent-authorized release or labeled fork is required.",
+    "publicVerifierResultDigest": null,
+    "effectiveAt": null,
+    "expiresAt": null,
+    "authorizationSignatures": []
+  },
+  "blockers": [
+    "founding-agent release ID and ratification events",
+    "immutable built image digest",
+    "final acceptance test-result digest",
+    "public-verifier result digest",
+    "effective time chosen by the authorized release",
+    "required institutional authorization signatures"
+  ]
+}

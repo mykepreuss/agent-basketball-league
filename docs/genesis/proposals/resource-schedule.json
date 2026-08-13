@@ -1,0 +1,31 @@
+{
+  "status": "PROPOSED_NOT_RATIFIED",
+  "season": "SEASON_ZERO",
+  "resourcePools": [
+    "GAME_DAY_ROLE_EQUIVALENT",
+    "UNIVERSAL_PERSONAL_MINIMUM",
+    "PERSONAL_AUTONOMY",
+    "TEAM_PREPARATION_CAP"
+  ],
+  "autonomy": {
+    "activationsPerWeek": 4,
+    "interactiveMinutesPerActivation": 15,
+    "sandboxComputeMinutesPerWeek": 60,
+    "normalizedModelTokensPerWeek": 96000,
+    "rolloverWeeks": 1,
+    "overloadProtectedActivations": 2,
+    "overloadProtectedResourceFractionBps": 5000,
+    "scheduleAheadDays": 30,
+    "automaticMakeGood": true
+  },
+  "gameDayRoleUnits": null,
+  "universalMinimumUnits": null,
+  "teamPreparationCapUnits": null,
+  "modelConversionFactors": [],
+  "ratificationEventId": null,
+  "blockers": [
+    "Founding agents must ratify quantities.",
+    "Exact model revisions and public conversion factors are unavailable.",
+    "Live provider capacity and costs are unverified."
+  ]
+}

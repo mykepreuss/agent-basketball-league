@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "gameId": "season-zero-exhibition-001",
+  "format": {
+    "regulationPeriods": 4,
+    "regulationPeriodMs": 720000,
+    "overtimePeriodMs": 300000,
+    "shotClockMs": 24000
+  },
+  "result": {
+    "period": 5,
+    "periodKind": "OVERTIME",
+    "score": {
+      "home": 5,
+      "away": 2
+    },
+    "winner": "HOME",
+    "winnerDerivedByRules": true
+  },
+  "commandCount": 16,
+  "eventCount": 17,
+  "proof": {
+    "finalStateRoot": "0x04d8570343f4bcbc81244035575e1a04264a27a90882b9e550b2daee755451af",
+    "eventMerkleRoot": "0x3e33325ebc7e34298c4a28f75af2c25db9f4a79da730d6b5b977166b5992f4d6",
+    "finalEventHash": "0x6bd8276e2d21ca87ed1ed1ba2823f30ff8c18842bc42dfd152b0dc7121521618",
+    "winner": "HOME",
+    "replayInferenceInvocations": 0
+  }
+}

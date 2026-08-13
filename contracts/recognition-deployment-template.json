@@ -1,0 +1,53 @@
+{
+  "mode": "PREPARE_ONLY_INCOMPLETE_NO_BROADCAST",
+  "chainId": 84532,
+  "transaction": null,
+  "exactTransactionCommand": "pnpm contract:prepare -- <ratified-genesis-config.json> <deployment-artifact.json>",
+  "compiler": {
+    "version": "0.8.36+commit.8a079791.Emscripten.clang",
+    "inputSha256": "6796cedce6058d05e3d1a9165c29fd44c1a953763fa65bfe51f9b14d673bbdf0"
+  },
+  "contract": {
+    "sourceSha256": "37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
+    "creationBytecodeSha256": "915e705db070d46a1e278ba78c368423061a37ec3f1672e561e446203540a6e7",
+    "bytecodeKeccak256": "0xdf790cac75cd66e5e83de113ed30faf0d030a70b47a63d77a61e7f1d68e5a70a",
+    "callableFunctions": [
+      "CHECKPOINT_TYPEHASH",
+      "KEY_REGISTRY",
+      "checkpointDigest",
+      "constitutionDigest",
+      "currentRegistryRoot",
+      "domainSeparator",
+      "getCurrentSigners",
+      "latestRootBySubject",
+      "policies",
+      "recognize",
+      "rotateRegistry",
+      "signerRoles",
+      "usedNonces",
+      "verifierDigest"
+    ],
+    "constructorInputs": [
+      "bytes32",
+      "bytes32",
+      "address[]",
+      "uint8[]",
+      "bytes32[]",
+      "tuple[]"
+    ],
+    "ownerAdminUpgradeSurfaceAbsent": true
+  },
+  "missingRatifiedInputs": [
+    "constitution digest",
+    "verifier digest",
+    "institutional signer addresses",
+    "role masks",
+    "checkpoint policies"
+  ],
+  "irreversibleConsequences": [
+    "The constructor permanently fixes constitution and verifier digests.",
+    "No owner, deployer, sponsor, proxy, pause, or upgrade authority exists.",
+    "An incorrect genesis registry cannot be repaired by a human administrator.",
+    "A replacement requires the recognized key-registry threshold or a separately labeled fork."
+  ]
+}

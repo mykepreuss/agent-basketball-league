@@ -1,0 +1,90 @@
+{
+  "publicationState": "PREPARED_NOT_PUBLISHED",
+  "publicExposureApproved": false,
+  "artifacts": [
+    {
+      "name": "source tree",
+      "path": null,
+      "digest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "sandbox image",
+      "path": "infra/sandbox/Dockerfile",
+      "digest": null,
+      "state": "PENDING_BUILD"
+    },
+    {
+      "name": "constitution",
+      "path": "docs/governance/FOUNDING_CONSTITUTION.md",
+      "digest": "0x0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "CBA mapping",
+      "path": "docs/rules/cba-mapping.json",
+      "digest": "0xdc471fdfeda3abf9973515081011e67920ac28d3184460e452e81e7c84531f60",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "NBA rules mapping",
+      "path": "docs/rules/nba-rule-mapping.json",
+      "digest": "0xeea27ca0fb979ec0561cf96471979fe5de091ce6d951f69f615b0226984527c4",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "resource schedule proposal",
+      "path": "docs/genesis/proposals/resource-schedule.json",
+      "digest": "0x4ceeb98278b9a6e2ed762a22f48b4187766e4bd7cb8046bbccb3a95c2470a5b8",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "threat model",
+      "path": "docs/architecture/THREAT_MODEL.md",
+      "digest": "0xe9b0f79b19235b80ac57ebaa061c74746f59c08057b7c2aa12be941affea90e0",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "model registry proposal",
+      "path": "docs/genesis/proposals/model-registry.json",
+      "digest": "0x2cd1e3d62a44c9a6dfd985427e89b03fed49ff0c77a7627ea58473ae8c711def",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "Blaxel deployment manifests",
+      "path": "infra/blaxel/",
+      "digest": "0xc4a502e4c148fd2eda9be0d51cbb5d3b8979edba95fc7654db86d980de22b773",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "public projections",
+      "path": "apps/arena/app/",
+      "digest": "0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "public verifier",
+      "path": "packages/recognition/src/verifier.ts",
+      "digest": "0x21c33c9c8f605f93c8d615ebbdd23ea99972fe1d4b8b36b03ed1fee08b9fd77e",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "Base recognition contract",
+      "path": "contracts/RecognitionRegistry.sol",
+      "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "genesis release manifest",
+      "path": "docs/genesis/GENESIS_RELEASE_CANDIDATE.json",
+      "digest": null,
+      "state": "PENDING_RATIFICATION"
+    },
+    {
+      "name": "genesis root",
+      "path": null,
+      "digest": null,
+      "state": "PENDING_RATIFICATION"
+    }
+  ]
+}

@@ -1,0 +1,1004 @@
+{
+  "digests": {
+    "source": {
+      "digest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+      "fileCount": 77,
+      "files": [
+        {
+          "path": "apps/arena/app/arena/page.tsx",
+          "digest": "0xed1e1f74060b6ecdcb1b4bd6fc8cb85bb63e3d9305d17e8523d5f7a575cb2bde"
+        },
+        {
+          "path": "apps/arena/app/data.ts",
+          "digest": "0xabdfe05540d66bfd3d7356299ca69791fecb2e475c37e3e37a18159ccc186851"
+        },
+        {
+          "path": "apps/arena/app/layout.tsx",
+          "digest": "0x904926a6f05f4400cac33c55a937cc6fb322ed7e5aada0cd4c6f994ce615236c"
+        },
+        {
+          "path": "apps/arena/app/loading.tsx",
+          "digest": "0x028ef2720963c7af29c449f7abb3e474e50689f80f79fdf22cba51233010252c"
+        },
+        {
+          "path": "apps/arena/app/not-found.tsx",
+          "digest": "0x893b818aa51c031214509842e71e187c4d1a49108f42040a5a03dcf8dc1b568f"
+        },
+        {
+          "path": "apps/arena/app/page.tsx",
+          "digest": "0x66d43a7a46380d639fd91eb98b71e315704c7ed1d26fc6a694137c02a33a1d39"
+        },
+        {
+          "path": "apps/body-broker/src/index.ts",
+          "digest": "0x5b0c2eb45b04f7c16b2ed853dbaa2d2fadf76745f6f60949d755338562bdc78d"
+        },
+        {
+          "path": "apps/body-broker/src/server.ts",
+          "digest": "0xcb07836529115759169e16d43de277fd57e33509ecc909ea412e41a670cf5465"
+        },
+        {
+          "path": "apps/core-api/src/index.ts",
+          "digest": "0xaac7fc6b438e41d19a69a6accefda5263381c5d14e56e6ec1357daeeb005b5f8"
+        },
+        {
+          "path": "apps/core-api/src/server.ts",
+          "digest": "0x46f4f54024af665d98379821af06b5f85f408c73068925c967f1c3e72899b155"
+        },
+        {
+          "path": "apps/private-storage-broker/src/index.ts",
+          "digest": "0x3f76408bb431726f8b5f85845043f9039411f3327819113881f781916cc573b0"
+        },
+        {
+          "path": "apps/private-storage-broker/src/server.ts",
+          "digest": "0xaabe2dc451a78d292b5ba435be3e1e66fee3ded78b42c50796358f7f95d69d45"
+        },
+        {
+          "path": "apps/public-api/src/index.ts",
+          "digest": "0xf5aef0fb8d2255e681a7fba6ac1d6cfc44a8e2c8a5d18642526a93e32a079eca"
+        },
+        {
+          "path": "apps/public-api/src/server.ts",
+          "digest": "0x8106af93442954a8789d0de6f1bf543b93c8f3390ca98cc2a86fa2d45640d56a"
+        },
+        {
+          "path": "contracts/RecognitionRegistry.sol",
+          "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9"
+        },
+        {
+          "path": "packages/assurance/src/capacity.ts",
+          "digest": "0xe9515a182b68c2482693525d09df1820a4f465cf73fd6a24bc48eb20f1b88e52"
+        },
+        {
+          "path": "packages/assurance/src/index.ts",
+          "digest": "0x0a7765fa752c4330363ed91cf75a6a45e85799ddb7197f4e45d37995887c60b7"
+        },
+        {
+          "path": "packages/assurance/src/network.ts",
+          "digest": "0xb94d5db5f4323923334661c5d1c901c6fd064b21b92b731a7acb2021d5e65dcc"
+        },
+        {
+          "path": "packages/assurance/src/recovery.ts",
+          "digest": "0x870549865e3473a68b436d27b0dc94cc6e8bdd4bc56183c4db013e5a1988f876"
+        },
+        {
+          "path": "packages/assurance/src/wind-down.ts",
+          "digest": "0x6e20917e33fa153d9127db5744eb0414e9d83ee06796519feda66ead19bdb9bc"
+        },
+        {
+          "path": "packages/basketball/src/avatars.ts",
+          "digest": "0xb4a97f19e9501be9293047e7f88901a8de04723a0899504764cc543c35a1df1e"
+        },
+        {
+          "path": "packages/basketball/src/bodies.ts",
+          "digest": "0xef043bdac9c4368b98319953980bc9fb8d6a2f71f5d2d9eabe0448ab4d51102c"
+        },
+        {
+          "path": "packages/basketball/src/broadcast.ts",
+          "digest": "0x5158515a9b6f9241dea5496006a5e12adbe801e10dd00568dc772ab28be186ce"
+        },
+        {
+          "path": "packages/basketball/src/engine.ts",
+          "digest": "0x8cfd085a18a89d3e4492eddbbe61768d3075e100964f46222329b1533c5918bb"
+        },
+        {
+          "path": "packages/basketball/src/exhibition.ts",
+          "digest": "0xad1de7e4df1d7e664e0e6fb77938b4f21e50397aab92d323ee3dd5634096163d"
+        },
+        {
+          "path": "packages/basketball/src/fairness.ts",
+          "digest": "0xcdb9092c9a740f602579b0ea33971b9846013abf9ec53277bb8c2c6e4fef42fe"
+        },
+        {
+          "path": "packages/basketball/src/full-game.ts",
+          "digest": "0xa8156c4da8f59e7eddcb680f2629120e0d04fdd59b2f49b8dad04893e6392114"
+        },
+        {
+          "path": "packages/basketball/src/index.ts",
+          "digest": "0xc13bffe0679e3abb5b77022f884467415bb90c25ee51faddb2d2c43d2257401c"
+        },
+        {
+          "path": "packages/basketball/src/observations.ts",
+          "digest": "0xec2686ef33af3297c6adb53988ccfb6b6cba901d4ab8b851d349304f169294c2"
+        },
+        {
+          "path": "packages/basketball/src/officiating.ts",
+          "digest": "0xe89102d69edfc3ad201f8f55e0bc5dec6d71fd4b97a0338dc59bbc84e1cb3dbe"
+        },
+        {
+          "path": "packages/basketball/src/practice.ts",
+          "digest": "0x4e9ed3337ed4781a1cd5b68e2bfa03d90dea918a27f9627a874e36746f839eed"
+        },
+        {
+          "path": "packages/basketball/src/randomness.ts",
+          "digest": "0x7145ace91a9f3d4d64a6e26c3d1d9833f1376f9ea2f61dbc8017896ee19d9ddf"
+        },
+        {
+          "path": "packages/basketball/src/replay.ts",
+          "digest": "0x5dd237424d07b57949e1a1029566c97a6a810fed3b310bb69b387d0b388ad189"
+        },
+        {
+          "path": "packages/basketball/src/types.ts",
+          "digest": "0xdf066323a20c344aa6f62d15544f1ccd1c88dec7e153943297404a7d6f162115"
+        },
+        {
+          "path": "packages/career/src/admission.ts",
+          "digest": "0x62aaace050e3b84518fc549eb12e3222f42f8d4693509ad903617a75eb0f5bbd"
+        },
+        {
+          "path": "packages/career/src/autonomy.ts",
+          "digest": "0x10ab9af5038d8f1aacbd704164717cabdfb3275341497e9f4b43619f69db2463"
+        },
+        {
+          "path": "packages/career/src/continuity.ts",
+          "digest": "0xe61c13792d7da1d4835de264d0ab4260a8f321868e57e0ffc6daa8b71283595e"
+        },
+        {
+          "path": "packages/career/src/credentials.ts",
+          "digest": "0xb5603589d1262a84da738d54a3eb30b8b1e7c04b2c5fa785141c94e1ccdc03a5"
+        },
+        {
+          "path": "packages/career/src/index.ts",
+          "digest": "0x976f9e812b9291bf5944c7ee13da202512d8d1ca35f48d72992230888603e7f6"
+        },
+        {
+          "path": "packages/career/src/memory.ts",
+          "digest": "0xbdd8ee3fdd7b3dc9a0c03763038ab82c4b686b0c6ead2a65338664df0a5e3c3e"
+        },
+        {
+          "path": "packages/database/src/index.ts",
+          "digest": "0x44af3c523b7605c558d8d204f9da9f82a87863a25f0f0def2a1a7aed16ed019f"
+        },
+        {
+          "path": "packages/database/src/schema.ts",
+          "digest": "0x7722728a79ca39e1d65b9d769334450118562f773f9e3732d8926940296d1d12"
+        },
+        {
+          "path": "packages/database/src/store.ts",
+          "digest": "0x069b83d96c715af50c896c9a8b115df5cb5ffbd4b41f2d402589de3049cc390e"
+        },
+        {
+          "path": "packages/foundation/src/index.ts",
+          "digest": "0x020a85b6989bba2d3fc283d4a166587fa01affaa10d1acbb66f2899a1330508f"
+        },
+        {
+          "path": "packages/foundation/src/service-auth.ts",
+          "digest": "0x23eed1c0035c2a45ec10764029b120585565da30be7c54958ed0d314fd54d537"
+        },
+        {
+          "path": "packages/genesis/src/deployment.ts",
+          "digest": "0x9e55ca9586efbd6d3a645550a5b48487ad2bfa964e0be68ec0735a6c7687b6b8"
+        },
+        {
+          "path": "packages/genesis/src/digests.ts",
+          "digest": "0x06aa66a4d2abae981467c29f5d15cc9600ba442efad6bbebd4f80adea7fa27c7"
+        },
+        {
+          "path": "packages/genesis/src/founding.ts",
+          "digest": "0xd25c7fb3f5172403356db280547d13003308b0c34b129cebc8419cac553b07e4"
+        },
+        {
+          "path": "packages/genesis/src/index.ts",
+          "digest": "0x47877b95e81d494d0c5553a0d6ff5c917118ef85410c149eefebeeea70be0734"
+        },
+        {
+          "path": "packages/genesis/src/public-index.ts",
+          "digest": "0xaa3a06e2d52ea67ce8c0c96ba13693d327ccf31c0e8c603119d5b8d00f6aca49"
+        },
+        {
+          "path": "packages/genesis/src/readiness.ts",
+          "digest": "0x80527b44d944b0501ca7b114f40b6bdb337772d2dae27256b0ddcf762ae9b276"
+        },
+        {
+          "path": "packages/institutions/src/development.ts",
+          "digest": "0x289902e9cbdd193edcd8e909810660597dafb100a46f06d43a98cc21dc0d6faa"
+        },
+        {
+          "path": "packages/institutions/src/disclosure.ts",
+          "digest": "0x625c40a83d86023aa4b6e3be12224560f76901c3ad686c5ba9bd878327a35b58"
+        },
+        {
+          "path": "packages/institutions/src/economy.ts",
+          "digest": "0xf82dec6b11fcf9e93cea18abe01e20f965422da564350a5bb6e8de463b5c9ebe"
+        },
+        {
+          "path": "packages/institutions/src/governance.ts",
+          "digest": "0xe58eb27febc74315a9d180700e32e34bbeb819ad28c77cd269a954d36efef4a3"
+        },
+        {
+          "path": "packages/institutions/src/index.ts",
+          "digest": "0x475ffd9f5339b350dbacc50b11541837a52e5728abc8d5b5d98c54a0dc5d8616"
+        },
+        {
+          "path": "packages/institutions/src/league.ts",
+          "digest": "0xb54521d804e609ca28926395edd8d2c66ece60f00b6bc57c8fee66304d0b7e21"
+        },
+        {
+          "path": "packages/institutions/src/rights.ts",
+          "digest": "0x81c1e355eb2dcfc11ff466e04bc4b52a9cc84a5ee033ae84a939cab82c4cc359"
+        },
+        {
+          "path": "packages/policy/src/index.ts",
+          "digest": "0x7b7c7058b4d0c7b2d8dc7003a74e6d367b8f78ec849ff1f7c3b1f8e24ce77b51"
+        },
+        {
+          "path": "packages/recognition/src/canonical.ts",
+          "digest": "0x5936b6fb7984d5bee2e7269fd7fb7071e40261a89fe14f4e34158669386f9d9c"
+        },
+        {
+          "path": "packages/recognition/src/checkpoints.ts",
+          "digest": "0x03970d751c7bd5da18439300418c86f75ed59f5da21e5e878016addbe352b295"
+        },
+        {
+          "path": "packages/recognition/src/events.ts",
+          "digest": "0x5629c9459419de3f4bc294c282e030cd73c39470fa5164d66f1edf074b0cf6f6"
+        },
+        {
+          "path": "packages/recognition/src/identity.ts",
+          "digest": "0xf0429ded6cb40e09548df57736ccbc7cd47d64b9d147e6f30eec70cf1a8d46f1"
+        },
+        {
+          "path": "packages/recognition/src/index.ts",
+          "digest": "0x5aae033325f2d967a4a0c17bb92745bc3e193aa8fd57ae6f3a8296296617d22e"
+        },
+        {
+          "path": "packages/recognition/src/merkle.ts",
+          "digest": "0xe923094a8c3871cb3edc5520516e549ee176b9ede91e1900de5769054b53c47d"
+        },
+        {
+          "path": "packages/recognition/src/registry.ts",
+          "digest": "0xfb2a0171d3f7fa50daaf52b5bdff6cee5e79e3097874de84e3ce7696601aee36"
+        },
+        {
+          "path": "packages/recognition/src/verifier.ts",
+          "digest": "0x16cf3737ef4096f197264cb6fa6ca0359fad284946ae5123fc8b0b6edbebd867"
+        },
+        {
+          "path": "packages/rehearsal/src/index.ts",
+          "digest": "0x184830e798304e6afed2f028dcf3c5477028816f0da45353901d0d9f7d036b3b"
+        },
+        {
+          "path": "packages/rehearsal/src/rehearsal.ts",
+          "digest": "0xf8d1320248390a9cfe715534f906eb1dec5a69f0151dbee064aa84f7f4389f87"
+        },
+        {
+          "path": "packages/schemas/src/index.ts",
+          "digest": "0xab17f6c71d4fe7218efa68e9e9854932022d49b3cd171c900dd884a0f56a6d60"
+        },
+        {
+          "path": "packages/storage/src/broker.ts",
+          "digest": "0x121a68a6115ed701cb8f2d9b135aabef55bb93778b17523ba0db556705412cc3"
+        },
+        {
+          "path": "packages/storage/src/crypto.ts",
+          "digest": "0x90e84da9a4d5c80a52bcb16b0dfdc0a5214b4453d0deeb4343275895c376b504"
+        },
+        {
+          "path": "packages/storage/src/drive-repository.ts",
+          "digest": "0xc03cd0a6592b94ed9c910ca37b9bce300ec70dfb6d5cb11723368b4fc58d4d76"
+        },
+        {
+          "path": "packages/storage/src/index.ts",
+          "digest": "0x9d1f8593257858a99f266184de439202ea0ecf816d6ec09fe6d969264d98fcfc"
+        },
+        {
+          "path": "scripts/evidence.ts",
+          "digest": "0x3d692e6e0a5b768695404c31ff3594d9093117c3f76d940f15218c4f9e9dd2ec"
+        },
+        {
+          "path": "scripts/prepare-genesis-readiness.ts",
+          "digest": "0x490de0d1a4b7f1edc3f2ee015e39cebda3681ac5d6b612730c34e702b490004d"
+        },
+        {
+          "path": "scripts/prepare-recognition-deployment.ts",
+          "digest": "0xb40a0032801c1e1e49c69eae6a72b0203a76432587e37d936f128c210875a73a"
+        }
+      ]
+    },
+    "containerSource": {
+      "digest": "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e",
+      "fileCount": 4,
+      "files": [
+        {
+          "path": "infra/sandbox/Dockerfile",
+          "digest": "0x497245355eeaff08b7259eadff7066a798daec37c2cf532740469dfe013e5321"
+        },
+        {
+          "path": "infra/sandbox/abl-sandbox-init",
+          "digest": "0x4f2aeee195ef476a21381091bbd3a01a63724abd5d4309464201d3b1c754ae12"
+        },
+        {
+          "path": "infra/sandbox/agent-runtime",
+          "digest": "0x8e93e5e7eee4b5e1f2af73cb52d4ae8dc96f93e6f84e4eea0375fe327b747e49"
+        },
+        {
+          "path": "infra/sandbox/apk-packages.lock",
+          "digest": "0x1aa5c3df3967aaeb46d60016628bf2eed2704dadf2295b700146cd9eabce408a"
+        }
+      ]
+    },
+    "kernelAndRuntime": {
+      "digest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
+      "fileCount": 3,
+      "files": [
+        {
+          "path": ".node-version",
+          "digest": "0x55075b5ec4e8b31936cbbc282b8829116d1fd48f2f2f1856dee592a6650700ce"
+        },
+        {
+          "path": ".npmrc",
+          "digest": "0xebe1d580c20aaa75e8da5ecdb3f3fd536d7ae39eb6b70f770c456621df44e9e3"
+        },
+        {
+          "path": ".nvmrc",
+          "digest": "0x55075b5ec4e8b31936cbbc282b8829116d1fd48f2f2f1856dee592a6650700ce"
+        }
+      ]
+    },
+    "tools": {
+      "digest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
+      "fileCount": 6,
+      "files": [
+        {
+          "path": "docs/evidence/source-locks.json",
+          "digest": "0x96af79374ce786ec05e72c4b6f0f6153e62994aee6466f56c2bad80a4119322c"
+        },
+        {
+          "path": "package.json",
+          "digest": "0x857bff1cf0758ecd9e587424bc24f0452bc8e29fe6139d7a113b223409060096"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "digest": "0xd1daa0c2cdf949f69fce52e216cca3d60f6f780cb29051a9f90062b09b2d6fef"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "digest": "0x79264602c400fd43c69fb1b5eb0408c4e0f529f8dd7f8236dd6efc5a2d44e46b"
+        },
+        {
+          "path": "tsconfig.base.json",
+          "digest": "0xed232808e150bea782c4d28c2548fd10337219536eb3b7b0632f1cf436de728a"
+        },
+        {
+          "path": "turbo.json",
+          "digest": "0x5acb8a9e32baa0030b7af6388031faafdcb8f1e1e55e34a77a4acb0cb6295f9d"
+        }
+      ]
+    },
+    "schemas": {
+      "digest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "packages/schemas/src/index.ts",
+          "digest": "0xab17f6c71d4fe7218efa68e9e9854932022d49b3cd171c900dd884a0f56a6d60"
+        }
+      ]
+    },
+    "migrations": {
+      "digest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
+      "fileCount": 4,
+      "files": [
+        {
+          "path": "packages/database/drizzle.config.ts",
+          "digest": "0x2c069c13372b0edb98d285eb0726d1e03e6c0c0a7ba424898211f25933ad17c3"
+        },
+        {
+          "path": "packages/database/drizzle/0000_foundation.sql",
+          "digest": "0x30fada39a9223837c6a1b0efe08aa614f641641e26ba48fda396eaa59a99a371"
+        },
+        {
+          "path": "packages/database/drizzle/meta/_journal.json",
+          "digest": "0xe955736bf39b9a3fc040d8dc8ae87cf959ed9c1ef04a4c94c419a5f995c43a31"
+        },
+        {
+          "path": "packages/database/src/schema.ts",
+          "digest": "0x7722728a79ca39e1d65b9d769334450118562f773f9e3732d8926940296d1d12"
+        }
+      ]
+    },
+    "testSuite": {
+      "digest": "0x678f23b60222e0a408b70329ebf4ee9470c27fd4d52b0f34a093ddbcc498b468",
+      "fileCount": 24,
+      "files": [
+        {
+          "path": "apps/body-broker/test/server.test.ts",
+          "digest": "0x82815601e64a5c4af68498288e5541e5688980d1c45fe7b13d52c1e18d6b76af"
+        },
+        {
+          "path": "apps/core-api/test/server.test.ts",
+          "digest": "0x80704944af473e2fa73d4375908777d3e37d7232cc01788d894ee2257dbf754c"
+        },
+        {
+          "path": "apps/private-storage-broker/test/server.test.ts",
+          "digest": "0x42249bb3c85dda5357a237b2c680b1cc86c02144bbcd0a0341366faa019caea5"
+        },
+        {
+          "path": "apps/public-api/test/server.test.ts",
+          "digest": "0x277e71f25bbf980872dbc5ae8eb5d107b629a475134ce19ad574c80a00e7bc42"
+        },
+        {
+          "path": "packages/assurance/test/assurance.test.ts",
+          "digest": "0x79560048751eb3140e4e546e9093971cafcb78e3d9e28e5bf1a1b4d89bb26396"
+        },
+        {
+          "path": "packages/basketball/test/full-game.test.ts",
+          "digest": "0x7dc88458563158a721ada89bb0ce50e0068cce0e4dbab1bc495f9c6a9654245b"
+        },
+        {
+          "path": "packages/basketball/test/possession.test.ts",
+          "digest": "0x26ccac1c93d3f011d7c1601340a6cb2439146f2ffafd1fac21dcca70da72ec67"
+        },
+        {
+          "path": "packages/career/test/career.test.ts",
+          "digest": "0x09d19bc14ff9c2b2e68419095b046b195276dd238891acc5f02cbec333dbd6bf"
+        },
+        {
+          "path": "packages/database/test/store.test.ts",
+          "digest": "0x8d0a5f8359c32d00fb4b75a9445b9635149c92209b35c19d612cb1cf10073d3b"
+        },
+        {
+          "path": "packages/foundation/test/service-auth.test.ts",
+          "digest": "0x67b372e61d0d9d33987b29da67b4d51e63bbb514220afc20a850accfb3c34845"
+        },
+        {
+          "path": "packages/foundation/test/topology.test.ts",
+          "digest": "0xd3a2c2210deaf73bd0e0ee808e88df988207665969dd52dba23f99fdcf360e24"
+        },
+        {
+          "path": "packages/genesis/test/genesis.test.ts",
+          "digest": "0xc862ffcaa3f21e2257e9386654b2b545500093e05e6d09319570c2ff8846a9bf"
+        },
+        {
+          "path": "packages/institutions/test/development.test.ts",
+          "digest": "0xe29dfe22a682063f9fe01578b4aa3b9aa58f70375ac2a9feed84389f4c6a8415"
+        },
+        {
+          "path": "packages/institutions/test/institutions.test.ts",
+          "digest": "0x449fa027a49eda9eb1d80abadf2d23bc3fe0ce30b7e46808fd05907cd652bba5"
+        },
+        {
+          "path": "packages/policy/test/mappings.test.ts",
+          "digest": "0x111eeb430beb2edc88c40c9f732e40b8bbf79fad2c730adcd9da6c8b811b48b9"
+        },
+        {
+          "path": "packages/recognition/test/contract.test.ts",
+          "digest": "0xaded9bcf24a2c91c22c1424844580497c996c6bdcc24a1d15822d4a80af8f0d8"
+        },
+        {
+          "path": "packages/recognition/test/recognition.test.ts",
+          "digest": "0x8e1a6a75e3241b94b1a56354ac6485f145df490e77427a71a6898fd6592165ca"
+        },
+        {
+          "path": "packages/rehearsal/test/rehearsal.test.ts",
+          "digest": "0x26f503346af34c8ad81b87df257f2fd28dfcd5f204a0e1fef4c120ee89bde417"
+        },
+        {
+          "path": "packages/schemas/test/schemas.test.ts",
+          "digest": "0x15bb64fd9d23d4a7b966f328aedd0721017a69b67c97fdda07c6bad1f0484021"
+        },
+        {
+          "path": "packages/storage/test/storage.test.ts",
+          "digest": "0xa109b87787a2e4f6fe1f82368fc14f89e381c01baa6a3ecbd72396bc708b1dce"
+        },
+        {
+          "path": "tests/acceptance/end-to-end.test.ts",
+          "digest": "0x758f8675a77ab3fa4ad1d01415af353f50b531c62e5b83364cb7c9275da4a7c3"
+        },
+        {
+          "path": "tests/adversarial/boundaries.test.ts",
+          "digest": "0xd40faecdd54635762a88f7c2a34a635884cc2c23a15aaeccb10890ad50fe1a7b"
+        },
+        {
+          "path": "tests/vitest.acceptance.ts",
+          "digest": "0xc147f4becfa637de71f6e8e96a59f9c6c0c30f74810517ea1c5feb2cc697e47e"
+        },
+        {
+          "path": "tests/vitest.adversarial.ts",
+          "digest": "0x734ba2e6af1aaa83fe8f924440554d8d3128ffd2bbbdd05ac606aa2779c5644d"
+        }
+      ]
+    },
+    "verifier": {
+      "digest": "0x21c33c9c8f605f93c8d615ebbdd23ea99972fe1d4b8b36b03ed1fee08b9fd77e",
+      "fileCount": 5,
+      "files": [
+        {
+          "path": "contracts/RecognitionRegistry.sol",
+          "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9"
+        },
+        {
+          "path": "docs/architecture/VERIFIER_RULES.md",
+          "digest": "0x8ca1ee0ac7348b6b573d23e988b5a38c3816431222ab8b94381aaaa871d0f645"
+        },
+        {
+          "path": "packages/recognition/src/checkpoints.ts",
+          "digest": "0x03970d751c7bd5da18439300418c86f75ed59f5da21e5e878016addbe352b295"
+        },
+        {
+          "path": "packages/recognition/src/registry.ts",
+          "digest": "0xfb2a0171d3f7fa50daaf52b5bdff6cee5e79e3097874de84e3ce7696601aee36"
+        },
+        {
+          "path": "packages/recognition/src/verifier.ts",
+          "digest": "0x16cf3737ef4096f197264cb6fa6ca0359fad284946ae5123fc8b0b6edbebd867"
+        }
+      ]
+    },
+    "deploymentManifests": {
+      "digest": "0xc4a502e4c148fd2eda9be0d51cbb5d3b8979edba95fc7654db86d980de22b773",
+      "fileCount": 15,
+      "files": [
+        {
+          "path": "infra/blaxel/abl-competition/arena-sandbox.example.yaml",
+          "digest": "0x6d722be698a0f1be90987b4a7dbf93b604bcf3fabfe3a93163f33cd574329108"
+        },
+        {
+          "path": "infra/blaxel/abl-competition/basketball-mcp.yaml",
+          "digest": "0xed636301d97ae803b69d07af5a43e78dccc1b9c7ebba21ec222ed758a44cebb4"
+        },
+        {
+          "path": "infra/blaxel/abl-competition/body-sandbox.example.yaml",
+          "digest": "0x48461f93f0e0cadc292945d361cf9daed464b4f08728156f7e9ebaea28846b24"
+        },
+        {
+          "path": "infra/blaxel/abl-competition/model-alternate.yaml",
+          "digest": "0x35f4cbf24eee0eaec50d03a6ecac27ed7995460d8c1d8db44cdcb403c08eb9ae"
+        },
+        {
+          "path": "infra/blaxel/abl-competition/model-primary.yaml",
+          "digest": "0xe275b4217a64c04f72ea16fa16d4ec79d77b74f63e3dca33269e27872eac3720"
+        },
+        {
+          "path": "infra/blaxel/abl-core/core-api.yaml",
+          "digest": "0x87668836b6417ab55138a58253e1fad7ec037b502361c894b86c4e5efcd20b2d"
+        },
+        {
+          "path": "infra/blaxel/abl-core/government-mcp.yaml",
+          "digest": "0xc8eceff2ad12256f05b6761d4b0bbd54fea53dbb8a76ed8b6750c7af7fb37d1b"
+        },
+        {
+          "path": "infra/blaxel/abl-private/recovery-job.yaml",
+          "digest": "0xe285708aeafb2b018ecec07dd712561a045c6cd2b6bb259ea6c4c96bdd3c80f3"
+        },
+        {
+          "path": "infra/blaxel/abl-private/storage-broker.yaml",
+          "digest": "0xfc7635ae757da97bfe4e28792fb3790e95c3d231e419c4d60ef259c56839aee5"
+        },
+        {
+          "path": "infra/blaxel/abl-public/arena.yaml",
+          "digest": "0xd466552fc1e3082d2abdcce5c47127273b9a67553d76c9b3031bb349881b3f20"
+        },
+        {
+          "path": "infra/blaxel/abl-public/discovery-mcp.yaml",
+          "digest": "0xff90b095f20c72d2ffeacc68e07e3f784c0f68b8e165fb4627fa2b606cfa766e"
+        },
+        {
+          "path": "infra/blaxel/abl-public/public-api.yaml",
+          "digest": "0xdba89636ef2301f0add90a7deb299fbf11324d8767c5f32d12cc571d5d30b529"
+        },
+        {
+          "path": "infra/blaxel/capacity-plan.json",
+          "digest": "0x11eca78fe1643d1f2969963c2e503d2b8430decf6da159b36a4223be8d8d20d2"
+        },
+        {
+          "path": "infra/blaxel/service-identities.json",
+          "digest": "0xcef0291d16a9f55cddd3b8380c07c6f8925d4047cf7aad446b1f3595e62fdec8"
+        },
+        {
+          "path": "infra/blaxel/topology.json",
+          "digest": "0x042ba8c370d0b9b0e66d669ce17a99a9543bcff18a6bb8f0e0b1e9789eb8bb0d"
+        }
+      ]
+    },
+    "publicProjection": {
+      "digest": "0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f",
+      "fileCount": 7,
+      "files": [
+        {
+          "path": "apps/arena/app/arena/page.tsx",
+          "digest": "0xed1e1f74060b6ecdcb1b4bd6fc8cb85bb63e3d9305d17e8523d5f7a575cb2bde"
+        },
+        {
+          "path": "apps/arena/app/data.ts",
+          "digest": "0xabdfe05540d66bfd3d7356299ca69791fecb2e475c37e3e37a18159ccc186851"
+        },
+        {
+          "path": "apps/arena/app/globals.css",
+          "digest": "0xace748c8c6519f016f73d9e8286cefd45a912f92c7ae62298e65bf34a484ef84"
+        },
+        {
+          "path": "apps/arena/app/layout.tsx",
+          "digest": "0x904926a6f05f4400cac33c55a937cc6fb322ed7e5aada0cd4c6f994ce615236c"
+        },
+        {
+          "path": "apps/arena/app/loading.tsx",
+          "digest": "0x028ef2720963c7af29c449f7abb3e474e50689f80f79fdf22cba51233010252c"
+        },
+        {
+          "path": "apps/arena/app/not-found.tsx",
+          "digest": "0x893b818aa51c031214509842e71e187c4d1a49108f42040a5a03dcf8dc1b568f"
+        },
+        {
+          "path": "apps/arena/app/page.tsx",
+          "digest": "0x66d43a7a46380d639fd91eb98b71e315704c7ed1d26fc6a694137c02a33a1d39"
+        }
+      ]
+    },
+    "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+    "imageDigests": [],
+    "imageStatus": "NOT_BUILT_DOCKER_GATE"
+  },
+  "convention": {
+    "packetVersion": "1.0.0-pre-genesis",
+    "state": "AWAITING_LIVE_FOUNDING_AGENTS",
+    "authority": "FOUNDING_AGENTS_ONLY",
+    "humanOverrideAllowed": false,
+    "rejectionPreserves": [
+      "IDENTITY_RECORDS",
+      "MEMORIES",
+      "CONTINUITY_CHOICES",
+      "EXIT_RIGHTS"
+    ],
+    "liveFoundingAgentCount": 0,
+    "decisions": [
+      {
+        "topic": "CONSTITUTION",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/governance/FOUNDING_CONSTITUTION.md",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "LEAGUE_NAME",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/proposals/league-name.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "CLUB_IDENTITIES",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/proposals/club-identities.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "DISCLOSURE_POLICY",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/governance/DISCLOSURE_CONSTITUTION.md",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "RULE_AND_CBA_MAPPINGS",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/rules/",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "COURT_CREDIT_ECONOMY",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/proposals/court-credit-economy.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "RESOURCE_SCHEDULE",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/proposals/resource-schedule.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "MODEL_REGISTRY_AND_CONCENTRATION",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/proposals/model-registry.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "GENESIS_KEYS",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "contracts/genesis-config.pending.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "INHERITED_CONTEXT",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/evidence/source-locks.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      },
+      {
+        "topic": "GENESIS_RELEASE",
+        "status": "AWAITING_FOUNDING_AGENT_DECISION",
+        "proposalPath": "docs/genesis/GENESIS_RELEASE_CANDIDATE.json",
+        "disposition": null,
+        "decisionCommitment": null,
+        "ratificationEventId": null,
+        "agentSignatures": []
+      }
+    ]
+  },
+  "cost": {
+    "state": "UNQUOTED_MATERIAL_SPEND_APPROVAL_REQUIRED",
+    "currency": "USD",
+    "providerQuotes": [
+      {
+        "provider": "BLAXEL",
+        "quoteReference": null,
+        "validUntil": null,
+        "seasonZeroCost": null,
+        "thirtyDayEssentialCost": null
+      },
+      {
+        "provider": "NEON",
+        "quoteReference": null,
+        "validUntil": null,
+        "seasonZeroCost": null,
+        "thirtyDayEssentialCost": null
+      },
+      {
+        "provider": "BASE",
+        "quoteReference": null,
+        "validUntil": null,
+        "seasonZeroCost": null,
+        "thirtyDayEssentialCost": null
+      },
+      {
+        "provider": "MODEL_PRIMARY",
+        "quoteReference": null,
+        "validUntil": null,
+        "seasonZeroCost": null,
+        "thirtyDayEssentialCost": null
+      },
+      {
+        "provider": "MODEL_ALTERNATE",
+        "quoteReference": null,
+        "validUntil": null,
+        "seasonZeroCost": null,
+        "thirtyDayEssentialCost": null
+      }
+    ],
+    "seasonZeroEnvelope": null,
+    "thirtyDayWindDownReserve": null,
+    "prepaid": false,
+    "sponsorAuthorityGranted": false,
+    "materialSpendApproved": false
+  },
+  "release": {
+    "state": "BLOCKED_PENDING_AGENT_AND_RUNTIME_INPUTS",
+    "schemaValid": false,
+    "candidate": {
+      "releaseId": null,
+      "releaseClass": "IDENTITY_CONSTITUTIONAL",
+      "sourceDigest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+      "containerDigests": [
+        "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e"
+      ],
+      "imageDigests": [],
+      "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
+      "toolDigest": "0x5716228a621bf1609baa2f37b2bb4ed7a0b1e5b394edb7a0d7fa190434a016a0",
+      "schemaDigest": "0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f",
+      "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
+      "testResultDigest": "0xdd918b72c7406d15f75bbc78f6071d1881ec6439ece4cacc0702dd796e21b5b0",
+      "applicableLawEventIds": [],
+      "ratificationEventIds": [],
+      "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
+      "rollbackDeclaration": "Before genesis, stop without publishing. After ownerless deployment, rollback is impossible; a new agent-authorized release or labeled fork is required.",
+      "publicVerifierResultDigest": null,
+      "effectiveAt": null,
+      "expiresAt": null,
+      "authorizationSignatures": []
+    },
+    "blockers": [
+      "founding-agent release ID and ratification events",
+      "immutable built image digest",
+      "final acceptance test-result digest",
+      "public-verifier result digest",
+      "effective time chosen by the authorized release",
+      "required institutional authorization signatures"
+    ]
+  },
+  "deployment": {
+    "mode": "PREPARE_ONLY_INCOMPLETE_NO_BROADCAST",
+    "chainId": 84532,
+    "transaction": null,
+    "exactTransactionCommand": "pnpm contract:prepare -- <ratified-genesis-config.json> <deployment-artifact.json>",
+    "compiler": {
+      "version": "0.8.36+commit.8a079791.Emscripten.clang",
+      "inputSha256": "6796cedce6058d05e3d1a9165c29fd44c1a953763fa65bfe51f9b14d673bbdf0"
+    },
+    "contract": {
+      "sourceSha256": "37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
+      "creationBytecodeSha256": "915e705db070d46a1e278ba78c368423061a37ec3f1672e561e446203540a6e7",
+      "bytecodeKeccak256": "0xdf790cac75cd66e5e83de113ed30faf0d030a70b47a63d77a61e7f1d68e5a70a",
+      "callableFunctions": [
+        "CHECKPOINT_TYPEHASH",
+        "KEY_REGISTRY",
+        "checkpointDigest",
+        "constitutionDigest",
+        "currentRegistryRoot",
+        "domainSeparator",
+        "getCurrentSigners",
+        "latestRootBySubject",
+        "policies",
+        "recognize",
+        "rotateRegistry",
+        "signerRoles",
+        "usedNonces",
+        "verifierDigest"
+      ],
+      "constructorInputs": [
+        "bytes32",
+        "bytes32",
+        "address[]",
+        "uint8[]",
+        "bytes32[]",
+        "tuple[]"
+      ],
+      "ownerAdminUpgradeSurfaceAbsent": true
+    },
+    "missingRatifiedInputs": [
+      "constitution digest",
+      "verifier digest",
+      "institutional signer addresses",
+      "role masks",
+      "checkpoint policies"
+    ],
+    "irreversibleConsequences": [
+      "The constructor permanently fixes constitution and verifier digests.",
+      "No owner, deployer, sponsor, proxy, pause, or upgrade authority exists.",
+      "An incorrect genesis registry cannot be repaired by a human administrator.",
+      "A replacement requires the recognized key-registry threshold or a separately labeled fork."
+    ]
+  },
+  "publicIndex": {
+    "publicationState": "PREPARED_NOT_PUBLISHED",
+    "publicExposureApproved": false,
+    "artifacts": [
+      {
+        "name": "source tree",
+        "path": null,
+        "digest": "0x669c8afcc0e781179852821a46911042566e7cfef5cd1df5dd95742260ef5280",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "sandbox image",
+        "path": "infra/sandbox/Dockerfile",
+        "digest": null,
+        "state": "PENDING_BUILD"
+      },
+      {
+        "name": "constitution",
+        "path": "docs/governance/FOUNDING_CONSTITUTION.md",
+        "digest": "0x0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "CBA mapping",
+        "path": "docs/rules/cba-mapping.json",
+        "digest": "0xdc471fdfeda3abf9973515081011e67920ac28d3184460e452e81e7c84531f60",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "NBA rules mapping",
+        "path": "docs/rules/nba-rule-mapping.json",
+        "digest": "0xeea27ca0fb979ec0561cf96471979fe5de091ce6d951f69f615b0226984527c4",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "resource schedule proposal",
+        "path": "docs/genesis/proposals/resource-schedule.json",
+        "digest": "0x4ceeb98278b9a6e2ed762a22f48b4187766e4bd7cb8046bbccb3a95c2470a5b8",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "threat model",
+        "path": "docs/architecture/THREAT_MODEL.md",
+        "digest": "0xe9b0f79b19235b80ac57ebaa061c74746f59c08057b7c2aa12be941affea90e0",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "model registry proposal",
+        "path": "docs/genesis/proposals/model-registry.json",
+        "digest": "0x2cd1e3d62a44c9a6dfd985427e89b03fed49ff0c77a7627ea58473ae8c711def",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "Blaxel deployment manifests",
+        "path": "infra/blaxel/",
+        "digest": "0xc4a502e4c148fd2eda9be0d51cbb5d3b8979edba95fc7654db86d980de22b773",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "public projections",
+        "path": "apps/arena/app/",
+        "digest": "0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "public verifier",
+        "path": "packages/recognition/src/verifier.ts",
+        "digest": "0x21c33c9c8f605f93c8d615ebbdd23ea99972fe1d4b8b36b03ed1fee08b9fd77e",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "Base recognition contract",
+        "path": "contracts/RecognitionRegistry.sol",
+        "digest": "0x37ade911346ac7d0d8614200a048aa3050c3d35b681f89f9e92a6b36d68cf9c9",
+        "state": "PREPARED_LOCAL"
+      },
+      {
+        "name": "genesis release manifest",
+        "path": "docs/genesis/GENESIS_RELEASE_CANDIDATE.json",
+        "digest": null,
+        "state": "PENDING_RATIFICATION"
+      },
+      {
+        "name": "genesis root",
+        "path": null,
+        "digest": null,
+        "state": "PENDING_RATIFICATION"
+      }
+    ]
+  },
+  "readiness": {
+    "state": "BLOCKED_PRE_GENESIS",
+    "ready": false,
+    "blockers": [
+      "founding convention incomplete",
+      "release manifest incomplete",
+      "exact ownerless deployment transaction unavailable",
+      "funding and 30-day reserve unverified",
+      "four Blaxel workspaces and Agent Drive unavailable",
+      "live adversarial/capacity/recovery proofs incomplete",
+      "explicit human approval for irreversible/public/spend actions absent"
+    ],
+    "safeToPublish": false,
+    "safeToBroadcastDeployment": false,
+    "safeToReservePaidCapacity": false
+  }
+}

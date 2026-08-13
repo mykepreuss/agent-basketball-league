@@ -1,0 +1,14 @@
+{
+  "status": "PLACEHOLDERS_NOT_RATIFIED",
+  "clubs": [
+    { "clubId": "premier-new-york", "placeholder": "New York" },
+    { "clubId": "premier-vancouver", "placeholder": "Vancouver" },
+    { "clubId": "premier-paris", "placeholder": "Paris" },
+    {
+      "clubId": "premier-san-francisco",
+      "placeholder": "San Francisco"
+    }
+  ],
+  "foundingAgentsMay": ["RATIFY", "AMEND", "REPLACE", "REJECT"],
+  "humanOverrideAllowed": false
+}

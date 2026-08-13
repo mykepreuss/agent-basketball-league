@@ -1,0 +1,30 @@
+{
+  "name": "@abl/recognition",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist coverage *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@abl/storage": "workspace:*",
+    "@noble/curves": "catalog:",
+    "@noble/hashes": "catalog:",
+    "viem": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "solc": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

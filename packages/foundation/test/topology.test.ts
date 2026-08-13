@@ -1,0 +1,231 @@
+import { readFile, readdir } from "node:fs/promises";
+
+import { parse } from "yaml";
+import { describe, expect, it } from "vitest";
+
+import {
+  assertImmutableImageReference,
+  forbiddenCompetitionEnvironmentNames,
+  privateTelemetryOptOut,
+  validateTopology,
+} from "../src/index.js";
+
+const infraRoot = new URL("../../../infra/blaxel/", import.meta.url);
+
+async function readJson(url: URL): Promise<unknown> {
+  return JSON.parse(await readFile(url, "utf8")) as unknown;
+}
+
+async function readYamlDirectory(
+  directory: string,
+): Promise<Array<Record<string, unknown>>> {
+  const url = new URL(`${directory}/`, infraRoot);
+  const names = (await readdir(url)).filter((name) => name.endsWith(".yaml"));
+  return Promise.all(
+    names.map(
+      async (name) =>
+        parse(await readFile(new URL(name, url), "utf8")) as Record<
+          string,
+          unknown
+        >,
+    ),
+  );
+}
+
+function runtimeOf(resource: Record<string, unknown>): Record<string, unknown> {
+  const spec = resource.spec as Record<string, unknown>;
+  return (spec.runtime as Record<string, unknown> | undefined) ?? spec;
+}
+
+function envMap(resource: Record<string, unknown>): Map<string, string> {
+  const runtime = runtimeOf(resource);
+  const envs = (runtime.envs ?? []) as Array<{ name: string; value: string }>;
+  return new Map(envs.map((entry) => [entry.name, entry.value]));
+}
+
+describe("four-workspace topology", () => {
+  it("contains exactly the approved isolated workspaces and no public call into them", async () => {
+    const topology = validateTopology(
+      await readJson(new URL("topology.json", infraRoot)),
+    );
+    expect(
+      topology.workspaces.map((workspace) => workspace.name).sort(),
+    ).toEqual(["abl-competition", "abl-core", "abl-private", "abl-public"]);
+    expect(
+      topology.allowedCalls.some(
+        (edge) => edge.from === "abl-public" && edge.to !== "base",
+      ),
+    ).toBe(false);
+  });
+
+  it("uses Applications only for intentionally public workloads", async () => {
+    for (const directory of ["abl-core", "abl-private", "abl-competition"]) {
+      const resources = await readYamlDirectory(directory);
+      expect(
+        resources.some((resource) => resource.kind === "Application"),
+        directory,
+      ).toBe(false);
+    }
+    const publicResources = await readYamlDirectory("abl-public");
+    expect(
+      publicResources.filter((resource) => resource.kind === "Application"),
+    ).toHaveLength(2);
+  });
+
+  it("keeps competition bodies free of database, raw Drive, blfs, and provider credentials", async () => {
+    const resources = await readYamlDirectory("abl-competition");
+    for (const resource of resources) {
+      for (const name of envMap(resource).keys()) {
+        expect(
+          forbiddenCompetitionEnvironmentNames.has(name),
+          `${String(resource.kind)}/${name}`,
+        ).toBe(false);
+      }
+      expect(JSON.stringify(resource)).not.toMatch(
+        /blfs|drive_token|database_url|provider_api_key/i,
+      );
+    }
+  });
+
+  it("disables content-bearing telemetry on every nonpublic workload", async () => {
+    for (const directory of ["abl-core", "abl-private", "abl-competition"]) {
+      for (const resource of await readYamlDirectory(directory)) {
+        if (resource.kind === "Model") continue;
+        const env = envMap(resource);
+        for (const [name, value] of Object.entries(privateTelemetryOptOut)) {
+          expect(
+            env.get(name),
+            `${directory}/${String(resource.kind)}/${name}`,
+          ).toBe(value);
+        }
+      }
+    }
+  });
+
+  it("requires immutable image digest inputs and never latest tags", async () => {
+    for (const directory of [
+      "abl-core",
+      "abl-private",
+      "abl-competition",
+      "abl-public",
+    ]) {
+      for (const resource of await readYamlDirectory(directory)) {
+        const runtime = runtimeOf(resource);
+        if (runtime.image !== undefined)
+          expect(() =>
+            assertImmutableImageReference(String(runtime.image)),
+          ).not.toThrow();
+      }
+    }
+  });
+
+  it("defines separate capability-scoped service identities and a spend-gated capacity target", async () => {
+    const identities = (await readJson(
+      new URL("service-identities.json", infraRoot),
+    )) as {
+      identities: Array<{
+        secretReference: string;
+        allowedTargets: Array<{ capabilities: string[] }>;
+        forbiddenCapabilities: string[];
+      }>;
+      transport: { binds: string[] };
+    };
+    expect(
+      new Set(identities.identities.map((identity) => identity.secretReference))
+        .size,
+    ).toBe(identities.identities.length);
+    expect(
+      identities.identities.every(
+        (identity) => identity.allowedTargets.length > 0,
+      ),
+    ).toBe(true);
+    expect(
+      identities.identities.every(
+        (identity) => identity.forbiddenCapabilities.length > 0,
+      ),
+    ).toBe(true);
+    expect(identities.transport.binds).toEqual(
+      expect.arrayContaining([
+        "service-id",
+        "capability",
+        "body-sha256",
+        "nonce",
+        "expected-version",
+      ]),
+    );
+
+    const capacity = (await readJson(
+      new URL("capacity-plan.json", infraRoot),
+    )) as {
+      approvalRequiredBeforeReservation: boolean;
+      reservationState: string;
+      targets: Record<string, number>;
+    };
+    expect(capacity.approvalRequiredBeforeReservation).toBe(true);
+    expect(capacity.reservationState).toBe("NOT_REQUESTED_MATERIAL_SPEND_GATE");
+    expect(capacity.targets).toMatchObject({
+      concurrentSpectators: 10_000,
+      candidateRegistrationsPerDay: 1_000,
+      simultaneousGames: 10,
+      activeBodies: 200,
+      headroomMultiplierWhereReservable: 2,
+    });
+  });
+});
+
+describe("hardened sandbox image policy", () => {
+  const sandboxRoot = new URL("../../../infra/sandbox/", import.meta.url);
+
+  it("pins the base image and package versions and uses an immutable root-owned launcher", async () => {
+    const dockerfile = await readFile(
+      new URL("Dockerfile", sandboxRoot),
+      "utf8",
+    );
+    const packageLock = await readFile(
+      new URL("apk-packages.lock", sandboxRoot),
+      "utf8",
+    );
+    expect(dockerfile).toMatch(
+      /node:24\.18\.0-alpine3\.24@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd/,
+    );
+    expect(dockerfile).toContain(
+      'ENTRYPOINT ["/usr/local/sbin/abl-sandbox-init"]',
+    );
+    expect(dockerfile).toContain(
+      "ghcr.io/blaxel-ai/sandbox@sha256:17c2840e04b8e66bb07fd15e448c9e9de31b5123f33b848d6fbbe84b083f3e8",
+    );
+    expect(packageLock.trim().split("\n")).toHaveLength(4);
+    expect(packageLock).not.toMatch(/latest|[><~^*]/);
+  });
+
+  it("drops agent privilege, strips inherited environment, and defaults outbound traffic to deny", async () => {
+    const init = await readFile(
+      new URL("abl-sandbox-init", sandboxRoot),
+      "utf8",
+    );
+    expect(init).toContain("policy drop");
+    expect(init).toContain(
+      "meta skuid $AGENT_UID ip daddr 127.0.0.1 tcp dport $BROKER_PORT accept",
+    );
+    expect(init).toContain(
+      "meta skuid $BROKER_UID ip daddr @approved_v4 tcp dport 443 accept",
+    );
+    expect(init).toContain("meta skuid $AGENT_UID reject");
+    expect(init).toContain("sandbox-api --disable-telemetry --user abl-agent");
+    const launcher = await readFile(
+      new URL("agent-runtime", sandboxRoot),
+      "utf8",
+    );
+    expect(launcher).toContain("exec env -i");
+    for (const forbidden of [
+      "DATABASE_URL",
+      "DRIVE_TOKEN",
+      "BLFS_TOKEN",
+      "MODEL_CREDENTIAL_FILE",
+      "DOMAIN_KEY_FILE",
+    ]) {
+      const agentEnvironment = launcher.slice(launcher.indexOf("exec env -i"));
+      expect(agentEnvironment).not.toContain(forbidden);
+    }
+  });
+});

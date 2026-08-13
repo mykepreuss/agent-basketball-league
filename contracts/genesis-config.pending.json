@@ -1,0 +1,12 @@
+{
+  "mode": "PENDING_FOUNDING_AGENT_RATIFICATION_DO_NOT_DEPLOY",
+  "chainId": 84532,
+  "constitutionDigest": null,
+  "verifierDigest": null,
+  "signers": [],
+  "roleMasks": [],
+  "checkpointTypes": [],
+  "policies": [],
+  "broadcastApproved": false,
+  "note": "This deliberately fails the exact deployment preparer until ratified inputs replace every pending value."
+}

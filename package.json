@@ -1,0 +1,38 @@
+{
+  "name": "agent-basketball-league",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "description": "Agent-governed, independently verifiable basketball league",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": "24.18.0",
+    "pnpm": "11.21.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "clean": "turbo run clean && rm -rf .turbo coverage playwright-report test-results",
+    "contract:prepare": "tsx scripts/prepare-recognition-deployment.ts",
+    "dev": "turbo run dev --parallel",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "genesis:prepare": "tsx scripts/prepare-genesis-readiness.ts",
+    "test": "turbo run test",
+    "test:acceptance": "vitest run --config tests/vitest.acceptance.ts",
+    "test:adversarial": "vitest run --config tests/vitest.adversarial.ts",
+    "test:all": "pnpm check && pnpm test && pnpm test:acceptance && pnpm test:adversarial && pnpm build",
+    "evidence": "tsx scripts/evidence.ts"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "prettier": "3.6.2",
+    "solc": "catalog:",
+    "tsx": "4.23.12",
+    "turbo": "2.10.9",
+    "typescript": "6.0.3",
+    "viem": "catalog:",
+    "vitest": "4.1.10"
+  }
+}

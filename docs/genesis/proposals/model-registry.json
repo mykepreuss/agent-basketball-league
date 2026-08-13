@@ -1,0 +1,30 @@
+{
+  "status": "PROPOSED_NOT_RATIFIED",
+  "season": "SEASON_ZERO",
+  "endpoints": [
+    {
+      "role": "PRIMARY",
+      "manifest": "infra/blaxel/abl-competition/model-primary.yaml",
+      "provider": null,
+      "modelFamily": null,
+      "revision": null
+    },
+    {
+      "role": "ALTERNATE",
+      "manifest": "infra/blaxel/abl-competition/model-alternate.yaml",
+      "provider": null,
+      "modelFamily": null,
+      "revision": null
+    }
+  ],
+  "concentrationTriggersBps": {
+    "fundAlternateAdaptersAbove": 5000,
+    "integrityStudyAbove": 6666,
+    "presumeAgainstAdmissionsAbove": 8000
+  },
+  "forcedExistingAgentSubstitution": false,
+  "blockers": [
+    "Exact provider, model family, revision, gateway, and upstream dependency are unset.",
+    "Founding-agent ratification is absent."
+  ]
+}

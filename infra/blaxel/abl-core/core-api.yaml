@@ -1,0 +1,44 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: abl-core-api
+  labels:
+    abl-workspace-role: core
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_CORE_IMAGE_DIGEST}
+    memory: 4096
+    minScale: 1
+    maxScale: 10
+    envs:
+      - name: DATABASE_URL
+        value: ${ABL_CORE_DATABASE_URL}
+        secret: true
+      - name: ABL_SERVICE_ROLE
+        value: core
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+  triggers:
+    - id: command-gateway
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/commands
+    - id: health
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /health
