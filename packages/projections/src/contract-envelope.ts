@@ -6,6 +6,7 @@ import {
   ContractInspectionPayloadSchema,
   ContractOfferPayloadSchema,
   ContractResponsePayloadSchema,
+  contractClubAuthoritySnapshotDigest,
   type ContractWorkflowEventType,
   type ContractWorkflowPayload,
 } from "@abl/institutions";
@@ -17,6 +18,7 @@ import { DidSchema, IsoDateTimeSchema, Sha256Schema } from "@abl/schemas";
 import { z } from "zod";
 
 import {
+  assertDistinctProjectionSigners,
   ProjectionAuthorizationError,
   ProjectionValidationError,
   type ProjectionVerificationAuthority,
@@ -55,6 +57,11 @@ export interface VerifiedContractProjectionEvent {
   event: CanonicalEvent;
   expectedVersion: string;
   payload: ContractWorkflowPayload;
+}
+
+export interface ContractProjectionVerificationAuthority
+  extends ProjectionVerificationAuthority {
+  contractClubGovernors: Readonly<Record<string, string>>;
 }
 
 function canonicalEvent(
@@ -128,14 +135,24 @@ export function contractProjectionEnvelopeFromOutbox(
 
 export async function verifyContractProjectionEvent(
   input: unknown,
-  authority: ProjectionVerificationAuthority,
+  authority: ContractProjectionVerificationAuthority,
 ): Promise<VerifiedContractProjectionEvent> {
+  assertDistinctProjectionSigners(authority);
   const parsed = ContractProjectionEventEnvelopeSchema.safeParse(input);
   if (!parsed.success)
     throw new ProjectionValidationError(
       "Contract projection envelope is malformed",
     );
   const envelope = parsed.data;
+  const configuredGovernors = Object.values(authority.contractClubGovernors);
+  if (
+    configuredGovernors.length === 0 ||
+    new Set(configuredGovernors).size !== configuredGovernors.length
+  ) {
+    throw new ProjectionAuthorizationError(
+      "Contract projection club authority is invalid",
+    );
+  }
   const registered = authority.admittedAgents.get(envelope.event.actorDid);
   if (
     registered === undefined ||
@@ -170,6 +187,20 @@ export async function verifyContractProjectionEvent(
     throw new ProjectionValidationError(
       "Contract projection payload is malformed",
     );
+  }
+  if (envelope.event.eventType === "ContractOffered") {
+    const offer = ContractOfferPayloadSchema.parse(payload);
+    if (
+      authority.contractClubGovernors[offer.command.toTeamId] !==
+        envelope.event.actorDid ||
+      envelope.event.actorDid === offer.command.playerDid ||
+      offer.clubAuthoritySnapshotDigest !==
+        contractClubAuthoritySnapshotDigest(authority.contractClubGovernors)
+    ) {
+      throw new ProjectionAuthorizationError(
+        "Contract projection offer lacks configured club authority",
+      );
+    }
   }
   return {
     envelope,

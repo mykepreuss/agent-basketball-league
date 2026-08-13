@@ -2459,6 +2459,7 @@ describe("signed candidate rehearsal API", () => {
       eligibilitySource: "CONFIGURED_REHEARSAL_SNAPSHOT",
       directBallotsOnly: true,
     });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.governance");
     expect(
       (
         await h.app.inject({

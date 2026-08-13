@@ -9,10 +9,13 @@ import {
   ProjectionVersionConflictError,
   projectionEnvelopeBytes,
   verifyContractProjectionEvent,
+  verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
   type PublicContractProjectionReader,
   type PublicContractProjectionWriter,
+  type PublicGovernanceProjectionReader,
+  type PublicGovernanceProjectionWriter,
   type PublicProjectionReader,
   type PublicProjectionWriter,
 } from "@abl/projections";
@@ -130,9 +133,13 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
 export interface PublicApiOptions {
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
+  governanceProjections?: PublicGovernanceProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
+    governanceWriter?: PublicGovernanceProjectionWriter;
+    contractClubGovernors?: Readonly<Record<string, string>>;
+    governanceEligibilitySnapshotDigest?: string;
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -158,6 +165,12 @@ function projectionHeaders(
   };
 }
 
+function projectionTopic(body: unknown): unknown {
+  if (typeof body !== "object" || body === null || !("topic" in body))
+    return undefined;
+  return body.topic;
+}
+
 function projectionError(error: unknown): { status: number; code: string } {
   const name = error instanceof Error ? error.name : "";
   if (name === "ServiceReplayError")
@@ -165,13 +178,15 @@ function projectionError(error: unknown): { status: number; code: string } {
   if (
     name === "ServiceAuthenticationError" ||
     name === "ProjectionAuthorizationError" ||
-    name === "ContractWorkflowAuthorizationError"
+    name === "ContractWorkflowAuthorizationError" ||
+    name === "GovernanceWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
   if (
     name === "ProjectionValidationError" ||
-    name === "ContractWorkflowValidationError"
+    name === "ContractWorkflowValidationError" ||
+    name === "GovernanceWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -185,7 +200,8 @@ export function createPublicApi(
   const app = Fastify({ logger: false, bodyLimit: 512_000 });
   const rehearsal =
     options.projections !== undefined ||
-    options.contractProjections !== undefined;
+    options.contractProjections !== undefined ||
+    options.governanceProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -197,6 +213,7 @@ export function createPublicApi(
       await Promise.all([
         options.projections?.refresh(),
         options.contractProjections?.refresh(),
+        options.governanceProjections?.refresh(),
       ]);
     }
   });
@@ -328,16 +345,16 @@ export function createPublicApi(
           path: PROJECTION_APPEND_PATH,
           body: projectionEnvelopeBytes(request.body),
         });
-        if (
-          typeof request.body === "object" &&
-          request.body !== null &&
-          "topic" in request.body &&
-          request.body.topic === "public.contracts"
-        ) {
-          const verified = await verifyContractProjectionEvent(
-            request.body,
-            projectionIngress,
-          );
+        const topic = projectionTopic(request.body);
+        if (topic === "public.contracts") {
+          if (projectionIngress.contractClubGovernors === undefined)
+            throw new ServiceAuthenticationError(
+              "Contract projection authority is not configured",
+            );
+          const verified = await verifyContractProjectionEvent(request.body, {
+            ...projectionIngress,
+            contractClubGovernors: projectionIngress.contractClubGovernors,
+          });
           if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
             throw new ProjectionVersionConflictError(
               "Signed expected version does not precede the contract event",
@@ -346,6 +363,37 @@ export function createPublicApi(
           if (projectionIngress.contractWriter === undefined)
             throw new Error("Contract projection writer is not configured");
           const record = await projectionIngress.contractWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
+        if (topic === "public.governance") {
+          if (
+            projectionIngress.governanceEligibilitySnapshotDigest === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Governance projection authority is not configured",
+            );
+          }
+          const verified = await verifyGovernanceProjectionEvent(request.body, {
+            ...projectionIngress,
+            governanceEligibilitySnapshotDigest:
+              projectionIngress.governanceEligibilitySnapshotDigest,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the governance event",
+            );
+          }
+          if (projectionIngress.governanceWriter === undefined)
+            throw new Error("Governance projection writer is not configured");
+          const record = await projectionIngress.governanceWriter.publish(
             verified.envelope,
             verified.expectedVersion,
             projectionIngress.now?.().toISOString(),
@@ -399,6 +447,8 @@ export function createPublicApi(
         items = options.projections?.games() ?? [];
       } else if (path === "/v1/public/contracts") {
         items = options.contractProjections?.contracts() ?? [];
+      } else if (path === "/v1/public/governance") {
+        items = options.governanceProjections?.governance() ?? [];
       }
       return {
         state,

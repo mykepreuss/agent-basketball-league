@@ -3,6 +3,7 @@ import {
   HttpProjectionEventSink,
   PublicProjectionWorker,
 } from "@abl/projections";
+import { sha256Commitment } from "@abl/recognition";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
@@ -37,9 +38,11 @@ const AdmittedAgentsSchema = z.record(
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
-      .array(z.enum(["game-possession", "career-contracts"]))
+      .array(
+        z.enum(["game-possession", "career-contracts", "governance-proposal"]),
+      )
       .min(1)
-      .max(2)
+      .max(3)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -92,6 +95,13 @@ let projectionTimer: NodeJS.Timeout | undefined;
 const app = rehearsal
   ? await (async () => {
       const authority = rehearsalAuthority();
+      const contractClubGovernors = ContractClubGovernorsSchema.parse(
+        JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
+      );
+      const governanceEligibilitySnapshot =
+        GovernanceEligibilitySnapshotSchema.parse(
+          JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
+        );
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
       closeStore = async () => store.close();
       const projectionSink = new HttpProjectionEventSink({
@@ -105,6 +115,10 @@ const app = rehearsal
       const worker = new PublicProjectionWorker({
         store,
         sink: projectionSink,
+        contractClubGovernors,
+        governanceEligibilitySnapshotDigest: sha256Commitment(
+          governanceEligibilitySnapshot,
+        ),
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -130,9 +144,7 @@ const app = rehearsal
           openedAt: required("ABL_COMBINE_OPENED_AT"),
         },
         contracts: {
-          clubGovernors: ContractClubGovernorsSchema.parse(
-            JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
-          ),
+          clubGovernors: contractClubGovernors,
         },
         memory: {
           storageVerifier: new HttpMemoryStorageVerifier({
@@ -162,9 +174,7 @@ const app = rehearsal
           }),
         },
         governance: {
-          eligibilitySnapshot: GovernanceEligibilitySnapshotSchema.parse(
-            JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
-          ),
+          eligibilitySnapshot: governanceEligibilitySnapshot,
         },
       });
     })()

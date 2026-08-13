@@ -62,6 +62,18 @@ export class ProjectionValidationError extends Error {
   public override readonly name = "ProjectionValidationError";
 }
 
+export function assertDistinctProjectionSigners(
+  authority: ProjectionVerificationAuthority,
+): void {
+  const signers = [...authority.admittedAgents.values()].map(
+    ({ signerAddress }) => signerAddress.toLowerCase(),
+  );
+  if (new Set(signers).size !== signers.length)
+    throw new ProjectionAuthorizationError(
+      "Projection authority aliases one signer across multiple agents",
+    );
+}
+
 function canonicalEvent(envelope: ProjectionEventEnvelope): CanonicalEvent {
   return {
     ...envelope.event,
@@ -123,6 +135,7 @@ export async function verifyProjectionEvent(
   authority: ProjectionVerificationAuthority,
   now: () => Date = () => new Date(),
 ): Promise<VerifiedProjectionEvent> {
+  assertDistinctProjectionSigners(authority);
   const parsed = ProjectionEventEnvelopeSchema.safeParse(input);
   if (!parsed.success)
     throw new ProjectionValidationError("Projection envelope is malformed");

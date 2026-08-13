@@ -3,5 +3,6 @@ export * from "./development.js";
 export * from "./contract-workflow.js";
 export * from "./economy.js";
 export * from "./governance.js";
+export * from "./governance-workflow.js";
 export * from "./league.js";
 export * from "./rights.js";

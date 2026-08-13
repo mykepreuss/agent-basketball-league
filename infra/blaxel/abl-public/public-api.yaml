@@ -31,6 +31,12 @@ spec:
       - name: ABL_PROJECTION_VERIFY_KEY_REGISTRY
         value: ${ABL_PROJECTION_VERIFY_KEY_REGISTRY}
         secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST
+        value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST}
+        secret: false
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}
         secret: false

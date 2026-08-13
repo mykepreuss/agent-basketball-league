@@ -1,11 +1,25 @@
 import {
-  evaluateProposal,
-  type Chamber,
+  GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
+  GOVERNANCE_WORKFLOW_CHAMBERS,
+  GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  GovernanceBallotPayloadSchema as BallotPayloadSchema,
+  GovernanceEligibilitySnapshotSchema,
+  GovernanceProposalRegistrationPayloadSchema as ProposalRegistrationCommandSchema,
+  GovernanceWorkflowAuthorizationError as GovernanceAuthorizationError,
+  GovernanceWorkflowValidationError as GovernanceValidationError,
+  applyGovernanceWorkflowTransition,
+  evaluateGovernanceWorkflowDecision,
+  governanceVoteFromAuthorization,
+  governanceWorkflowStateRoot,
+  isGovernanceWorkflowEventType,
+  parseGovernanceWorkflowPayload,
+  validateGovernanceEligibilitySnapshot,
   type EligibilitySnapshot,
-  type GovernanceBallot,
   type GovernanceDecision,
-  type GovernanceProposal,
   type GovernanceVote,
+  type GovernanceWorkflowEventType,
+  type GovernanceWorkflowPayload,
+  type GovernanceWorkflowSnapshot,
   type InstitutionalAuthorizationContext,
   type InstitutionalSigner,
 } from "@abl/institutions";
@@ -23,12 +37,6 @@ import {
   verifyEventContent,
   type CanonicalEvent,
 } from "@abl/recognition";
-import {
-  DidSchema,
-  IsoDateTimeSchema,
-  Sha256Schema,
-  UuidV7Schema,
-} from "@abl/schemas";
 import type { FastifyInstance } from "fastify";
 import type { Hex, TypedDataDomain } from "viem";
 import { z } from "zod";
@@ -46,120 +54,20 @@ import {
 } from "./candidates.js";
 import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 
-const aggregateType = "governance-proposal";
-const chambers = [
-  "UNIVERSAL_CAREER_ASSEMBLY",
-  "PREMIER_PLAYERS",
-  "DEVELOPMENT_PLAYERS",
-  "PREMIER_TEAM_COUNCIL",
-  "DEVELOPMENT_TEAM_COUNCIL",
-  "EXECUTIVE_COMMISSION",
-  "TRIBUNAL",
-  "INTEGRITY_OFFICE",
-] as const satisfies readonly Chamber[];
-const eventTypes = [
-  "GovernanceProposalRegistered",
-  "GovernanceBallotCast",
-  "GovernanceProposalClosed",
-  "GovernanceInspected",
-] as const;
-export type GovernanceWorkflowEventType = (typeof eventTypes)[number];
-
-const ChamberSchema = z.enum(chambers);
-export const GovernanceEligibilitySnapshotSchema = z.strictObject({
-  snapshotId: UuidV7Schema,
-  capturedAt: IsoDateTimeSchema,
-  members: z.strictObject(
-    Object.fromEntries(
-      chambers.map((chamber) => [chamber, z.array(DidSchema)]),
-    ) as Record<Chamber, z.ZodArray<typeof DidSchema>>,
-  ),
-});
-const ProposalCommandSchema = z.strictObject({
-  proposalId: UuidV7Schema,
-  version: z.number().int().positive(),
-  proposerDid: DidSchema,
-  institution: z.string().min(1).max(160),
-  proposalClass: z.enum([
-    "TIER_CBA",
-    "SHARED_ORDINARY",
-    "CONSTITUTIONAL",
-    "FOUNDATIONAL_RIGHT",
-    "EXPANSION",
-  ]),
-  tier: z.enum(["PREMIER", "DEVELOPMENT"]).optional(),
-  title: z.string().min(1).max(300),
-  textCommitment: Sha256Schema,
-  executableChangeDigest: Sha256Schema.nullable(),
-  opensAt: IsoDateTimeSchema,
-  closesAt: IsoDateTimeSchema,
-  eligibilitySnapshotDigest: Sha256Schema,
-  deliberationSeasons: z.number().int().nonnegative().optional(),
-  fundedApplication: z.boolean().optional(),
-  auditsPassed: z.boolean().optional(),
-});
-const ProposalRegistrationCommandSchema = z.strictObject({
-  proposal: ProposalCommandSchema,
-  eligibilitySnapshot: GovernanceEligibilitySnapshotSchema,
-  recusedDids: z.array(DidSchema),
-});
-const BallotCommandSchema = z.strictObject({
-  ballotId: UuidV7Schema,
-  voterDid: DidSchema,
-  chamber: ChamberSchema,
-  choice: z.enum(["YES", "NO", "ABSTAIN"]),
-  proposalId: UuidV7Schema,
-  proposalVersion: z.number().int().positive(),
-  eligibilitySnapshotDigest: Sha256Schema,
-  castAt: IsoDateTimeSchema,
-});
-const BallotPayloadSchema = z.strictObject({ command: BallotCommandSchema });
-const CloseCommandSchema = z.strictObject({
-  proposalId: UuidV7Schema,
-  proposalVersion: z.number().int().positive(),
-  requestedByDid: DidSchema,
-  requestedAt: IsoDateTimeSchema,
-});
-const ClosePayloadSchema = z.strictObject({ command: CloseCommandSchema });
-const InspectCommandSchema = z.strictObject({
-  proposalId: UuidV7Schema,
-  requestedByDid: DidSchema,
-  requestedAt: IsoDateTimeSchema,
-  format: z.literal("ABL-GOVERNANCE-INSPECTION-V1"),
-});
-const InspectPayloadSchema = z.strictObject({ command: InspectCommandSchema });
-
-export const GOVERNANCE_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
-  protocol: "abl-governance-proposal-workflow",
-  version: 1,
-  aggregateType,
-  eventTypes,
-  directBallotsOnly: true,
-  eligibilityMode: "CONFIGURED_REHEARSAL_SNAPSHOT",
-});
-
-type ProposalCommand = z.infer<typeof ProposalCommandSchema>;
-type BallotCommand = z.infer<typeof BallotCommandSchema>;
-type ProposalRegistrationCommand = z.infer<
-  typeof ProposalRegistrationCommandSchema
->;
-export type GovernanceWorkflowPayload =
-  | ProposalRegistrationCommand
-  | z.infer<typeof BallotPayloadSchema>
-  | z.infer<typeof ClosePayloadSchema>
-  | z.infer<typeof InspectPayloadSchema>;
-
-export interface GovernanceWorkflowSnapshot {
-  proposalId: string;
-  version: number;
-  lastTransitionAt: string;
-  proposal: ProposalCommand;
-  eligibilitySnapshot: EligibilitySnapshot;
-  recusedDids: string[];
-  ballots: BallotCommand[];
-  decision: GovernanceDecision | null;
-  closedAt: string | null;
-}
+const aggregateType = GOVERNANCE_WORKFLOW_AGGREGATE_TYPE;
+const chambers = GOVERNANCE_WORKFLOW_CHAMBERS;
+export {
+  GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
+  GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  GovernanceEligibilitySnapshotSchema,
+  applyGovernanceWorkflowTransition,
+  governanceWorkflowStateRoot,
+};
+export type {
+  GovernanceWorkflowEventType,
+  GovernanceWorkflowPayload,
+  GovernanceWorkflowSnapshot,
+};
 
 export interface GovernanceRehearsalOptions {
   store: CanonicalStore;
@@ -186,14 +94,6 @@ interface MutableInstitutionalAuthorizationContext
   signers: Map<string, InstitutionalSigner>;
 }
 
-class GovernanceAuthorizationError extends Error {
-  public override readonly name = "GovernanceAuthorizationError";
-}
-
-class GovernanceValidationError extends Error {
-  public override readonly name = "GovernanceValidationError";
-}
-
 function canonicalInstant(value: string): number {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed) || value !== new Date(parsed).toISOString())
@@ -214,289 +114,6 @@ function candidateOptions(
     ...options.candidateAdmission,
   };
   return options.now === undefined ? common : { ...common, now: options.now };
-}
-
-function unique(values: readonly string[], label: string): void {
-  if (new Set(values).size !== values.length)
-    throw new GovernanceValidationError(`${label} contains duplicates`);
-}
-
-function validateEligibilitySnapshot(snapshot: EligibilitySnapshot): void {
-  canonicalInstant(snapshot.capturedAt);
-  for (const chamber of chambers)
-    unique(snapshot.members[chamber], `${chamber} eligibility`);
-  const tierPlayers = new Set([
-    ...snapshot.members.PREMIER_PLAYERS,
-    ...snapshot.members.DEVELOPMENT_PLAYERS,
-  ]);
-  if (
-    tierPlayers.size !==
-      snapshot.members.PREMIER_PLAYERS.length +
-        snapshot.members.DEVELOPMENT_PLAYERS.length ||
-    sha256Commitment([...tierPlayers].sort()) !==
-      sha256Commitment([...snapshot.members.UNIVERSAL_CAREER_ASSEMBLY].sort())
-  ) {
-    throw new GovernanceValidationError(
-      "Universal assembly must exactly contain both disjoint player tiers",
-    );
-  }
-}
-
-function validateProposalCommand(
-  registration: ProposalRegistrationCommand,
-  actorDid: string,
-  aggregateId: string,
-  timestamp: string,
-): void {
-  const { proposal, eligibilitySnapshot, recusedDids } = registration;
-  validateEligibilitySnapshot(eligibilitySnapshot);
-  unique(recusedDids, "Governance recusals");
-  const openedAt = canonicalInstant(proposal.opensAt);
-  const closesAt = canonicalInstant(proposal.closesAt);
-  const capturedAt = canonicalInstant(eligibilitySnapshot.capturedAt);
-  const registeredAt = canonicalInstant(timestamp);
-  if (
-    proposal.proposerDid !== actorDid ||
-    proposal.proposalId !== aggregateId ||
-    proposal.version !== 1 ||
-    proposal.eligibilitySnapshotDigest !==
-      sha256Commitment(eligibilitySnapshot) ||
-    capturedAt > registeredAt ||
-    registeredAt > openedAt ||
-    openedAt >= closesAt
-  ) {
-    throw new GovernanceValidationError(
-      "Governance proposal does not bind its proposer, snapshot, or window",
-    );
-  }
-  if (
-    (proposal.proposalClass === "TIER_CBA") !==
-    (proposal.tier !== undefined)
-  ) {
-    throw new GovernanceValidationError(
-      "Tier CBA proposals must select exactly one tier",
-    );
-  }
-  const allMembers = new Set(
-    chambers.flatMap((chamber) => eligibilitySnapshot.members[chamber]),
-  );
-  if (!allMembers.has(actorDid))
-    throw new GovernanceAuthorizationError(
-      "Proposal author is outside the eligibility snapshot",
-    );
-  if (recusedDids.some((did) => !allMembers.has(did)))
-    throw new GovernanceValidationError(
-      "Governance recusal is outside the eligibility snapshot",
-    );
-}
-
-function domainProposalClass(
-  proposal: ProposalCommand,
-): GovernanceProposal["proposalClass"] {
-  switch (proposal.proposalClass) {
-    case "TIER_CBA":
-      return proposal.tier === "PREMIER"
-        ? "TIER_CBA_PREMIER"
-        : "TIER_CBA_DEVELOPMENT";
-    case "EXPANSION":
-      return "PREMIER_EXPANSION";
-    default:
-      return proposal.proposalClass;
-  }
-}
-
-function toDomainProposal(
-  snapshot: GovernanceWorkflowSnapshot,
-): GovernanceProposal {
-  const { proposal } = snapshot;
-  return {
-    proposalId: proposal.proposalId,
-    version: proposal.version,
-    proposalClass: domainProposalClass(proposal),
-    openedAt: proposal.opensAt,
-    closesAt: proposal.closesAt,
-    eligibilitySnapshotId: snapshot.eligibilitySnapshot.snapshotId,
-    eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest as Hex,
-    ...(proposal.deliberationSeasons === undefined
-      ? {}
-      : { deliberationSeasons: proposal.deliberationSeasons }),
-    ...(proposal.fundedApplication === undefined
-      ? {}
-      : { fundedApplication: proposal.fundedApplication }),
-    ...(proposal.auditsPassed === undefined
-      ? {}
-      : { auditsPassed: proposal.auditsPassed }),
-  };
-}
-
-function parsePayload(
-  eventType: GovernanceWorkflowEventType,
-  payload: unknown,
-): GovernanceWorkflowPayload {
-  switch (eventType) {
-    case "GovernanceProposalRegistered":
-      return ProposalRegistrationCommandSchema.parse(payload);
-    case "GovernanceBallotCast":
-      return BallotPayloadSchema.parse(payload);
-    case "GovernanceProposalClosed":
-      return ClosePayloadSchema.parse(payload);
-    case "GovernanceInspected":
-      return InspectPayloadSchema.parse(payload);
-  }
-}
-
-function isEventType(value: string): value is GovernanceWorkflowEventType {
-  return eventTypes.includes(value as GovernanceWorkflowEventType);
-}
-
-function isEligible(snapshot: EligibilitySnapshot, agentDid: string): boolean {
-  return chambers.some((chamber) =>
-    snapshot.members[chamber].includes(agentDid),
-  );
-}
-
-export function governanceWorkflowStateRoot(
-  snapshot: GovernanceWorkflowSnapshot,
-): Hex {
-  return sha256Commitment({
-    format: "ABL-GOVERNANCE-PROPOSAL-STATE-V1",
-    ...snapshot,
-  });
-}
-
-function applyRegistration(
-  event: CanonicalEvent,
-  registration: ProposalRegistrationCommand,
-): GovernanceWorkflowSnapshot {
-  if (event.aggregateVersion !== 1n)
-    throw new GovernanceValidationError(
-      "Governance proposal registration must be version one",
-    );
-  validateProposalCommand(
-    registration,
-    event.actorDid,
-    event.aggregateId,
-    event.timestamp,
-  );
-  return {
-    proposalId: registration.proposal.proposalId,
-    version: 1,
-    lastTransitionAt: event.timestamp,
-    proposal: structuredClone(registration.proposal),
-    eligibilitySnapshot: structuredClone(registration.eligibilitySnapshot),
-    recusedDids: [...registration.recusedDids],
-    ballots: [],
-    decision: null,
-    closedAt: null,
-  };
-}
-
-export function applyGovernanceWorkflowTransition(
-  current: GovernanceWorkflowSnapshot | null,
-  event: CanonicalEvent,
-  payload: GovernanceWorkflowPayload,
-  decision: GovernanceDecision | null = null,
-): GovernanceWorkflowSnapshot {
-  if (current === null) {
-    if (event.eventType !== "GovernanceProposalRegistered")
-      throw new GovernanceValidationError(
-        "Governance proposal must be registered first",
-      );
-    return applyRegistration(
-      event,
-      ProposalRegistrationCommandSchema.parse(payload),
-    );
-  }
-  if (
-    event.aggregateVersion !== BigInt(current.version + 1) ||
-    event.aggregateId !== current.proposalId ||
-    canonicalInstant(event.timestamp) <
-      canonicalInstant(current.lastTransitionAt)
-  ) {
-    throw new GovernanceValidationError(
-      "Governance aggregate sequence is invalid",
-    );
-  }
-  const next = structuredClone(current);
-  next.version += 1;
-  next.lastTransitionAt = event.timestamp;
-
-  if (event.eventType === "GovernanceProposalRegistered")
-    throw new GovernanceValidationError("Governance proposal already exists");
-  if (event.eventType === "GovernanceBallotCast") {
-    if (next.decision !== null)
-      throw new GovernanceValidationError(
-        "Closed proposal cannot accept ballots",
-      );
-    const ballot = BallotPayloadSchema.parse(payload).command;
-    const castAt = canonicalInstant(ballot.castAt);
-    if (
-      ballot.voterDid !== event.actorDid ||
-      ballot.proposalId !== next.proposalId ||
-      ballot.proposalVersion !== next.proposal.version ||
-      ballot.eligibilitySnapshotDigest !==
-        next.proposal.eligibilitySnapshotDigest ||
-      ballot.castAt !== event.timestamp ||
-      castAt < canonicalInstant(next.proposal.opensAt) ||
-      castAt >= canonicalInstant(next.proposal.closesAt) ||
-      !next.eligibilitySnapshot.members[ballot.chamber].includes(
-        ballot.voterDid,
-      ) ||
-      next.recusedDids.includes(ballot.voterDid)
-    ) {
-      throw new GovernanceAuthorizationError(
-        "Governance ballot is outside voter, snapshot, or window authority",
-      );
-    }
-    if (
-      next.ballots.some(
-        (prior) =>
-          prior.ballotId === ballot.ballotId ||
-          (prior.chamber === ballot.chamber &&
-            prior.voterDid === ballot.voterDid),
-      )
-    ) {
-      throw new GovernanceValidationError(
-        "Governance ballot duplicates an ID or eligible seat",
-      );
-    }
-    next.ballots.push(structuredClone(ballot));
-    return next;
-  }
-  if (event.eventType === "GovernanceProposalClosed") {
-    const close = ClosePayloadSchema.parse(payload).command;
-    if (
-      next.decision !== null ||
-      close.proposalId !== next.proposalId ||
-      close.proposalVersion !== next.proposal.version ||
-      close.requestedByDid !== event.actorDid ||
-      close.requestedAt !== event.timestamp ||
-      canonicalInstant(close.requestedAt) <
-        canonicalInstant(next.proposal.closesAt) ||
-      !isEligible(next.eligibilitySnapshot, event.actorDid) ||
-      decision === null ||
-      decision.proposalId !== next.proposalId
-    ) {
-      throw new GovernanceValidationError(
-        "Governance close request or deterministic decision is invalid",
-      );
-    }
-    next.decision = structuredClone(decision);
-    next.closedAt = event.timestamp;
-    return next;
-  }
-  const inspection = InspectPayloadSchema.parse(payload).command;
-  if (
-    inspection.proposalId !== next.proposalId ||
-    inspection.requestedByDid !== event.actorDid ||
-    inspection.requestedAt !== event.timestamp ||
-    !isEligible(next.eligibilitySnapshot, event.actorDid)
-  ) {
-    throw new GovernanceAuthorizationError(
-      "Governance inspection is outside proposal authority",
-    );
-  }
-  return next;
 }
 
 async function requireCareerSignature(
@@ -549,46 +166,6 @@ function registerVoter(
   });
 }
 
-function governanceVote(
-  ballot: BallotCommand,
-  event: CanonicalEvent,
-  signature: string,
-  signerAddress: `0x${string}`,
-): GovernanceVote {
-  const command: GovernanceBallot = {
-    ballotId: ballot.ballotId,
-    voterDid: ballot.voterDid,
-    chamber: ballot.chamber,
-    choice: ballot.choice,
-    proposalId: ballot.proposalId,
-    proposalVersion: ballot.proposalVersion,
-    eligibilitySnapshotDigest: ballot.eligibilitySnapshotDigest as Hex,
-    castAt: ballot.castAt,
-  };
-  return {
-    ...command,
-    authorizationEvent: event as CanonicalEvent<{ command: GovernanceBallot }>,
-    signature: signature as Hex,
-    signerAddress,
-    authorizationAggregateVersion: Number(event.aggregateVersion),
-    authorizationStateRoot: event.stateRoot,
-  };
-}
-
-async function evaluate(
-  snapshot: GovernanceWorkflowSnapshot,
-  votes: readonly GovernanceVote[],
-  authorization: InstitutionalAuthorizationContext,
-): Promise<GovernanceDecision> {
-  return evaluateProposal({
-    proposal: toDomainProposal(snapshot),
-    snapshot: snapshot.eligibilitySnapshot,
-    votes,
-    recusals: snapshot.recusedDids,
-    authorization,
-  });
-}
-
 async function validateConfiguredSnapshotMembers(
   options: GovernanceRehearsalOptions,
   snapshot: EligibilitySnapshot,
@@ -604,7 +181,7 @@ async function validateConfiguredSnapshotMembers(
     chambers.flatMap((chamber) => snapshot.members[chamber]),
   );
   try {
-    await Promise.all(
+    const authorities = await Promise.all(
       [...members].map((memberDid) =>
         readCandidateCareerAuthority(
           candidateOptions(options),
@@ -613,6 +190,11 @@ async function validateConfiguredSnapshotMembers(
         ),
       ),
     );
+    const signingAddresses = authorities.map(({ signingAddress }) =>
+      signingAddress.toLowerCase(),
+    );
+    if (new Set(signingAddresses).size !== signingAddresses.length)
+      throw new Error("Governance eligibility aliases a career key");
   } catch {
     throw new GovernanceAuthorizationError(
       "Eligibility snapshot contains a career not admitted when captured",
@@ -640,7 +222,7 @@ async function replayGovernanceAggregate(
       event.aggregateType !== aggregateType ||
       event.aggregateId !== proposalId ||
       event.aggregateVersion !== BigInt(index + 1) ||
-      !isEventType(event.eventType) ||
+      !isGovernanceWorkflowEventType(event.eventType) ||
       event.schemaDigest !== GOVERNANCE_WORKFLOW_SCHEMA_DIGEST ||
       event.previousEventHash !== previousHash ||
       !Number.isFinite(occurredAt) ||
@@ -662,7 +244,7 @@ async function replayGovernanceAggregate(
     }
     let payload: GovernanceWorkflowPayload;
     try {
-      payload = parsePayload(event.eventType, event.payload);
+      payload = parseGovernanceWorkflowPayload(event.eventType, event.payload);
     } catch {
       throw new GovernanceAuthorizationError(
         "Stored governance event payload is malformed",
@@ -685,7 +267,7 @@ async function replayGovernanceAggregate(
       const ballot = BallotPayloadSchema.parse(payload).command;
       registerVoter(authorization, ballot.voterDid, authority.signingAddress);
       votes.push(
-        governanceVote(
+        governanceVoteFromAuthorization(
           ballot,
           event,
           record.signatures[0],
@@ -698,7 +280,11 @@ async function replayGovernanceAggregate(
           "Stored governance close precedes proposal",
         );
       try {
-        decision = await evaluate(snapshot, votes, authorization);
+        decision = await evaluateGovernanceWorkflowDecision(
+          snapshot,
+          votes,
+          authorization,
+        );
       } catch (error) {
         throw new GovernanceAuthorizationError(
           error instanceof Error
@@ -791,7 +377,7 @@ export function installGovernanceRehearsalRoutes(
   const configuredSnapshot = GovernanceEligibilitySnapshotSchema.parse(
     options.eligibilitySnapshot,
   );
-  validateEligibilitySnapshot(configuredSnapshot);
+  validateGovernanceEligibilitySnapshot(configuredSnapshot);
   const now = options.now ?? Date.now;
   const routes: ReadonlyArray<{
     path: string;
@@ -837,7 +423,10 @@ export function installGovernanceRehearsalRoutes(
             "Governance event is outside route authority",
           );
         }
-        const payload = parsePayload(route.eventType, event.payload);
+        const payload = parseGovernanceWorkflowPayload(
+          route.eventType,
+          event.payload,
+        );
         const aggregate = await replayGovernanceAggregate(
           options,
           event.aggregateId,
@@ -907,7 +496,7 @@ export function installGovernanceRehearsalRoutes(
                 "Governance proposal is absent",
               );
             try {
-              decision = await evaluate(
+              decision = await evaluateGovernanceWorkflowDecision(
                 aggregate.snapshot,
                 aggregate.votes,
                 aggregate.authorization,

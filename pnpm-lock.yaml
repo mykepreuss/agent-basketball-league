@@ -237,6 +237,12 @@ importers:
         specifier: "catalog:"
         version: 4.4.3
     devDependencies:
+      "@abl/institutions":
+        specifier: workspace:*
+        version: link:../../packages/institutions
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
       "@types/node":
         specifier: "catalog:"
         version: 26.2.0

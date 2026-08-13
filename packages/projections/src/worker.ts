@@ -1,4 +1,7 @@
-import type { ProjectionOutboxStore } from "@abl/database";
+import type {
+  ProjectionOutboxEvent,
+  ProjectionOutboxStore,
+} from "@abl/database";
 
 import {
   contractProjectionEnvelopeFromOutbox,
@@ -10,6 +13,11 @@ import {
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
 } from "./envelope.js";
+import {
+  governanceProjectionEnvelopeFromOutbox,
+  verifyGovernanceProjectionEvent,
+} from "./governance-envelope.js";
+import type { PublicGovernanceProjectionWriter } from "./governance-repository.js";
 import type { PublicProjectionWriter } from "./repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
@@ -17,91 +25,177 @@ type WorkerDestination =
   | {
       writer: PublicProjectionWriter;
       contractWriter?: PublicContractProjectionWriter;
+      governanceWriter?: PublicGovernanceProjectionWriter;
       sink?: never;
     }
-  | { sink: ProjectionEventSink; writer?: never; contractWriter?: never };
+  | {
+      sink: ProjectionEventSink;
+      writer?: never;
+      contractWriter?: never;
+      governanceWriter?: never;
+    };
+
+const projectionTopics = [
+  "public.game",
+  "public.contracts",
+  "public.governance",
+] as const;
+type ProjectionTopic = (typeof projectionTopics)[number];
 
 export class PublicProjectionWorker {
   readonly #store: ProjectionOutboxStore;
   readonly #destination: WorkerDestination;
   readonly #authority: ProjectionVerificationAuthority;
+  readonly #contractClubGovernors: Readonly<Record<string, string>> | undefined;
+  readonly #governanceEligibilitySnapshotDigest: string | undefined;
   readonly #now: () => Date;
+  #nextTopic = 0;
 
   public constructor(
     input: {
       store: ProjectionOutboxStore;
       now?: () => Date;
+      contractClubGovernors?: Readonly<Record<string, string>>;
+      governanceEligibilitySnapshotDigest?: string;
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
     this.#store = input.store;
     if (input.sink !== undefined) {
       this.#destination = { sink: input.sink };
-    } else if (input.contractWriter === undefined) {
+    } else if (
+      input.contractWriter === undefined &&
+      input.governanceWriter === undefined
+    ) {
       this.#destination = { writer: input.writer };
     } else {
-      this.#destination = {
+      const destination: {
+        writer: PublicProjectionWriter;
+        contractWriter?: PublicContractProjectionWriter;
+        governanceWriter?: PublicGovernanceProjectionWriter;
+      } = {
         writer: input.writer,
-        contractWriter: input.contractWriter,
       };
+      if (input.contractWriter !== undefined)
+        destination.contractWriter = input.contractWriter;
+      if (input.governanceWriter !== undefined)
+        destination.governanceWriter = input.governanceWriter;
+      this.#destination = destination;
     }
     this.#authority = {
       domain: input.domain,
       admittedAgents: input.admittedAgents,
     };
+    this.#contractClubGovernors = input.contractClubGovernors;
+    this.#governanceEligibilitySnapshotDigest =
+      input.governanceEligibilitySnapshotDigest;
     this.#now = input.now ?? (() => new Date());
   }
 
-  public async drain(limit = 100): Promise<number> {
-    let published = 0;
-    const gameEvents = await this.#store.pendingProjectionEvents(
-      limit,
-      "public.game",
+  async #publishGame(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = projectionEnvelopeFromOutbox(event);
+    const verified = await verifyProjectionEvent(
+      envelope,
+      this.#authority,
+      this.#now,
     );
-    for (const event of gameEvents) {
-      const envelope = projectionEnvelopeFromOutbox(event);
-      const verified = await verifyProjectionEvent(
+    if (this.#destination.sink === undefined) {
+      await this.#destination.writer.publish(
+        verified.projection,
+        verified.expectedVersion,
         envelope,
-        this.#authority,
-        this.#now,
       );
-      if (this.#destination.sink === undefined) {
-        await this.#destination.writer.publish(
-          verified.projection,
-          verified.expectedVersion,
-          envelope,
-        );
-      } else {
-        await this.#destination.sink.publish(envelope);
-      }
-      await this.#store.markProjected(event.outboxId, this.#now());
-      published += 1;
+    } else {
+      await this.#destination.sink.publish(envelope);
     }
-    const remaining = Math.max(0, limit - published);
-    if (remaining === 0) return published;
-    const contractEvents = await this.#store.pendingProjectionEvents(
-      remaining,
-      "public.contracts",
-    );
-    for (const event of contractEvents) {
-      const envelope = contractProjectionEnvelopeFromOutbox(event);
-      const verified = await verifyContractProjectionEvent(
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
+  async #publishContract(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = contractProjectionEnvelopeFromOutbox(event);
+    if (this.#contractClubGovernors === undefined)
+      throw new Error("Contract projection authority is not configured");
+    const verified = await verifyContractProjectionEvent(envelope, {
+      ...this.#authority,
+      contractClubGovernors: this.#contractClubGovernors,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.contractWriter === undefined)
+        throw new Error("Contract projection writer is not configured");
+      await this.#destination.contractWriter.publish(
         envelope,
-        this.#authority,
+        verified.expectedVersion,
+        this.#now().toISOString(),
       );
-      if (this.#destination.sink === undefined) {
-        if (this.#destination.contractWriter === undefined)
-          throw new Error("Contract projection writer is not configured");
-        await this.#destination.contractWriter.publish(
-          envelope,
-          verified.expectedVersion,
-          this.#now().toISOString(),
-        );
-      } else {
-        await this.#destination.sink.publish(envelope);
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
+  async #publishGovernance(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = governanceProjectionEnvelopeFromOutbox(event);
+    if (this.#governanceEligibilitySnapshotDigest === undefined)
+      throw new Error("Governance projection authority is not configured");
+    const verified = await verifyGovernanceProjectionEvent(envelope, {
+      ...this.#authority,
+      governanceEligibilitySnapshotDigest:
+        this.#governanceEligibilitySnapshotDigest,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.governanceWriter === undefined)
+        throw new Error("Governance projection writer is not configured");
+      await this.#destination.governanceWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
+  async #publish(
+    topic: ProjectionTopic,
+    event: ProjectionOutboxEvent,
+  ): Promise<void> {
+    switch (topic) {
+      case "public.game":
+        return this.#publishGame(event);
+      case "public.contracts":
+        return this.#publishContract(event);
+      case "public.governance":
+        return this.#publishGovernance(event);
+    }
+  }
+
+  public async drain(limit = 100): Promise<number> {
+    if (!Number.isSafeInteger(limit) || limit < 0)
+      throw new Error("Projection drain limit is invalid");
+    const queues = await Promise.all(
+      projectionTopics.map((topic) =>
+        this.#store.pendingProjectionEvents(limit, topic),
+      ),
+    );
+    const positions = projectionTopics.map(() => 0);
+    let published = 0;
+    while (published < limit) {
+      let selected = -1;
+      for (let offset = 0; offset < projectionTopics.length; offset += 1) {
+        const candidate = (this.#nextTopic + offset) % projectionTopics.length;
+        if (positions[candidate]! < queues[candidate]!.length) {
+          selected = candidate;
+          break;
+        }
       }
-      await this.#store.markProjected(event.outboxId, this.#now());
+      if (selected === -1) break;
+      const topic = projectionTopics[selected]!;
+      const event = queues[selected]![positions[selected]!]!;
+      positions[selected]! += 1;
+      await this.#publish(topic, event);
       published += 1;
+      this.#nextTopic = (selected + 1) % projectionTopics.length;
     }
     return published;
   }

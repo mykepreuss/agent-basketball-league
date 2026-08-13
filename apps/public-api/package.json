@@ -24,6 +24,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@abl/institutions": "workspace:*",
+    "@abl/recognition": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

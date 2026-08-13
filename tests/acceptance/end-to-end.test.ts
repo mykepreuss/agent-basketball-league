@@ -29,6 +29,7 @@ import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
+  contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
 } from "../../packages/institutions/src/index.js";
@@ -596,6 +597,9 @@ describe("complete local acceptance", () => {
     const playerDid = "did:abl:player-contract-acceptance";
     const governor = createSigningIdentity(`0x${"4".repeat(64)}`);
     const player = createSigningIdentity(`0x${"5".repeat(64)}`);
+    const contractClubGovernors = {
+      "club-contract-acceptance": governorDid,
+    };
     const authority = {
       domain: REHEARSAL_RECOGNITION_DOMAIN,
       admittedAgents: new Map([
@@ -614,6 +618,7 @@ describe("complete local acceptance", () => {
           },
         ],
       ]),
+      contractClubGovernors,
     };
     const store = new InMemoryCanonicalStore();
     const appendContractEvent = async (
@@ -659,8 +664,8 @@ describe("complete local acceptance", () => {
       },
       offeredByDid: governorDid,
       offeredAt: offerTimestamp,
-      clubAuthoritySnapshotDigest: sha256Commitment(
-        "acceptance-club-authority",
+      clubAuthoritySnapshotDigest: contractClubAuthoritySnapshotDigest(
+        contractClubGovernors,
       ),
     };
     const offerInput = {

@@ -1,8 +1,10 @@
 import { ServiceRequestVerifier } from "@abl/foundation";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
   verifyContractProjectionEvent,
+  verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
@@ -35,11 +37,17 @@ const AgentRegistrySchema = z.record(
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
-      .array(z.enum(["game-possession", "career-contracts"]))
+      .array(
+        z.enum(["game-possession", "career-contracts", "governance-proposal"]),
+      )
       .min(1)
-      .max(2)
+      .max(3)
       .refine((types) => new Set(types).size === types.length),
   }),
+);
+const ContractClubGovernorsSchema = z.record(
+  z.string().min(1).max(160),
+  z.string().startsWith("did:"),
 );
 
 function projectionAuthority(): {
@@ -48,10 +56,28 @@ function projectionAuthority(): {
     string,
     { signerAddress: `0x${string}`; allowedAggregateTypes: string[] }
   >;
+  contractClubGovernors: Readonly<Record<string, string>>;
+  governanceEligibilitySnapshotDigest: string;
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
   );
+  const contractClubGovernors = ContractClubGovernorsSchema.parse(
+    JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
+  );
+  const governanceEligibilitySnapshotDigest = z
+    .string()
+    .regex(/^0x[0-9a-f]{64}$/)
+    .parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST"));
+  if (
+    Object.keys(contractClubGovernors).length === 0 ||
+    new Set(Object.values(contractClubGovernors)).size !==
+      Object.keys(contractClubGovernors).length
+  ) {
+    throw new Error(
+      "Contract projection club governors must be nonempty and distinct",
+    );
+  }
   return {
     domain: {
       name: "ABL Recognition",
@@ -76,6 +102,8 @@ function projectionAuthority(): {
         },
       ]),
     ),
+    contractClubGovernors,
+    governanceEligibilitySnapshotDigest,
   };
 }
 
@@ -83,6 +111,7 @@ const projectionRoot = process.env.ABL_PUBLIC_PROJECTION_ROOT;
 let authority: ReturnType<typeof projectionAuthority> | undefined;
 let projections: FilePublicProjectionRepository | undefined;
 let contractProjections: FilePublicContractProjectionRepository | undefined;
+let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   authority = runtimeAuthority;
@@ -103,21 +132,32 @@ if (projectionRoot !== undefined) {
         verifyContractProjectionEvent(authorization, runtimeAuthority),
     },
   );
+  governanceProjections = new FilePublicGovernanceProjectionRepository(
+    projectionRoot,
+    {
+      domain: runtimeAuthority.domain,
+      verifyAuthorization: async (authorization) =>
+        verifyGovernanceProjectionEvent(authorization, runtimeAuthority),
+    },
+  );
 }
 await Promise.all([
   projections?.initialize(),
   contractProjections?.initialize(),
+  governanceProjections?.initialize(),
 ]);
 
 let projectionIngress: PublicApiOptions["projectionIngress"];
 if (
   projections !== undefined &&
   contractProjections !== undefined &&
+  governanceProjections !== undefined &&
   authority !== undefined
 ) {
   projectionIngress = {
     writer: projections,
     contractWriter: contractProjections,
+    governanceWriter: governanceProjections,
     verifier: new ServiceRequestVerifier([
       {
         serviceId: required("ABL_PROJECTION_INGEST_SERVICE_ID"),
@@ -133,6 +173,8 @@ const apiOptions: PublicApiOptions = {};
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;
+if (governanceProjections !== undefined)
+  apiOptions.governanceProjections = governanceProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

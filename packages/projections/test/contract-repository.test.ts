@@ -6,6 +6,7 @@ import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
+  contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
   type ContractWorkflowEventType,
@@ -30,7 +31,7 @@ import {
   PublicProjectionWorker,
   verifyContractProjectionEvent,
   type ContractProjectionEventEnvelope,
-  type ProjectionVerificationAuthority,
+  type ContractProjectionVerificationAuthority,
   type PublicProjectionEnvelope,
 } from "../src/index.js";
 
@@ -45,8 +46,9 @@ const playerDid = "did:abl:player-projection";
 const governor = createSigningIdentity(`0x${"1".repeat(64)}`);
 const player = createSigningIdentity(`0x${"2".repeat(64)}`);
 const rogue = createSigningIdentity(`0x${"3".repeat(64)}`);
+const contractClubGovernors = { "club-projection": governorDid };
 
-const authority: ProjectionVerificationAuthority = {
+const authority: ContractProjectionVerificationAuthority = {
   domain,
   admittedAgents: new Map([
     [
@@ -64,6 +66,7 @@ const authority: ProjectionVerificationAuthority = {
       },
     ],
   ]),
+  contractClubGovernors,
 };
 
 function uuid(sequence: string | number): string {
@@ -161,7 +164,9 @@ async function offer() {
       },
       offeredByDid: governorDid,
       offeredAt: timestamp,
-      clubAuthoritySnapshotDigest: sha256Commitment("club-authority"),
+      clubAuthoritySnapshotDigest: contractClubAuthoritySnapshotDigest(
+        contractClubGovernors,
+      ),
     },
   });
 }
@@ -272,6 +277,22 @@ describe("durable public contract projections", () => {
         undeclaredAuthority: true,
       } as unknown as ContractWorkflowPayload),
     ).toThrow();
+    const originalOffer = offered.event.payload as ContractWorkflowPayload & {
+      offeredByDid: string;
+    };
+    const selfOffer = await contractEvent({
+      sequence: 1,
+      actorDid: playerDid,
+      signer: player,
+      eventType: "ContractOffered",
+      timestamp: offered.event.timestamp,
+      payload: { ...originalOffer, offeredByDid: playerDid },
+      current: null,
+      previousEventHash: null,
+    });
+    await expect(
+      verifyContractProjectionEvent(selfOffer.envelope, authority),
+    ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
     const unauthorized = await contractEvent({
       sequence: 1,
       actorDid: governorDid,
