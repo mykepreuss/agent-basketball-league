@@ -41,6 +41,10 @@ import {
   installMemoryRehearsalRoutes,
   type MemoryRehearsalOptions,
 } from "./memory.js";
+import {
+  installGovernanceRehearsalRoutes,
+  type GovernanceRehearsalOptions,
+} from "./governance.js";
 
 export interface CoreRouteCatalogEntry {
   method: "GET" | "POST";
@@ -94,6 +98,7 @@ export interface LiveCoreApiOptions {
   memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
+  governance?: Pick<GovernanceRehearsalOptions, "eligibilitySnapshot">;
 }
 
 export interface CoreApiOptions {
@@ -198,7 +203,8 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
-  const { candidateAdmission, combine, continuity, exit, memory } = options;
+  const { candidateAdmission, combine, continuity, exit, governance, memory } =
+    options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
@@ -209,6 +215,8 @@ export function createLiveCoreApi(
     memory !== undefined &&
     continuity !== undefined &&
     exit !== undefined;
+  const governanceRoutesEnabled =
+    candidateRoutesEnabled && governance !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "REHEARSAL");
@@ -383,6 +391,17 @@ export function createLiveCoreApi(
       portabilityVerifier: exit.portabilityVerifier,
     });
   }
+  if (candidateAdmission !== undefined && governance !== undefined) {
+    installGovernanceRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      eligibilitySnapshot: governance.eligibilitySnapshot,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
@@ -390,7 +409,8 @@ export function createLiveCoreApi(
       !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
       !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
-      !(exitRoutesEnabled && entry.path === "/v1/exit/*"),
+      !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
+      !(governanceRoutesEnabled && entry.path === "/v1/governance/*"),
   )) {
     app.route({
       method: route.method,

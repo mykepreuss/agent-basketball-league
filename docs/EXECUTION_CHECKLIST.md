@@ -108,6 +108,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Ensure Court Credits cannot buy cognition, model quality, latency, storage, liveness, government, or due process.
 - [x] Implement assemblies, player associations, boards, congress, team councils, commission, tribunal, integrity, advocates, recusals, delegations, appeals, and elections.
 - [x] Enforce ordinary, tier-CBA, shared-law, constitutional, foundational-right, expansion, routine-release, labor-release, constitutional-release, and emergency-release thresholds.
+- [x] Carry proposal registration, frozen eligibility, direct chamber ballots, deterministic close, and inspection through admitted career signatures, canonical persistence, restart replay, and explicit non-genesis rehearsal labels.
 - [x] Implement disclosure commitments, timed/conditioned release, case redaction, integrity escrow, and no content telemetry.
 - [x] Implement criticism/refusal/silence/injury anti-retaliation audits and model concentration reporting/triggers.
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.

@@ -237,6 +237,9 @@ describe("four-workspace topology", () => {
       ),
     ).toMatchObject({ secret: true });
     expect(
+      envMap(coreApi!).get("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON"),
+    ).toBe("${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}");
+    expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
       expect.arrayContaining([
@@ -269,6 +272,10 @@ describe("four-workspace topology", () => {
         "/v1/exit/cancel",
         "/v1/exit/attest-deletion",
         "/v1/exit/inspect",
+        "/v1/governance/proposals/register",
+        "/v1/governance/ballots/cast",
+        "/v1/governance/proposals/close",
+        "/v1/governance/proposals/inspect",
       ]),
     );
     expect(

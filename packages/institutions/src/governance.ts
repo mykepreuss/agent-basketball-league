@@ -4,7 +4,7 @@ import {
   sha256Commitment,
   type CanonicalEvent,
 } from "@abl/recognition";
-import type { TypedDataDomain } from "viem";
+import type { Hex, TypedDataDomain } from "viem";
 
 export const INSTITUTION_SIZES = {
   premierPlayersAssociationBoard: 8,
@@ -68,6 +68,7 @@ export interface SignedInstitutionalCommand<TCommand> {
 }
 
 export interface GovernanceBallot {
+  ballotId?: string;
   voterDid: string;
   chamber: Chamber;
   choice: "YES" | "NO" | "ABSTAIN";
@@ -77,7 +78,10 @@ export interface GovernanceBallot {
   castAt: string;
 }
 export type GovernanceVote = GovernanceBallot &
-  SignedInstitutionalCommand<GovernanceBallot>;
+  SignedInstitutionalCommand<GovernanceBallot> & {
+    authorizationAggregateVersion?: number;
+    authorizationStateRoot?: Hex;
+  };
 
 export interface GovernanceProposal {
   proposalId: string;
@@ -226,6 +230,7 @@ export async function evaluateProposal(input: {
     )
       throw new Error("Vote is outside the proposal/window");
     const ballot: GovernanceBallot = {
+      ...(vote.ballotId === undefined ? {} : { ballotId: vote.ballotId }),
       voterDid: vote.voterDid,
       chamber: vote.chamber,
       choice: vote.choice,
@@ -241,9 +246,10 @@ export async function evaluateProposal(input: {
       requiredRole: "VOTER",
       aggregateType: "governance-proposal",
       aggregateId: input.proposal.proposalId,
-      aggregateVersion: input.proposal.version,
+      aggregateVersion:
+        vote.authorizationAggregateVersion ?? input.proposal.version,
       eventType: "GovernanceBallotCast",
-      stateRoot: snapshotRoot,
+      stateRoot: vote.authorizationStateRoot ?? snapshotRoot,
       timestamp: vote.castAt,
       context: input.authorization,
       usedAuthorizations,

@@ -79,6 +79,9 @@ spec:
       - name: ABL_EXIT_PORTABILITY_HMAC_BASE64
         value: ${ABL_CORE_EXIT_PORTABILITY_HMAC_BASE64}
         secret: true
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON
+        value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}
+        secret: false
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -239,6 +242,26 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/exit/inspect
+    - id: governance-proposal-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/register
+    - id: governance-ballot-cast
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/ballots/cast
+    - id: governance-proposal-close
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/close
+    - id: governance-proposal-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/inspect
     - id: health
       type: http
       configuration:

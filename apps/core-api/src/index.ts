@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { HttpMemoryStorageVerifier } from "./memory-storage.js";
 import { HttpExitPackagePortabilityVerifier } from "./exit-portability.js";
+import { GovernanceEligibilitySnapshotSchema } from "./governance.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -149,6 +150,11 @@ const app = rehearsal
               capabilities: new Set(["exit:portability:verify"]),
             },
           }),
+        },
+        governance: {
+          eligibilitySnapshot: GovernanceEligibilitySnapshotSchema.parse(
+            JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
+          ),
         },
       });
     })()

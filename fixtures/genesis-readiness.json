@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0x3ec0210436ccf2fad8a564eba9a89d05f259c8490c8208694653bbbe21e756e1",
-      "fileCount": 97,
+      "digest": "0x15a777ff51cab1cacbd1d4ab5ea4fd18593c7bc45bcbb42d949f09418af7a4e8",
+      "fileCount": 98,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -65,8 +65,12 @@
           "digest": "0x75618f90ad2291e456652105abcbd43e4f2b886653faee663abc110a2d415c87"
         },
         {
+          "path": "apps/core-api/src/governance.ts",
+          "digest": "0x5cc6e414f8b87480bb4f6e2d260020d392c5b5ae1a5bea1c8a0bb91fb59d81f8"
+        },
+        {
           "path": "apps/core-api/src/index.ts",
-          "digest": "0x094a996b64379ee39b30a34c5a95263d01cbe4b7bdedd3b2caa263b8188ffed4"
+          "digest": "0xc9cbe7717007d1b90928d4c5837bb6f603ef1d5b92b7a25d9345553834748d3e"
         },
         {
           "path": "apps/core-api/src/memory-storage.ts",
@@ -78,7 +82,7 @@
         },
         {
           "path": "apps/core-api/src/server.ts",
-          "digest": "0x8fde6f338ff6fd1c62a9bf64612e34194eb9b2ef5367989a36fd01313fafc24b"
+          "digest": "0xa08270439096742c7836e498d4a9ae99377ebdf995eb45dd8c32bf80996582b6"
         },
         {
           "path": "apps/private-storage-broker/src/index.ts",
@@ -278,7 +282,7 @@
         },
         {
           "path": "packages/institutions/src/governance.ts",
-          "digest": "0x1ab5e906e8f15cf5b6c61d9a5e5d7418a5b5a268d80c60af70abc6356cd6c830"
+          "digest": "0xb4574f136d9d8982a4e37846b2821620fe2346bd46cdb5ca5fc01da47e8e4a6f"
         },
         {
           "path": "packages/institutions/src/index.ts",
@@ -505,7 +509,7 @@
       ]
     },
     "testSuite": {
-      "digest": "0x2122af15f86294d75cb0bddd113008ed646e73793a710e0a884e9de5c03e51a6",
+      "digest": "0xc2bf263f3aba5f7f7d26894e886a68ddf56bf5918b76a0d66916feb77c737711",
       "fileCount": 30,
       "files": [
         {
@@ -514,7 +518,7 @@
         },
         {
           "path": "apps/core-api/test/candidates.test.ts",
-          "digest": "0xbb0bd77ae824bd62b617d67079bbebe2c6d2a4720b6ce09e3fcb92dd6269568b"
+          "digest": "0xe96323092612b03820b509d69ffe0cac62ea17fcf80d91657bce2a0c667ec4af"
         },
         {
           "path": "apps/core-api/test/exit-portability.test.ts",
@@ -566,7 +570,7 @@
         },
         {
           "path": "packages/foundation/test/topology.test.ts",
-          "digest": "0x335655b1ce9853a5b7bb3f63d548800751b0c678ff221c791fbf36d489e13f13"
+          "digest": "0xffbde14c2471354595576fa353efde6055fe8f05c0b5c17f15f52bec84a0b82b"
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
@@ -657,7 +661,7 @@
       ]
     },
     "deploymentManifests": {
-      "digest": "0xed08ffaf03634d6a40d8ec4df521bbb3635c068f1c1da6b6481fb24a4d5593ed",
+      "digest": "0x0a4fc9b9f3355ae537b8dca8ac4015268b6e5f7e1446ed77915e27975b6fa55d",
       "fileCount": 15,
       "files": [
         {
@@ -682,7 +686,7 @@
         },
         {
           "path": "infra/blaxel/abl-core/core-api.yaml",
-          "digest": "0x5d8173c0163a2eef078ded514a0e37b0da353a54d75dc1c4793d0e2444979157"
+          "digest": "0xd25b4d0459ea05e9adf18a0002c7b3926372368b6ffc4a3b60d3f769e57e41a4"
         },
         {
           "path": "infra/blaxel/abl-core/government-mcp.yaml",
@@ -788,7 +792,7 @@
         }
       ]
     },
-    "testResultDigest": "0x12193cde11cd8e65dbe4e167ad2f201c5a83ec984bfc92177db136922050a2b9",
+    "testResultDigest": "0x225e00a54a1649a5f32051df52f8adc43464dcdae54ab8d066f15d354375f502",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -959,7 +963,7 @@
       "releaseId": null,
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0x3ec0210436ccf2fad8a564eba9a89d05f259c8490c8208694653bbbe21e756e1",
+      "sourceDigest": "0x15a777ff51cab1cacbd1d4ab5ea4fd18593c7bc45bcbb42d949f09418af7a4e8",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
@@ -968,7 +972,7 @@
       "toolDigest": "0x98e6bcbd4c0c079b730d63d3ca0966889a0a9061732be9701b23c1fcdf1069a3",
       "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
       "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-      "testResultDigest": "0x12193cde11cd8e65dbe4e167ad2f201c5a83ec984bfc92177db136922050a2b9",
+      "testResultDigest": "0x225e00a54a1649a5f32051df52f8adc43464dcdae54ab8d066f15d354375f502",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -1047,7 +1051,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0x3ec0210436ccf2fad8a564eba9a89d05f259c8490c8208694653bbbe21e756e1",
+        "digest": "0x15a777ff51cab1cacbd1d4ab5ea4fd18593c7bc45bcbb42d949f09418af7a4e8",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1095,7 +1099,7 @@
       {
         "name": "Blaxel deployment manifests",
         "path": "infra/blaxel/",
-        "digest": "0xed08ffaf03634d6a40d8ec4df521bbb3635c068f1c1da6b6481fb24a4d5593ed",
+        "digest": "0x0a4fc9b9f3355ae537b8dca8ac4015268b6e5f7e1446ed77915e27975b6fa55d",
         "state": "PREPARED_LOCAL"
       },
       {

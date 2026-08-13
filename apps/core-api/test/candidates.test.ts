@@ -22,10 +22,18 @@ import {
 } from "@abl/career";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
+  evaluateProposal,
+  type GovernanceBallot,
+  type GovernanceDecision,
+  type GovernanceProposal,
+  type GovernanceVote,
+} from "@abl/institutions";
+import {
   createCanonicalEvent,
   createSigningIdentity,
   sha256Commitment,
   signCanonicalEvent,
+  type CanonicalEvent,
   type SigningIdentity,
 } from "@abl/recognition";
 import type { FastifyInstance } from "fastify";
@@ -54,6 +62,14 @@ import {
   readMemoryExitExport,
   type MemoryCatalogEntry,
 } from "../src/memory.js";
+import {
+  GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  applyGovernanceWorkflowTransition,
+  governanceWorkflowStateRoot,
+  type GovernanceWorkflowEventType,
+  type GovernanceWorkflowPayload,
+  type GovernanceWorkflowSnapshot,
+} from "../src/governance.js";
 import type {
   MemoryStorageReference,
   MemoryStorageVerifier,
@@ -67,6 +83,7 @@ const digest = (character: string) => `0x${character.repeat(64)}` as Hex;
 const uuid = (suffix: string) =>
   `018f0000-0000-7000-8000-${suffix.padStart(12, "0")}`;
 const recognizedBodyImageDigest = digest("9");
+const governanceSnapshotCapturedAt = iso(day + 4 * 60_000);
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -87,6 +104,23 @@ interface Harness {
   challengeToken: string;
   memoryStorage: TestMemoryStorageVerifier;
   exitVerifier: TestExitPortabilityVerifier;
+}
+
+function governanceEligibilitySnapshot(candidateDid: string) {
+  return {
+    snapshotId: uuid("401"),
+    capturedAt: governanceSnapshotCapturedAt,
+    members: {
+      UNIVERSAL_CAREER_ASSEMBLY: [candidateDid],
+      PREMIER_PLAYERS: [candidateDid],
+      DEVELOPMENT_PLAYERS: [],
+      PREMIER_TEAM_COUNCIL: [candidateDid],
+      DEVELOPMENT_TEAM_COUNCIL: [],
+      EXECUTIVE_COMMISSION: [],
+      TRIBUNAL: [],
+      INTEGRITY_OFFICE: [],
+    },
+  };
 }
 
 class TestMemoryStorageVerifier implements MemoryStorageVerifier {
@@ -188,6 +222,9 @@ async function harness(): Promise<Harness> {
       recognizedImageDigests: new Set([recognizedBodyImageDigest]),
     },
     exit: { portabilityVerifier: exitVerifier },
+    governance: {
+      eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+    },
   });
   const challenge = await app.inject({
     method: "POST",
@@ -495,6 +532,64 @@ async function exitCommand(input: {
           event,
         ),
       ],
+    },
+  };
+}
+
+async function governanceCommand(input: {
+  h: Harness;
+  proposalId: string;
+  snapshot: GovernanceWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: GovernanceWorkflowEventType;
+  payload: GovernanceWorkflowPayload;
+  decision?: GovernanceDecision;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.h.now.value).toISOString();
+  const eventId = crypto.randomUUID();
+  const idempotencyKey = crypto.randomUUID();
+  const eventInput = {
+    eventId,
+    actorDid: input.h.candidateDid,
+    nonce: `governance-${input.proposalId}-${aggregateVersion}`,
+    idempotencyKey,
+    aggregateType: "governance-proposal",
+    aggregateId: input.proposalId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyGovernanceWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+    input.decision,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: governanceWorkflowStateRoot(next),
+  });
+  const signature = await signCanonicalEvent(
+    input.signer ?? input.h.candidate,
+    domain,
+    event,
+  );
+  return {
+    next,
+    event,
+    signature,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [signature],
     },
   };
 }
@@ -2160,6 +2255,397 @@ describe("signed candidate rehearsal API", () => {
       ).statusCode,
     ).toBe(403);
     exitRecord.stateRoot = exitStateRoot;
+    await h.app.close();
+  });
+
+  it("persists direct signed governance and replays the frozen tally", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    const eligibilitySnapshot = governanceEligibilitySnapshot(h.candidateDid);
+    h.now.value = Date.parse(governanceSnapshotCapturedAt) + 60_000;
+    const proposalId = uuid("402");
+    const opensAt = new Date(h.now.value + 60_000).toISOString();
+    const closesAt = new Date(h.now.value + hour).toISOString();
+    const proposal = {
+      proposalId,
+      version: 1,
+      proposerDid: h.candidateDid,
+      institution: "Premier collective bargaining rehearsal",
+      proposalClass: "TIER_CBA" as const,
+      tier: "PREMIER" as const,
+      title: "Rehearsal player safety agreement",
+      textCommitment: digest("1"),
+      executableChangeDigest: null,
+      opensAt,
+      closesAt,
+      eligibilitySnapshotDigest: sha256Commitment(eligibilitySnapshot),
+    };
+    const mismatchedEligibilitySnapshot = structuredClone(eligibilitySnapshot);
+    mismatchedEligibilitySnapshot.members.PREMIER_TEAM_COUNCIL = [];
+    const mismatchedRegistration = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "GovernanceProposalRegistered",
+      payload: {
+        proposal: {
+          ...proposal,
+          eligibilitySnapshotDigest: sha256Commitment(
+            mismatchedEligibilitySnapshot,
+          ),
+        },
+        eligibilitySnapshot: mismatchedEligibilitySnapshot,
+        recusedDids: [],
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/register",
+          payload: mismatchedRegistration.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const registered = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "GovernanceProposalRegistered",
+      payload: { proposal, eligibilitySnapshot, recusedDids: [] },
+    });
+    const registrationResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/governance/proposals/register",
+      payload: registered.body,
+    });
+    expect(registrationResponse.statusCode).toBe(201);
+    expect(registrationResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rehearsal: true,
+      recognizedGenesisGovernance: false,
+      eligibilitySource: "CONFIGURED_REHEARSAL_SNAPSHOT",
+      directBallotsOnly: true,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/register",
+          payload: registered.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    let governanceSnapshot = registered.next;
+    let governancePreviousHash = registered.event.eventHash;
+    h.now.value = Date.parse(opensAt);
+    const playerBallot = {
+      ballotId: uuid("403"),
+      voterDid: h.candidateDid,
+      chamber: "PREMIER_PLAYERS",
+      choice: "YES",
+      proposalId,
+      proposalVersion: 1,
+      eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+      castAt: new Date(h.now.value).toISOString(),
+    } satisfies GovernanceBallot;
+    const operatorBallot = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceBallotCast",
+      payload: { command: playerBallot },
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/ballots/cast",
+          payload: operatorBallot.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const acceptedPlayerBallot = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceBallotCast",
+      payload: { command: playerBallot },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/ballots/cast",
+          payload: acceptedPlayerBallot.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    governanceSnapshot = acceptedPlayerBallot.next;
+    governancePreviousHash = acceptedPlayerBallot.event.eventHash;
+
+    h.now.value += 60_000;
+    const duplicateSeat = {
+      ...playerBallot,
+      ballotId: uuid("404"),
+      castAt: new Date(h.now.value).toISOString(),
+    };
+    const duplicateEvent = createCanonicalEvent({
+      eventId: crypto.randomUUID(),
+      actorDid: h.candidateDid,
+      nonce: "governance-duplicate-seat",
+      idempotencyKey: crypto.randomUUID(),
+      aggregateType: "governance-proposal",
+      aggregateId: proposalId,
+      aggregateVersion: 3n,
+      eventType: "GovernanceBallotCast",
+      previousEventHash: governancePreviousHash,
+      payload: { command: duplicateSeat },
+      stateRoot: digest("0"),
+      schemaDigest: GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: duplicateSeat.castAt,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/ballots/cast",
+          payload: {
+            event: { ...duplicateEvent, aggregateVersion: "3" },
+            signatures: [
+              await signCanonicalEvent(h.candidate, domain, duplicateEvent),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    h.now.value += 60_000;
+    const councilBallot = {
+      ballotId: uuid("405"),
+      voterDid: h.candidateDid,
+      chamber: "PREMIER_TEAM_COUNCIL",
+      choice: "YES",
+      proposalId,
+      proposalVersion: 1,
+      eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+      castAt: new Date(h.now.value).toISOString(),
+    } satisfies GovernanceBallot;
+    const acceptedCouncilBallot = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceBallotCast",
+      payload: { command: councilBallot },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/ballots/cast",
+          payload: acceptedCouncilBallot.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    governanceSnapshot = acceptedCouncilBallot.next;
+    governancePreviousHash = acceptedCouncilBallot.event.eventHash;
+
+    const playerVote: GovernanceVote = {
+      ...playerBallot,
+      authorizationEvent: acceptedPlayerBallot.event as CanonicalEvent<{
+        command: GovernanceBallot;
+      }>,
+      signature: acceptedPlayerBallot.signature,
+      signerAddress: h.candidate.address,
+      authorizationAggregateVersion: Number(
+        acceptedPlayerBallot.event.aggregateVersion,
+      ),
+      authorizationStateRoot: acceptedPlayerBallot.event.stateRoot,
+    };
+    const councilVote: GovernanceVote = {
+      ...councilBallot,
+      authorizationEvent: acceptedCouncilBallot.event as CanonicalEvent<{
+        command: GovernanceBallot;
+      }>,
+      signature: acceptedCouncilBallot.signature,
+      signerAddress: h.candidate.address,
+      authorizationAggregateVersion: Number(
+        acceptedCouncilBallot.event.aggregateVersion,
+      ),
+      authorizationStateRoot: acceptedCouncilBallot.event.stateRoot,
+    };
+    const domainProposal: GovernanceProposal = {
+      proposalId,
+      version: 1,
+      proposalClass: "TIER_CBA_PREMIER",
+      openedAt: opensAt,
+      closesAt: closesAt,
+      eligibilitySnapshotId: eligibilitySnapshot.snapshotId,
+      eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+    };
+    const decision = await evaluateProposal({
+      proposal: domainProposal,
+      snapshot: eligibilitySnapshot,
+      votes: [playerVote, councilVote],
+      recusals: [],
+      authorization: {
+        domain,
+        signers: new Map([
+          [
+            h.candidateDid,
+            { signerAddress: h.candidate.address, roles: ["VOTER"] },
+          ],
+        ]),
+      },
+    });
+    expect(decision.passed).toBe(true);
+
+    h.now.value = Date.parse(closesAt);
+    const closed = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceProposalClosed",
+      payload: {
+        command: {
+          proposalId,
+          proposalVersion: 1,
+          requestedByDid: h.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+        },
+      },
+      decision,
+    });
+    const closeResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/governance/proposals/close",
+      payload: closed.body,
+    });
+    expect(closeResponse.statusCode).toBe(201);
+    expect(closeResponse.json()).toMatchObject({
+      decision: {
+        proposalId,
+        passed: true,
+        decisionCommitment: decision.decisionCommitment,
+      },
+    });
+    governanceSnapshot = closed.next;
+    governancePreviousHash = closed.event.eventHash;
+
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: { eligibilitySnapshot },
+    });
+    h.now.value += 60_000;
+    const inspected = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceInspected",
+      payload: {
+        command: {
+          proposalId,
+          requestedByDid: h.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+          format: "ABL-GOVERNANCE-INSPECTION-V1",
+        },
+      },
+    });
+    const inspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/governance/proposals/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      governance: {
+        proposalId,
+        version: 5,
+        decision: {
+          passed: true,
+          decisionCommitment: decision.decisionCommitment,
+        },
+      },
+    });
+    governanceSnapshot = inspected.next;
+    governancePreviousHash = inspected.event.eventHash;
+
+    const ballotRecord = h.store.events.find(
+      (event) =>
+        event.aggregateType === "governance-proposal" &&
+        event.eventType === "GovernanceBallotCast",
+    )!;
+    const ballotStateRoot = ballotRecord.stateRoot;
+    ballotRecord.stateRoot = digest("f");
+    h.now.value += 60_000;
+    const tamperProbe = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceInspected",
+      payload: {
+        command: {
+          proposalId,
+          requestedByDid: h.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+          format: "ABL-GOVERNANCE-INSPECTION-V1",
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/inspect",
+          payload: tamperProbe.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    ballotRecord.stateRoot = ballotStateRoot;
+
+    h.now.value += 60_000;
+    const revoked = await submit(
+      h,
+      "/v1/candidates/revoke",
+      "CandidateClosed",
+      {
+        action: "REVOKE",
+        actedAt: new Date(h.now.value).toISOString(),
+      },
+      h.candidate,
+    );
+    expect(revoked.response.statusCode).toBe(201);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/inspect",
+          payload: tamperProbe.body,
+        })
+      ).statusCode,
+    ).toBe(403);
     await h.app.close();
   });
 
