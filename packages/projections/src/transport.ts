@@ -9,12 +9,17 @@ import {
   projectionEnvelopeBytes,
   type ProjectionEventEnvelope,
 } from "./envelope.js";
+import type { ContractProjectionEventEnvelope } from "./contract-envelope.js";
 
 export const PROJECTION_APPEND_CAPABILITY = "projection:append";
 export const PROJECTION_APPEND_PATH = "/v1/internal/projections";
 
+export type PublicProjectionEnvelope =
+  | ProjectionEventEnvelope
+  | ContractProjectionEventEnvelope;
+
 export interface ProjectionEventSink {
-  publish(envelope: ProjectionEventEnvelope): Promise<void>;
+  publish(envelope: PublicProjectionEnvelope): Promise<void>;
 }
 
 export class ProjectionTransportError extends Error {
@@ -63,7 +68,7 @@ export class HttpProjectionEventSink implements ProjectionEventSink {
     this.#createNonce = input.createNonce ?? randomUUID;
   }
 
-  public async publish(envelope: ProjectionEventEnvelope): Promise<void> {
+  public async publish(envelope: PublicProjectionEnvelope): Promise<void> {
     const body = projectionEnvelopeBytes(envelope);
     const expectedVersion = (
       BigInt(envelope.event.aggregateVersion) - 1n

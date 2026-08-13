@@ -18,7 +18,9 @@
   "dependencies": {
     "@abl/database": "workspace:*",
     "@abl/foundation": "workspace:*",
+    "@abl/institutions": "workspace:*",
     "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
     "viem": "catalog:",
     "zod": "catalog:"
   },

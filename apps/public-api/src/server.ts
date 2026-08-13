@@ -8,8 +8,11 @@ import {
   PROJECTION_APPEND_PATH,
   ProjectionVersionConflictError,
   projectionEnvelopeBytes,
+  verifyContractProjectionEvent,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
+  type PublicContractProjectionReader,
+  type PublicContractProjectionWriter,
   type PublicProjectionReader,
   type PublicProjectionWriter,
 } from "@abl/projections";
@@ -126,8 +129,10 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
 
 export interface PublicApiOptions {
   projections?: PublicProjectionReader;
+  contractProjections?: PublicContractProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
+    contractWriter?: PublicContractProjectionWriter;
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -159,11 +164,15 @@ function projectionError(error: unknown): { status: number; code: string } {
     return { status: 409, code: "service_replay" };
   if (
     name === "ServiceAuthenticationError" ||
-    name === "ProjectionAuthorizationError"
+    name === "ProjectionAuthorizationError" ||
+    name === "ContractWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
-  if (name === "ProjectionValidationError")
+  if (
+    name === "ProjectionValidationError" ||
+    name === "ContractWorkflowValidationError"
+  )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
     return { status: 409, code: "version_conflict" };
@@ -174,7 +183,9 @@ export function createPublicApi(
   options: PublicApiOptions = {},
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 512_000 });
-  const rehearsal = options.projections !== undefined;
+  const rehearsal =
+    options.projections !== undefined ||
+    options.contractProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -182,8 +193,12 @@ export function createPublicApi(
     return payload;
   });
   app.addHook("onRequest", async (request) => {
-    if (request.url.startsWith("/v1/public/"))
-      await options.projections?.refresh();
+    if (request.url.startsWith("/v1/public/")) {
+      await Promise.all([
+        options.projections?.refresh(),
+        options.contractProjections?.refresh(),
+      ]);
+    }
   });
   app.get("/", async () => ({
     service: "Agent Basketball League public API",
@@ -313,6 +328,34 @@ export function createPublicApi(
           path: PROJECTION_APPEND_PATH,
           body: projectionEnvelopeBytes(request.body),
         });
+        if (
+          typeof request.body === "object" &&
+          request.body !== null &&
+          "topic" in request.body &&
+          request.body.topic === "public.contracts"
+        ) {
+          const verified = await verifyContractProjectionEvent(
+            request.body,
+            projectionIngress,
+          );
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the contract event",
+            );
+          }
+          if (projectionIngress.contractWriter === undefined)
+            throw new Error("Contract projection writer is not configured");
+          const record = await projectionIngress.contractWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -346,14 +389,17 @@ export function createPublicApi(
       const afterCursor = /^-1$|^\d+$/.test(rawCursor)
         ? Number.parseInt(rawCursor, 10)
         : -1;
-      const items =
-        path === "/v1/public/events"
-          ? (options.projections?.events(
-              Number.isInteger(afterCursor) ? afterCursor : -1,
-            ) ?? [])
-          : path === "/v1/public/games"
-            ? (options.projections?.games() ?? [])
-            : [];
+      let items: readonly unknown[] = [];
+      if (path === "/v1/public/events") {
+        items =
+          options.projections?.events(
+            Number.isInteger(afterCursor) ? afterCursor : -1,
+          ) ?? [];
+      } else if (path === "/v1/public/games") {
+        items = options.projections?.games() ?? [];
+      } else if (path === "/v1/public/contracts") {
+        items = options.contractProjections?.contracts() ?? [];
+      }
       return {
         state,
         canonical: rehearsal,

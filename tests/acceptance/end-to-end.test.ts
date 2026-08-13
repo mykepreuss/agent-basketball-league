@@ -25,8 +25,16 @@ import {
   ServiceRequestVerifier,
   signServiceRequest,
 } from "../../packages/foundation/src/index.js";
+import {
+  CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+  CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  applyContractWorkflowTransition,
+  contractOfferCommitment,
+  contractWorkflowStateRoot,
+} from "../../packages/institutions/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
+  FilePublicContractProjectionRepository,
   FilePublicProjectionRepository,
   HttpProjectionEventSink,
   PROJECTION_APPEND_CAPABILITY,
@@ -34,7 +42,9 @@ import {
   PublicProjectionWorker,
   projectionEnvelopeBytes,
   projectionEnvelopeFromOutbox,
+  verifyContractProjectionEvent,
   verifyProjectionEvent,
+  type ContractProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
 } from "../../packages/projections/src/index.js";
@@ -48,6 +58,7 @@ import {
   sha256Commitment,
   signCanonicalEvent,
   verifyCheckpointClaim,
+  type CanonicalEvent,
 } from "../../packages/recognition/src/index.js";
 import { runPrivateRehearsal } from "../../packages/rehearsal/src/index.js";
 import {
@@ -575,6 +586,252 @@ describe("complete local acceptance", () => {
     await expect(compromised.initialize()).rejects.toThrow(
       "authorization is invalid",
     );
+  });
+
+  it("carries independent contract consent from the outbox to durable public history", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-contract-acceptance-"),
+    );
+    const governorDid = "did:abl:governor-contract-acceptance";
+    const playerDid = "did:abl:player-contract-acceptance";
+    const governor = createSigningIdentity(`0x${"4".repeat(64)}`);
+    const player = createSigningIdentity(`0x${"5".repeat(64)}`);
+    const authority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          governorDid,
+          {
+            signerAddress: governor.address,
+            allowedAggregateTypes: [CONTRACT_WORKFLOW_AGGREGATE_TYPE],
+          },
+        ],
+        [
+          playerDid,
+          {
+            signerAddress: player.address,
+            allowedAggregateTypes: [CONTRACT_WORKFLOW_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+    };
+    const store = new InMemoryCanonicalStore();
+    const appendContractEvent = async (
+      event: CanonicalEvent,
+      signature: string,
+      requestLabel: string,
+    ) =>
+      store.append({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        requestHash: sha256Commitment(requestLabel),
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        expectedVersion: event.aggregateVersion - 1n,
+        competitionId: "contract-acceptance",
+        seasonId: "pre-genesis",
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.schemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: event.payload,
+        stateRoot: event.stateRoot,
+        signatures: [signature],
+        occurredAt: new Date(event.timestamp),
+        outboxTopic: "public.contracts",
+      });
+    const offerTimestamp = "2026-08-13T11:00:00.000Z";
+    const offerPayload = {
+      command: {
+        transactionId: "0198a000-0000-7000-8000-000000000401",
+        kind: "SIGN" as const,
+        playerDid,
+        fromTeamId: null,
+        toTeamId: "club-contract-acceptance",
+        seasons: 3,
+        courtCredits: 100_000,
+        capMechanism: "DRAFT_SCALE" as const,
+        termsCommitment: sha256Commitment("acceptance-contract-terms"),
+        effectiveAt: "2026-08-13T12:00:00.000Z",
+      },
+      offeredByDid: governorDid,
+      offeredAt: offerTimestamp,
+      clubAuthoritySnapshotDigest: sha256Commitment(
+        "acceptance-club-authority",
+      ),
+    };
+    const offerInput = {
+      eventId: "0198a000-0000-7000-8000-000000000402",
+      actorDid: governorDid,
+      nonce: "contract-acceptance-offer",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000403",
+      aggregateType: CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: playerDid,
+      aggregateVersion: 1n,
+      eventType: "ContractOffered",
+      previousEventHash: null,
+      payload: offerPayload,
+      stateRoot: sha256Commitment("provisional-offer"),
+      schemaDigest: CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: offerTimestamp,
+    };
+    const offerSnapshot = applyContractWorkflowTransition(
+      null,
+      createCanonicalEvent(offerInput),
+      offerPayload,
+    );
+    const offerEvent = createCanonicalEvent({
+      ...offerInput,
+      stateRoot: contractWorkflowStateRoot(offerSnapshot),
+    });
+    const offerSignature = await signCanonicalEvent(
+      governor,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      offerEvent,
+    );
+    await appendContractEvent(
+      offerEvent,
+      offerSignature,
+      "acceptance-offer-request",
+    );
+
+    const responseTimestamp = "2026-08-13T11:01:00.000Z";
+    const responsePayload = {
+      command: {
+        consentId: "0198a000-0000-7000-8000-000000000404",
+        agentDid: playerDid,
+        subjectType: "PLAYER_CONTRACT" as const,
+        subjectId: offerPayload.command.transactionId,
+        decision: "CONSENT" as const,
+        scope: ["PLAYING_RIGHTS"] as ["PLAYING_RIGHTS"],
+        proposalCommitment: contractOfferCommitment(
+          offerSnapshot.contracts[0]!,
+        ),
+        recordedAt: responseTimestamp,
+      },
+    };
+    const responseInput = {
+      eventId: "0198a000-0000-7000-8000-000000000405",
+      actorDid: playerDid,
+      nonce: "contract-acceptance-response",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000406",
+      aggregateType: CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: playerDid,
+      aggregateVersion: 2n,
+      eventType: "ContractResponded",
+      previousEventHash: offerEvent.eventHash,
+      payload: responsePayload,
+      stateRoot: sha256Commitment("provisional-response"),
+      schemaDigest: CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: responseTimestamp,
+    };
+    const responseSnapshot = applyContractWorkflowTransition(
+      offerSnapshot,
+      createCanonicalEvent(responseInput),
+      responsePayload,
+    );
+    const responseEvent = createCanonicalEvent({
+      ...responseInput,
+      stateRoot: contractWorkflowStateRoot(responseSnapshot),
+    });
+    const responseSignature = await signCanonicalEvent(
+      player,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      responseEvent,
+    );
+    await appendContractEvent(
+      responseEvent,
+      responseSignature,
+      "acceptance-response-request",
+    );
+
+    const gameProjections = new FilePublicProjectionRepository(projectionRoot);
+    const contractRepositoryOptions = {
+      verifyAuthorization: async (
+        authorization: ContractProjectionEventEnvelope,
+      ) => verifyContractProjectionEvent(authorization, authority),
+    };
+    const contractProjections = new FilePublicContractProjectionRepository(
+      projectionRoot,
+      contractRepositoryOptions,
+    );
+    await Promise.all([
+      gameProjections.initialize(),
+      contractProjections.initialize(),
+    ]);
+    const projectionIdentity = {
+      serviceId: "core-contract-projection-publisher",
+      secret: new TextEncoder().encode("c".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const serviceNow = Date.parse("2026-08-13T11:02:00.000Z");
+    const publicApi = createPublicApi({
+      projections: gameProjections,
+      contractProjections,
+      projectionIngress: {
+        writer: gameProjections,
+        contractWriter: contractProjections,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    let transportNonce = 0;
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => `contract-transport-${++transportNonce}`,
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      });
+      expect(await worker.drain()).toBe(2);
+      expect(await worker.drain()).toBe(0);
+      const contracts = await publicApi.inject({
+        method: "GET",
+        url: "/v1/public/contracts",
+      });
+      expect(contracts.json()).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            playerDid,
+            aggregateVersion: "2",
+            contracts: [{ status: "ACTIVE", consent: { decision: "CONSENT" } }],
+          },
+        ],
+      });
+    } finally {
+      await publicApi.close();
+    }
+
+    const restarted = new FilePublicContractProjectionRepository(
+      projectionRoot,
+      contractRepositoryOptions,
+    );
+    await restarted.initialize();
+    expect(restarted.contracts()).toMatchObject([
+      {
+        playerDid,
+        aggregateVersion: "2",
+        contracts: [{ status: "ACTIVE" }],
+      },
+    ]);
   });
 
   it("replays both accelerated seasons and every cross-domain rehearsal scenario exactly", async () => {

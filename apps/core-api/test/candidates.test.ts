@@ -2872,6 +2872,7 @@ describe("signed candidate rehearsal API", () => {
         firstOffer.next.contracts[0]!,
       ),
     });
+    expect(player.store.events.at(-1)?.outboxTopic).toBe("public.contracts");
     expect(
       (
         await player.app.inject({

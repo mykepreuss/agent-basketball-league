@@ -12,6 +12,8 @@
   "references": [
     { "path": "../database" },
     { "path": "../foundation" },
-    { "path": "../recognition" }
+    { "path": "../institutions" },
+    { "path": "../recognition" },
+    { "path": "../schemas" }
   ]
 }

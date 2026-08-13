@@ -1,6 +1,8 @@
 import { ServiceRequestVerifier } from "@abl/foundation";
 import {
+  FilePublicContractProjectionRepository,
   FilePublicProjectionRepository,
+  verifyContractProjectionEvent,
   verifyProjectionEvent,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
@@ -32,7 +34,11 @@ const AgentRegistrySchema = z.record(
   z.string().startsWith("did:"),
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-    allowedAggregateTypes: z.array(z.literal("game-possession")).length(1),
+    allowedAggregateTypes: z
+      .array(z.enum(["game-possession", "career-contracts"]))
+      .min(1)
+      .max(2)
+      .refine((types) => new Set(types).size === types.length),
   }),
 );
 
@@ -76,6 +82,7 @@ function projectionAuthority(): {
 const projectionRoot = process.env.ABL_PUBLIC_PROJECTION_ROOT;
 let authority: ReturnType<typeof projectionAuthority> | undefined;
 let projections: FilePublicProjectionRepository | undefined;
+let contractProjections: FilePublicContractProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   authority = runtimeAuthority;
@@ -89,13 +96,28 @@ if (projectionRoot !== undefined) {
         )
       ).projection,
   });
+  contractProjections = new FilePublicContractProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization) =>
+        verifyContractProjectionEvent(authorization, runtimeAuthority),
+    },
+  );
 }
-if (projections !== undefined) await projections.initialize();
+await Promise.all([
+  projections?.initialize(),
+  contractProjections?.initialize(),
+]);
 
 let projectionIngress: PublicApiOptions["projectionIngress"];
-if (projections !== undefined && authority !== undefined) {
+if (
+  projections !== undefined &&
+  contractProjections !== undefined &&
+  authority !== undefined
+) {
   projectionIngress = {
     writer: projections,
+    contractWriter: contractProjections,
     verifier: new ServiceRequestVerifier([
       {
         serviceId: required("ABL_PROJECTION_INGEST_SERVICE_ID"),
@@ -109,6 +131,8 @@ if (projections !== undefined && authority !== undefined) {
 
 const apiOptions: PublicApiOptions = {};
 if (projections !== undefined) apiOptions.projections = projections;
+if (contractProjections !== undefined)
+  apiOptions.contractProjections = contractProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

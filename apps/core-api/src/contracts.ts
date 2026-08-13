@@ -1,6 +1,21 @@
 import {
-  validateContractDuration,
-  type ContractStatus,
+  CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+  CONTRACT_WORKFLOW_EVENT_TYPES,
+  CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  ContractInspectionPayloadSchema as InspectionPayloadSchema,
+  ContractOfferPayloadSchema as OfferPayloadSchema,
+  ContractResponsePayloadSchema as ResponsePayloadSchema,
+  ContractWorkflowAuthorizationError as ContractAuthorizationError,
+  ContractWorkflowValidationError as ContractValidationError,
+  applyContractWorkflowTransition,
+  compositeCareerConsentHistoryCommitment,
+  contractClubAuthoritySnapshotDigest,
+  contractConsentHistoryCommitment,
+  contractOfferCommitment,
+  contractWorkflowStateRoot,
+  type ContractWorkflowEventType,
+  type ContractWorkflowPayload as DomainContractWorkflowPayload,
+  type ContractWorkflowSnapshot,
 } from "@abl/institutions";
 import {
   CanonicalConflictError,
@@ -16,13 +31,7 @@ import {
   verifyEventContent,
   type CanonicalEvent,
 } from "@abl/recognition";
-import {
-  ContractTransactionSchema,
-  DidSchema,
-  IsoDateTimeSchema,
-  Sha256Schema,
-  UuidV7Schema,
-} from "@abl/schemas";
+import { DidSchema } from "@abl/schemas";
 import type { FastifyInstance } from "fastify";
 import type { Hex, TypedDataDomain } from "viem";
 import { z } from "zod";
@@ -39,89 +48,26 @@ import {
 } from "./candidates.js";
 import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 
-const aggregateType = "career-contracts";
-const eventTypes = [
-  "ContractOffered",
-  "ContractResponded",
-  "ContractsInspected",
-] as const;
-export type ContractWorkflowEventType = (typeof eventTypes)[number];
+const aggregateType = CONTRACT_WORKFLOW_AGGREGATE_TYPE;
+const eventTypes = CONTRACT_WORKFLOW_EVENT_TYPES;
+export {
+  CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+  CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  applyContractWorkflowTransition,
+  compositeCareerConsentHistoryCommitment,
+  contractClubAuthoritySnapshotDigest,
+  contractConsentHistoryCommitment,
+  contractOfferCommitment,
+  contractWorkflowStateRoot,
+};
+export type { ContractWorkflowEventType, ContractWorkflowSnapshot };
 
 export const ContractClubGovernorsSchema = z.record(
   z.string().min(1).max(160),
   DidSchema,
 );
-const ContractOfferSchema = ContractTransactionSchema.omit({
-  consentRecordId: true,
-}).extend({
-  kind: z.literal("SIGN"),
-  fromTeamId: z.null(),
-  toTeamId: z.string().min(1).max(160),
-  seasons: z.number().int().min(1).max(5),
-  capMechanism: z.enum(["STANDARD_CAP", "DRAFT_SCALE", "MINIMUM"]),
-});
-const OfferPayloadSchema = z.strictObject({
-  command: ContractOfferSchema,
-  offeredByDid: DidSchema,
-  offeredAt: IsoDateTimeSchema,
-  clubAuthoritySnapshotDigest: Sha256Schema,
-});
-const ContractResponseSchema = z.strictObject({
-  consentId: UuidV7Schema,
-  agentDid: DidSchema,
-  subjectType: z.literal("PLAYER_CONTRACT"),
-  subjectId: UuidV7Schema,
-  decision: z.enum(["CONSENT", "REFUSE"]),
-  scope: z.tuple([z.literal("PLAYING_RIGHTS")]),
-  proposalCommitment: Sha256Schema,
-  recordedAt: IsoDateTimeSchema,
-});
-const ResponsePayloadSchema = z.strictObject({
-  command: ContractResponseSchema,
-});
-const InspectionCommandSchema = z.strictObject({
-  playerDid: DidSchema,
-  requestedByDid: DidSchema,
-  requestedAt: IsoDateTimeSchema,
-  format: z.literal("ABL-CONTRACT-INSPECTION-V1"),
-});
-const InspectionPayloadSchema = z.strictObject({
-  command: InspectionCommandSchema,
-});
-
-export const CONTRACT_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
-  protocol: "abl-career-contract-workflow",
-  version: 1,
-  aggregateType,
-  eventTypes,
-  initialSigningOnly: true,
-  playerRefusalFinal: true,
-  liveCapSheetVerified: false,
-});
-
-type ContractOffer = z.infer<typeof ContractOfferSchema>;
 type OfferPayload = z.infer<typeof OfferPayloadSchema>;
-type ContractResponse = z.infer<typeof ContractResponseSchema>;
-export type ContractWorkflowPayload =
-  | OfferPayload
-  | z.infer<typeof ResponsePayloadSchema>
-  | z.infer<typeof InspectionPayloadSchema>;
-
-export interface ContractWorkflowRecord {
-  transaction: ContractOffer;
-  offeredByDid: string;
-  offeredAt: string;
-  clubAuthoritySnapshotDigest: Hex;
-  status: Extract<ContractStatus, "OFFERED" | "ACTIVE" | "REFUSED">;
-  consent: ContractResponse | null;
-}
-
-export interface ContractWorkflowSnapshot {
-  playerDid: string;
-  version: number;
-  lastTransitionAt: string;
-  contracts: ContractWorkflowRecord[];
-}
+export type ContractWorkflowPayload = DomainContractWorkflowPayload;
 
 export interface ContractRehearsalOptions {
   store: CanonicalStore;
@@ -139,14 +85,6 @@ export interface ContractRehearsalOptions {
 interface ContractAggregate {
   records: StoredCanonicalEvent[];
   snapshot: ContractWorkflowSnapshot | null;
-}
-
-class ContractAuthorizationError extends Error {
-  public override readonly name = "ContractAuthorizationError";
-}
-
-class ContractValidationError extends Error {
-  public override readonly name = "ContractValidationError";
 }
 
 function canonicalInstant(value: string): number {
@@ -169,100 +107,6 @@ function candidateOptions(
   return options.now === undefined ? common : { ...common, now: options.now };
 }
 
-function normalizedClubGovernors(
-  clubGovernors: Readonly<Record<string, string>>,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(clubGovernors).sort(([left], [right]) =>
-      left.localeCompare(right),
-    ),
-  );
-}
-
-export function contractClubAuthoritySnapshotDigest(
-  clubGovernors: Readonly<Record<string, string>>,
-): Hex {
-  return sha256Commitment({
-    format: "ABL-CONTRACT-CLUB-AUTHORITY-SNAPSHOT-V1",
-    clubGovernors: normalizedClubGovernors(clubGovernors),
-  });
-}
-
-export function contractOfferCommitment(record: {
-  transaction: ContractOffer;
-  offeredByDid: string;
-  offeredAt: string;
-  clubAuthoritySnapshotDigest: Hex;
-}): Hex {
-  return sha256Commitment({
-    format: "ABL-CONTRACT-OFFER-COMMITMENT-V1",
-    transaction: record.transaction,
-    offeredByDid: record.offeredByDid,
-    offeredAt: record.offeredAt,
-    clubAuthoritySnapshotDigest: record.clubAuthoritySnapshotDigest,
-  });
-}
-
-function validateOffer(
-  playerDid: string,
-  event: CanonicalEvent,
-  payload: OfferPayload,
-): void {
-  const { command } = payload;
-  const offeredAt = canonicalInstant(payload.offeredAt);
-  const effectiveAt = canonicalInstant(command.effectiveAt);
-  try {
-    validateContractDuration(command.seasons);
-  } catch (error) {
-    throw new ContractValidationError(
-      error instanceof Error ? error.message : "Contract terms are invalid",
-    );
-  }
-  if (
-    command.playerDid !== playerDid ||
-    payload.offeredByDid !== event.actorDid ||
-    payload.offeredAt !== event.timestamp ||
-    effectiveAt < offeredAt
-  ) {
-    throw new ContractValidationError(
-      "Contract offer does not bind its parties or effective time",
-    );
-  }
-}
-
-function validateResponse(
-  snapshot: ContractWorkflowSnapshot,
-  event: CanonicalEvent,
-  response: ContractResponse,
-): ContractWorkflowRecord {
-  const recordedAt = canonicalInstant(response.recordedAt);
-  const contract = snapshot.contracts.find(
-    ({ transaction }) => transaction.transactionId === response.subjectId,
-  );
-  if (
-    contract === undefined ||
-    contract.status !== "OFFERED" ||
-    response.agentDid !== snapshot.playerDid ||
-    event.actorDid !== snapshot.playerDid ||
-    response.recordedAt !== event.timestamp ||
-    response.proposalCommitment !== contractOfferCommitment(contract) ||
-    recordedAt > canonicalInstant(contract.transaction.effectiveAt)
-  ) {
-    throw new ContractValidationError(
-      "Contract response does not bind an open offer or its player",
-    );
-  }
-  if (
-    response.decision === "CONSENT" &&
-    snapshot.contracts.some(({ status }) => status === "ACTIVE")
-  ) {
-    throw new ContractValidationError(
-      "Initial-signing rehearsal cannot overlap an active contract",
-    );
-  }
-  return contract;
-}
-
 function parsePayload(
   eventType: ContractWorkflowEventType,
   payload: unknown,
@@ -279,141 +123,6 @@ function parsePayload(
 
 function isEventType(value: string): value is ContractWorkflowEventType {
   return eventTypes.includes(value as ContractWorkflowEventType);
-}
-
-export function contractWorkflowStateRoot(
-  snapshot: ContractWorkflowSnapshot,
-): Hex {
-  return sha256Commitment({
-    format: "ABL-CAREER-CONTRACT-STATE-V1",
-    ...snapshot,
-  });
-}
-
-export function contractConsentHistoryCommitment(
-  playerDid: string,
-  snapshot: ContractWorkflowSnapshot | null,
-): Hex {
-  return sha256Commitment({
-    format: "ABL-CONTRACT-CONSENT-HISTORY-V1",
-    playerDid,
-    consents:
-      snapshot?.contracts.flatMap(({ transaction, consent }) =>
-        consent === null
-          ? []
-          : [{ transactionId: transaction.transactionId, consent }],
-      ) ?? [],
-  });
-}
-
-export function compositeCareerConsentHistoryCommitment(
-  admissionConsentHistoryCommitment: Hex,
-  contractConsentCommitment: Hex,
-): Hex {
-  return sha256Commitment({
-    format: "ABL-COMPOSITE-CONSENT-HISTORY-V1",
-    admissionConsentHistoryCommitment,
-    contractConsentCommitment,
-  });
-}
-
-function workflowRecord(offer: OfferPayload): ContractWorkflowRecord {
-  return {
-    transaction: structuredClone(offer.command),
-    offeredByDid: offer.offeredByDid,
-    offeredAt: offer.offeredAt,
-    clubAuthoritySnapshotDigest: offer.clubAuthoritySnapshotDigest as Hex,
-    status: "OFFERED",
-    consent: null,
-  };
-}
-
-export function applyContractWorkflowTransition(
-  current: ContractWorkflowSnapshot | null,
-  event: CanonicalEvent,
-  payload: ContractWorkflowPayload,
-): ContractWorkflowSnapshot {
-  if (current === null) {
-    if (
-      event.aggregateVersion !== 1n ||
-      event.eventType !== "ContractOffered"
-    ) {
-      throw new ContractValidationError(
-        "Career contract history must begin with an offer",
-      );
-    }
-    const offer = OfferPayloadSchema.parse(payload);
-    validateOffer(event.aggregateId, event, offer);
-    return {
-      playerDid: event.aggregateId,
-      version: 1,
-      lastTransitionAt: event.timestamp,
-      contracts: [workflowRecord(offer)],
-    };
-  }
-  if (
-    event.aggregateVersion !== BigInt(current.version + 1) ||
-    event.aggregateId !== current.playerDid ||
-    canonicalInstant(event.timestamp) <
-      canonicalInstant(current.lastTransitionAt)
-  ) {
-    throw new ContractValidationError(
-      "Career contract aggregate sequence is invalid",
-    );
-  }
-  const next = structuredClone(current);
-  next.version += 1;
-  next.lastTransitionAt = event.timestamp;
-
-  if (event.eventType === "ContractOffered") {
-    const offer = OfferPayloadSchema.parse(payload);
-    validateOffer(next.playerDid, event, offer);
-    if (
-      next.contracts.some(
-        ({ transaction }) =>
-          transaction.transactionId === offer.command.transactionId,
-      )
-    ) {
-      throw new ContractValidationError(
-        "Contract transaction ID is not unique",
-      );
-    }
-    next.contracts.push(workflowRecord(offer));
-    return next;
-  }
-  if (event.eventType === "ContractResponded") {
-    const response = ResponsePayloadSchema.parse(payload).command;
-    if (
-      next.contracts.some(
-        ({ consent }) => consent?.consentId === response.consentId,
-      )
-    ) {
-      throw new ContractValidationError("Contract consent ID is not unique");
-    }
-    const contract = validateResponse(next, event, response);
-    contract.status = response.decision === "CONSENT" ? "ACTIVE" : "REFUSED";
-    contract.consent = structuredClone(response);
-    return next;
-  }
-  if (event.eventType === "ContractsInspected") {
-    const inspection = InspectionPayloadSchema.parse(payload).command;
-    const participatingGovernors = new Set(
-      next.contracts.map(({ offeredByDid }) => offeredByDid),
-    );
-    if (
-      inspection.playerDid !== next.playerDid ||
-      inspection.requestedByDid !== event.actorDid ||
-      inspection.requestedAt !== event.timestamp ||
-      (event.actorDid !== next.playerDid &&
-        !participatingGovernors.has(event.actorDid))
-    ) {
-      throw new ContractAuthorizationError(
-        "Contract inspection is outside party authority",
-      );
-    }
-    return next;
-  }
-  throw new ContractValidationError("Contract history cannot be re-registered");
 }
 
 async function requireCareerSignature(

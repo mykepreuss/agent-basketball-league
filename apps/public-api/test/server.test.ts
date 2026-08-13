@@ -86,4 +86,47 @@ describe("public API", () => {
     ).toBe(404);
     await app.close();
   });
+
+  it("serves verified rehearsal contracts from the durable projection reader", async () => {
+    let refreshes = 0;
+    const app = createPublicApi({
+      contractProjections: {
+        refresh: async () => {
+          refreshes += 1;
+        },
+        contracts: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            playerDid: "did:abl:player-public-contract",
+            aggregateVersion: "2",
+            canonicalEventHash: `0x${"a".repeat(64)}`,
+            stateRoot: `0x${"b".repeat(64)}`,
+            contracts: [],
+            projectedAt: "2026-08-13T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/public/contracts",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
+    expect(response.json()).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          playerDid: "did:abl:player-public-contract",
+          aggregateVersion: "2",
+          canonical: true,
+        },
+      ],
+    });
+    expect(refreshes).toBe(1);
+    await app.close();
+  });
 });

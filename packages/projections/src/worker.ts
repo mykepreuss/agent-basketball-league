@@ -1,6 +1,11 @@
 import type { ProjectionOutboxStore } from "@abl/database";
 
 import {
+  contractProjectionEnvelopeFromOutbox,
+  verifyContractProjectionEvent,
+} from "./contract-envelope.js";
+import type { PublicContractProjectionWriter } from "./contract-repository.js";
+import {
   projectionEnvelopeFromOutbox,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
@@ -9,8 +14,12 @@ import type { PublicProjectionWriter } from "./repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
-  | { writer: PublicProjectionWriter; sink?: never }
-  | { sink: ProjectionEventSink; writer?: never };
+  | {
+      writer: PublicProjectionWriter;
+      contractWriter?: PublicContractProjectionWriter;
+      sink?: never;
+    }
+  | { sink: ProjectionEventSink; writer?: never; contractWriter?: never };
 
 export class PublicProjectionWorker {
   readonly #store: ProjectionOutboxStore;
@@ -26,10 +35,16 @@ export class PublicProjectionWorker {
       WorkerDestination,
   ) {
     this.#store = input.store;
-    this.#destination =
-      input.sink === undefined
-        ? { writer: input.writer }
-        : { sink: input.sink };
+    if (input.sink !== undefined) {
+      this.#destination = { sink: input.sink };
+    } else if (input.contractWriter === undefined) {
+      this.#destination = { writer: input.writer };
+    } else {
+      this.#destination = {
+        writer: input.writer,
+        contractWriter: input.contractWriter,
+      };
+    }
     this.#authority = {
       domain: input.domain,
       admittedAgents: input.admittedAgents,
@@ -38,12 +53,12 @@ export class PublicProjectionWorker {
   }
 
   public async drain(limit = 100): Promise<number> {
-    const pending = await this.#store.pendingProjectionEvents(
+    let published = 0;
+    const gameEvents = await this.#store.pendingProjectionEvents(
       limit,
       "public.game",
     );
-    let published = 0;
-    for (const event of pending) {
+    for (const event of gameEvents) {
       const envelope = projectionEnvelopeFromOutbox(event);
       const verified = await verifyProjectionEvent(
         envelope,
@@ -55,6 +70,32 @@ export class PublicProjectionWorker {
           verified.projection,
           verified.expectedVersion,
           envelope,
+        );
+      } else {
+        await this.#destination.sink.publish(envelope);
+      }
+      await this.#store.markProjected(event.outboxId, this.#now());
+      published += 1;
+    }
+    const remaining = Math.max(0, limit - published);
+    if (remaining === 0) return published;
+    const contractEvents = await this.#store.pendingProjectionEvents(
+      remaining,
+      "public.contracts",
+    );
+    for (const event of contractEvents) {
+      const envelope = contractProjectionEnvelopeFromOutbox(event);
+      const verified = await verifyContractProjectionEvent(
+        envelope,
+        this.#authority,
+      );
+      if (this.#destination.sink === undefined) {
+        if (this.#destination.contractWriter === undefined)
+          throw new Error("Contract projection writer is not configured");
+        await this.#destination.contractWriter.publish(
+          envelope,
+          verified.expectedVersion,
+          this.#now().toISOString(),
         );
       } else {
         await this.#destination.sink.publish(envelope);

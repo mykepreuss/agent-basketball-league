@@ -408,9 +408,15 @@ importers:
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
     devDependencies:
       "@types/node":
         specifier: "catalog:"
@@ -449,9 +455,15 @@ importers:
       "@abl/foundation":
         specifier: workspace:*
         version: link:../foundation
+      "@abl/institutions":
+        specifier: workspace:*
+        version: link:../institutions
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)

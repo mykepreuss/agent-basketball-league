@@ -36,7 +36,11 @@ const AdmittedAgentsSchema = z.record(
   z.string().startsWith("did:"),
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-    allowedAggregateTypes: z.array(z.literal("game-possession")).length(1),
+    allowedAggregateTypes: z
+      .array(z.enum(["game-possession", "career-contracts"]))
+      .min(1)
+      .max(2)
+      .refine((types) => new Set(types).size === types.length),
   }),
 );
 const RecognizedBodyImagesSchema = z

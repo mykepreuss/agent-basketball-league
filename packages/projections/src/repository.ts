@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { link, mkdir, open, readFile, readdir, rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readFile, readdir } from "node:fs/promises";
+import { join, resolve } from "node:path";
 
 import { sha256Commitment } from "@abl/recognition";
 
 import type { ProjectionEventEnvelope } from "./envelope.js";
+import { writeImmutableJson } from "./immutable-json.js";
 
 export interface PublicPlayerProjection {
   playerId: string;
@@ -106,31 +106,6 @@ function recordHash(
   value: Omit<ProjectionRecord, "recordHash">,
 ): `0x${string}` {
   return sha256Commitment(value);
-}
-
-async function writeImmutableJson(path: string, value: unknown): Promise<void> {
-  const temporaryPath = `${path}.${randomUUID()}.tmp`;
-  let handle: Awaited<ReturnType<typeof open>> | undefined = await open(
-    temporaryPath,
-    "wx",
-    0o600,
-  );
-  try {
-    await handle.writeFile(`${JSON.stringify(value)}\n`, "utf8");
-    await handle.sync();
-    await handle.close();
-    handle = undefined;
-    await link(temporaryPath, path);
-    const directory = await open(dirname(path), "r");
-    try {
-      await directory.sync();
-    } finally {
-      await directory.close();
-    }
-  } finally {
-    if (handle !== undefined) await handle.close().catch(() => undefined);
-    await rm(temporaryPath, { force: true }).catch(() => undefined);
-  }
 }
 
 export class FilePublicProjectionRepository
