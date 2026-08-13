@@ -12,7 +12,7 @@ export interface StaticBoundaryProof {
   blockedBy: readonly string[];
   sourceVerified: boolean;
   liveExecuted: false;
-  liveStatus: "NOT_EXECUTED_DOCKER_GATE";
+  liveStatus: "NOT_EXECUTED_BLAXEL_SANDBOX_GATE";
 }
 
 export function analyzeSandboxBoundary(input: {
@@ -84,7 +84,7 @@ export function analyzeSandboxBoundary(input: {
         combined.includes(pattern),
       ),
       liveExecuted: false,
-      liveStatus: "NOT_EXECUTED_DOCKER_GATE",
+      liveStatus: "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
     };
   });
 }

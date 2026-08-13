@@ -103,7 +103,7 @@ describe("genesis artifact preparation", () => {
     }
     expect(first).toMatchObject({
       imageDigests: [],
-      imageStatus: "NOT_BUILT_DOCKER_GATE",
+      imageStatus: "NOT_BUILT_BLAXEL_IMAGE_GATE",
     });
     expect(first.testResultDigest).toSatisfy(
       (value: unknown) =>

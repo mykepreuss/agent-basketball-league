@@ -6,9 +6,9 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 
 `@abl/assurance` turns the locally executable part of the security, capacity, recovery, and wind-down plan into seven passing tests. It does not convert unavailable provider exercises into synthetic claims.
 
-The static sandbox analysis covers all seven required escape vectors: direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, and workload-token access. Every required fixed-broker source control is present. Every result also carries `liveExecuted: false` and `NOT_EXECUTED_DOCKER_GATE`, because neither a local Docker daemon nor a target Blaxel sandbox is available.
+The static sandbox analysis covers all seven required escape vectors: direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, and workload-token access. Every required fixed-broker source control is present. Every result also carries `liveExecuted: false` and `NOT_EXECUTED_BLAXEL_SANDBOX_GATE`, because a target Blaxel sandbox is unavailable. A local Docker daemon is not required for Blaxel's image build and would not satisfy this live platform proof.
 
-The public-compromise analysis verifies that `abl-public` has only a Base checkpoint-read edge, explicit denials to core/private/competition, no canonical-write or agent-invocation authority, and no competition credentials or private storage. The public YAML manifests also contain no database, Drive, provider-key, service-credential, or domain-key values. This is a topology/source proof, not a live penetration test.
+The public-compromise analysis verifies that `abl-public` has only a Base checkpoint-read edge, explicit denials to core/private/competition, no canonical-write or agent-invocation authority, and no competition credentials or private storage. Its projection Agent receives only a capability-scoped HMAC verification secret plus the public admitted-agent key registry; the HMAC cannot create the required agent-signed canonical envelope. Each durable projection stores that envelope and re-verifies it on restart, so recomputing the unkeyed local record chain does not create persistent recognized history. The public YAML manifests contain no database, Drive, provider-key, or domain private-key values. This is a topology/source/local-adversarial proof, not a live penetration test.
 
 ## Local 2x synthetic capacity proof
 
@@ -34,9 +34,9 @@ Agent Drive restoration, Blaxel sandbox restoration, Neon point-in-time recovery
 ## Verification environment and commands
 
 ```text
-Timestamp: 2026-08-13T01:28:44-07:00
+Timestamp: 2026-08-13 final uncached evidence rerun
 Host:      Darwin 25.5.0 arm64
-Node:      v24.7.0 (repository pin: 24.18.0; engine warning retained)
+Node:      v24.18.0 (exact repository pin)
 pnpm:      11.21.0
 
 pnpm --filter @abl/assurance check -> pass
@@ -49,12 +49,12 @@ The suite covers all seven static escape-vector labels and live-gate markers, pu
 Artifact locks:
 
 - Capacity harness: `sha256:e9515a182b68c2482693525d09df1820a4f465cf73fd6a24bc48eb20f1b88e52`
-- Network analysis: `sha256:b94d5db5f4323923334661c5d1c901c6fd064b21b92b731a7acb2021d5e65dcc`
+- Network analysis: `sha256:817f8d5573bf1831e23d435a500562f00357e928364636c6ae17b1a4ac72b1c2`
 - Recovery harness: `sha256:870549865e3473a68b436d27b0dc94cc6e8bdd4bc56183c4db013e5a1988f876`
 - Wind-down harness: `sha256:6e20917e33fa153d9127db5744eb0414e9d83ee06796519feda66ead19bdb9bc`
-- Assurance suite: `sha256:79560048751eb3140e4e546e9093971cafcb78e3d9e28e5bf1a1b4d89bb26396`
-- Locked plan fixture: `sha256:615c80805d00746b87699f9be104c2a894e0f5c4eb595a4284adf0a793c5376f`
-- Lockfile: `sha256:8ef7b172c6728b1bb27120c56963ce550c55e494a75a8733e9e1564967f1ee00`
+- Assurance suite: `sha256:f917ea9d56a97bfe8e1f95a9d885bbcb5a4746a976fd7bccb8f788840cb38c26`
+- Locked plan fixture: `sha256:74bf007e6ec248c13baf0ab76db67502ba6ecfb74a85a5c014ce9598c16b9d20`
+- Lockfile: `sha256:1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f`
 
 ## Retained external gates
 

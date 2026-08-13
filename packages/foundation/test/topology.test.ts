@@ -69,7 +69,26 @@ describe("four-workspace topology", () => {
     const publicResources = await readYamlDirectory("abl-public");
     expect(
       publicResources.filter((resource) => resource.kind === "Application"),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    const publicApi = publicResources.find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-public-api",
+    );
+    expect(publicApi).toMatchObject({
+      kind: "Agent",
+      spec: {
+        public: true,
+        region: "us-was-1",
+        volumes: [
+          {
+            name: "${ABL_PUBLIC_PROJECTION_VOLUME_NAME}",
+            mountPath: "/mnt/abl-public-projections",
+          },
+        ],
+        runtime: { minScale: 1, maxScale: 1 },
+      },
+    });
   });
 
   it("keeps competition bodies free of database, raw Drive, blfs, and provider credentials", async () => {
@@ -153,6 +172,32 @@ describe("four-workspace topology", () => {
         "expected-version",
       ]),
     );
+    expect(
+      identities.identities.find(
+        (identity) =>
+          identity.secretReference === "core-public-projection-hmac-v1",
+      )?.allowedTargets,
+    ).toContainEqual({
+      workspace: "abl-public",
+      capabilities: ["projection:append"],
+    });
+
+    const [coreApi] = (await readYamlDirectory("abl-core")).filter(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-core-api",
+    );
+    const publicApi = (await readYamlDirectory("abl-public")).find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-public-api",
+    );
+    expect(envMap(coreApi!).get("ABL_PROJECTION_SERVICE_ID")).toBe(
+      "core-projection-publisher",
+    );
+    expect(envMap(publicApi!).get("ABL_PROJECTION_INGEST_SERVICE_ID")).toBe(
+      "core-projection-publisher",
+    );
 
     const capacity = (await readJson(
       new URL("capacity-plan.json", infraRoot),
@@ -174,11 +219,34 @@ describe("four-workspace topology", () => {
 });
 
 describe("hardened sandbox image policy", () => {
-  const sandboxRoot = new URL("../../../infra/sandbox/", import.meta.url);
+  const repositoryRoot = new URL("../../../", import.meta.url);
+  const sandboxRoot = new URL("infra/sandbox/", repositoryRoot);
+
+  it("defines a Blaxel-native image project with a source-minimal upload context", async () => {
+    const [config, ignore] = await Promise.all([
+      readFile(new URL("blaxel.toml", repositoryRoot), "utf8"),
+      readFile(new URL(".blaxelignore", repositoryRoot), "utf8"),
+    ]);
+    expect(config).toContain('name = "abl-body-sandbox-image"');
+    expect(config).toContain('type = "sandbox"');
+    expect(config).toContain("slim = false");
+    expect(config).toContain('generation = "mk3"');
+    for (const excluded of [
+      ".next",
+      ".turbo",
+      "dist",
+      "node_modules",
+      "apps/arena",
+      "packages/recognition",
+      "tests",
+    ]) {
+      expect(ignore.split("\n")).toContain(excluded);
+    }
+  });
 
   it("pins the base image and package versions and uses an immutable root-owned launcher", async () => {
     const dockerfile = await readFile(
-      new URL("Dockerfile", sandboxRoot),
+      new URL("Dockerfile", repositoryRoot),
       "utf8",
     );
     const packageLock = await readFile(

@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "node:path";
 
 import { sha256Commitment } from "@abl/recognition";
 
+import type { ProjectionEventEnvelope } from "./envelope.js";
+
 export interface PublicPlayerProjection {
   playerId: string;
   team: "HOME" | "AWAY";
@@ -54,6 +56,7 @@ export interface ProjectionRecord {
   cursor: number;
   previousRecordHash: `0x${string}` | null;
   projection: PublicGameProjection;
+  authorization: ProjectionEventEnvelope | null;
   recordHash: `0x${string}`;
 }
 
@@ -75,7 +78,28 @@ export interface PublicProjectionReader {
 }
 
 export interface PublicProjectionWriter {
-  publish(projection: PublicGameProjection): Promise<ProjectionRecord>;
+  publish(
+    projection: PublicGameProjection,
+    expectedVersion?: string,
+    authorization?: ProjectionEventEnvelope,
+  ): Promise<ProjectionRecord>;
+}
+
+export interface PublicProjectionRepositoryOptions {
+  verifyAuthorization?: (
+    authorization: ProjectionEventEnvelope,
+    projectedAt: string,
+  ) => Promise<PublicGameProjection>;
+}
+
+export class ProjectionVersionConflictError extends Error {
+  public override readonly name = "ProjectionVersionConflictError";
+}
+
+function parseVersion(value: string, label: string): bigint {
+  if (!/^(0|[1-9]\d*)$/.test(value))
+    throw new ProjectionVersionConflictError(`${label} is not canonical`);
+  return BigInt(value);
 }
 
 function recordHash(
@@ -113,12 +137,43 @@ export class FilePublicProjectionRepository
   implements PublicProjectionReader, PublicProjectionWriter
 {
   readonly #root: string;
+  readonly #verifyAuthorization: PublicProjectionRepositoryOptions["verifyAuthorization"];
   readonly #records: ProjectionRecord[] = [];
   readonly #eventCursors = new Map<string, number>();
   #operationTail = Promise.resolve();
 
-  public constructor(root: string) {
+  public constructor(
+    root: string,
+    options: PublicProjectionRepositoryOptions = {},
+  ) {
     this.#root = resolve(root);
+    this.#verifyAuthorization = options.verifyAuthorization;
+  }
+
+  async #assertAuthorized(
+    projection: PublicGameProjection,
+    authorization: ProjectionEventEnvelope | null,
+  ): Promise<void> {
+    if (this.#verifyAuthorization === undefined) return;
+    const projectedAtMs = Date.parse(projection.projectedAt);
+    if (
+      authorization === null ||
+      !Number.isFinite(projectedAtMs) ||
+      projection.projectedAt !== new Date(projectedAtMs).toISOString()
+    ) {
+      throw new Error("Public projection authorization is absent or invalid");
+    }
+    let verified: PublicGameProjection;
+    try {
+      verified = await this.#verifyAuthorization(
+        authorization,
+        projection.projectedAt,
+      );
+    } catch {
+      throw new Error("Public projection authorization is invalid");
+    }
+    if (sha256Commitment(verified) !== sha256Commitment(projection))
+      throw new Error("Public projection does not match its authorization");
   }
 
   public async initialize(): Promise<void> {
@@ -146,6 +201,7 @@ export class FilePublicProjectionRepository
       const recordsRoot = join(this.#root, "records");
       const records: ProjectionRecord[] = [];
       const eventCursors = new Map<string, number>();
+      const gameVersions = new Map<string, bigint>();
       const filenames = (await readdir(recordsRoot))
         .filter((name) => /^\d{12}\.json$/.test(name))
         .sort();
@@ -155,6 +211,10 @@ export class FilePublicProjectionRepository
         );
         const record = value as ProjectionRecord;
         const prior = records.at(-1);
+        await this.#assertAuthorized(
+          record.projection,
+          record.authorization ?? null,
+        );
         if (
           record.cursor !== records.length ||
           filename !== `${String(record.cursor).padStart(12, "0")}.json` ||
@@ -164,6 +224,7 @@ export class FilePublicProjectionRepository
               cursor: record.cursor,
               previousRecordHash: record.previousRecordHash,
               projection: record.projection,
+              authorization: record.authorization,
             }) ||
           record.projection.canonical !== true
         ) {
@@ -171,8 +232,24 @@ export class FilePublicProjectionRepository
         }
         if (eventCursors.has(record.projection.canonicalEventHash))
           throw new Error("Public projection repeats a canonical event");
+        const priorGameVersion =
+          gameVersions.get(record.projection.gameId) ?? 0n;
+        let projectionVersion: bigint;
+        try {
+          projectionVersion = parseVersion(
+            record.projection.aggregateVersion,
+            "Projection aggregate version",
+          );
+        } catch {
+          throw new Error("Public projection has an invalid aggregate version");
+        }
+        if (projectionVersion !== priorGameVersion + 1n)
+          throw new Error(
+            "Public projection aggregate version chain is corrupt",
+          );
         records.push(structuredClone(record));
         eventCursors.set(record.projection.canonicalEventHash, record.cursor);
+        gameVersions.set(record.projection.gameId, projectionVersion);
       }
       this.#records.splice(0, this.#records.length, ...records);
       this.#eventCursors.clear();
@@ -183,16 +260,38 @@ export class FilePublicProjectionRepository
 
   public async publish(
     projection: PublicGameProjection,
+    expectedVersion?: string,
+    authorization?: ProjectionEventEnvelope,
   ): Promise<ProjectionRecord> {
     return this.#serialize(async () => {
+      await this.#assertAuthorized(projection, authorization ?? null);
       const priorCursor = this.#eventCursors.get(projection.canonicalEventHash);
       if (priorCursor !== undefined)
         return structuredClone(this.#records[priorCursor]!);
+      const actualVersion = this.#records.findLast(
+        ({ projection: candidate }) => candidate.gameId === projection.gameId,
+      )?.projection.aggregateVersion;
+      const actual = parseVersion(actualVersion ?? "0", "Stored version");
+      const next = parseVersion(
+        projection.aggregateVersion,
+        "Projection version",
+      );
+      const claimedExpected = parseVersion(
+        expectedVersion ?? (next - 1n).toString(),
+        "Expected version",
+      );
+      if (actual !== claimedExpected || next !== claimedExpected + 1n) {
+        throw new ProjectionVersionConflictError(
+          `Expected projection version ${claimedExpected}, received ${actual}`,
+        );
+      }
       const prior = this.#records.at(-1);
       const withoutHash = {
         cursor: this.#records.length,
         previousRecordHash: prior?.recordHash ?? null,
         projection: structuredClone(projection),
+        authorization:
+          authorization === undefined ? null : structuredClone(authorization),
       };
       const record: ProjectionRecord = {
         ...withoutHash,
@@ -226,9 +325,9 @@ export class FilePublicProjectionRepository
   }
 
   public game(gameId: string): PublicGameProjection | undefined {
-    const projection = this.#records
-      .map(({ projection }) => projection)
-      .findLast((candidate) => candidate.gameId === gameId);
+    const projection = this.#records.findLast(
+      ({ projection: candidate }) => candidate.gameId === gameId,
+    )?.projection;
     return projection === undefined ? undefined : structuredClone(projection);
   }
 

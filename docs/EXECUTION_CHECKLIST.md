@@ -7,7 +7,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 ## 0. Discovery and platform verification [x]
 
 - [x] Read the approved plan and objective completely.
-- [x] Inspect workspace, target path, Git state, applicable `AGENTS.md`, Node, pnpm, Docker, Postgres, Foundry, and Blaxel CLI.
+- [x] Inspect workspace, target path, Git state, applicable `AGENTS.md`, Node, pnpm, local OCI tooling, Postgres, Foundry, and Blaxel CLI.
 - [x] Inspect authenticated Blaxel workspaces and currently accessible resource classes without creating spend.
 - [x] Review the current official Blaxel documentation index and the Drive, proxy, domain, non-root, telemetry, hosting, workspace, and quota constraints.
 - [x] Verify current official Node, NBA rulebook, NBPA CBA, NBA cap, Neon recovery, and Base testnet sources.
@@ -32,12 +32,14 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 - [x] Define `abl-core`, `abl-private`, `abl-competition`, and `abl-public` manifests with explicit responsibilities and prohibited access.
 - [x] Define least-privilege cross-workspace service identities, signed requests, nonces, expected versions, and allowlists.
+- [x] Implement the declared core-to-public projection capability as HMAC-authenticated HTTP delivery of strict agent-signed envelopes, with durable aggregate-version enforcement and retry idempotency.
 - [x] Implement serializable canonical state, per-aggregate versions/hash chains, UUIDv7 events, atomic outbox, constraints, and partitions.
 - [x] Implement the ciphertext-only private-storage broker, domain keys/manifests/version chains, guardian recovery envelopes, and authorization metadata.
 - [x] Reconstruct storage policy, ciphertext-version, and guardian-envelope state from immutable durable records after restart; fail closed on path/chain corruption and roll memory back after failed writes.
 - [x] Implement the unprivileged custom sandbox image source with fixed broker, immutable trust roots/executables, no agent-visible Drive/model/database credentials, and OS-level egress setup.
 - [x] Define applications, sandboxes, agents, MCP servers, jobs, model endpoints, revisions, observability opt-outs, quota targets, and region placement.
-- [!] Build and live-test the sandbox image; the Docker daemon is unavailable.
+- [x] Prepare and dry-run the repository-root Blaxel custom-image project; no local Docker daemon is required.
+- [!] Build the image with `bl push` in `abl-competition`, pin its immutable ID, and live-test it; the target workspace is unavailable.
 - [!] Obtain access to four Blaxel workspaces and Agent Drive private preview; current account exposes only `knicks`, with Drive disabled.
 - [!] Stage the manifests without material recurring spend after the target Blaxel account/workspaces are confirmed.
 - [!] Run the migration and recovery proof on the project Neon branch after a connection is supplied.
@@ -66,7 +68,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Change recognized state, create film, permit durable agent-authored lessons, and publish immutable segments/cursor.
 - [x] Render the possession in the public arena.
 - [x] Independently replay the exact state and Merkle root without model inference.
-- [x] Carry the signed possession through the rehearsal-only command API, canonical transaction/outbox, independently signature-verifying projection worker, durable public projection, cursor/SSE API, and fixture-free arena; prove restart and direct rogue-store insertion behavior.
+- [x] Carry the signed possession through the rehearsal-only command API, canonical transaction/outbox, HMAC-authenticated HTTP projection transport, independent public signature verification, durable public projection, cursor/SSE API, and fixture-free arena; prove safe retry, restart, transport replay/tamper rejection, direct rogue-store rejection, and forged-volume-record rejection.
 - [x] Pass the first-possession acceptance scenario and record proof.
 
 ## 5. Identity and personal computers [x]
@@ -125,10 +127,10 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 ## 10. Security, capacity, and recovery proof [!]
 
 - [x] Statistically verify the fixed-broker source controls for direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, and workload-token access.
-- [!] Execute those seven escape attempts inside the built sandbox image after a Docker daemon or target Blaxel sandbox is available.
+- [!] Execute those seven escape attempts inside the built image after a target Blaxel sandbox is available.
 - [x] Prove local cross-domain ciphertext isolation, ciphertext-only broker behavior, public/core private-content denial, trade revocation ordering, and telemetry exclusion.
 - [!] Repeat the isolation and telemetry exercises against Agent Drive and the four live Blaxel workspaces after access is supplied.
-- [x] Prove from the topology and secret-free public manifests that a public compromise has no path to commands, competition credentials, the canonical database, or private content.
+- [x] Prove from topology, capability-scoped manifests, independent agent-signature verification, and restart-time durable-record verification that a public compromise has no path to commands, competition credentials, the canonical database, private content, or persistent recognized-history forgery.
 - [!] Run a live public-workspace penetration exercise after that workspace exists.
 - [x] Execute a local in-process synthetic proof at 2x the targets: 20,000 spectator cursor polls, 2,000 candidate registrations, 20 games, and 400 active body objects.
 - [!] Reserve and exercise 10,000 spectators, 1,000 candidate registrations/day, ten simultaneous games, and 200 active bodies with 2x remote headroom where reservable; material spend and missing workspaces gate this step.
@@ -158,7 +160,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 ## 12. Final acceptance and Season One gate [!]
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
-- [!] Run the live Docker/Blaxel/Drive/Neon/Base/networked-load/hardware suites after their external prerequisites and spend approval exist.
+- [!] Run the live Blaxel custom-image/Drive/Neon/Base/networked-load/hardware suites after their external prerequisites and spend approval exist.
 - [x] Verify all 43 schemas/interfaces, 40 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
@@ -177,6 +179,6 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Competition: exact replay, no winner input, <=52% calibration, equivalent resources, whole-game postponement on provider failure.
 - [x] Government/releases: eligibility, thresholds, recusals, appeals, delegation, expiry, artifact digest consistency, fail closed.
 - [x] Network/platform local/static: broker-only egress controls, public compromise containment, and zero private-content telemetry policy.
-- [!] Network/platform live: execute escape, isolation, penetration, and telemetry proofs on built Docker/Blaxel/Drive resources.
+- [!] Network/platform live: execute escape, isolation, penetration, and telemetry proofs on built Blaxel custom-image and Drive resources.
 - [x] Scale/funding-failure local: 2x synthetic counts/SLOs, exact events, overload priorities, deliberative wind-down, proofs, and portable exits.
 - [!] Scale/funding-failure live: reserve networked capacity, verify provider SLOs/costs, and prepay the Season Zero/30-day envelopes.

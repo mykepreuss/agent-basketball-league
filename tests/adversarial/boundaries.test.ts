@@ -22,7 +22,7 @@ describe("adversarial acceptance", () => {
       [
         "infra/sandbox/abl-sandbox-init",
         "infra/sandbox/agent-runtime",
-        "infra/sandbox/Dockerfile",
+        "Dockerfile",
       ].map((path) => readFile(join(repositoryRoot, path), "utf8")),
     );
     const proofs = analyzeSandboxBoundary({
@@ -36,7 +36,7 @@ describe("adversarial acceptance", () => {
       proofs.every(
         (proof) =>
           proof.liveExecuted === false &&
-          proof.liveStatus === "NOT_EXECUTED_DOCKER_GATE",
+          proof.liveStatus === "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
       ),
     ).toBe(true);
   });

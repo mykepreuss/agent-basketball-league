@@ -1,5 +1,5 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Application
+kind: Agent
 metadata:
   name: abl-public-api
   labels:
@@ -7,20 +7,42 @@ metadata:
     abl-release: ${ABL_RELEASE_ID}
 spec:
   enabled: true
-  image: ${ABL_PUBLIC_API_IMAGE_DIGEST}
-  memory: 4096
-  port: 8080
+  public: true
   region: us-was-1
-  envs:
-    - name: ABL_PROJECTION_INPUT_URL
-      value: ${ABL_PROJECTION_INPUT_URL}
-      secret: false
-    - name: ABL_PROJECTION_VERIFY_KEY_REGISTRY
-      value: ${ABL_PROJECTION_VERIFY_KEY_REGISTRY}
-      secret: false
-    - name: DO_NOT_TRACK
-      value: "1"
-      secret: false
-    - name: BL_ENABLE_OPENTELEMETRY
-      value: "false"
-      secret: false
+  volumes:
+    - name: ${ABL_PUBLIC_PROJECTION_VOLUME_NAME}
+      mountPath: /mnt/abl-public-projections
+  runtime:
+    generation: mk3
+    image: ${ABL_PUBLIC_API_IMAGE_DIGEST}
+    memory: 4096
+    minScale: 1
+    maxScale: 1
+    envs:
+      - name: ABL_PUBLIC_PROJECTION_ROOT
+        value: /mnt/abl-public-projections
+        secret: false
+      - name: ABL_PROJECTION_INGEST_SERVICE_ID
+        value: core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_INGEST_HMAC_BASE64
+        value: ${ABL_CORE_PUBLIC_PROJECTION_HMAC_BASE64}
+        secret: true
+      - name: ABL_PROJECTION_VERIFY_KEY_REGISTRY
+        value: ${ABL_PROJECTION_VERIFY_KEY_REGISTRY}
+        secret: false
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

@@ -16,11 +16,11 @@ import {
 const root = new URL("../../../", import.meta.url);
 
 describe("static sandbox and workspace containment proof", () => {
-  it("covers every required escape vector and explicitly retains the live Docker gate", async () => {
+  it("covers every required escape vector and retains the live Blaxel sandbox gate", async () => {
     const [initSource, launcherSource, dockerfileSource] = await Promise.all([
       readFile(new URL("infra/sandbox/abl-sandbox-init", root), "utf8"),
       readFile(new URL("infra/sandbox/agent-runtime", root), "utf8"),
-      readFile(new URL("infra/sandbox/Dockerfile", root), "utf8"),
+      readFile(new URL("Dockerfile", root), "utf8"),
     ]);
     const proofs = analyzeSandboxBoundary({
       initSource,
@@ -34,7 +34,7 @@ describe("static sandbox and workspace containment proof", () => {
       proofs.every(
         (proof) =>
           !proof.liveExecuted &&
-          proof.liveStatus === "NOT_EXECUTED_DOCKER_GATE",
+          proof.liveStatus === "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
       ),
     ).toBe(true);
   });

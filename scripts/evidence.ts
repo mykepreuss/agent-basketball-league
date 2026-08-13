@@ -163,7 +163,7 @@ async function main(): Promise<void> {
     routeCount: routeCatalog.routes.length,
     rawResults: suites,
     limitations: [
-      "Docker sandbox escape execution is unavailable.",
+      "Live escape execution in the Blaxel custom-image sandbox is unavailable.",
       "Four target Blaxel workspaces and Agent Drive are unavailable.",
       "Neon PITR lacks project credentials.",
       "Base finality lacks a ratified deployment and credentials.",

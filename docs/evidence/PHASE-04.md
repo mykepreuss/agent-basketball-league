@@ -40,7 +40,7 @@ The original fixture-backed layout received desktop/mobile browser QA with the f
 - Mobile 390×844: no horizontal overflow, all players/events remain in the DOM, the court scales, the ledger stacks, and the proof grid collapses to one column.
 - Semantic regions expose the score/clocks, fixed-point court, six-segment ledger, and independent proof. Reduced-motion and higher-contrast media rules are present.
 
-The fixture remains only a deterministic presentation regression locked by the possession test. The end-to-end acceptance starts a real local public API and proves that the arena data loader receives the signed possession projection from it.
+The fixture remains only a deterministic presentation regression locked by the possession test. The end-to-end acceptance starts a real local public API and proves that the arena data loader receives the signed possession projection from it after the projection crosses a loopback HTTP service boundary.
 
 ## Rehearsal-only vertical path
 
@@ -49,20 +49,21 @@ The same possession now crosses a complete local non-fixture path:
 1. Persistent H1 signs `PossessionResolved` after all player, coach, referee, and replay authorizations are verified.
 2. The rehearsal-only core API validates canonical content, admitted DID/key/aggregate scope, complete decision-proof cardinality, internal event/segment/Merkle consistency, and timestamp/version bounds.
 3. The canonical store commits the event, aggregate head, actor nonce, idempotency result, and outbox atomically.
-4. The projection worker independently reconstructs and verifies the canonical event/signature from durable outbox data before publishing an immutable fsynced projection hash chain.
-5. A separately initialized public reader discovers post-startup records, serves games/events/cursor/segments/SSE, and the arena reads that API.
-6. Projection and private-storage restart tests reconstruct their complete durable chains. A rogue-signed direct canonical-store insertion is rejected before public projection.
+4. The projection worker reconstructs and verifies the canonical event/signature from durable outbox data, encodes a strict signed envelope, and delivers it to the public service over a real HMAC-authenticated HTTP boundary whose signature binds method, path, body, nonce, timestamp, capability, and expected aggregate version.
+5. The public service independently repeats the agent-key/content/payload verification, rejects undeclared projection fields, atomically enforces the expected game version, and stores the signed source authorization beside the immutable fsynced projection hash chain.
+6. Public games/events/cursor/segments/SSE and the arena read only that verified repository. The internal ingest route is absent from public discovery and accepts neither unsigned callers nor HMAC-only content without an admitted-agent signature.
+7. Safe delivery retry, service nonce replay, transport tampering, aggregate-version skips, rogue-signed direct-store insertions, restart reconstruction, and a forged durable record with a recomputed local record hash are all tested. Restart rejects the forged record because its agent authorization no longer verifies.
 
 The mode is explicit (`ABL_REHEARSAL_MODE=1`); normal startup remains pre-genesis and rejects consequential commands.
 
 ## Verification
 
-After formatting:
+The current focused path passes under the pinned Node `24.18.0` runtime:
 
 ```text
-pnpm check  -> 13/13 tasks
-pnpm test   -> 43/43 tests (arena has no duplicate unit suite)
-pnpm build  -> 10/10 packages; / and /arena statically prerendered
+pnpm --filter @abl/projections check/test -> pass
+pnpm --filter @abl/public-api check       -> pass
+pnpm test:acceptance                      -> 7/7 assertions
 ```
 
 Adversarial cases reject changed cognition receipts/signature bindings, invalid randomness reveals, missing/duplicate participants, wrong window order, and any input containing a `winner` field.
@@ -73,8 +74,11 @@ Artifact locks:
 - Deterministic engine: `sha256:6842f2acb2c6722f5f49db6a5a7a7a0a2de570ef27f3aea934b1f074110dd6c0`
 - Random stream: `sha256:7145ace91a9f3d4d64a6e26c3d1d9833f1376f9ea2f61dbc8017896ee19d9ddf`
 - Arena page: `sha256:56f27b1b8f2660336ae5f8d723816659ddf81f6cda4599dc069ab8f6b39e59ff`
-- Lockfile: `sha256:b3dfbcaaa3f4de35fe6710d15d7f2a693b22b8230d8b0e149701c9ef4a5e614a`
+- Signed-envelope transport: `sha256:c93a22aa582cf0a848501a3e36229e3569e3fa92a4a053a3e728a3770faa2b86`
+- Restart-verifying projection repository: `sha256:72037c4020fe6698e425045f8ffbd26e4d0af72b8a289c3af0033faea64a3a65`
+- Acceptance suite: `sha256:6d7f439489c50e62b3a2a779ff6492e4a7c42ef86b3464b3be24aa7f35fc434f`
+- Lockfile: `sha256:1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f`
 
 ## Retained platform gate
 
-The player bodies and arena are real local adapters and production-buildable resources, but they have not been provisioned as named Blaxel Sandboxes because the four target workspaces are unavailable and Docker is offline. This local proof does not satisfy the later live isolation, provider-failure, concurrency, latency, or capacity gates.
+The player bodies and arena are real local adapters and production-buildable resources, but they have not been provisioned as named Blaxel Sandboxes because the four target workspaces are unavailable. This local proof does not satisfy the later live isolation, provider-failure, concurrency, latency, or capacity gates.

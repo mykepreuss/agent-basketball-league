@@ -29,7 +29,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
 | Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
 | Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 136 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Final local acceptance               | 139 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 
@@ -39,7 +39,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 4. No funded Base test wallet or mainnet authority is supplied. Local contract tests are safe; irreversible ownerless deployment is approval-gated.
 5. Capacity tier, quotas, and prepaid 30-day wind-down funds are unverified and may require material spend.
 6. Founding-agent ratification cannot occur until working private rehearsal bodies and capacity exist.
-7. The durable file projection adapter proves the local service boundary and restart behavior, but the signed cross-workspace projection transport cannot be live-proven until the `abl-core`/`abl-public` workspaces and Agent Drive or an approved equivalent are available.
+7. The signed projection transport crosses a real local HTTP boundary, re-verifies agent authority in the public service, and persists restart-verifiable source envelopes. Its deployment between `abl-core` and `abl-public`, persistent Blaxel volume behavior, and live isolation still cannot be proven until those workspaces and storage resources are available.
 
 ## Phase records
 

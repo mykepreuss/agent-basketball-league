@@ -5,16 +5,16 @@
     "releaseId": null,
     "version": null,
     "releaseClass": "IDENTITY_CONSTITUTIONAL",
-    "sourceDigest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
+    "sourceDigest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
     "containerDigests": [
-      "0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e"
+      "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
     ],
     "imageDigests": [],
     "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-    "toolDigest": "0x97b4730cff7e4442428759c4e41e52273aca66ef1365893303d89383a5133c9b",
+    "toolDigest": "0x46d112cf7db239aaa27f70bdaa1579ed0d20792625aacf45ad44345f47cfba76",
     "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
     "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
-    "testResultDigest": "0xfa281c02d08e705fb3a2c72f8b5331227776c7e528410b66f83b400a73775a47",
+    "testResultDigest": "0xbd10df4b18849308b2ec7b58c6fc8db18a18ce13c48b76bdd7ee6eeee92e3e36",
     "applicableLawEventIds": [],
     "ratificationEventIds": [],
     "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",

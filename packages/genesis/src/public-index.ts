@@ -33,7 +33,7 @@ export async function buildPublicArtifactIndex(
       },
       {
         name: "sandbox image",
-        path: "infra/sandbox/Dockerfile",
+        path: "Dockerfile",
         digest: null,
         state: "PENDING_BUILD" as const,
       },
@@ -57,7 +57,7 @@ export async function buildPublicArtifactIndex(
       },
       {
         name: "public projections",
-        path: "apps/arena/app/",
+        path: null,
         digest: digests.publicProjection.digest,
         state: "PREPARED_LOCAL" as const,
       },

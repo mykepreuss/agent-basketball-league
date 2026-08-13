@@ -42,7 +42,7 @@
     "SPECTATORS"
   ],
   "externalGates": {
-    "dockerEscapeTests": "NOT_EXECUTED_DOCKER_GATE",
+    "sandboxEscapeTests": "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
     "blaxelCapacityAndIsolation": "NOT_EXECUTED_BLAXEL_GATE",
     "agentDriveRecovery": "NOT_EXECUTED_AGENT_DRIVE_GATE",
     "neonPointInTimeRecovery": "NOT_EXECUTED_NEON_CREDENTIAL_GATE",

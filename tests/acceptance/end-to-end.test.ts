@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,10 +21,21 @@ import {
   runFirstPossessionRehearsal,
 } from "../../packages/basketball/src/index.js";
 import { InMemoryCanonicalStore } from "../../packages/database/src/index.js";
+import {
+  ServiceRequestVerifier,
+  signServiceRequest,
+} from "../../packages/foundation/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicProjectionRepository,
+  HttpProjectionEventSink,
+  PROJECTION_APPEND_CAPABILITY,
+  PROJECTION_APPEND_PATH,
   PublicProjectionWorker,
+  projectionEnvelopeBytes,
+  projectionEnvelopeFromOutbox,
+  verifyProjectionEvent,
+  type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
 } from "../../packages/projections/src/index.js";
 import {
@@ -69,8 +80,11 @@ describe("complete local acceptance", () => {
         }),
       ),
       events: result.events.map((event) => ({
-        ...event,
+        sequence: event.sequence,
+        type: event.type,
         label: `${event.type.toLowerCase().replaceAll("_", " ")} resolved`,
+        stateRoot: event.stateRoot,
+        eventHash: event.eventHash,
       })),
       segments: result.segments,
       finalStateRoot: result.finalStateRoot,
@@ -240,6 +254,45 @@ describe("complete local acceptance", () => {
         })
       ).statusCode,
     ).toBe(400);
+    const privateFieldEvent = createCanonicalEvent({
+      eventId: "0198a000-0000-7000-8000-000000000308",
+      actorDid: submittingBody.did,
+      nonce: "possession-resolution-private-field",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000309",
+      aggregateType: "game-possession",
+      aggregateId: result.finalState.gameId,
+      aggregateVersion: 2n,
+      eventType: "PossessionResolved",
+      previousEventHash: event.eventHash,
+      payload: {
+        source: { ...source, privateMemory: "must-never-project" },
+        decisionProof: rehearsal.decisionProof,
+      },
+      stateRoot: result.finalStateRoot,
+      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      timestamp: "2026-08-13T10:05:00.000Z",
+    });
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            event: {
+              ...privateFieldEvent,
+              aggregateVersion: privateFieldEvent.aggregateVersion.toString(),
+            },
+            signatures: [
+              await signCanonicalEvent(
+                submittingBody.signingIdentity,
+                REHEARSAL_RECOGNITION_DOMAIN,
+                privateFieldEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
 
     const directWriteStore = new InMemoryCanonicalStore();
     await directWriteStore.append({
@@ -273,15 +326,13 @@ describe("complete local acceptance", () => {
     const projectionRoot = await mkdtemp(
       join(tmpdir(), "abl-vertical-projections-"),
     );
-    const projections = new FilePublicProjectionRepository(projectionRoot);
-    await projections.initialize();
-    const publicProjections = new FilePublicProjectionRepository(
-      projectionRoot,
-    );
-    await publicProjections.initialize();
-    const worker = new PublicProjectionWorker({
-      store,
-      writer: projections,
+    const serviceNow = Date.parse("2026-08-13T10:05:01.000Z");
+    const projectionIdentity = {
+      serviceId: "core-projection-publisher",
+      secret: new TextEncoder().encode("p".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const projectionAuthority = {
       domain: REHEARSAL_RECOGNITION_DOMAIN,
       admittedAgents: new Map([
         [
@@ -292,16 +343,195 @@ describe("complete local acceptance", () => {
           },
         ],
       ]),
-      now: () => new Date("2026-08-13T10:05:01.000Z"),
+    };
+    const projectionRepositoryOptions = {
+      verifyAuthorization: async (
+        authorization: ProjectionEventEnvelope,
+        projectedAt: string,
+      ) =>
+        (
+          await verifyProjectionEvent(
+            authorization,
+            projectionAuthority,
+            () => new Date(projectedAt),
+          )
+        ).projection,
+    };
+    const publicProjections = new FilePublicProjectionRepository(
+      projectionRoot,
+      projectionRepositoryOptions,
+    );
+    await publicProjections.initialize();
+    const publicApi = createPublicApi({
+      projections: publicProjections,
+      projectionIngress: {
+        writer: publicProjections,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...projectionAuthority,
+      },
     });
-    expect(await worker.drain()).toBe(1);
-    expect(await worker.drain()).toBe(0);
-    const publicApi = createPublicApi({ projections: publicProjections });
     const publicAddress = await publicApi.listen({
       host: "127.0.0.1",
       port: 0,
     });
     try {
+      const pending = await store.pendingProjectionEvents();
+      const outboxEvent = pending[0];
+      if (outboxEvent === undefined)
+        throw new Error("Canonical command did not create an outbox event");
+      const envelope = projectionEnvelopeFromOutbox(outboxEvent);
+      const signedRequest = (
+        body: ProjectionEventEnvelope,
+        nonce: string,
+        expectedVersion = "0",
+      ) => {
+        const bytes = projectionEnvelopeBytes(body);
+        return {
+          bytes,
+          headers: signServiceRequest(projectionIdentity, {
+            method: "POST",
+            path: PROJECTION_APPEND_PATH,
+            body: bytes,
+            nonce,
+            timestamp: new Date(serviceNow).toISOString(),
+            expectedVersion,
+            capability: PROJECTION_APPEND_CAPABILITY,
+          }),
+        };
+      };
+
+      expect(
+        (
+          await publicApi.inject({
+            method: "POST",
+            url: PROJECTION_APPEND_PATH,
+            payload: Buffer.from(projectionEnvelopeBytes(envelope)),
+            headers: { "content-type": "application/json" },
+          })
+        ).statusCode,
+      ).toBe(403);
+
+      const tamperedEnvelope: ProjectionEventEnvelope = {
+        ...envelope,
+        event: {
+          ...envelope.event,
+          stateRoot: `0x${"f".repeat(64)}`,
+        },
+      };
+      const tampered = signedRequest(
+        tamperedEnvelope,
+        "tampered-projection-request",
+      );
+      expect(
+        (
+          await publicApi.inject({
+            method: "POST",
+            url: PROJECTION_APPEND_PATH,
+            payload: Buffer.from(tampered.bytes),
+            headers: {
+              ...tampered.headers,
+              "content-type": "application/json",
+            },
+          })
+        ).statusCode,
+      ).toBe(403);
+
+      const firstDelivery = signedRequest(envelope, "first-projection-request");
+      const acceptedProjection = await publicApi.inject({
+        method: "POST",
+        url: PROJECTION_APPEND_PATH,
+        payload: Buffer.from(firstDelivery.bytes),
+        headers: {
+          ...firstDelivery.headers,
+          "content-type": "application/json",
+        },
+      });
+      expect(acceptedProjection.statusCode).toBe(201);
+      expect(
+        (
+          await publicApi.inject({
+            method: "POST",
+            url: PROJECTION_APPEND_PATH,
+            payload: Buffer.from(firstDelivery.bytes),
+            headers: {
+              ...firstDelivery.headers,
+              "content-type": "application/json",
+            },
+          })
+        ).statusCode,
+      ).toBe(409);
+
+      const skippedEvent = createCanonicalEvent({
+        ...event,
+        eventId: "0198a000-0000-7000-8000-000000000306",
+        nonce: "possession-resolution-skipped-version",
+        idempotencyKey: "0198a000-0000-7000-8000-000000000307",
+        aggregateVersion: 3n,
+        previousEventHash: event.eventHash,
+      });
+      const skippedEnvelope: ProjectionEventEnvelope = {
+        version: "1.0.0",
+        topic: "public.game",
+        event: {
+          ...skippedEvent,
+          aggregateVersion: skippedEvent.aggregateVersion.toString(),
+        },
+        signature: await signCanonicalEvent(
+          submittingBody.signingIdentity,
+          REHEARSAL_RECOGNITION_DOMAIN,
+          skippedEvent,
+        ),
+      };
+      const skipped = signedRequest(
+        skippedEnvelope,
+        "skipped-projection-request",
+        "2",
+      );
+      expect(
+        (
+          await publicApi.inject({
+            method: "POST",
+            url: PROJECTION_APPEND_PATH,
+            payload: Buffer.from(skipped.bytes),
+            headers: {
+              ...skipped.headers,
+              "content-type": "application/json",
+            },
+          })
+        ).statusCode,
+      ).toBe(409);
+
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "worker-idempotent-retry",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        ...projectionAuthority,
+      });
+      expect(await worker.drain()).toBe(1);
+      expect(await worker.drain()).toBe(0);
+      const publicEvents = await publicApi.inject({
+        method: "GET",
+        url: "/v1/public/events",
+      });
+      expect(publicEvents.json()).toMatchObject({
+        items: [
+          {
+            authorization: {
+              event: { eventHash: event.eventHash },
+              signature,
+            },
+          },
+        ],
+      });
       const arenaProjection = await loadPossessionProof(publicAddress);
       expect(arenaProjection).toMatchObject({
         gameId: result.finalState.gameId,
@@ -319,10 +549,31 @@ describe("complete local acceptance", () => {
     } finally {
       await Promise.all([publicApi.close(), coreApi.close()]);
     }
-    const restarted = new FilePublicProjectionRepository(projectionRoot);
+    const restarted = new FilePublicProjectionRepository(
+      projectionRoot,
+      projectionRepositoryOptions,
+    );
     await restarted.initialize();
     expect(restarted.game(result.finalState.gameId)?.finalStateRoot).toBe(
       result.finalStateRoot,
+    );
+
+    const recordPath = join(projectionRoot, "records", "000000000000.json");
+    const forgedRecord = JSON.parse(await readFile(recordPath, "utf8")) as {
+      authorization: ProjectionEventEnvelope;
+      recordHash: `0x${string}`;
+      [key: string]: unknown;
+    };
+    forgedRecord.authorization.signature = `0x${"c".repeat(130)}`;
+    const { recordHash: _recordHash, ...forgedContent } = forgedRecord;
+    forgedRecord.recordHash = sha256Commitment(forgedContent);
+    await writeFile(recordPath, `${JSON.stringify(forgedRecord)}\n`, "utf8");
+    const compromised = new FilePublicProjectionRepository(
+      projectionRoot,
+      projectionRepositoryOptions,
+    );
+    await expect(compromised.initialize()).rejects.toThrow(
+      "authorization is invalid",
     );
   });
 

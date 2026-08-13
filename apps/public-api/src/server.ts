@@ -1,5 +1,19 @@
-import type { PublicProjectionReader } from "@abl/projections";
-import Fastify, { type FastifyInstance } from "fastify";
+import {
+  ServiceAuthenticationError,
+  type ServiceRequestVerifier,
+  type SignedServiceRequestHeaders,
+} from "@abl/foundation";
+import {
+  PROJECTION_APPEND_CAPABILITY,
+  PROJECTION_APPEND_PATH,
+  ProjectionVersionConflictError,
+  projectionEnvelopeBytes,
+  verifyProjectionEvent,
+  type ProjectionVerificationAuthority,
+  type PublicProjectionReader,
+  type PublicProjectionWriter,
+} from "@abl/projections";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 
 export interface RouteCatalogEntry {
   method: "GET" | "POST";
@@ -112,12 +126,54 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
 
 export interface PublicApiOptions {
   projections?: PublicProjectionReader;
+  projectionIngress?: ProjectionVerificationAuthority & {
+    writer: PublicProjectionWriter;
+    verifier: ServiceRequestVerifier;
+    now?: () => Date;
+  };
+}
+
+function projectionHeaders(
+  request: FastifyRequest,
+): SignedServiceRequestHeaders {
+  function value(name: keyof SignedServiceRequestHeaders): string {
+    const header = request.headers[name];
+    if (typeof header !== "string" || header === "")
+      throw new ServiceAuthenticationError(`Missing ${name}`);
+    return header;
+  }
+  return {
+    "x-abl-service-id": value("x-abl-service-id"),
+    "x-abl-capability": value("x-abl-capability"),
+    "x-abl-nonce": value("x-abl-nonce"),
+    "x-abl-timestamp": value("x-abl-timestamp"),
+    "x-abl-expected-version": value("x-abl-expected-version"),
+    "x-abl-content-sha256": value("x-abl-content-sha256"),
+    "x-abl-signature": value("x-abl-signature"),
+  };
+}
+
+function projectionError(error: unknown): { status: number; code: string } {
+  const name = error instanceof Error ? error.name : "";
+  if (name === "ServiceReplayError")
+    return { status: 409, code: "service_replay" };
+  if (
+    name === "ServiceAuthenticationError" ||
+    name === "ProjectionAuthorizationError"
+  ) {
+    return { status: 403, code: "authorization_denied" };
+  }
+  if (name === "ProjectionValidationError")
+    return { status: 400, code: "invalid_projection" };
+  if (name === "ProjectionVersionConflictError")
+    return { status: 409, code: "version_conflict" };
+  return { status: 500, code: "projection_failure" };
 }
 
 export function createPublicApi(
   options: PublicApiOptions = {},
 ): FastifyInstance {
-  const app = Fastify({ logger: false, bodyLimit: 64_000 });
+  const app = Fastify({ logger: false, bodyLimit: 512_000 });
   const rehearsal = options.projections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
@@ -244,6 +300,45 @@ export function createPublicApi(
       error: { code: -32601, message: "Method not found" },
     });
   });
+  const projectionIngress = options.projectionIngress;
+  if (projectionIngress !== undefined) {
+    app.post(PROJECTION_APPEND_PATH, async (request, reply) => {
+      try {
+        const headers = projectionHeaders(request);
+        if (headers["x-abl-capability"] !== PROJECTION_APPEND_CAPABILITY) {
+          throw new ServiceAuthenticationError("Wrong projection capability");
+        }
+        projectionIngress.verifier.verify(headers, {
+          method: request.method,
+          path: PROJECTION_APPEND_PATH,
+          body: projectionEnvelopeBytes(request.body),
+        });
+        const verified = await verifyProjectionEvent(
+          request.body,
+          projectionIngress,
+          projectionIngress.now,
+        );
+        if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+          throw new ProjectionVersionConflictError(
+            "Signed expected version does not precede the projection event",
+          );
+        }
+        const record = await projectionIngress.writer.publish(
+          verified.projection,
+          verified.expectedVersion,
+          verified.envelope,
+        );
+        return reply.code(201).send({
+          accepted: true,
+          canonicalEventHash: verified.projection.canonicalEventHash,
+          cursor: record.cursor,
+        });
+      } catch (error) {
+        const response = projectionError(error);
+        return reply.code(response.status).send({ error: response.code });
+      }
+    });
+  }
   for (const path of collectionPaths) {
     app.get(path, async (request) => {
       const query = request.query as { afterCursor?: string } | undefined;

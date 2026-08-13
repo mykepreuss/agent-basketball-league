@@ -28,7 +28,7 @@ export interface GenesisArtifactDigests {
   publicProjection: DigestGroup;
   testResultDigest: Sha256Digest | null;
   imageDigests: readonly [];
-  imageStatus: "NOT_BUILT_DOCKER_GATE";
+  imageStatus: "NOT_BUILT_BLAXEL_IMAGE_GATE";
 }
 
 const ignoredSegments = new Set([
@@ -94,7 +94,9 @@ export async function prepareGenesisArtifactDigests(
       /^contracts\/.*\.sol$/.test(path),
   );
   const containerPaths = [
-    "infra/sandbox/Dockerfile",
+    ".blaxelignore",
+    "Dockerfile",
+    "blaxel.toml",
     "infra/sandbox/abl-sandbox-init",
     "infra/sandbox/agent-runtime",
     "infra/sandbox/apk-packages.lock",
@@ -130,8 +132,11 @@ export async function prepareGenesisArtifactDigests(
   const deploymentManifestPaths = allFiles.filter(
     (path) => path.startsWith("infra/blaxel/") && /\.(json|yaml)$/.test(path),
   );
-  const publicProjectionPaths = allFiles.filter((path) =>
-    path.startsWith("apps/arena/app/"),
+  const publicProjectionPaths = allFiles.filter(
+    (path) =>
+      path.startsWith("packages/projections/src/") ||
+      path.startsWith("apps/public-api/src/") ||
+      path.startsWith("apps/arena/app/"),
   );
   let testResultDigest: Sha256Digest | null = null;
   try {
@@ -168,7 +173,7 @@ export async function prepareGenesisArtifactDigests(
     publicProjection: await digestGroup(repositoryRoot, publicProjectionPaths),
     testResultDigest,
     imageDigests: [],
-    imageStatus: "NOT_BUILT_DOCKER_GATE",
+    imageStatus: "NOT_BUILT_BLAXEL_IMAGE_GATE",
   };
 }
 

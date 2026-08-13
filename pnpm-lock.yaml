@@ -206,12 +206,21 @@ importers:
 
   apps/public-api:
     dependencies:
+      "@abl/foundation":
+        specifier: workspace:*
+        version: link:../../packages/foundation
       "@abl/projections":
         specifier: workspace:*
         version: link:../../packages/projections
       fastify:
         specifier: "catalog:"
         version: 5.11.3
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
     devDependencies:
       "@types/node":
         specifier: "catalog:"
@@ -416,12 +425,18 @@ importers:
       "@abl/database":
         specifier: workspace:*
         version: link:../database
+      "@abl/foundation":
+        specifier: workspace:*
+        version: link:../foundation
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
     devDependencies:
       "@types/node":
         specifier: "catalog:"

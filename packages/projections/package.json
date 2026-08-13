@@ -17,8 +17,10 @@
   },
   "dependencies": {
     "@abl/database": "workspace:*",
+    "@abl/foundation": "workspace:*",
     "@abl/recognition": "workspace:*",
-    "viem": "catalog:"
+    "viem": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

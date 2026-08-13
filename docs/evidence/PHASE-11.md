@@ -14,16 +14,16 @@ Proposal artifacts expose the ABL name and four club identities as replaceable p
 
 The generated bundle records these current tree commitments:
 
-- Source: `0xec1afc98241c941a51ab66bf0eb058dcb03a681f6c1c476848bce049e053a6c6` (72 files)
-- Container source: `0x43deac1738e847264554f9155fefe81fda3631888273611a96040422a6cce61e` (4 files)
-- Kernel/runtime pins: `0x3a21b9a181d97ea91bfbf50cd15cbc65feffa5406162ddaf52b91bb5f97ca439`
-- Tools/lockfiles: `0xf81b7565a1427eafccc3569550e4690c2c193bdf2a171510b5445264e2d57799`
-- Schemas: `0xe54ff83a749ce17ba97dae28090333bb2576b4d63a31f7e0a3b026646d38956f`
-- Migrations: `0xa88b9d527711d1e5115d301acb8ca38c76b7a1acf9b524e4b2ed05e9a14e9858`
-- Test suite: `0x82d8261342f6b4d1a40d40e70d2afa2df084dcc7b2dd9387ebf52fbdb2ca3a99` (18 files)
-- Public verifier: `0xe5c1e8d05d4adb7b24f7ff5fdb47ad514b35cdabc7824279b8b47d747a1a1f68`
-- Blaxel manifests: `0xc4a502e4c148fd2eda9be0d51cbb5d3b8979edba95fc7654db86d980de22b773`
-- Public projection: `0xc892db40835a8159fb3e62cbd53de797eba949082c31e07b23eb657c1248fe9f`
+- Source: `0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b` (85 files)
+- Container source: `0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1` (6 files)
+- Kernel/runtime pins: `0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf`
+- Tools/lockfiles: `0x46d112cf7db239aaa27f70bdaa1579ed0d20792625aacf45ad44345f47cfba76`
+- Schemas: `0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399`
+- Migrations: `0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599` (4 files)
+- Test suite: `0x6f45ed61af14356fc85921871e11550e26f7ccdf5564247c2120533774bb065f` (26 files)
+- Public verifier: `0x7eb8a95a280e2f6180b678c53dffd7621cd3f18c9c797d62cedf9d677b63ffa0` (5 files)
+- Blaxel manifests: `0xdd938896f1fd155beacbd211a8087409651e7f3048c733d529568597f61c4478` (15 files)
+- Public projection: `0xd4c88adc5e39355b1e54a44200ea647358d6be7f769b7e2fae8126e481f30652` (15 files covering the projection package, public API, and arena data path)
 
 Each group commits a sorted list of repository-relative paths and individual SHA-256 values. Generated outputs, build directories, caches, and dependencies are excluded. Later source/test changes require regeneration; these are phase-11 snapshot commitments, not a genesis root.
 
@@ -49,14 +49,14 @@ placeholder prepare-only config  -> compiler/encoder pass; no RPC/key/broadcast
 
 Artifact locks:
 
-- Genesis readiness bundle: `sha256:c3b2ee445c8af9340a69f0f42a1566e80675b05e05a9fb0200699c65e5da9227`
+- Genesis readiness bundle: `sha256:3784e32a3e020e89ed458dd5bb88816e82a527c3429f1b3d2ff0700273c18174`
 - Convention packet: `sha256:ac6ef99e46daac303190d461a5189a0575b0553d981347d4636ef138c40acab1`
-- Release candidate: `sha256:701775924cbcc5aec62856ee2d1b00b27bd0b329669c33404349a463ec080735`
-- Public index: `sha256:591a79e937442c17f49b5469dd8cd5c917118ef85410c149eefebeeea70be0734`
+- Release candidate: `sha256:9554e602d16b6364c204aa6126f2bb8a8f4f6e3dbc4faf9f300cce0c4d15a125`
+- Public index: `sha256:b4c69b2639bb1909f33dae5264f05bad4ce91ca8a7e85c3b1c79241c4ee2b146`
 - Cost envelope: `sha256:ac104c77afdb87000f4cd27ca7af0edf06cbd6bfbc2a2efde3167e043b127d53`
-- Deployment template: `sha256:ba89ea40f1446f1dc0c6e52cb19d2ef4abb625f32b4f62a36d899f3d631530e4`
-- Genesis suite: `sha256:abe1c0a0ee27409c07ed5439e3bba077957f4c5226d06c4ab2c0dbeac1790ffa`
-- Lockfile: `sha256:20e11ef70c0e0dede063959cc808708e67e6be97efc9697aeb66d1e8925b0f70`
+- Deployment template: `sha256:c4580f711f98c33b1fc295a3b17fb05e36153577641423b6576882c670cdb533`
+- Genesis suite: `sha256:d09a154083cf30d1bc00f7d627c6b23179c31ab566fdd4d743a8e77ab57a0e25`
+- Lockfile: `sha256:1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f`
 
 ## Retained gates
 

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FilePublicProjectionRepository,
+  ProjectionVersionConflictError,
   type PublicGameProjection,
 } from "../src/index.js";
 
@@ -53,5 +54,27 @@ describe("durable public projection repository", () => {
       latestSegment: -1,
       nextCursor: 1,
     });
+  });
+
+  it("rejects aggregate version skips while preserving exact-event retries", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-projection-version-"));
+    const repository = new FilePublicProjectionRepository(root);
+    await repository.initialize();
+    const first = projection();
+    const published = await repository.publish(first, "0");
+    expect((await repository.publish(first, "99")).cursor).toBe(
+      published.cursor,
+    );
+    await expect(
+      repository.publish(
+        {
+          ...first,
+          aggregateVersion: "3",
+          canonicalEventHash: `0x${"b".repeat(64)}`,
+        },
+        "2",
+      ),
+    ).rejects.toBeInstanceOf(ProjectionVersionConflictError);
+    expect(repository.events()).toHaveLength(1);
   });
 });

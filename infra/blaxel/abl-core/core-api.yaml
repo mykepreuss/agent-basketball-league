@@ -22,6 +22,33 @@ spec:
       - name: ABL_SERVICE_ROLE
         value: core
         secret: false
+      - name: ABL_REHEARSAL_MODE
+        value: "1"
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: ${ABL_COMPETITION_ID}
+        secret: false
+      - name: ABL_SEASON_ID
+        value: ${ABL_SEASON_ID}
+        secret: false
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: ABL_ADMITTED_AGENTS_JSON
+        value: ${ABL_ADMITTED_AGENTS_JSON}
+        secret: false
+      - name: ABL_PUBLIC_PROJECTION_URL
+        value: ${ABL_PUBLIC_PROJECTION_URL}
+        secret: false
+      - name: ABL_PROJECTION_SERVICE_ID
+        value: core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_HMAC_BASE64
+        value: ${ABL_CORE_PUBLIC_PROJECTION_HMAC_BASE64}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false

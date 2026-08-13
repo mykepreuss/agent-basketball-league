@@ -1,6 +1,6 @@
 import { PostgresCanonicalStore } from "@abl/database";
 import {
-  FilePublicProjectionRepository,
+  HttpProjectionEventSink,
   PublicProjectionWorker,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
@@ -16,6 +16,16 @@ function required(name: string): string {
   if (value === undefined || value === "")
     throw new Error(`Missing required environment value: ${name}`);
   return value;
+}
+
+function secret(name: string): Uint8Array {
+  const encoded = required(name);
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))
+    throw new Error(`${name} is not canonical base64`);
+  const decoded = Buffer.from(encoded, "base64");
+  if (decoded.byteLength < 32)
+    throw new Error(`${name} must contain at least 256 bits`);
+  return decoded;
 }
 
 const AdmittedAgentsSchema = z.record(
@@ -73,13 +83,17 @@ const app = rehearsal
       const authority = rehearsalAuthority();
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
       closeStore = async () => store.close();
-      const projections = new FilePublicProjectionRepository(
-        required("ABL_PUBLIC_PROJECTION_ROOT"),
-      );
-      await projections.initialize();
+      const projectionSink = new HttpProjectionEventSink({
+        origin: required("ABL_PUBLIC_PROJECTION_URL"),
+        identity: {
+          serviceId: required("ABL_PROJECTION_SERVICE_ID"),
+          secret: secret("ABL_PROJECTION_HMAC_BASE64"),
+          capabilities: new Set(["projection:append"]),
+        },
+      });
       const worker = new PublicProjectionWorker({
         store,
-        writer: projections,
+        sink: projectionSink,
         ...authority,
       });
       projectionTimer = setInterval(() => {

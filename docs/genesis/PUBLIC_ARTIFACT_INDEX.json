@@ -5,12 +5,12 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0x92e6a11c6e86ce7f40c1d23021a536930ecfc4513c6e77a7816cdcf8102585f2",
+      "digest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "sandbox image",
-      "path": "infra/sandbox/Dockerfile",
+      "path": "Dockerfile",
       "digest": null,
       "state": "PENDING_BUILD"
     },
@@ -53,13 +53,13 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0xc4a502e4c148fd2eda9be0d51cbb5d3b8979edba95fc7654db86d980de22b773",
+      "digest": "0xdd938896f1fd155beacbd211a8087409651e7f3048c733d529568597f61c4478",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
-      "path": "apps/arena/app/",
-      "digest": "0x7ede7d680a959139fb5b258f1c746e19b360ebd11ec7d2bfa6ecbab1a1c3744b",
+      "path": null,
+      "digest": "0xd4c88adc5e39355b1e54a44200ea647358d6be7f769b7e2fae8126e481f30652",
       "state": "PREPARED_LOCAL"
     },
     {

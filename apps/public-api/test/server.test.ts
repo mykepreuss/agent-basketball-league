@@ -75,6 +75,15 @@ describe("public API", () => {
         (route) => route.method === "GET" || route.path === "/mcp",
       ),
     ).toBe(true);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/internal/projections",
+          payload: {},
+        })
+      ).statusCode,
+    ).toBe(404);
     await app.close();
   });
 });
