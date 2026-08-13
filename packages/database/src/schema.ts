@@ -115,6 +115,11 @@ export const outbox = pgTable(
   (table) => [
     unique("canonical_outbox_event_unique").on(table.eventId),
     index("canonical_outbox_pending_idx").on(table.publishedAt, table.outboxId),
+    index("canonical_outbox_topic_pending_idx").on(
+      table.topic,
+      table.publishedAt,
+      table.outboxId,
+    ),
   ],
 );
 

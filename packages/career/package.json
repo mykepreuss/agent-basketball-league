@@ -17,8 +17,10 @@
   },
   "dependencies": {
     "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
     "@abl/storage": "workspace:*",
-    "viem": "catalog:"
+    "viem": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -58,6 +58,16 @@ describe("canonical event and outbox transaction contract", () => {
     expect(store.outboxEvents).toEqual([
       { eventId: input.eventId, topic: "canonical.game" },
     ]);
+    await expect(store.readAggregate("game", "game-a")).resolves.toMatchObject([
+      {
+        eventId: input.eventId,
+        actorDid: input.actorDid,
+        aggregateVersion: 1n,
+        eventHash: input.eventHash,
+        payload: input.payload,
+      },
+    ]);
+    await expect(store.readAggregate("game", "absent")).resolves.toEqual([]);
     expect(await store.pendingProjectionEvents()).toMatchObject([
       {
         outboxId: 1n,
@@ -131,6 +141,22 @@ describe("canonical event and outbox transaction contract", () => {
     ]);
     expect(a.aggregateVersion).toBe(1n);
     expect(b.aggregateVersion).toBe(1n);
+  });
+
+  it("filters pending outbox work by consumer topic without head-of-line blocking", async () => {
+    const store = new InMemoryCanonicalStore();
+    await store.append(event({ outboxTopic: "candidate.lifecycle" }));
+    const game = event({
+      aggregateId: "game-b",
+      nonce: "2",
+      eventHash: hash("9"),
+      outboxTopic: "public.game",
+    });
+    await store.append(game);
+    await expect(
+      store.pendingProjectionEvents(100, "public.game"),
+    ).resolves.toMatchObject([{ eventId: game.eventId, topic: "public.game" }]);
+    await expect(store.pendingProjectionEvents()).resolves.toHaveLength(2);
   });
 });
 

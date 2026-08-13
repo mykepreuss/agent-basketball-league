@@ -49,6 +49,9 @@ spec:
       - name: ABL_PROJECTION_HMAC_BASE64
         value: ${ABL_CORE_PUBLIC_PROJECTION_HMAC_BASE64}
         secret: true
+      - name: ABL_CANDIDATE_CHALLENGE_HMAC_BASE64
+        value: ${ABL_CANDIDATE_CHALLENGE_HMAC_BASE64}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -64,6 +67,46 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/commands
+    - id: candidate-challenge
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/challenge
+    - id: candidate-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/register
+    - id: candidate-provenance
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/provenance
+    - id: candidate-reflect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/reflect
+    - id: candidate-admit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/admit
+    - id: candidate-revoke
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/revoke
+    - id: candidate-transfer
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/transfer
+    - id: candidate-status
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/status
     - id: health
       type: http
       configuration:

@@ -198,6 +198,29 @@ describe("four-workspace topology", () => {
     expect(envMap(publicApi!).get("ABL_PROJECTION_INGEST_SERVICE_ID")).toBe(
       "core-projection-publisher",
     );
+    const coreSpec = coreApi!.spec as {
+      runtime: { envs: Array<{ name: string; secret: boolean }> };
+      triggers: Array<{ configuration: { path: string } }>;
+    };
+    expect(
+      coreSpec.runtime.envs.find(
+        (entry) => entry.name === "ABL_CANDIDATE_CHALLENGE_HMAC_BASE64",
+      ),
+    ).toMatchObject({ secret: true });
+    expect(
+      coreSpec.triggers.map((trigger) => trigger.configuration.path),
+    ).toEqual(
+      expect.arrayContaining([
+        "/v1/candidates/challenge",
+        "/v1/candidates/register",
+        "/v1/candidates/provenance",
+        "/v1/candidates/reflect",
+        "/v1/candidates/admit",
+        "/v1/candidates/revoke",
+        "/v1/candidates/transfer",
+        "/v1/candidates/status",
+      ]),
+    );
 
     const capacity = (await readJson(
       new URL("capacity-plan.json", infraRoot),

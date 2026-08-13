@@ -129,6 +129,15 @@ describe("genesis artifact preparation", () => {
         authorizationSignatures: [],
       },
     });
+    expect(release.blockers).toContain("immutable built image digest");
+    expect(release.blockers).toContain("public-verifier result digest");
+    if (digests.testResultDigest === null) {
+      expect(release.blockers).toContain("final acceptance test-result digest");
+    } else {
+      expect(release.blockers).not.toContain(
+        "final acceptance test-result digest",
+      );
+    }
   });
 
   it("compiles the exact ownerless contract template but refuses to invent constructor inputs or a transaction", async () => {

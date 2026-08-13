@@ -17,6 +17,11 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
+import {
+  installCandidateRehearsalRoutes,
+  type CandidateRehearsalOptions,
+} from "./candidates.js";
+
 export interface CoreRouteCatalogEntry {
   method: "GET" | "POST";
   path: string;
@@ -85,6 +90,10 @@ export interface LiveCoreApiOptions {
   competitionId: string;
   seasonId: string;
   now?: () => number;
+  candidateAdmission?: Pick<
+    CandidateRehearsalOptions,
+    "challengeSecret" | "challengeId" | "challengeBytes"
+  >;
 }
 
 export interface CoreApiOptions {
@@ -287,11 +296,23 @@ export function createLiveCoreApi(
       return reply.code(response.status).send({ error: response.code });
     }
   });
+  if (options.candidateAdmission !== undefined) {
+    installCandidateRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      ...options.candidateAdmission,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
-      entry.path !== "/v1/candidates/challenge" &&
-      entry.path !== "/v1/candidates/provenance",
+      !(
+        options.candidateAdmission !== undefined &&
+        entry.authority === "CANDIDATE"
+      ),
   )) {
     app.route({
       method: route.method,

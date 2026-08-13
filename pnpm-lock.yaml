@@ -150,6 +150,9 @@ importers:
 
   apps/core-api:
     dependencies:
+      "@abl/career":
+        specifier: workspace:*
+        version: link:../../packages/career
       "@abl/database":
         specifier: workspace:*
         version: link:../../packages/database
@@ -296,12 +299,18 @@ importers:
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
       "@abl/storage":
         specifier: workspace:*
         version: link:../storage
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
     devDependencies:
       "@types/node":
         specifier: "catalog:"

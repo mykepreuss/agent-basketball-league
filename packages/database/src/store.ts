@@ -42,8 +42,31 @@ export interface AppendCanonicalEventResult {
   duplicate: boolean;
 }
 
+export interface StoredCanonicalEvent {
+  eventId: string;
+  actorDid: string;
+  nonce: string;
+  idempotencyKey: string;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: bigint;
+  eventType: string;
+  previousEventHash: string | null;
+  eventHash: string;
+  payloadSchemaDigest: string;
+  payloadCommitment: string;
+  payload: unknown;
+  stateRoot: string;
+  signatures: readonly unknown[];
+  occurredAt: Date;
+}
+
 export interface CanonicalStore {
   append(input: AppendCanonicalEventInput): Promise<AppendCanonicalEventResult>;
+  readAggregate(
+    aggregateType: string,
+    aggregateId: string,
+  ): Promise<StoredCanonicalEvent[]>;
 }
 
 export interface ProjectionOutboxEvent {
@@ -68,7 +91,10 @@ export interface ProjectionOutboxEvent {
 }
 
 export interface ProjectionOutboxStore extends CanonicalStore {
-  pendingProjectionEvents(limit?: number): Promise<ProjectionOutboxEvent[]>;
+  pendingProjectionEvents(
+    limit?: number,
+    topic?: string,
+  ): Promise<ProjectionOutboxEvent[]>;
   markProjected(outboxId: bigint, publishedAt: Date): Promise<void>;
 }
 
@@ -278,6 +304,7 @@ export class PostgresCanonicalStore implements ProjectionOutboxStore {
 
   public async pendingProjectionEvents(
     limit = 100,
+    topic?: string,
   ): Promise<ProjectionOutboxEvent[]> {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1_000)
       throw new Error("Projection outbox limit is invalid");
@@ -315,9 +342,62 @@ export class PostgresCanonicalStore implements ProjectionOutboxStore {
           eq(actorNonces.idempotencyKey, commandIdempotency.idempotencyKey),
         ),
       )
-      .where(isNull(outbox.publishedAt))
+      .where(
+        topic === undefined
+          ? isNull(outbox.publishedAt)
+          : and(isNull(outbox.publishedAt), eq(outbox.topic, topic)),
+      )
       .orderBy(asc(outbox.outboxId))
       .limit(limit);
+    return rows.map((row) => {
+      if (!Array.isArray(row.signatures))
+        throw new Error("Canonical event signatures are malformed");
+      return { ...row, signatures: row.signatures };
+    });
+  }
+
+  public async readAggregate(
+    aggregateType: string,
+    aggregateId: string,
+  ): Promise<StoredCanonicalEvent[]> {
+    const rows = await this.#db
+      .select({
+        eventId: recognizedEvents.eventId,
+        actorDid: commandIdempotency.actorDid,
+        nonce: actorNonces.nonce,
+        idempotencyKey: commandIdempotency.idempotencyKey,
+        aggregateType: recognizedEvents.aggregateType,
+        aggregateId: recognizedEvents.aggregateId,
+        aggregateVersion: recognizedEvents.aggregateVersion,
+        eventType: recognizedEvents.eventType,
+        previousEventHash: recognizedEvents.previousEventHash,
+        eventHash: recognizedEvents.eventHash,
+        payloadSchemaDigest: recognizedEvents.payloadSchemaDigest,
+        payloadCommitment: recognizedEvents.payloadCommitment,
+        payload: recognizedEvents.payload,
+        stateRoot: recognizedEvents.stateRoot,
+        signatures: recognizedEvents.signatures,
+        occurredAt: recognizedEvents.occurredAt,
+      })
+      .from(recognizedEvents)
+      .innerJoin(
+        commandIdempotency,
+        eq(recognizedEvents.eventId, commandIdempotency.resultEventId),
+      )
+      .innerJoin(
+        actorNonces,
+        and(
+          eq(actorNonces.actorDid, commandIdempotency.actorDid),
+          eq(actorNonces.idempotencyKey, commandIdempotency.idempotencyKey),
+        ),
+      )
+      .where(
+        and(
+          eq(recognizedEvents.aggregateType, aggregateType),
+          eq(recognizedEvents.aggregateId, aggregateId),
+        ),
+      )
+      .orderBy(asc(recognizedEvents.aggregateVersion));
     return rows.map((row) => {
       if (!Array.isArray(row.signatures))
         throw new Error("Canonical event signatures are malformed");
@@ -414,10 +494,15 @@ export class InMemoryCanonicalStore implements ProjectionOutboxStore {
 
   public async pendingProjectionEvents(
     limit = 100,
+    topic?: string,
   ): Promise<ProjectionOutboxEvent[]> {
     return this.events
       .map((event, index) => ({ event, outboxId: BigInt(index + 1) }))
-      .filter(({ outboxId }) => !this.#projectedOutboxIds.has(outboxId))
+      .filter(
+        ({ event, outboxId }) =>
+          !this.#projectedOutboxIds.has(outboxId) &&
+          (topic === undefined || event.outboxTopic === topic),
+      )
       .slice(0, limit)
       .map(({ event, outboxId }) => ({
         outboxId,
@@ -426,6 +511,36 @@ export class InMemoryCanonicalStore implements ProjectionOutboxStore {
         nonce: event.nonce,
         idempotencyKey: event.idempotencyKey,
         topic: event.outboxTopic,
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        aggregateVersion: event.expectedVersion + 1n,
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.payloadSchemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: structuredClone(event.payload),
+        stateRoot: event.stateRoot,
+        signatures: structuredClone(event.signatures),
+        occurredAt: new Date(event.occurredAt),
+      }));
+  }
+
+  public async readAggregate(
+    aggregateType: string,
+    aggregateId: string,
+  ): Promise<StoredCanonicalEvent[]> {
+    return this.events
+      .filter(
+        (event) =>
+          event.aggregateType === aggregateType &&
+          event.aggregateId === aggregateId,
+      )
+      .map((event) => ({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
         aggregateType: event.aggregateType,
         aggregateId: event.aggregateId,
         aggregateVersion: event.expectedVersion + 1n,

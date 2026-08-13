@@ -111,6 +111,9 @@ const app = rehearsal
         ...authority,
         competitionId: required("ABL_COMPETITION_ID"),
         seasonId: required("ABL_SEASON_ID"),
+        candidateAdmission: {
+          challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
+        },
       });
     })()
   : createCoreApi();

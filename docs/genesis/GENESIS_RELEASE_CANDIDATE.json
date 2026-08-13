@@ -5,16 +5,16 @@
     "releaseId": null,
     "version": null,
     "releaseClass": "IDENTITY_CONSTITUTIONAL",
-    "sourceDigest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
+    "sourceDigest": "0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0",
     "containerDigests": [
       "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
     ],
     "imageDigests": [],
     "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-    "toolDigest": "0x46d112cf7db239aaa27f70bdaa1579ed0d20792625aacf45ad44345f47cfba76",
+    "toolDigest": "0x380586d2e04d8572db6bc3132233f357b87f54b8995e1772412d6d180aa7c922",
     "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
-    "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
-    "testResultDigest": "0xbd10df4b18849308b2ec7b58c6fc8db18a18ce13c48b76bdd7ee6eeee92e3e36",
+    "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
+    "testResultDigest": "0xb19745acdfa6fbb8d6a6f148084a139809c2bf60564c1397672bb824e96db0d6",
     "applicableLawEventIds": [],
     "ratificationEventIds": [],
     "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -27,7 +27,6 @@
   "blockers": [
     "founding-agent release ID and ratification events",
     "immutable built image digest",
-    "final acceptance test-result digest",
     "public-verifier result digest",
     "effective time chosen by the authorized release",
     "required institutional authorization signatures"

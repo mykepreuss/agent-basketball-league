@@ -18,6 +18,7 @@ import {
   recoverCanonicalEventSigner,
   sha256Commitment,
   signCanonicalEvent,
+  signingPublicKeyToAddress,
   thresholdPolicies,
   verifyDeploymentAgainstRelease,
   verifyCheckpointClaim,
@@ -110,6 +111,9 @@ describe("canonical commitments and key separation", () => {
     expect(bytesToHex(bundle.encryption.publicKey)).toMatch(/^[0-9a-f]{64}$/);
     expect(bundle.signing.publicKey.slice(2)).not.toBe(
       bytesToHex(bundle.encryption.publicKey),
+    );
+    expect(signingPublicKeyToAddress(bundle.signing.publicKey)).toBe(
+      bundle.signing.address,
     );
     const canonicalEvent = event();
     const signature = await signCanonicalEvent(

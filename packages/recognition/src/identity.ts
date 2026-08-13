@@ -8,7 +8,11 @@ import {
   type Hex,
   type TypedDataDomain,
 } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  generatePrivateKey,
+  privateKeyToAccount,
+  publicKeyToAddress,
+} from "viem/accounts";
 
 export interface SigningIdentity {
   privateKey: Hex;
@@ -36,10 +40,17 @@ export function createSigningIdentity(
   };
 }
 
+export function signingPublicKeyToAddress(publicKey: Hex): Address {
+  const uncompressed = secp256k1.Point.fromHex(publicKey.slice(2)).toBytes(
+    false,
+  );
+  return getAddress(publicKeyToAddress(`0x${bytesToHex(uncompressed)}`));
+}
+
 export function createAgentKeyBundle(): AgentKeyBundle {
   const signing = createSigningIdentity();
   const encryption = generateEncryptionKeyPair();
-  if (signing.publicKey.slice(2) === bytesToHex(encryption.publicKey))
+  if (signing.publicKey.slice(4) === bytesToHex(encryption.publicKey))
     throw new Error("Signing and encryption keys collided");
   return { signing, encryption };
 }

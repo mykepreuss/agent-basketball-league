@@ -125,18 +125,27 @@ export function buildPendingReleaseManifest(
   };
   if (ReleaseManifestSchema.safeParse(candidate).success)
     throw new Error("Pending release candidate unexpectedly passed the schema");
+  const blockers: string[] = [];
+  if (
+    candidate.releaseId === null ||
+    candidate.ratificationEventIds.length === 0
+  )
+    blockers.push("founding-agent release ID and ratification events");
+  if (candidate.imageDigests.length === 0)
+    blockers.push("immutable built image digest");
+  if (candidate.testResultDigest === null)
+    blockers.push("final acceptance test-result digest");
+  if (candidate.publicVerifierResultDigest === null)
+    blockers.push("public-verifier result digest");
+  if (candidate.effectiveAt === null)
+    blockers.push("effective time chosen by the authorized release");
+  if (candidate.authorizationSignatures.length === 0)
+    blockers.push("required institutional authorization signatures");
   return {
     state: "BLOCKED_PENDING_AGENT_AND_RUNTIME_INPUTS",
     schemaValid: false,
     candidate,
-    blockers: [
-      "founding-agent release ID and ratification events",
-      "immutable built image digest",
-      "final acceptance test-result digest",
-      "public-verifier result digest",
-      "effective time chosen by the authorized release",
-      "required institutional authorization signatures",
-    ],
+    blockers,
   };
 }
 

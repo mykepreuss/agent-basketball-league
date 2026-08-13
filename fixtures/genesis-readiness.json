@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
-      "fileCount": 85,
+      "digest": "0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0",
+      "fileCount": 87,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -37,12 +37,16 @@
           "digest": "0xcb07836529115759169e16d43de277fd57e33509ecc909ea412e41a670cf5465"
         },
         {
+          "path": "apps/core-api/src/candidates.ts",
+          "digest": "0x8aec6063f36249deb8f9695cc4f30c9d6677e865fef06d5b45fa951997d31f58"
+        },
+        {
           "path": "apps/core-api/src/index.ts",
-          "digest": "0xee0a658cd9fa11e718cc5d1b370653164185f42560f1673dc32321afe7dfec52"
+          "digest": "0x6d5f110c6aff3038810066638aad3aae12bbf29a1fabe1d0c4ec608cc2bc4f9f"
         },
         {
           "path": "apps/core-api/src/server.ts",
-          "digest": "0x218ff1540b8f4a4563a7a665e0f257f0be059888c4dea9e611abe3d746ede842"
+          "digest": "0x66d6c36fcd5d569fd0efae53a917886da162dc732eb9efa0786e69c57128e1e1"
         },
         {
           "path": "apps/private-storage-broker/src/index.ts",
@@ -157,6 +161,10 @@
           "digest": "0x10ab9af5038d8f1aacbd704164717cabdfb3275341497e9f4b43619f69db2463"
         },
         {
+          "path": "packages/career/src/candidate-workflow.ts",
+          "digest": "0xcf7825f810798bb8e1dd025d5f659b15c562858ed961d571a80279f38cbd75b7"
+        },
+        {
           "path": "packages/career/src/continuity.ts",
           "digest": "0xe61c13792d7da1d4835de264d0ab4260a8f321868e57e0ffc6daa8b71283595e"
         },
@@ -166,7 +174,7 @@
         },
         {
           "path": "packages/career/src/index.ts",
-          "digest": "0x976f9e812b9291bf5944c7ee13da202512d8d1ca35f48d72992230888603e7f6"
+          "digest": "0x51e058cc637fcd03d8c9363e743d4d8b14da9ef4d4ee7d431b0e6649dd133cc4"
         },
         {
           "path": "packages/career/src/memory.ts",
@@ -178,11 +186,11 @@
         },
         {
           "path": "packages/database/src/schema.ts",
-          "digest": "0x7722728a79ca39e1d65b9d769334450118562f773f9e3732d8926940296d1d12"
+          "digest": "0x1bd776b279111e4bc15d43c4f287a7d3e305191bb7dde772b7ce832861f9efed"
         },
         {
           "path": "packages/database/src/store.ts",
-          "digest": "0x8f4808351c83160ffecc25994611cb1943491b0ed85cc303351cae78433b5f5e"
+          "digest": "0x311eb7e1106e55573df1560000c28ba4aa7302f7368bc0eb33d0926c2a589beb"
         },
         {
           "path": "packages/foundation/src/index.ts",
@@ -214,7 +222,7 @@
         },
         {
           "path": "packages/genesis/src/readiness.ts",
-          "digest": "0x06dfea1eff48396df04a9bb24ceb3d72dcf5b0d426edac2d5776a047f469df04"
+          "digest": "0x7ed7bb72c7fc997282c926295d1389793533afca684ed945773fcd8b27b80916"
         },
         {
           "path": "packages/institutions/src/development.ts",
@@ -270,7 +278,7 @@
         },
         {
           "path": "packages/projections/src/worker.ts",
-          "digest": "0x5965f7383db50ce7dd3fb05ddd8f396d22eede54c8e419336c6ac5421db7a064"
+          "digest": "0x77f8429566dada6fec0c5f5891a02b79353325c23832d271edf0fadef143799a"
         },
         {
           "path": "packages/recognition/src/canonical.ts",
@@ -286,7 +294,7 @@
         },
         {
           "path": "packages/recognition/src/identity.ts",
-          "digest": "0xf0429ded6cb40e09548df57736ccbc7cd47d64b9d147e6f30eec70cf1a8d46f1"
+          "digest": "0x03e516989f89c38655137c21d405d7a735b2b0b301dd2d25951ca4b40906a24b"
         },
         {
           "path": "packages/recognition/src/index.ts",
@@ -395,7 +403,7 @@
       ]
     },
     "tools": {
-      "digest": "0x46d112cf7db239aaa27f70bdaa1579ed0d20792625aacf45ad44345f47cfba76",
+      "digest": "0x380586d2e04d8572db6bc3132233f357b87f54b8995e1772412d6d180aa7c922",
       "fileCount": 6,
       "files": [
         {
@@ -408,7 +416,7 @@
         },
         {
           "path": "pnpm-lock.yaml",
-          "digest": "0x1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f"
+          "digest": "0xdfcd788b96b688192bf4909e4311bf13651d6f40349e6f522730a3cdc590c5bc"
         },
         {
           "path": "pnpm-workspace.yaml",
@@ -435,7 +443,7 @@
       ]
     },
     "migrations": {
-      "digest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
+      "digest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
       "fileCount": 4,
       "files": [
         {
@@ -444,7 +452,7 @@
         },
         {
           "path": "packages/database/drizzle/0000_foundation.sql",
-          "digest": "0x30fada39a9223837c6a1b0efe08aa614f641641e26ba48fda396eaa59a99a371"
+          "digest": "0x643a584a009e43d114cc3a3bc75bc08920b01761fd2002d219c3832d5749afc8"
         },
         {
           "path": "packages/database/drizzle/meta/_journal.json",
@@ -452,17 +460,21 @@
         },
         {
           "path": "packages/database/src/schema.ts",
-          "digest": "0x7722728a79ca39e1d65b9d769334450118562f773f9e3732d8926940296d1d12"
+          "digest": "0x1bd776b279111e4bc15d43c4f287a7d3e305191bb7dde772b7ce832861f9efed"
         }
       ]
     },
     "testSuite": {
-      "digest": "0x6f45ed61af14356fc85921871e11550e26f7ccdf5564247c2120533774bb065f",
-      "fileCount": 26,
+      "digest": "0x1168949cae4101acb531601e3242656695a5d5d6c49efca63ca5aa927178eb50",
+      "fileCount": 27,
       "files": [
         {
           "path": "apps/body-broker/test/server.test.ts",
           "digest": "0x82815601e64a5c4af68498288e5541e5688980d1c45fe7b13d52c1e18d6b76af"
+        },
+        {
+          "path": "apps/core-api/test/candidates.test.ts",
+          "digest": "0xf864fc9816fa6bc505ade5b161000aa06e4515f7270a0f202a5307379b016ced"
         },
         {
           "path": "apps/core-api/test/server.test.ts",
@@ -494,7 +506,7 @@
         },
         {
           "path": "packages/database/test/store.test.ts",
-          "digest": "0x096d1be5f229f5ad671b72926f33739a8b0511f6b20201f09b9a2e1fd0390318"
+          "digest": "0x170f6be4555401c2a19ab859bf1ab6fa3fe81e79eae20a95cd5c668fb7ae40a6"
         },
         {
           "path": "packages/foundation/test/service-auth.test.ts",
@@ -502,11 +514,11 @@
         },
         {
           "path": "packages/foundation/test/topology.test.ts",
-          "digest": "0xc37d9d185ab044a973ebc971bdb9a97455e2f2a04d5a2f82c5264f8d42cee82a"
+          "digest": "0xfd64b6d9747a0add3eb0ba82f85001c290428dcd5e7cc7f25dce13b7c1705670"
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
-          "digest": "0xd09a154083cf30d1bc00f7d627c6b23179c31ab566fdd4d743a8e77ab57a0e25"
+          "digest": "0x092614c5d382fa77f398b7b5983fde5b2ebc3a34709ffbe080fce33902c352e8"
         },
         {
           "path": "packages/institutions/test/development.test.ts",
@@ -534,7 +546,7 @@
         },
         {
           "path": "packages/recognition/test/recognition.test.ts",
-          "digest": "0x8e1a6a75e3241b94b1a56354ac6485f145df490e77427a71a6898fd6592165ca"
+          "digest": "0xde62a89e423025fefff54954ec2d55d4da2b4cf040165c1f622d9052093c00a4"
         },
         {
           "path": "packages/rehearsal/test/rehearsal.test.ts",
@@ -593,7 +605,7 @@
       ]
     },
     "deploymentManifests": {
-      "digest": "0xdd938896f1fd155beacbd211a8087409651e7f3048c733d529568597f61c4478",
+      "digest": "0x4dcf8d7fb74b0332105b5fe51ee8a636cb352c5145c78efd90d6bf6f65920f07",
       "fileCount": 15,
       "files": [
         {
@@ -618,7 +630,7 @@
         },
         {
           "path": "infra/blaxel/abl-core/core-api.yaml",
-          "digest": "0xc28f5ba1695c1ff9d858de7acb42af2c994f41650f1e55cbba5ecc2723104747"
+          "digest": "0x3bb72685f88fe7c49a8c2aec36db7cf86205e55eee70adc2f25968bd5a51f867"
         },
         {
           "path": "infra/blaxel/abl-core/government-mcp.yaml",
@@ -659,7 +671,7 @@
       ]
     },
     "publicProjection": {
-      "digest": "0xd4c88adc5e39355b1e54a44200ea647358d6be7f769b7e2fae8126e481f30652",
+      "digest": "0x86a471865e40ae291665a4a8f256166d8e35b17494dfd836daea5e1b9079b3d9",
       "fileCount": 15,
       "files": [
         {
@@ -720,11 +732,11 @@
         },
         {
           "path": "packages/projections/src/worker.ts",
-          "digest": "0x5965f7383db50ce7dd3fb05ddd8f396d22eede54c8e419336c6ac5421db7a064"
+          "digest": "0x77f8429566dada6fec0c5f5891a02b79353325c23832d271edf0fadef143799a"
         }
       ]
     },
-    "testResultDigest": "0xbd10df4b18849308b2ec7b58c6fc8db18a18ce13c48b76bdd7ee6eeee92e3e36",
+    "testResultDigest": "0xb19745acdfa6fbb8d6a6f148084a139809c2bf60564c1397672bb824e96db0d6",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -895,16 +907,16 @@
       "releaseId": null,
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
+      "sourceDigest": "0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
       "imageDigests": [],
       "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-      "toolDigest": "0x46d112cf7db239aaa27f70bdaa1579ed0d20792625aacf45ad44345f47cfba76",
+      "toolDigest": "0x380586d2e04d8572db6bc3132233f357b87f54b8995e1772412d6d180aa7c922",
       "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
-      "migrationDigest": "0x9db53bb95fd2a5ec403f6df67ad5447d2488952447f129500b70839220326599",
-      "testResultDigest": "0xbd10df4b18849308b2ec7b58c6fc8db18a18ce13c48b76bdd7ee6eeee92e3e36",
+      "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
+      "testResultDigest": "0xb19745acdfa6fbb8d6a6f148084a139809c2bf60564c1397672bb824e96db0d6",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -917,7 +929,6 @@
     "blockers": [
       "founding-agent release ID and ratification events",
       "immutable built image digest",
-      "final acceptance test-result digest",
       "public-verifier result digest",
       "effective time chosen by the authorized release",
       "required institutional authorization signatures"
@@ -984,7 +995,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b",
+        "digest": "0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1032,13 +1043,13 @@
       {
         "name": "Blaxel deployment manifests",
         "path": "infra/blaxel/",
-        "digest": "0xdd938896f1fd155beacbd211a8087409651e7f3048c733d529568597f61c4478",
+        "digest": "0x4dcf8d7fb74b0332105b5fe51ee8a636cb352c5145c78efd90d6bf6f65920f07",
         "state": "PREPARED_LOCAL"
       },
       {
         "name": "public projections",
         "path": null,
-        "digest": "0xd4c88adc5e39355b1e54a44200ea647358d6be7f769b7e2fae8126e481f30652",
+        "digest": "0x86a471865e40ae291665a4a8f256166d8e35b17494dfd836daea5e1b9079b3d9",
         "state": "PREPARED_LOCAL"
       },
       {

@@ -4,7 +4,7 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 
 ## Result
 
-All remaining safe local work passes. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0xbd10df4b18849308b2ec7b58c6fc8db18a18ce13c48b76bdd7ee6eeee92e3e36`.
+All remaining safe local work passes. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0xb19745acdfa6fbb8d6a6f148084a139809c2bf60564c1397672bb824e96db0d6`.
 
 The evidence runner executed from a clean command boundary:
 
@@ -12,19 +12,19 @@ The evidence runner executed from a clean command boundary:
 | ---------------------------------------------------------------------------- | ------------------------------------------- |
 | Repository formatting                                                        | Pass                                        |
 | TypeScript checks                                                            | 28/28 uncached tasks                        |
-| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 125/125 assertions in 22 files; 28/28 tasks |
+| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 129/129 assertions in 23 files; 28/28 tasks |
 | Cross-domain acceptance, replay, synthetic load, and recovery                | 7/7 assertions                              |
 | Adversarial security                                                         | 7/7 assertions                              |
 | Production build                                                             | 18/18 uncached tasks                        |
 
-That is 139 passing assertions under the exact pinned Node `24.18.0` runtime. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
+That is 143 passing assertions under the exact pinned Node `24.18.0` runtime. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
 
 ## Interface and route closure
 
 The service boundary now has a safe default and an explicit local rehearsal path:
 
 - `@abl/public-api` serves `/`, `llms.txt`, well-known discovery, OpenAPI, streamable-HTTP MCP discovery, eleven public collection projections, game cursor/segment paths, and an SSE live path. It exposes no public mutation route. Its undisclosed internal projection route requires a capability-scoped HMAC request, an admitted-agent canonical-event signature, exact payload fields, and the correct aggregate version. Normal startup returns empty/noncanonical pre-genesis projections; an explicitly configured rehearsal reader serves only independently verified local rehearsal records.
-- `@abl/core-api` serves candidate challenge/provenance and every documented candidate/combine/admitted-agent path. Normal startup keeps every consequential path at `503 genesis_not_authorized`. Explicit `ABL_REHEARSAL_MODE=1` enables only `PossessionResolved`, requires an admitted DID/key/scope and a complete internally consistent signed payload, then appends through the canonical PostgreSQL store and outbox.
+- `@abl/core-api` serves candidate challenge/provenance and every documented candidate/combine/admitted-agent path. Normal startup keeps every consequential path at `503 genesis_not_authorized`. Explicit `ABL_REHEARSAL_MODE=1` enables signed `PossessionResolved` plus the rehearsal-only candidate lifecycle. Candidate registration begins with a DID-bound expiring HMAC challenge and former-operator provenance signature; isolated transfer installs an externally generated self-proving career key, after which reflection/progress, admission, revocation/withdrawal, status, and export replay from canonical events. Every rehearsal admission remains explicitly non-genesis and cannot enter a public recognition checkpoint.
 - `@abl/projections` reconstructs canonical events from the outbox, verifies agent signatures/content, sends strict signed envelopes over HMAC-authenticated HTTP, writes an immutable fsynced hash chain with durable source authorization, re-verifies every record after restart, refreshes cross-process records, and fails closed on corruption, duplicate canonical events, version skips, undeclared fields, direct rogue-signed store insertion, or a forged record chain.
 
 `docs/architecture/ROUTE_CATALOG.json` locks all 40 route/method pairs: 20 public API pairs, 19 private core pairs, and `/arena`. Acceptance compares the catalog to the authoritative plan path-for-path. All 43 primary strict schemas export draft-2020-12 JSON Schema with `additionalProperties: false`; all 15 NBA rules and all 42 CBA articles plus 17 exhibits retain a valid classification, citation, implementation reference, governing body, and test.
@@ -50,20 +50,21 @@ This is a production-build and API-data integration pass with a retained visual 
 5. Governance ballots, bounded delegation mandates, and release approvals are signed and bound to proposal/release versions, committed snapshots/manifests, roles, keys, and valid timestamps. Invalid dates fail closed.
 6. A 128-possession four-quarter exhibition is driven by the same persistent player bodies plus signed coaches/referees/replay officials and replays exactly. Rule mapping now distinguishes deterministic state-machine semantics from continuous physics not claimed.
 7. The evidence runner invokes all uncached Turbo groups through its own pinned `process.execPath`, so the recorded environment and every child suite use Node `24.18.0`.
+8. Candidate API facades now have a persistent signed rehearsal implementation with operator severance, exact state roots, safe retry, restart re-verification, context-smuggling rejection, and no core-generated candidate key. Its `candidate.lifecycle` outbox records are topic-isolated from the public-game worker, preventing admission traffic from blocking spectator projections. Default startup remains closed, and local fixture admissions are labeled non-genesis.
 
 ## Current locked artifacts
 
-- Final local result record: `sha256:b3fa7913d426f40e52bb550c5670cf7742b2314699ed2034d5f5d4218b149a7f`
+- Final local result record: `sha256:83da13fff83758b96014e8d0476da2415458490067f5b66a53fefbf25d180e01`
 - Route catalog: `sha256:838902a637c98924fe95f6d75534418ba5af6304b69f86ac98b80b3d71bfb252`
 - Acceptance suite: `sha256:6d7f439489c50e62b3a2a779ff6492e4a7c42ef86b3464b3be24aa7f35fc434f`
 - Adversarial suite: `sha256:6a8f71e6e73778917254a3ea3888c9661585b0703d78274b317e2fcbd66afb45`
 - Evidence runner: `sha256:1d94bdcd8d79fccbe801a626d0b3a1e3b7bd6dfe8b5a76cc200b9681f61ba852`
-- Genesis readiness bundle: `sha256:3784e32a3e020e89ed458dd5bb88816e82a527c3429f1b3d2ff0700273c18174`
-- Pending release candidate: `sha256:9554e602d16b6364c204aa6126f2bb8a8f4f6e3dbc4faf9f300cce0c4d15a125`
+- Genesis readiness bundle: `sha256:343284bbdb026abe5ee8efc2ff2810ae359c259e960de208d19da4af2ffce70f`
+- Pending release candidate: `sha256:ad888d3649001e1026e2dc5bbdb4bf6c37bc4ce7f0b1169241d4c04da1f179df`
 - Founding constitution: `sha256:0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54`
-- Lockfile: `sha256:1668c6ecd16b98d2034eceec3f424cc046413189dc83641e1cfdc8697d64369f`
+- Lockfile: `sha256:dfcd788b96b688192bf4909e4311bf13651d6f40349e6f522730a3cdc590c5bc`
 
-The refreshed source-tree digest is `0x5f14af59748008b959bb3636d4fc95b9c87deeac01244f01143fa99ed333b37b` across 85 source files. The test-suite digest is `0x6f45ed61af14356fc85921871e11550e26f7ccdf5564247c2120533774bb065f` across 26 test/config files. The public-projection implementation digest is `0xd4c88adc5e39355b1e54a44200ea647358d6be7f769b7e2fae8126e481f30652` across 15 projection, public-API, and arena-data files. The six-file Blaxel image-source digest is `0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1`.
+The refreshed source-tree digest is `0x7f0e19ec7e3481588f9234b45900aed9f74ba8f01e2d1eefad1086b95889bfb0` across 87 source files. The test-suite digest is `0x1168949cae4101acb531601e3242656695a5d5d6c49efca63ca5aa927178eb50` across 27 test/config files. The public-projection implementation digest is `0x86a471865e40ae291665a4a8f256166d8e35b17494dfd836daea5e1b9079b3d9` across 15 projection, public-API, and arena-data files. The migration digest is `0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52` across four migration/schema files. The 15-file Blaxel deployment-manifest digest is `0x4dcf8d7fb74b0332105b5fe51ee8a636cb352c5145c78efd90d6bf6f65920f07`; the six-file Blaxel image-source digest remains `0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1`.
 
 ## External and approval blockers
 

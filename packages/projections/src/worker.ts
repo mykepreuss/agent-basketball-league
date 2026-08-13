@@ -38,7 +38,10 @@ export class PublicProjectionWorker {
   }
 
   public async drain(limit = 100): Promise<number> {
-    const pending = await this.#store.pendingProjectionEvents(limit);
+    const pending = await this.#store.pendingProjectionEvents(
+      limit,
+      "public.game",
+    );
     let published = 0;
     for (const event of pending) {
       const envelope = projectionEnvelopeFromOutbox(event);

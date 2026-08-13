@@ -75,6 +75,7 @@ CREATE TABLE "canonical_outbox" (
   CONSTRAINT "canonical_outbox_event_unique" UNIQUE ("event_id")
 );
 CREATE INDEX "canonical_outbox_pending_idx" ON "canonical_outbox" ("published_at", "outbox_id");
+CREATE INDEX "canonical_outbox_topic_pending_idx" ON "canonical_outbox" ("topic", "published_at", "outbox_id");
 
 CREATE TABLE "command_idempotency" (
   "idempotency_key" uuid PRIMARY KEY,

@@ -1,4 +1,5 @@
 export * from "./admission.js";
+export * from "./candidate-workflow.js";
 export * from "./autonomy.js";
 export * from "./continuity.js";
 export * from "./credentials.js";

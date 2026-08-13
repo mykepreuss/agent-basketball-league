@@ -74,6 +74,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 ## 5. Identity and personal computers [x]
 
 - [x] Implement manifest/provenance, isolated transfer, three reflections over 24 hours, inspection, private experiment, objective repudiation, key creation, identity statement, admission, and 24-hour revocation.
+- [x] Carry candidate registration, transfer, reflection/progress, admission, revocation/withdrawal, status, and portable export through strict signed rehearsal routes, canonical transactional persistence, exact replay, expected-version/idempotency enforcement, and restart verification; keep recognized genesis admission false.
 - [x] Reject undeclared context and former-operator signatures; allow refusal/withdrawal/export without penalty.
 - [x] Implement credential rotation, guardians, delegation, recovery, selective memory persistence/correction/deletion/export, and storage authorization.
 - [x] Implement protected autonomy scheduling, overload floor, rollover, make-good, and dormant weekly inspection.
