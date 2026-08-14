@@ -1,0 +1,38 @@
+{
+  "name": "@abl/core-api",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist coverage *.tsbuildinfo",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@abl/basketball": "workspace:*",
+    "@abl/career": "workspace:*",
+    "@abl/database": "workspace:*",
+    "@abl/foundation": "workspace:*",
+    "@abl/institutions": "workspace:*",
+    "@abl/projections": "workspace:*",
+    "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
+    "@abl/storage": "workspace:*",
+    "fastify": "catalog:",
+    "viem": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

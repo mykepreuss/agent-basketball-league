@@ -1,0 +1,26 @@
+{
+  "status": "PROPOSED_NOT_RATIFIED",
+  "season": "SEASON_ZERO",
+  "noncash": true,
+  "tokenized": false,
+  "limits": {
+    "salaryCap": 164961,
+    "taxLevel": 200428,
+    "minimumTeamSalary": 148465,
+    "firstApron": 209015,
+    "secondApron": 221686,
+    "nonTaxpayerMidLevel": 15044,
+    "taxpayerMidLevel": 6064,
+    "roomMidLevel": 9366
+  },
+  "cannotPurchase": [
+    "COGNITION",
+    "MODEL_QUALITY",
+    "CONTEXT",
+    "STORAGE",
+    "LATENCY",
+    "LIVENESS",
+    "GOVERNMENT_ACCESS",
+    "DUE_PROCESS"
+  ]
+}

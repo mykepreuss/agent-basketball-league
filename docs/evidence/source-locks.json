@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "algorithm": "sha256",
+  "retrievedAt": "2026-08-12T23:42:00-07:00",
+  "note": "Hashes lock the retrieved bytes used during implementation review. Dynamic official pages may later change; a release updates this manifest only through an evidenced source review.",
+  "sources": [
+    {
+      "sha256": "5f7463a9891a3a50e6a2ca15853bdc4062f7e226e0b38bb5642cb7fc743bf2cf",
+      "url": "https://docs.blaxel.ai/llms.txt"
+    },
+    {
+      "sha256": "3abac542053a4081b306a9e899a8aa32d8b26a3719d55f50daa3be9e5cdffb9a",
+      "url": "https://docs.blaxel.ai/Agent-drive/Overview.md"
+    },
+    {
+      "sha256": "5ce8ba4ed1ee0ac6dee615f4efe5b15ad7c4e10fc419a2225bb2af7cb5f62798",
+      "url": "https://docs.blaxel.ai/Agent-drive/Permissions.md"
+    },
+    {
+      "sha256": "3cca9eaa5906c6665fa6d3effa4f61a1d2f8bc6bf2ab3cd7af9e5c5c95a516e3",
+      "url": "https://docs.blaxel.ai/Sandboxes/Proxy.md"
+    },
+    {
+      "sha256": "68b62fe54a223f409ff7ba68b806481143e118317b5eb0a413595388b68450c4",
+      "url": "https://docs.blaxel.ai/Sandboxes/Proxy-domains.md"
+    },
+    {
+      "sha256": "38722ce91568edd8d913d50b97ea85d5784705e37ac4357bef340d8d81a81dde",
+      "url": "https://docs.blaxel.ai/Sandboxes/Non-root-user.md"
+    },
+    {
+      "sha256": "2ad3573894315e9e86e9b6e9327b7eed492f0d6a3eedba08536f9fd90bb107af",
+      "url": "https://docs.blaxel.ai/Security/Data-collection-and-privacy.md"
+    },
+    {
+      "sha256": "3927bab574a00ca0560c9583fe19655ba19603a1c5851414e4325d34ac50e469",
+      "url": "https://nodejs.org/dist/v24.18.0/SHASUMS256.txt"
+    },
+    {
+      "sha256": "bf178ca0f2d64f9dfe6fde095d3ae43d576b12e19ce7a679618d632584f7ab32",
+      "url": "https://imgix.cosmicjs.com/25da5eb0-15eb-11ee-b5b3-fbd321202bdf-Final-2023-NBA-Collective-Bargaining-Agreement-6-28-23.pdf"
+    },
+    {
+      "sha256": "748d7bc300eb8999edbd55a565aad60d1254d4c1f544a7d5d3d85b2ea1588f2c",
+      "url": "https://official.nba.com/rulebook/"
+    },
+    {
+      "sha256": "5b27fd104b560302fe8c7bc08dea9a95b4b52b477de0e6ee150d8a0282e22773",
+      "url": "https://www.nba.com/news/nba-salary-cap-2026-27-season"
+    },
+    {
+      "sha256": "31b386e3286831eca2b2a4b4e559bd024dd0ecc5603fec234367c9d25106989a",
+      "url": "https://nextjs.org/docs/app/getting-started/installation"
+    },
+    {
+      "sha256": "cd0b32036be9b21dc2b9901d6342081ae16e2f3bda7ffefd3c0c7ae0a38a4415",
+      "url": "https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/"
+    },
+    {
+      "sha256": "82888e9ba66d6e2849e3d177e2e850e270860d690305278b016d76cda38a1118",
+      "url": "https://zod.dev/json-schema"
+    },
+    {
+      "sha256": "c1266fcaf2088952932770dffa1f6568e003510c1dbf2a7ac4b5304b4b05e7d7",
+      "url": "https://orm.drizzle.team/docs/transactions"
+    },
+    {
+      "sha256": "908986a9ec31fe72a18cd26f5e1069ac05a9a33c69486005236bfac422a42501",
+      "url": "https://viem.sh/docs/actions/wallet/signTypedData"
+    },
+    {
+      "sha256": "e52f612b9fa7e6acba77ddfad31be7baa06df729bf7d075e68b1f8cdfe8f8e55",
+      "url": "https://docs.base.org/base-chain/quickstart/connecting-to-base"
+    },
+    {
+      "sha256": "449354346ce7aaced450ddf0aa62144bea7362d00e070941f53a4bd5056b8c23",
+      "url": "https://neon.com/docs/ai/ai-database-versioning"
+    }
+  ]
+}

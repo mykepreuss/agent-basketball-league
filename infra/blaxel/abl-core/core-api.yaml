@@ -1,0 +1,568 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: abl-core-api
+  labels:
+    abl-workspace-role: core
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_CORE_IMAGE_DIGEST}
+    memory: 4096
+    minScale: 1
+    maxScale: 10
+    envs:
+      - name: DATABASE_URL
+        value: ${ABL_CORE_DATABASE_URL}
+        secret: true
+      - name: ABL_SERVICE_ROLE
+        value: core
+        secret: false
+      - name: ABL_REHEARSAL_MODE
+        value: "1"
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: ${ABL_COMPETITION_ID}
+        secret: false
+      - name: ABL_SEASON_ID
+        value: ${ABL_SEASON_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: ABL_ADMITTED_AGENTS_JSON
+        value: ${ABL_ADMITTED_AGENTS_JSON}
+        secret: false
+      - name: ABL_PUBLIC_PROJECTION_URL
+        value: ${ABL_PUBLIC_PROJECTION_URL}
+        secret: false
+      - name: ABL_PROJECTION_SERVICE_ID
+        value: core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_HMAC_BASE64
+        value: ${ABL_CORE_PUBLIC_PROJECTION_HMAC_BASE64}
+        secret: true
+      - name: ABL_CANDIDATE_CHALLENGE_HMAC_BASE64
+        value: ${ABL_CANDIDATE_CHALLENGE_HMAC_BASE64}
+        secret: true
+      - name: ABL_COMBINE_ID
+        value: ${ABL_COMBINE_ID}
+        secret: false
+      - name: ABL_COMBINE_OPENED_AT
+        value: ${ABL_COMBINE_OPENED_AT}
+        secret: false
+      - name: ABL_COMBINE_OFFICIAL_DID
+        value: ${ABL_COMBINE_OFFICIAL_DID}
+        secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_DRAFT_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_ECONOMY_DRAFT_ID}
+        secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_TRADE_ACCESS_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_URL
+        value: ${ABL_PRIVATE_STORAGE_URL}
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_SERVICE_ID
+        value: core-memory-verifier
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_HMAC_BASE64
+        value: ${ABL_CORE_PRIVATE_STORAGE_HMAC_BASE64}
+        secret: true
+      - name: ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON
+        value: ${ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_VERIFIER_URL
+        value: ${ABL_EXIT_PORTABILITY_VERIFIER_URL}
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_SERVICE_ID
+        value: core-exit-portability-verifier
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_HMAC_BASE64
+        value: ${ABL_CORE_EXIT_PORTABILITY_HMAC_BASE64}
+        secret: true
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON
+        value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}
+        secret: false
+      - name: ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON
+        value: ${ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON
+        value: ${ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FILM_DELIVERY_EVIDENCE_JSON
+        value: ${ABL_FILM_DELIVERY_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_CASE_TRIBUNAL_DIDS_JSON
+        value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
+        secret: false
+      - name: ABL_CASE_APPELLATE_DIDS_JSON
+        value: ${ABL_CASE_APPELLATE_DIDS_JSON}
+        secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+  triggers:
+    - id: command-gateway
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/commands
+    - id: candidate-challenge
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/challenge
+    - id: candidate-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/register
+    - id: candidate-provenance
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/provenance
+    - id: candidate-reflect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/reflect
+    - id: candidate-admit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/admit
+    - id: candidate-revoke
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/revoke
+    - id: candidate-transfer
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/transfer
+    - id: candidate-status
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/candidates/status
+    - id: combine-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/register
+    - id: combine-status
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/status
+    - id: combine-result-certify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/results/certify
+    - id: premier-draft-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/draft/complete
+    - id: contract-offer
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/offer
+    - id: contract-respond
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/respond
+    - id: contract-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/inspect
+    - id: cap-certify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/cap/certify
+    - id: trade-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/trades/complete
+    - id: waiver-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/waivers/complete
+    - id: free-agency-open
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/free-agency/open
+    - id: free-agent-sign
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/free-agency/sign
+    - id: economy-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/economy/inspect
+    - id: development-charter
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/charter
+    - id: development-premier-eligibility
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/premier-eligibility
+    - id: development-call-up
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/call-ups
+    - id: development-replacement
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/replacements
+    - id: development-free-agency
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/free-agency
+    - id: development-cross-tier-trade
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/trades
+    - id: memory-persist
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/persist
+    - id: memory-correct
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/correct
+    - id: memory-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/delete
+    - id: memory-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/inspect
+    - id: memory-export
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/memory/export
+    - id: film-admit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/film/admit
+    - id: film-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/film/inspect
+    - id: practice-run
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/practice/run
+    - id: practice-lesson-persist
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/practice/lessons/persist
+    - id: practice-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/practice/inspect
+    - id: continuity-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/register
+    - id: continuity-policy
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/policy
+    - id: continuity-activity
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/activity
+    - id: continuity-standby
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/standby
+    - id: continuity-notice
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/notice
+    - id: continuity-decide
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/decide
+    - id: continuity-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/delete
+    - id: continuity-rehydrate
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/rehydrate
+    - id: continuity-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/continuity/inspect
+    - id: exit-package
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/package
+    - id: exit-request
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/request
+    - id: exit-cancel
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/cancel
+    - id: exit-attest-deletion
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/attest-deletion
+    - id: exit-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/exit/inspect
+    - id: governance-proposal-register
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/register
+    - id: governance-ballot-cast
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/ballots/cast
+    - id: governance-proposal-close
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/close
+    - id: governance-proposal-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/governance/proposals/inspect
+    - id: premier-election-open
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/open
+    - id: premier-election-candidate-declare
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/candidates/declare
+    - id: premier-election-ballot-cast
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/ballots/cast
+    - id: premier-election-close
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/close
+    - id: premier-election-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/inspect
+    - id: artifact-admit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/artifacts/admit
+    - id: artifact-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/artifacts/inspect
+    - id: disclosure-submit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/submit
+    - id: disclosure-release
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/release
+    - id: disclosure-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/inspect
+    - id: resource-schedule-publish
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/resources/schedules/publish
+    - id: release-propose
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/propose
+    - id: release-approve
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/approve
+    - id: release-stay
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/stay
+    - id: release-authorize
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/authorize
+    - id: case-file
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/file
+    - id: case-notice-serve
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/notice/serve
+    - id: case-representative-appoint
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/representatives/appoint
+    - id: case-evidence-grant
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/evidence/grant
+    - id: case-response-submit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/responses/submit
+    - id: case-ruling-issue
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/rulings/issue
+    - id: case-appeal-file
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/appeals/file
+    - id: case-appeal-rule
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/appeals/rule
+    - id: case-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/cases/inspect
+    - id: health
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /health

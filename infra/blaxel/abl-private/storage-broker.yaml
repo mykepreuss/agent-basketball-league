@@ -1,0 +1,76 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: abl-private-storage-broker
+  labels:
+    abl-workspace-role: private
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  volumes:
+    - name: ${ABL_PRIVATE_DRIVE_NAME}
+      mountPath: /mnt/abl-ciphertext
+  runtime:
+    generation: mk3
+    image: ${ABL_PRIVATE_BROKER_IMAGE_DIGEST}
+    memory: 4096
+    minScale: 1
+    maxScale: 10
+    envs:
+      - name: ABL_DRIVE_NAME
+        value: ${ABL_PRIVATE_DRIVE_NAME}
+        secret: false
+      - name: ABL_DRIVE_MOUNT
+        value: /mnt/abl-ciphertext
+        secret: false
+      - name: ABL_STORAGE_BOOTSTRAP_FILE
+        value: /run/secrets/abl-storage-bootstrap.json
+        secret: false
+      - name: ABL_SERVICE_ROLE
+        value: private-storage-broker
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+  triggers:
+    - id: ciphertext-api
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/ciphertext
+    - id: ciphertext-get
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/ciphertext/get
+    - id: ciphertext-delete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/ciphertext/delete
+    - id: commitment-verify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/commitments/verify
+    - id: deletion-verify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/deletions/verify
+    - id: health
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /health

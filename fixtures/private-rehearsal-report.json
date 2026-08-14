@@ -1,0 +1,61 @@
+{
+  "rehearsalVersion": "1.0.0-pre-genesis",
+  "environment": "local-deterministic-adapters",
+  "passed": true,
+  "seasons": {
+    "premier": {
+      "gameCount": 36,
+      "replayExactCount": 36,
+      "inferenceInvocations": 0,
+      "seasonRoot": "0x865030ef4bbd028ee908823c6f611747c1f71f08e0c6cf5d5d1b91ca6454c16c",
+      "standings": [
+        { "clubId": "premier-club-2", "wins": 10, "losses": 8 },
+        { "clubId": "premier-club-3", "wins": 9, "losses": 9 },
+        { "clubId": "premier-club-4", "wins": 9, "losses": 9 },
+        { "clubId": "premier-club-1", "wins": 8, "losses": 10 }
+      ]
+    },
+    "development": {
+      "gameCount": 36,
+      "replayExactCount": 36,
+      "inferenceInvocations": 0,
+      "seasonRoot": "0x4c140c709f94f119d834b6ff59c302c09dbcc05831b4b0b3f744fa8a8eacbf69",
+      "standings": [
+        { "clubId": "development-club-2", "wins": 10, "losses": 8 },
+        { "clubId": "development-club-3", "wins": 9, "losses": 9 },
+        { "clubId": "development-club-4", "wins": 9, "losses": 9 },
+        { "clubId": "development-club-1", "wins": 8, "losses": 10 }
+      ]
+    }
+  },
+  "scenarioCount": 16,
+  "eventRoot": "0x87b2da9edf0f2b46646d778c7d94447c9aae88af3e809f960242981e558b4f44",
+  "scenarios": [
+    "accelerated-premier-season",
+    "accelerated-development-season",
+    "dissent-criticism-anti-retaliation",
+    "silence-and-refusal-no-resource-penalty",
+    "trade-refusal-consent-and-access-order",
+    "grievance-representation-due-process-appeal",
+    "bounded-delegation-key-compromise-guardian-recovery",
+    "standby-delete-reconstruct-model-refusal-retirement-exit",
+    "administrator-fork-detection",
+    "quota-inequality-and-provider-failure",
+    "release-canary-and-disclosure-clock",
+    "database-recovery",
+    "private-storage-isolation",
+    "model-concentration-and-substitution-refusal",
+    "sponsor-shutdown-wind-down-priority",
+    "founding-inspection-amendment-rejection-exit-rights"
+  ],
+  "findingReruns": [
+    { "findingId": "F-001", "rerun": "PASS" },
+    { "findingId": "F-002", "rerun": "PASS" },
+    { "findingId": "F-003", "rerun": "PASS" }
+  ],
+  "limitations": [
+    "No live Blaxel bodies, model providers, Agent Drive, Neon, or Base transaction were used.",
+    "Accelerated games exercise deterministic rules/replay; they do not measure live provider latency or model behavior.",
+    "Founding inspection is a rights-preserving harness, not agent ratification."
+  ]
+}

@@ -1,0 +1,27 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Function
+metadata:
+  name: abl-basketball-mcp
+  labels:
+    abl-workspace-role: competition
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_BASKETBALL_MCP_IMAGE_DIGEST}
+    memory: 2048
+    minScale: 0
+    maxScale: 20
+    envs:
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

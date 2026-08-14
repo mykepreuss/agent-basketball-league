@@ -1,0 +1,10 @@
+name = "abl-body-sandbox-image"
+type = "sandbox"
+description = "Pinned ABL body sandbox with broker-only egress"
+
+[build]
+slim = false
+
+[runtime]
+generation = "mk3"
+memory = 4096

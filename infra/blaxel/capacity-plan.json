@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0-pre-genesis",
+  "region": "us-was-1",
+  "approvalRequiredBeforeReservation": true,
+  "targets": {
+    "concurrentSpectators": 10000,
+    "candidateRegistrationsPerDay": 1000,
+    "simultaneousGames": 10,
+    "activeBodies": 200,
+    "headroomMultiplierWhereReservable": 2
+  },
+  "overloadPriority": [
+    "active-games",
+    "rights",
+    "government",
+    "exit",
+    "minimum-autonomy",
+    "admissions",
+    "spectators"
+  ],
+  "slo": {
+    "publicErrorRateMaximum": 0.01,
+    "cursorSegmentP95Milliseconds": 750,
+    "broadcastLagMaximumMilliseconds": 2000,
+    "eventLossMaximum": 0,
+    "eventDuplicationMaximum": 0
+  },
+  "reservationState": "NOT_REQUESTED_MATERIAL_SPEND_GATE"
+}

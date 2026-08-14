@@ -1,0 +1,27 @@
+{
+  "name": "@abl/arena",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "check": "tsc --noEmit",
+    "clean": "rm -rf .next coverage",
+    "dev": "next dev",
+    "start": "next start",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@abl/projections": "workspace:*",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

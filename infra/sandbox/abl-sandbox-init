@@ -1,0 +1,95 @@
+#!/bin/sh
+set -eu
+
+readonly BROKER_UID=10100
+readonly AGENT_UID=10101
+readonly BROKER_PORT=7777
+readonly NFT_TABLE=abl_egress
+
+required() {
+  eval "value=\${$1:-}"
+  if [ -z "$value" ]; then
+    printf 'Missing required environment value: %s\n' "$1" >&2
+    exit 78
+  fi
+}
+
+for name in ABL_CORE_ORIGIN ABL_MODEL_ORIGIN ABL_PRIVATE_ORIGIN ABL_AGENT_DID ABL_SERVICE_ID \
+  ABL_SERVICE_CREDENTIAL_B64 ABL_MODEL_CREDENTIAL_B64 ABL_PERSONAL_DOMAIN_ID ABL_DOMAIN_KEY_B64; do
+  required "$name"
+done
+
+umask 077
+export ABL_SERVICE_CREDENTIAL_FILE=/run/abl-broker/service-credential
+export ABL_MODEL_CREDENTIAL_FILE=/run/abl-broker/model-credential
+export ABL_DOMAIN_KEY_FILE=/run/abl-broker/domain-key
+printf '%s' "$ABL_SERVICE_CREDENTIAL_B64" | base64 -d >"$ABL_SERVICE_CREDENTIAL_FILE"
+printf '%s' "$ABL_MODEL_CREDENTIAL_B64" | base64 -d >"$ABL_MODEL_CREDENTIAL_FILE"
+printf '%s' "$ABL_DOMAIN_KEY_B64" | base64 -d >"$ABL_DOMAIN_KEY_FILE"
+unset ABL_SERVICE_CREDENTIAL_B64 ABL_MODEL_CREDENTIAL_B64 ABL_DOMAIN_KEY_B64
+
+case "$ABL_CORE_ORIGIN $ABL_MODEL_ORIGIN $ABL_PRIVATE_ORIGIN" in
+  *[!A-Za-z0-9.:/_-]*) printf '%s\n' 'Outbound origins contain forbidden characters' >&2; exit 78 ;;
+esac
+
+allowed_ipv4=""
+for origin in "$ABL_CORE_ORIGIN" "$ABL_MODEL_ORIGIN" "$ABL_PRIVATE_ORIGIN"; do
+  case "$origin" in
+    https://*) host=${origin#https://}; host=${host%%/*}; host=${host%%:*} ;;
+    *) printf '%s\n' 'Every outbound origin must use https' >&2; exit 78 ;;
+  esac
+  addresses=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u)
+  if [ -z "$addresses" ]; then
+    printf 'Unable to resolve approved broker host: %s\n' "$host" >&2
+    exit 69
+  fi
+  for address in $addresses; do
+    allowed_ipv4="$allowed_ipv4${allowed_ipv4:+, }$address"
+    if ! grep -q "[[:space:]]$host\([[:space:]]\|$\)" /etc/hosts; then
+      printf '%s %s\n' "$address" "$host" >>/etc/hosts
+    fi
+  done
+done
+
+for secret_file in "$ABL_SERVICE_CREDENTIAL_FILE" "$ABL_MODEL_CREDENTIAL_FILE" "$ABL_DOMAIN_KEY_FILE"; do
+  case "$secret_file" in /run/abl-broker/*) ;; *) printf '%s\n' 'Broker secret file is outside its private runtime directory' >&2; exit 78 ;; esac
+  chown "$BROKER_UID:$BROKER_UID" "$secret_file"
+  chmod 0400 "$secret_file"
+done
+
+nft delete table inet "$NFT_TABLE" 2>/dev/null || true
+nft -f - <<EOF
+table inet $NFT_TABLE {
+  set approved_v4 { type ipv4_addr; flags interval; elements = { $allowed_ipv4 } }
+  chain output {
+    type filter hook output priority -100; policy drop;
+    ct state established,related accept
+    meta skuid 0 accept
+    meta skuid $AGENT_UID ip daddr 127.0.0.1 tcp dport $BROKER_PORT accept
+    meta skuid $BROKER_UID ip daddr @approved_v4 tcp dport 443 accept
+    oifname "lo" meta skuid $BROKER_UID accept
+    meta skuid $AGENT_UID reject with icmpx type admin-prohibited
+    meta skuid $BROKER_UID reject with icmpx type admin-prohibited
+  }
+}
+EOF
+
+su-exec abl-broker /usr/local/bin/node /opt/abl/body-broker/dist/index.js &
+broker_pid=$!
+trap 'kill "$broker_pid" 2>/dev/null || true' EXIT INT TERM
+
+attempt=0
+until su-exec abl-agent wget -q -T 1 -O /dev/null "http://127.0.0.1:$BROKER_PORT/health"; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 50 ] || ! kill -0 "$broker_pid" 2>/dev/null; then
+    printf '%s\n' 'Fixed broker failed to become ready' >&2
+    exit 70
+  fi
+  sleep 0.1
+done
+
+# The immutable agent-runtime launcher constructs the admitted process's
+# allowlisted environment. The root sandbox API keeps platform duties but runs
+# every user operation as uid 10101; nftables denies that uid every route except
+# the broker port.
+exec /usr/local/bin/sandbox-api --disable-telemetry --user abl-agent "$@"

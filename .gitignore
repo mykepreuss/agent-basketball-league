@@ -1,0 +1,16 @@
+node_modules/
+.turbo/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+artifacts/
+cache/
+out/
+tmp/

@@ -1,0 +1,31 @@
+{
+  "name": "@abl/safety-gateway",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist coverage *.tsbuildinfo",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@abl/safety": "workspace:*",
+    "fastify": "catalog:",
+    "viem": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@abl/recognition": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

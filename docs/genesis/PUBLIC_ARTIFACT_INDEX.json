@@ -1,0 +1,90 @@
+{
+  "publicationState": "PREPARED_NOT_PUBLISHED",
+  "publicExposureApproved": false,
+  "artifacts": [
+    {
+      "name": "source tree",
+      "path": null,
+      "digest": "0x1bad230665bf0c50141972ac93e912b3fd1d90e1a05fce76661fb7250bc994d8",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "sandbox image",
+      "path": "Dockerfile",
+      "digest": null,
+      "state": "PENDING_BUILD"
+    },
+    {
+      "name": "constitution",
+      "path": "docs/governance/FOUNDING_CONSTITUTION.md",
+      "digest": "0x0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "CBA mapping",
+      "path": "docs/rules/cba-mapping.json",
+      "digest": "0xdc471fdfeda3abf9973515081011e67920ac28d3184460e452e81e7c84531f60",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "NBA rules mapping",
+      "path": "docs/rules/nba-rule-mapping.json",
+      "digest": "0xf03fc82721b65e7e04f4daa18d57ea329b30b82a57ca8083ee9d095985cba5f1",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "resource schedule proposal",
+      "path": "docs/genesis/proposals/resource-schedule.json",
+      "digest": "0x4ceeb98278b9a6e2ed762a22f48b4187766e4bd7cb8046bbccb3a95c2470a5b8",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "threat model",
+      "path": "docs/architecture/THREAT_MODEL.md",
+      "digest": "0xe9b0f79b19235b80ac57ebaa061c74746f59c08057b7c2aa12be941affea90e0",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "model registry proposal",
+      "path": "docs/genesis/proposals/model-registry.json",
+      "digest": "0x2cd1e3d62a44c9a6dfd985427e89b03fed49ff0c77a7627ea58473ae8c711def",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "Blaxel deployment manifests",
+      "path": "infra/blaxel/",
+      "digest": "0x9179c19b0c19ca2433ae684fae1ad217026edbbe1da7c838424fe86bbf6c3900",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "public projections",
+      "path": null,
+      "digest": "0xd2b1935a6d2f3c978994d6177de0ce4547d24db36e9219c4e1eb8d70d367a0ea",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "public verifier",
+      "path": "packages/recognition/src/verifier.ts",
+      "digest": "0x0ea48b34aeea22807b45cbdf08592d8ec73352520d76092688dfc1ed279eb2e7",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "Base recognition contract",
+      "path": "contracts/RecognitionRegistry.sol",
+      "digest": "0x1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
+      "state": "PREPARED_LOCAL"
+    },
+    {
+      "name": "genesis release manifest",
+      "path": "docs/genesis/GENESIS_RELEASE_CANDIDATE.json",
+      "digest": null,
+      "state": "PENDING_RATIFICATION"
+    },
+    {
+      "name": "genesis root",
+      "path": null,
+      "digest": null,
+      "state": "PENDING_RATIFICATION"
+    }
+  ]
+}
