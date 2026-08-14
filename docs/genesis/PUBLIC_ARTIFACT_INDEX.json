@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0xb728d2ac48c5ba7f4fec104498e4e65120772628c1c41f4ccfcf876ef731219f",
+      "digest": "0x8d9a48e734e5d87c6e71c11093c8bd64b2cf67b12bb4739f58c7e1d6c1df47c1",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,13 +53,13 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0xe27eb97bfba4c4ed31cb5f8bb06ca6837b33e2f59792d72c1fde0b016a5fa4a2",
+      "digest": "0xc1d041b1da871fc354802493070bed779c6c3adaa93796f4934c9ca65e3d22e6",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
       "path": null,
-      "digest": "0xdcf7bb5bda5c5c5eee8cd4ce2e718fbea4c98faa0cee6e684ec48d802476ebfc",
+      "digest": "0x58a81eb9f9508dfbc6dadbd551a207c4547882b1996442ed16ce479fcc9dc9c4",
       "state": "PREPARED_LOCAL"
     },
     {

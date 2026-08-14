@@ -4,10 +4,12 @@ import {
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
+  FilePublicResourceProjectionRepository,
   verifyContractProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
+  verifyResourceProjectionEvent,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
@@ -45,10 +47,11 @@ const AgentRegistrySchema = z.record(
           "career-contracts",
           "governance-proposal",
           "due-process-case",
+          "resource-schedule",
         ]),
       )
       .min(1)
-      .max(4)
+      .max(5)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -138,6 +141,7 @@ let projections: FilePublicProjectionRepository | undefined;
 let contractProjections: FilePublicContractProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
+let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   authority = runtimeAuthority;
@@ -158,7 +162,7 @@ if (projectionRoot !== undefined) {
         verifyContractProjectionEvent(authorization, runtimeAuthority),
     },
   );
-  governanceProjections = new FilePublicGovernanceProjectionRepository(
+  const governanceRepository = new FilePublicGovernanceProjectionRepository(
     projectionRoot,
     {
       domain: runtimeAuthority.domain,
@@ -166,10 +170,22 @@ if (projectionRoot !== undefined) {
         verifyGovernanceProjectionEvent(authorization, runtimeAuthority),
     },
   );
+  governanceProjections = governanceRepository;
   caseProjections = new FilePublicCaseProjectionRepository(projectionRoot, {
     verifyAuthorization: async (authorization) =>
       verifyCaseProjectionEvent(authorization, runtimeAuthority),
   });
+  resourceProjections = new FilePublicResourceProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization) =>
+        verifyResourceProjectionEvent(authorization, {
+          ...runtimeAuthority,
+          resourceScheduleRatification: (proposalId) =>
+            governanceRepository.resourceScheduleRatification(proposalId),
+        }),
+    },
+  );
 }
 await Promise.all([
   projections?.initialize(),
@@ -177,6 +193,7 @@ await Promise.all([
   governanceProjections?.initialize(),
   caseProjections?.initialize(),
 ]);
+await resourceProjections?.initialize();
 
 let projectionIngress: PublicApiOptions["projectionIngress"];
 if (
@@ -184,13 +201,18 @@ if (
   contractProjections !== undefined &&
   governanceProjections !== undefined &&
   caseProjections !== undefined &&
+  resourceProjections !== undefined &&
   authority !== undefined
 ) {
+  const governanceRepository = governanceProjections;
   projectionIngress = {
     writer: projections,
     contractWriter: contractProjections,
     governanceWriter: governanceProjections,
     caseWriter: caseProjections,
+    resourceWriter: resourceProjections,
+    resourceScheduleRatification: (proposalId) =>
+      governanceRepository.resourceScheduleRatification(proposalId),
     verifier: new ServiceRequestVerifier([
       {
         serviceId: required("ABL_PROJECTION_INGEST_SERVICE_ID"),
@@ -209,6 +231,8 @@ if (contractProjections !== undefined)
 if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
+if (resourceProjections !== undefined)
+  apiOptions.resourceProjections = resourceProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

@@ -16,6 +16,8 @@ import {
   type GovernanceWorkflowSnapshot,
   type InstitutionalAuthorizationContext,
   type InstitutionalSigner,
+  type ResourceScheduleRatification,
+  type ResourceScheduleRatificationReader,
 } from "@abl/institutions";
 import { sha256Commitment } from "@abl/recognition";
 import type { TypedDataDomain } from "viem";
@@ -64,6 +66,9 @@ export interface PublicGovernanceProjectionWriter {
     projectedAt?: string,
   ): Promise<GovernanceProjectionRecord>;
 }
+
+export interface PublicGovernanceRatificationReader
+  extends ResourceScheduleRatificationReader {}
 
 export interface PublicGovernanceProjectionRepositoryOptions {
   domain: TypedDataDomain;
@@ -195,7 +200,10 @@ async function advanceGovernance(
 }
 
 export class FilePublicGovernanceProjectionRepository
-  implements PublicGovernanceProjectionReader, PublicGovernanceProjectionWriter
+  implements
+    PublicGovernanceProjectionReader,
+    PublicGovernanceProjectionWriter,
+    PublicGovernanceRatificationReader
 {
   readonly #root: string;
   readonly #domain: TypedDataDomain;
@@ -395,5 +403,25 @@ export class FilePublicGovernanceProjectionRepository
     for (const { projection } of this.#records)
       latest.set(projection.proposalId, projection);
     return structuredClone([...latest.values()]);
+  }
+
+  public async resourceScheduleRatification(
+    proposalId: string,
+  ): Promise<ResourceScheduleRatification | null> {
+    const state = this.#states.get(proposalId)?.snapshot;
+    if (state?.decision === null || state?.decision === undefined) return null;
+    const closeRecord = this.#records.find(
+      (record) =>
+        record.projection.proposalId === proposalId &&
+        record.authorization.event.eventType === "GovernanceProposalClosed",
+    );
+    if (closeRecord === undefined) return null;
+    return {
+      proposalId,
+      proposalClass: state.proposal.proposalClass,
+      executableChangeDigest: state.proposal.executableChangeDigest,
+      passed: state.decision.passed,
+      closeEventId: closeRecord.authorization.event.eventId,
+    };
   }
 }

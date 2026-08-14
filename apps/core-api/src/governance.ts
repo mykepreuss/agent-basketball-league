@@ -22,6 +22,7 @@ import {
   type GovernanceWorkflowSnapshot,
   type InstitutionalAuthorizationContext,
   type InstitutionalSigner,
+  type ResourceScheduleRatification,
 } from "@abl/institutions";
 import {
   CanonicalConflictError,
@@ -316,6 +317,27 @@ async function replayGovernanceAggregate(
     previousTimestamp = occurredAt;
   }
   return { records, snapshot, votes, authorization };
+}
+
+export async function readResourceScheduleRatification(
+  options: GovernanceRehearsalOptions,
+  proposalId: string,
+): Promise<ResourceScheduleRatification | null> {
+  const aggregate = await replayGovernanceAggregate(options, proposalId);
+  const snapshot = aggregate.snapshot;
+  if (snapshot?.decision === null || snapshot?.decision === undefined)
+    return null;
+  const closeRecord = aggregate.records.find(
+    (record) => record.eventType === "GovernanceProposalClosed",
+  );
+  if (closeRecord === undefined) return null;
+  return {
+    proposalId: snapshot.proposalId,
+    proposalClass: snapshot.proposal.proposalClass,
+    executableChangeDigest: snapshot.proposal.executableChangeDigest,
+    passed: snapshot.decision.passed,
+    closeEventId: closeRecord.eventId,
+  };
 }
 
 function appendInput(

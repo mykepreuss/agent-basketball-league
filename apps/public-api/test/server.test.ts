@@ -8,22 +8,31 @@ import {
   CASE_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
   GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+  RESOURCE_SCHEDULE_EVENT_TYPE,
+  RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyGovernanceWorkflowTransition,
+  applyResourceScheduleTransition,
   applyCaseWorkflowTransition,
   caseWorkflowStateRoot,
   governanceWorkflowStateRoot,
+  resourceScheduleExecutableDigest,
+  resourceScheduleStateRoot,
 } from "@abl/institutions";
 import {
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
+  FilePublicResourceProjectionRepository,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
   projectionEnvelopeBytes,
   verifyGovernanceProjectionEvent,
   verifyCaseProjectionEvent,
+  verifyResourceProjectionEvent,
   type CaseProjectionEventEnvelope,
   type GovernanceProjectionEventEnvelope,
+  type ResourceProjectionEventEnvelope,
 } from "@abl/projections";
 import {
   createCanonicalEvent,
@@ -183,6 +192,80 @@ describe("public API", () => {
       items: [{ clubId: "club-public-contract", canonical: true }],
     });
     expect(refreshes).toBe(2);
+    await app.close();
+  });
+
+  it("serves only independently replayed rehearsal resource schedules", async () => {
+    let refreshes = 0;
+    const scheduleId = "0198a000-0000-7000-8000-000000000690";
+    const app = createPublicApi({
+      resourceProjections: {
+        refresh: async () => {
+          refreshes += 1;
+        },
+        resources: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            recognizedGenesisResources: false,
+            scheduleId,
+            aggregateVersion: "1",
+            canonicalEventHash: `0x${"1".repeat(64)}`,
+            stateRoot: `0x${"2".repeat(64)}`,
+            schedule: {
+              scheduleId,
+              version: 1,
+              effectiveAt: "2026-08-14T00:00:00.000Z",
+              gameDayRoleUnits: {
+                PLAYER: 100,
+                COACH: 80,
+                REFEREE: 60,
+                REPLAY: 60,
+              },
+              universalMinimumUnits: 40,
+              autonomy: {
+                activationsPerWeek: 4,
+                interactiveMinutesPerActivation: 15,
+                sandboxComputeMinutesPerWeek: 60,
+                normalizedModelTokensPerWeek: 96_000,
+                rolloverWeeks: 1,
+              },
+              teamPreparationCapUnits: 2_000,
+              conversionFactors: [
+                {
+                  provider: "provider-a",
+                  modelRevision: "model-a-2026-08-13",
+                  unitsPerThousandTokens: 1.25,
+                },
+              ],
+              ratificationEventId: "0198a000-0000-7000-8000-000000000691",
+            },
+            ratificationProposalId: "0198a000-0000-7000-8000-000000000692",
+            projectedAt: "2026-08-13T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/public/resources",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
+    expect(response.json()).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          scheduleId,
+          aggregateVersion: "1",
+          canonical: true,
+          recognizedGenesisResources: false,
+        },
+      ],
+    });
+    expect(refreshes).toBe(1);
     await app.close();
   });
 
@@ -439,6 +522,169 @@ describe("public API", () => {
       ).json(),
     ).toMatchObject({
       items: [{ proposalId, aggregateVersion: "1", canonical: true }],
+    });
+    await app.close();
+  });
+
+  it("authenticates resource ingress against independently supplied ratification", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-public-resource-"));
+    const domain = {
+      name: "ABL Recognition",
+      version: "1",
+      chainId: 84532,
+      verifyingContract: "0x1111111111111111111111111111111111111111" as const,
+    };
+    const publisherDid = "did:abl:public-resource-publisher";
+    const publisher = createSigningIdentity(`0x${"8".repeat(64)}`);
+    const scheduleId = "0198a000-0000-7000-8000-000000000720";
+    const proposalId = "0198a000-0000-7000-8000-000000000721";
+    const closeEventId = "0198a000-0000-7000-8000-000000000722";
+    const schedule = {
+      scheduleId,
+      version: 1,
+      effectiveAt: "2026-08-14T00:00:00.000Z",
+      gameDayRoleUnits: {
+        PLAYER: 100,
+        COACH: 80,
+        REFEREE: 60,
+        REPLAY: 60,
+      },
+      universalMinimumUnits: 40,
+      autonomy: {
+        activationsPerWeek: 4 as const,
+        interactiveMinutesPerActivation: 15 as const,
+        sandboxComputeMinutesPerWeek: 60 as const,
+        normalizedModelTokensPerWeek: 96_000 as const,
+        rolloverWeeks: 1 as const,
+      },
+      teamPreparationCapUnits: 2_000,
+      conversionFactors: [
+        {
+          provider: "provider-a",
+          modelRevision: "model-a-2026-08-13",
+          unitsPerThousandTokens: 1.25,
+        },
+      ],
+      ratificationEventId: closeEventId,
+    };
+    const payload = { schedule, ratificationProposalId: proposalId };
+    const eventInput = {
+      eventId: "0198a000-0000-7000-8000-000000000723",
+      actorDid: publisherDid,
+      nonce: "public-resource-ingress",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000724",
+      aggregateType: RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+      aggregateId: scheduleId,
+      aggregateVersion: 1n,
+      eventType: RESOURCE_SCHEDULE_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: sha256Commitment("provisional-resource-ingress"),
+      schemaDigest: RESOURCE_SCHEDULE_SCHEMA_DIGEST,
+      timestamp: "2026-08-13T08:01:00.000Z",
+    } as const;
+    const snapshot = applyResourceScheduleTransition(
+      null,
+      createCanonicalEvent(eventInput),
+      payload,
+    );
+    const event = createCanonicalEvent({
+      ...eventInput,
+      stateRoot: resourceScheduleStateRoot(snapshot),
+    });
+    const envelope: ResourceProjectionEventEnvelope = {
+      version: "1.0.0",
+      topic: "public.resources",
+      event: {
+        ...event,
+        aggregateType: RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: RESOURCE_SCHEDULE_EVENT_TYPE,
+      },
+      signature: await signCanonicalEvent(publisher, domain, event),
+    };
+    const resourceScheduleRatification = async (requestedProposalId: string) =>
+      requestedProposalId === proposalId
+        ? {
+            proposalId,
+            proposalClass: "CONSTITUTIONAL",
+            executableChangeDigest: resourceScheduleExecutableDigest(schedule),
+            passed: true,
+            closeEventId,
+          }
+        : null;
+    const authority = {
+      domain,
+      admittedAgents: new Map([
+        [
+          publisherDid,
+          {
+            signerAddress: publisher.address,
+            allowedAggregateTypes: [RESOURCE_SCHEDULE_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+      resourceScheduleRatification,
+    };
+    const games = new FilePublicProjectionRepository(root);
+    const resources = new FilePublicResourceProjectionRepository(root, {
+      verifyAuthorization: (authorization) =>
+        verifyResourceProjectionEvent(authorization, authority),
+    });
+    await Promise.all([games.initialize(), resources.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T08:01:05.000Z");
+    const serviceIdentity = {
+      serviceId: "resource-ingress-test",
+      secret: new TextEncoder().encode("r".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const app = createPublicApi({
+      projections: games,
+      resourceProjections: resources,
+      projectionIngress: {
+        writer: games,
+        resourceWriter: resources,
+        verifier: new ServiceRequestVerifier([serviceIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const body = projectionEnvelopeBytes(envelope);
+    const headers = signServiceRequest(serviceIdentity, {
+      method: "POST",
+      path: PROJECTION_APPEND_PATH,
+      body,
+      nonce: "resource-ingress-service-request",
+      timestamp: new Date(serviceNow).toISOString(),
+      expectedVersion: "0",
+      capability: PROJECTION_APPEND_CAPABILITY,
+    });
+    const accepted = await app.inject({
+      method: "POST",
+      url: PROJECTION_APPEND_PATH,
+      headers: { ...headers, "content-type": "application/json" },
+      payload: Buffer.from(body),
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/public/resources",
+        })
+      ).json(),
+    ).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          scheduleId,
+          aggregateVersion: "1",
+          recognizedGenesisResources: false,
+        },
+      ],
     });
     await app.close();
   });

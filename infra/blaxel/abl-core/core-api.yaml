@@ -286,6 +286,11 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/governance/proposals/inspect
+    - id: resource-schedule-publish
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/resources/schedules/publish
     - id: case-file
       type: http
       configuration:

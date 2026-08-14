@@ -50,6 +50,10 @@ import {
   type MemoryRehearsalOptions,
 } from "./memory.js";
 import {
+  installResourceScheduleRehearsalRoutes,
+  type ResourceScheduleRehearsalOptions,
+} from "./resources.js";
+import {
   installGovernanceRehearsalRoutes,
   type GovernanceRehearsalOptions,
 } from "./governance.js";
@@ -77,6 +81,7 @@ export const CORE_ROUTE_CATALOG: readonly CoreRouteCatalogEntry[] = [
   { method: "POST", path: "/v1/practice/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/contracts/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/governance/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/resources/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/cases/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/continuity/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/exit/*", authority: "ADMITTED_AGENT" },
@@ -108,6 +113,7 @@ export interface LiveCoreApiOptions {
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
   governance?: Pick<GovernanceRehearsalOptions, "eligibilitySnapshot">;
+  resources?: Pick<ResourceScheduleRehearsalOptions, "governance">;
   cases?: Pick<CaseRehearsalOptions, "tribunalDids" | "appellateDids">;
 }
 
@@ -222,6 +228,7 @@ export function createLiveCoreApi(
     exit,
     governance,
     memory,
+    resources,
   } = options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
@@ -238,6 +245,10 @@ export function createLiveCoreApi(
     exit !== undefined;
   const governanceRoutesEnabled =
     candidateRoutesEnabled && governance !== undefined;
+  const resourceRoutesEnabled =
+    candidateRoutesEnabled &&
+    governanceRoutesEnabled &&
+    resources !== undefined;
   const caseRoutesEnabled = candidateRoutesEnabled && cases !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -437,6 +448,21 @@ export function createLiveCoreApi(
       eligibilitySnapshot: governance.eligibilitySnapshot,
     });
   }
+  if (
+    candidateAdmission !== undefined &&
+    governance !== undefined &&
+    resources !== undefined
+  ) {
+    installResourceScheduleRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      governance: resources.governance,
+    });
+  }
   if (candidateAdmission !== undefined && cases !== undefined) {
     installCaseRehearsalRoutes(app, {
       store: options.store,
@@ -459,6 +485,7 @@ export function createLiveCoreApi(
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
+      !(resourceRoutesEnabled && entry.path === "/v1/resources/*") &&
       !(caseRoutesEnabled && entry.path === "/v1/cases/*"),
   )) {
     app.route({

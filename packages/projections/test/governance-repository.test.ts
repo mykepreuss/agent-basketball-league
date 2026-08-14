@@ -283,9 +283,21 @@ describe("durable public governance projections", () => {
         ],
       },
     ]);
+    await expect(
+      store.resourceScheduleRatification(proposalId),
+    ).resolves.toEqual({
+      proposalId,
+      proposalClass: "TIER_CBA",
+      executableChangeDigest: null,
+      passed: true,
+      closeEventId: events.closed.event.eventId,
+    });
     const restarted = repository(root);
     await restarted.initialize();
     expect(restarted.governance()).toEqual(store.governance());
+    await expect(
+      restarted.resourceScheduleRatification(proposalId),
+    ).resolves.toEqual(await store.resourceScheduleRatification(proposalId));
   });
 
   it("drains configured governance outbox events through the worker", async () => {

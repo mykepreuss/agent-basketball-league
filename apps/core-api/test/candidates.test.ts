@@ -23,9 +23,15 @@ import {
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
   CASE_WORKFLOW_SCHEMA_DIGEST,
+  RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+  RESOURCE_SCHEDULE_EVENT_TYPE,
+  RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyCaseWorkflowTransition,
+  applyResourceScheduleTransition,
   caseWorkflowStateRoot,
   evaluateProposal,
+  resourceScheduleExecutableDigest,
+  resourceScheduleStateRoot,
   type CaseWorkflowEventType,
   type CaseWorkflowPayload,
   type CaseWorkflowSnapshot,
@@ -33,6 +39,8 @@ import {
   type GovernanceDecision,
   type GovernanceProposal,
   type GovernanceVote,
+  type ResourceSchedule,
+  type ResourceScheduleSnapshot,
 } from "@abl/institutions";
 import {
   createCanonicalEvent,
@@ -255,6 +263,11 @@ async function harness(): Promise<Harness> {
     exit: { portabilityVerifier: exitVerifier },
     governance: {
       eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+    },
+    resources: {
+      governance: {
+        eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+      },
     },
     cases: { tribunalDids, appellateDids },
   });
@@ -598,10 +611,11 @@ async function governanceCommand(input: {
   payload: GovernanceWorkflowPayload;
   decision?: GovernanceDecision;
   signer?: SigningIdentity;
+  eventId?: string;
 }) {
   const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
   const timestamp = new Date(input.h.now.value).toISOString();
-  const eventId = crypto.randomUUID();
+  const eventId = input.eventId ?? crypto.randomUUID();
   const idempotencyKey = crypto.randomUUID();
   const eventInput = {
     eventId,
@@ -643,6 +657,63 @@ async function governanceCommand(input: {
     body: {
       event: { ...event, aggregateVersion: aggregateVersion.toString() },
       signatures: [signature],
+    },
+  };
+}
+
+async function resourceScheduleCommand(input: {
+  h: Harness;
+  schedule: ResourceSchedule;
+  ratificationProposalId: string;
+  snapshot: ResourceScheduleSnapshot | null;
+  previousEventHash: Hex | null;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.h.now.value).toISOString();
+  const payload = {
+    schedule: input.schedule,
+    ratificationProposalId: input.ratificationProposalId,
+  };
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.h.candidateDid,
+    nonce: `resource-${input.schedule.scheduleId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+    aggregateId: input.schedule.scheduleId,
+    aggregateVersion,
+    eventType: RESOURCE_SCHEDULE_EVENT_TYPE,
+    previousEventHash: input.previousEventHash,
+    payload,
+    schemaDigest: RESOURCE_SCHEDULE_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyResourceScheduleTransition(
+    input.snapshot,
+    provisional,
+    payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: resourceScheduleStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
     },
   };
 }
@@ -2721,6 +2792,7 @@ describe("signed candidate rehearsal API", () => {
         },
       },
       decision,
+      eventId: uuid("457"),
     });
     const closeResponse = await h.app.inject({
       method: "POST",
@@ -2841,6 +2913,358 @@ describe("signed candidate rehearsal API", () => {
         })
       ).statusCode,
     ).toBe(403);
+    await h.app.close();
+  });
+
+  it("publishes only governance-ratified resource schedules and replays them after restart", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    const configuredSnapshot = governanceEligibilitySnapshot(h.candidateDid);
+    const eligibilitySnapshot = {
+      ...configuredSnapshot,
+      members: {
+        ...configuredSnapshot.members,
+        DEVELOPMENT_TEAM_COUNCIL: [h.candidateDid],
+      },
+    };
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: { eligibilitySnapshot },
+      resources: { governance: { eligibilitySnapshot } },
+    });
+
+    h.now.value = Date.parse(governanceSnapshotCapturedAt) + 60_000;
+    const proposalId = uuid("450");
+    const scheduleId = uuid("451");
+    const proposedSchedule: ResourceSchedule = {
+      scheduleId,
+      version: 1,
+      effectiveAt: new Date(h.now.value + 2 * hour).toISOString(),
+      gameDayRoleUnits: {
+        PLAYER: 100,
+        COACH: 80,
+        REFEREE: 60,
+        REPLAY: 60,
+      },
+      universalMinimumUnits: 40,
+      autonomy: {
+        activationsPerWeek: 4,
+        interactiveMinutesPerActivation: 15,
+        sandboxComputeMinutesPerWeek: 60,
+        normalizedModelTokensPerWeek: 96_000,
+        rolloverWeeks: 1,
+      },
+      teamPreparationCapUnits: 2_000,
+      conversionFactors: [
+        {
+          provider: "provider-a",
+          modelRevision: "model-a-2026-08-13",
+          unitsPerThousandTokens: 1.25,
+        },
+      ],
+      ratificationEventId: uuid("452"),
+    };
+    const opensAt = new Date(h.now.value + 60_000).toISOString();
+    const closesAt = new Date(h.now.value + 30 * 60_000).toISOString();
+    const proposal = {
+      proposalId,
+      version: 1,
+      proposerDid: h.candidateDid,
+      institution: "Universal resource schedule rehearsal",
+      proposalClass: "CONSTITUTIONAL" as const,
+      title: "Ratify the rehearsal resource schedule",
+      textCommitment: sha256Commitment("resource-schedule-proposal"),
+      executableChangeDigest:
+        resourceScheduleExecutableDigest(proposedSchedule),
+      opensAt,
+      closesAt,
+      eligibilitySnapshotDigest: sha256Commitment(eligibilitySnapshot),
+    };
+    const registered = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "GovernanceProposalRegistered",
+      payload: { proposal, eligibilitySnapshot, recusedDids: [] },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/register",
+          payload: registered.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    let governanceSnapshot = registered.next;
+    let governancePreviousHash = registered.event.eventHash;
+    const votes: GovernanceVote[] = [];
+    const chambers = [
+      "UNIVERSAL_CAREER_ASSEMBLY",
+      "PREMIER_TEAM_COUNCIL",
+      "DEVELOPMENT_TEAM_COUNCIL",
+    ] as const;
+    for (const [index, chamber] of chambers.entries()) {
+      h.now.value = Date.parse(opensAt) + index * 60_000;
+      const ballot = {
+        ballotId: uuid(String(453 + index)),
+        voterDid: h.candidateDid,
+        chamber,
+        choice: "YES" as const,
+        proposalId,
+        proposalVersion: 1,
+        eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+        castAt: new Date(h.now.value).toISOString(),
+      } satisfies GovernanceBallot;
+      const command = await governanceCommand({
+        h,
+        proposalId,
+        snapshot: governanceSnapshot,
+        previousEventHash: governancePreviousHash,
+        eventType: "GovernanceBallotCast",
+        payload: { command: ballot },
+      });
+      expect(
+        (
+          await h.app.inject({
+            method: "POST",
+            url: "/v1/governance/ballots/cast",
+            payload: command.body,
+          })
+        ).statusCode,
+      ).toBe(201);
+      votes.push({
+        ...ballot,
+        authorizationEvent: command.event as CanonicalEvent<{
+          command: GovernanceBallot;
+        }>,
+        signature: command.signature,
+        signerAddress: h.candidate.address,
+        authorizationAggregateVersion: Number(command.event.aggregateVersion),
+        authorizationStateRoot: command.event.stateRoot,
+      });
+      governanceSnapshot = command.next;
+      governancePreviousHash = command.event.eventHash;
+    }
+
+    const decision = await evaluateProposal({
+      proposal: {
+        proposalId,
+        version: 1,
+        proposalClass: "CONSTITUTIONAL",
+        openedAt: opensAt,
+        closesAt,
+        eligibilitySnapshotId: eligibilitySnapshot.snapshotId,
+        eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+      },
+      snapshot: eligibilitySnapshot,
+      votes,
+      recusals: [],
+      authorization: {
+        domain,
+        signers: new Map([
+          [
+            h.candidateDid,
+            { signerAddress: h.candidate.address, roles: ["VOTER"] },
+          ],
+        ]),
+      },
+    });
+    expect(decision.passed).toBe(true);
+
+    h.now.value = Date.parse(closesAt);
+    const closed = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceProposalClosed",
+      payload: {
+        command: {
+          proposalId,
+          proposalVersion: 1,
+          requestedByDid: h.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+        },
+      },
+      decision,
+      eventId: uuid("458"),
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/proposals/close",
+          payload: closed.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    h.now.value += 60_000;
+    const schedule = {
+      ...proposedSchedule,
+      ratificationEventId: closed.event.eventId,
+    };
+    expect(resourceScheduleExecutableDigest(schedule)).toBe(
+      proposal.executableChangeDigest,
+    );
+    const mismatched = await resourceScheduleCommand({
+      h,
+      schedule: {
+        ...schedule,
+        conversionFactors: [
+          { ...schedule.conversionFactors[0]!, unitsPerThousandTokens: 2 },
+        ],
+      },
+      ratificationProposalId: proposalId,
+      snapshot: null,
+      previousEventHash: null,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: mismatched.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const wrongClose = await resourceScheduleCommand({
+      h,
+      schedule: { ...schedule, ratificationEventId: uuid("459") },
+      ratificationProposalId: proposalId,
+      snapshot: null,
+      previousEventHash: null,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: wrongClose.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const forged = await resourceScheduleCommand({
+      h,
+      schedule,
+      ratificationProposalId: proposalId,
+      snapshot: null,
+      previousEventHash: null,
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: forged.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const published = await resourceScheduleCommand({
+      h,
+      schedule,
+      ratificationProposalId: proposalId,
+      snapshot: null,
+      previousEventHash: null,
+    });
+    const publicationResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/resources/schedules/publish",
+      payload: published.body,
+    });
+    expect(publicationResponse.statusCode).toBe(201);
+    expect(publicationResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rehearsal: true,
+      recognizedGenesisResources: false,
+      ratificationSource: "PASSED_REHEARSAL_CONSTITUTIONAL_PROPOSAL",
+      schedule: { scheduleId, version: 1 },
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.resources");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: published.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: { eligibilitySnapshot },
+      resources: { governance: { eligibilitySnapshot } },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: published.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+
+    const record = h.store.events.find(
+      (event) => event.aggregateType === RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+    )!;
+    const originalRoot = record.stateRoot;
+    record.stateRoot = digest("f");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: published.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    record.stateRoot = originalRoot;
+
+    const closeRecord = h.store.events.find(
+      (event) =>
+        event.aggregateId === proposalId &&
+        event.eventType === "GovernanceProposalClosed",
+    )!;
+    const originalCloseRoot = closeRecord.stateRoot;
+    closeRecord.stateRoot = digest("e");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/resources/schedules/publish",
+          payload: published.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    closeRecord.stateRoot = originalCloseRoot;
     await h.app.close();
   });
 

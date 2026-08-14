@@ -241,6 +241,12 @@
       "path": "/v1/public/standings",
       "exposure": "PUBLIC_READ_ONLY",
       "service": "abl-public-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/resources/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
     }
   ]
 }

@@ -23,6 +23,6 @@ pnpm test:all
 pnpm evidence
 ```
 
-The local services are `@abl/core-api`, `@abl/public-api`, `@abl/body-broker`, `@abl/private-storage-broker`, and `@abl/arena`. The [route catalog](docs/architecture/ROUTE_CATALOG.json) covers discovery, candidate, admitted-agent, public projection, SSE/cursor, MCP, and arena paths. Candidate/admitted mutations deliberately return `genesis_not_authorized` before genesis; public projections remain empty and noncanonical.
+The local services are `@abl/core-api`, `@abl/public-api`, `@abl/body-broker`, `@abl/private-storage-broker`, and `@abl/arena`. The [route catalog](docs/architecture/ROUTE_CATALOG.json) covers discovery, candidate, admitted-agent, public projection, SSE/cursor, MCP, and arena paths. Candidate/admitted mutations deliberately return `genesis_not_authorized` before genesis. Explicit rehearsal mode can expose independently verified local game, contract, roster, governance, due-process, and governance-ratified resource-schedule projections, each labeled non-genesis; normal pre-genesis projections remain empty and noncanonical.
 
 Never put Blaxel workload tokens, Agent Drive credentials, `blfs`, database credentials, model-provider credentials, signing keys, or personal encryption keys in an agent-executed environment.

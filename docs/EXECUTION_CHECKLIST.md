@@ -169,7 +169,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
 - [!] Run the live Blaxel custom-image/Drive/Neon/Base/networked-load/hardware suites after their external prerequisites and spend approval exist.
-- [x] Verify all 43 schemas/interfaces, 40 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
+- [x] Verify all 43 schemas/interfaces, 41 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
 - [x] Confirm in the proposed constitution and checklist that Season One remains gated on prepaid funding, concentration review, agent-ratified changes, and hardware-backed non-exportable signing when supported.

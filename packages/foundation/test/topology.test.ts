@@ -282,6 +282,7 @@ describe("four-workspace topology", () => {
         "/v1/governance/ballots/cast",
         "/v1/governance/proposals/close",
         "/v1/governance/proposals/inspect",
+        "/v1/resources/schedules/publish",
       ]),
     );
     expect(

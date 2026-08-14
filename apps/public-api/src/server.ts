@@ -12,6 +12,7 @@ import {
   verifyContractProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
+  verifyResourceProjectionEvent,
   type ProjectionVerificationAuthority,
   type PublicCaseProjectionReader,
   type PublicCaseProjectionWriter,
@@ -21,7 +22,10 @@ import {
   type PublicGovernanceProjectionWriter,
   type PublicProjectionReader,
   type PublicProjectionWriter,
+  type PublicResourceProjectionReader,
+  type PublicResourceProjectionWriter,
 } from "@abl/projections";
+import type { ResourceScheduleRatificationReader } from "@abl/institutions";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 
 export interface RouteCatalogEntry {
@@ -138,15 +142,18 @@ export interface PublicApiOptions {
   contractProjections?: PublicContractProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
+  resourceProjections?: PublicResourceProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
+    resourceWriter?: PublicResourceProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
+    resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -187,7 +194,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ProjectionAuthorizationError" ||
     name === "ContractWorkflowAuthorizationError" ||
     name === "GovernanceWorkflowAuthorizationError" ||
-    name === "CaseWorkflowAuthorizationError"
+    name === "CaseWorkflowAuthorizationError" ||
+    name === "ResourceScheduleAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
@@ -195,7 +203,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ProjectionValidationError" ||
     name === "ContractWorkflowValidationError" ||
     name === "GovernanceWorkflowValidationError" ||
-    name === "CaseWorkflowValidationError"
+    name === "CaseWorkflowValidationError" ||
+    name === "ResourceScheduleValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -211,7 +220,8 @@ export function createPublicApi(
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
     options.governanceProjections !== undefined ||
-    options.caseProjections !== undefined;
+    options.caseProjections !== undefined ||
+    options.resourceProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -225,6 +235,7 @@ export function createPublicApi(
         options.contractProjections?.refresh(),
         options.governanceProjections?.refresh(),
         options.caseProjections?.refresh(),
+        options.resourceProjections?.refresh(),
       ]);
     }
   });
@@ -447,6 +458,36 @@ export function createPublicApi(
             cursor: record.cursor,
           });
         }
+        if (topic === "public.resources") {
+          if (projectionIngress.resourceScheduleRatification === undefined)
+            throw new ServiceAuthenticationError(
+              "Resource schedule ratification is not configured",
+            );
+          const verified = await verifyResourceProjectionEvent(request.body, {
+            ...projectionIngress,
+            resourceScheduleRatification:
+              projectionIngress.resourceScheduleRatification,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the resource schedule event",
+            );
+          }
+          if (projectionIngress.resourceWriter === undefined)
+            throw new Error(
+              "Resource schedule projection writer is not configured",
+            );
+          const record = await projectionIngress.resourceWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -492,6 +533,8 @@ export function createPublicApi(
         items = options.contractProjections?.contracts() ?? [];
       } else if (path === "/v1/public/rosters") {
         items = options.contractProjections?.rosters() ?? [];
+      } else if (path === "/v1/public/resources") {
+        items = options.resourceProjections?.resources() ?? [];
       } else if (path === "/v1/public/governance") {
         items = [
           ...(options.governanceProjections?.governance() ?? []).map(

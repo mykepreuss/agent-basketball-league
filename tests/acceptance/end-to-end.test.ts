@@ -28,15 +28,35 @@ import {
 import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
+  GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+  RESOURCE_SCHEDULE_EVENT_TYPE,
+  RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
+  applyGovernanceWorkflowTransition,
+  applyResourceScheduleTransition,
   contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
+  evaluateGovernanceWorkflowDecision,
+  governanceVoteFromAuthorization,
+  governanceWorkflowStateRoot,
+  resourceScheduleExecutableDigest,
+  resourceScheduleStateRoot,
+  type GovernanceDecision,
+  type GovernanceWorkflowEventType,
+  type GovernanceWorkflowPayload,
+  type GovernanceWorkflowSnapshot,
+  type GovernanceVote,
+  type ResourceSchedule,
 } from "../../packages/institutions/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicGovernanceProjectionRepository,
   FilePublicProjectionRepository,
+  FilePublicResourceProjectionRepository,
   HttpProjectionEventSink,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
@@ -44,7 +64,9 @@ import {
   projectionEnvelopeBytes,
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
+  verifyGovernanceProjectionEvent,
   verifyProjectionEvent,
+  verifyResourceProjectionEvent,
   type ContractProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
@@ -860,6 +882,398 @@ describe("complete local acceptance", () => {
     ]);
   });
 
+  it("carries a constitutional resource decision through causal projection delivery", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-resource-acceptance-"),
+    );
+    const voterDid = "did:abl:resource-acceptance-voter";
+    const voter = createSigningIdentity(`0x${"8".repeat(64)}`);
+    const proposalId = "0198d000-0000-7000-8000-000000000801";
+    const scheduleId = "0198d000-0000-7000-8000-000000000802";
+    const closeEventId = "0198d000-0000-7000-8000-000000000803";
+    const eligibilitySnapshot = {
+      snapshotId: "0198d000-0000-7000-8000-000000000804",
+      capturedAt: "2026-08-13T08:00:00.000Z",
+      members: {
+        UNIVERSAL_CAREER_ASSEMBLY: [voterDid],
+        PREMIER_PLAYERS: [voterDid],
+        DEVELOPMENT_PLAYERS: [],
+        PREMIER_TEAM_COUNCIL: [voterDid],
+        DEVELOPMENT_TEAM_COUNCIL: [voterDid],
+        EXECUTIVE_COMMISSION: [],
+        TRIBUNAL: [],
+        INTEGRITY_OFFICE: [],
+      },
+    };
+    const eligibilitySnapshotDigest = sha256Commitment(eligibilitySnapshot);
+    const schedule: ResourceSchedule = {
+      scheduleId,
+      version: 1,
+      effectiveAt: "2026-08-13T10:00:00.000Z",
+      gameDayRoleUnits: {
+        PLAYER: 100,
+        COACH: 80,
+        REFEREE: 60,
+        REPLAY: 60,
+      },
+      universalMinimumUnits: 40,
+      autonomy: {
+        activationsPerWeek: 4,
+        interactiveMinutesPerActivation: 15,
+        sandboxComputeMinutesPerWeek: 60,
+        normalizedModelTokensPerWeek: 96_000,
+        rolloverWeeks: 1,
+      },
+      teamPreparationCapUnits: 2_000,
+      conversionFactors: [
+        {
+          provider: "provider-a",
+          modelRevision: "model-a-2026-08-13",
+          unitsPerThousandTokens: 1.25,
+        },
+      ],
+      ratificationEventId: closeEventId,
+    };
+    const proposal = {
+      proposalId,
+      version: 1,
+      proposerDid: voterDid,
+      institution: "Universal resource schedule acceptance rehearsal",
+      proposalClass: "CONSTITUTIONAL" as const,
+      title: "Ratify the acceptance resource schedule",
+      textCommitment: sha256Commitment("acceptance-resource-proposal"),
+      executableChangeDigest: resourceScheduleExecutableDigest(schedule),
+      opensAt: "2026-08-13T08:02:00.000Z",
+      closesAt: "2026-08-13T09:00:00.000Z",
+      eligibilitySnapshotDigest,
+    };
+    const store = new InMemoryCanonicalStore();
+    const append = async (
+      event: CanonicalEvent,
+      signature: string,
+      outboxTopic: "public.governance" | "public.resources",
+    ) =>
+      store.append({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        requestHash: sha256Commitment({
+          eventHash: event.eventHash,
+          signatures: [signature],
+        }),
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        expectedVersion: event.aggregateVersion - 1n,
+        competitionId: "resource-acceptance",
+        seasonId: "pre-genesis",
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.schemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: event.payload,
+        stateRoot: event.stateRoot,
+        signatures: [signature],
+        occurredAt: new Date(event.timestamp),
+        outboxTopic,
+      });
+
+    let governanceSnapshot: GovernanceWorkflowSnapshot | null = null;
+    let governancePreviousHash: `0x${string}` | null = null;
+    let governanceSequence = 0;
+    const governanceEvent = async (input: {
+      eventType: GovernanceWorkflowEventType;
+      timestamp: string;
+      payload: GovernanceWorkflowPayload;
+      decision?: GovernanceDecision;
+      eventId?: string;
+    }) => {
+      governanceSequence += 1;
+      const eventInput = {
+        eventId:
+          input.eventId ??
+          `0198d000-0000-7000-8000-${String(810 + governanceSequence).padStart(12, "0")}`,
+        actorDid: voterDid,
+        nonce: `resource-governance-${governanceSequence}`,
+        idempotencyKey: `0198d000-0000-7000-8000-${String(820 + governanceSequence).padStart(12, "0")}`,
+        aggregateType: GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
+        aggregateId: proposalId,
+        aggregateVersion: BigInt(governanceSequence),
+        eventType: input.eventType,
+        previousEventHash: governancePreviousHash,
+        payload: input.payload,
+        stateRoot: sha256Commitment("provisional-governance"),
+        schemaDigest: GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+        timestamp: input.timestamp,
+      } as const;
+      const provisional = createCanonicalEvent(eventInput);
+      const next = applyGovernanceWorkflowTransition(
+        governanceSnapshot,
+        provisional,
+        input.payload,
+        input.decision,
+      );
+      const event = createCanonicalEvent({
+        ...eventInput,
+        stateRoot: governanceWorkflowStateRoot(next),
+      });
+      const signature = await signCanonicalEvent(
+        voter,
+        REHEARSAL_RECOGNITION_DOMAIN,
+        event,
+      );
+      await append(event, signature, "public.governance");
+      governanceSnapshot = next;
+      governancePreviousHash = event.eventHash;
+      return { event, signature };
+    };
+
+    await governanceEvent({
+      eventType: "GovernanceProposalRegistered",
+      timestamp: "2026-08-13T08:01:00.000Z",
+      payload: { proposal, eligibilitySnapshot, recusedDids: [] },
+    });
+    const votes: GovernanceVote[] = [];
+    for (const [index, chamber] of [
+      "UNIVERSAL_CAREER_ASSEMBLY",
+      "PREMIER_TEAM_COUNCIL",
+      "DEVELOPMENT_TEAM_COUNCIL",
+    ].entries()) {
+      const castAt = `2026-08-13T08:0${index + 2}:00.000Z`;
+      const ballot = {
+        ballotId: `0198d000-0000-7000-8000-${String(830 + index).padStart(12, "0")}`,
+        voterDid,
+        chamber: chamber as
+          | "UNIVERSAL_CAREER_ASSEMBLY"
+          | "PREMIER_TEAM_COUNCIL"
+          | "DEVELOPMENT_TEAM_COUNCIL",
+        choice: "YES" as const,
+        proposalId,
+        proposalVersion: 1,
+        eligibilitySnapshotDigest,
+        castAt,
+      };
+      const voted = await governanceEvent({
+        eventType: "GovernanceBallotCast",
+        timestamp: castAt,
+        payload: { command: ballot },
+      });
+      votes.push(
+        governanceVoteFromAuthorization(
+          ballot,
+          voted.event,
+          voted.signature,
+          voter.address,
+        ),
+      );
+    }
+    if (governanceSnapshot === null)
+      throw new Error("Governance state was not constructed");
+    const decision = await evaluateGovernanceWorkflowDecision(
+      governanceSnapshot,
+      votes,
+      {
+        domain: REHEARSAL_RECOGNITION_DOMAIN,
+        signers: new Map([
+          [voterDid, { signerAddress: voter.address, roles: ["VOTER"] }],
+        ]),
+      },
+    );
+    expect(decision.passed).toBe(true);
+    await governanceEvent({
+      eventType: "GovernanceProposalClosed",
+      timestamp: proposal.closesAt,
+      eventId: closeEventId,
+      payload: {
+        command: {
+          proposalId,
+          proposalVersion: 1,
+          requestedByDid: voterDid,
+          requestedAt: proposal.closesAt,
+        },
+      },
+      decision,
+    });
+
+    const resourcePayload = { schedule, ratificationProposalId: proposalId };
+    const resourceInput = {
+      eventId: "0198d000-0000-7000-8000-000000000840",
+      actorDid: voterDid,
+      nonce: "resource-acceptance-publication",
+      idempotencyKey: "0198d000-0000-7000-8000-000000000841",
+      aggregateType: RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+      aggregateId: scheduleId,
+      aggregateVersion: 1n,
+      eventType: RESOURCE_SCHEDULE_EVENT_TYPE,
+      previousEventHash: null,
+      payload: resourcePayload,
+      stateRoot: sha256Commitment("provisional-resource"),
+      schemaDigest: RESOURCE_SCHEDULE_SCHEMA_DIGEST,
+      timestamp: "2026-08-13T09:01:00.000Z",
+    } as const;
+    const resourceSnapshot = applyResourceScheduleTransition(
+      null,
+      createCanonicalEvent(resourceInput),
+      resourcePayload,
+    );
+    const resourceEvent = createCanonicalEvent({
+      ...resourceInput,
+      stateRoot: resourceScheduleStateRoot(resourceSnapshot),
+    });
+    const resourceSignature = await signCanonicalEvent(
+      voter,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      resourceEvent,
+    );
+    await append(resourceEvent, resourceSignature, "public.resources");
+
+    const admittedAgents = new Map([
+      [
+        voterDid,
+        {
+          signerAddress: voter.address,
+          allowedAggregateTypes: [
+            GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
+            RESOURCE_SCHEDULE_AGGREGATE_TYPE,
+          ],
+        },
+      ],
+    ]);
+    const governanceAuthority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents,
+      governanceEligibilitySnapshotDigest: eligibilitySnapshotDigest,
+    };
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const governance = new FilePublicGovernanceProjectionRepository(
+      projectionRoot,
+      {
+        domain: REHEARSAL_RECOGNITION_DOMAIN,
+        verifyAuthorization: (authorization) =>
+          verifyGovernanceProjectionEvent(authorization, governanceAuthority),
+      },
+    );
+    const resources = new FilePublicResourceProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization) =>
+          verifyResourceProjectionEvent(authorization, {
+            domain: REHEARSAL_RECOGNITION_DOMAIN,
+            admittedAgents,
+            resourceScheduleRatification: (requestedProposalId) =>
+              governance.resourceScheduleRatification(requestedProposalId),
+          }),
+      },
+    );
+    await Promise.all([games.initialize(), governance.initialize()]);
+    await resources.initialize();
+    const serviceNow = Date.parse("2026-08-13T09:02:00.000Z");
+    const projectionIdentity = {
+      serviceId: "core-resource-projection-publisher",
+      secret: new TextEncoder().encode("r".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const publicApi = createPublicApi({
+      projections: games,
+      governanceProjections: governance,
+      resourceProjections: resources,
+      projectionIngress: {
+        writer: games,
+        governanceWriter: governance,
+        resourceWriter: resources,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        resourceScheduleRatification: (requestedProposalId) =>
+          governance.resourceScheduleRatification(requestedProposalId),
+        ...governanceAuthority,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    const ratification = {
+      proposalId,
+      proposalClass: proposal.proposalClass,
+      executableChangeDigest: proposal.executableChangeDigest,
+      passed: decision.passed,
+      closeEventId,
+    };
+    let transportNonce = 0;
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => `resource-transport-${++transportNonce}`,
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        resourceScheduleRatification: async (requestedProposalId) =>
+          requestedProposalId === proposalId ? ratification : null,
+        ...governanceAuthority,
+      });
+      expect(await worker.drain()).toBe(6);
+      expect(await worker.drain()).toBe(0);
+      expect(governanceSequence).toBe(5);
+      expect(
+        (
+          await publicApi.inject({
+            method: "GET",
+            url: "/v1/public/resources",
+          })
+        ).json(),
+      ).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            scheduleId,
+            aggregateVersion: "1",
+            recognizedGenesisResources: false,
+            schedule: { ratificationEventId: closeEventId },
+            ratificationProposalId: proposalId,
+          },
+        ],
+      });
+    } finally {
+      await publicApi.close();
+    }
+
+    const restartedGovernance = new FilePublicGovernanceProjectionRepository(
+      projectionRoot,
+      {
+        domain: REHEARSAL_RECOGNITION_DOMAIN,
+        verifyAuthorization: (authorization) =>
+          verifyGovernanceProjectionEvent(authorization, governanceAuthority),
+      },
+    );
+    await restartedGovernance.initialize();
+    const restartedResources = new FilePublicResourceProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization) =>
+          verifyResourceProjectionEvent(authorization, {
+            domain: REHEARSAL_RECOGNITION_DOMAIN,
+            admittedAgents,
+            resourceScheduleRatification: (requestedProposalId) =>
+              restartedGovernance.resourceScheduleRatification(
+                requestedProposalId,
+              ),
+          }),
+      },
+    );
+    await restartedResources.initialize();
+    expect(restartedResources.resources()).toMatchObject([
+      { scheduleId, aggregateVersion: "1", recognizedGenesisResources: false },
+    ]);
+  });
+
   it("replays both accelerated seasons and every cross-domain rehearsal scenario exactly", async () => {
     const report = await runPrivateRehearsal();
     expect(report.passed).toBe(true);
@@ -977,6 +1391,7 @@ describe("complete local acceptance", () => {
       "POST /v1/practice/*",
       "POST /v1/contracts/*",
       "POST /v1/governance/*",
+      "POST /v1/resources/*",
       "POST /v1/cases/*",
       "POST /v1/continuity/*",
       "POST /v1/exit/*",

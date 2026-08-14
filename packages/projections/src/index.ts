@@ -7,5 +7,7 @@ export * from "./governance-envelope.js";
 export * from "./governance-repository.js";
 export * from "./payload.js";
 export * from "./repository.js";
+export * from "./resource-envelope.js";
+export * from "./resource-repository.js";
 export * from "./transport.js";
 export * from "./worker.js";

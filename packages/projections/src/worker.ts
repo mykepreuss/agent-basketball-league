@@ -2,6 +2,7 @@ import type {
   ProjectionOutboxEvent,
   ProjectionOutboxStore,
 } from "@abl/database";
+import type { ResourceScheduleRatificationReader } from "@abl/institutions";
 
 import {
   caseProjectionEnvelopeFromOutbox,
@@ -24,6 +25,11 @@ import {
 } from "./governance-envelope.js";
 import type { PublicGovernanceProjectionWriter } from "./governance-repository.js";
 import type { PublicProjectionWriter } from "./repository.js";
+import {
+  resourceProjectionEnvelopeFromOutbox,
+  verifyResourceProjectionEvent,
+} from "./resource-envelope.js";
+import type { PublicResourceProjectionWriter } from "./resource-repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
@@ -32,6 +38,7 @@ type WorkerDestination =
       contractWriter?: PublicContractProjectionWriter;
       governanceWriter?: PublicGovernanceProjectionWriter;
       caseWriter?: PublicCaseProjectionWriter;
+      resourceWriter?: PublicResourceProjectionWriter;
       sink?: never;
     }
   | {
@@ -40,6 +47,7 @@ type WorkerDestination =
       contractWriter?: never;
       governanceWriter?: never;
       caseWriter?: never;
+      resourceWriter?: never;
     };
 
 const projectionTopics = [
@@ -47,8 +55,11 @@ const projectionTopics = [
   "public.contracts",
   "public.governance",
   "public.cases",
+  "public.resources",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
+const governanceTopicIndex = projectionTopics.indexOf("public.governance");
+const resourceTopicIndex = projectionTopics.indexOf("public.resources");
 
 export class PublicProjectionWorker {
   readonly #store: ProjectionOutboxStore;
@@ -58,6 +69,9 @@ export class PublicProjectionWorker {
   readonly #governanceEligibilitySnapshotDigest: string | undefined;
   readonly #caseTribunalDids: readonly string[] | undefined;
   readonly #caseAppellateDids: readonly string[] | undefined;
+  readonly #resourceScheduleRatification:
+    | ResourceScheduleRatificationReader["resourceScheduleRatification"]
+    | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -69,6 +83,7 @@ export class PublicProjectionWorker {
       governanceEligibilitySnapshotDigest?: string;
       caseTribunalDids?: readonly string[];
       caseAppellateDids?: readonly string[];
+      resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -78,7 +93,8 @@ export class PublicProjectionWorker {
     } else if (
       input.contractWriter === undefined &&
       input.governanceWriter === undefined &&
-      input.caseWriter === undefined
+      input.caseWriter === undefined &&
+      input.resourceWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -87,6 +103,7 @@ export class PublicProjectionWorker {
         contractWriter?: PublicContractProjectionWriter;
         governanceWriter?: PublicGovernanceProjectionWriter;
         caseWriter?: PublicCaseProjectionWriter;
+        resourceWriter?: PublicResourceProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -96,6 +113,8 @@ export class PublicProjectionWorker {
         destination.governanceWriter = input.governanceWriter;
       if (input.caseWriter !== undefined)
         destination.caseWriter = input.caseWriter;
+      if (input.resourceWriter !== undefined)
+        destination.resourceWriter = input.resourceWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -107,6 +126,7 @@ export class PublicProjectionWorker {
       input.governanceEligibilitySnapshotDigest;
     this.#caseTribunalDids = input.caseTribunalDids;
     this.#caseAppellateDids = input.caseAppellateDids;
+    this.#resourceScheduleRatification = input.resourceScheduleRatification;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -201,6 +221,30 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishResource(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = resourceProjectionEnvelopeFromOutbox(event);
+    if (this.#resourceScheduleRatification === undefined)
+      throw new Error("Resource schedule ratification is not configured");
+    const verified = await verifyResourceProjectionEvent(envelope, {
+      ...this.#authority,
+      resourceScheduleRatification: this.#resourceScheduleRatification,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.resourceWriter === undefined)
+        throw new Error(
+          "Resource schedule projection writer is not configured",
+        );
+      await this.#destination.resourceWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -214,6 +258,8 @@ export class PublicProjectionWorker {
         return this.#publishGovernance(event);
       case "public.cases":
         return this.#publishCase(event);
+      case "public.resources":
+        return this.#publishResource(event);
     }
   }
 
@@ -229,11 +275,19 @@ export class PublicProjectionWorker {
     let published = 0;
     while (published < limit) {
       let selected = -1;
-      for (let offset = 0; offset < projectionTopics.length; offset += 1) {
-        const candidate = (this.#nextTopic + offset) % projectionTopics.length;
-        if (positions[candidate]! < queues[candidate]!.length) {
-          selected = candidate;
-          break;
+      if (
+        positions[resourceTopicIndex]! < queues[resourceTopicIndex]!.length &&
+        positions[governanceTopicIndex]! < queues[governanceTopicIndex]!.length
+      ) {
+        selected = governanceTopicIndex;
+      } else {
+        for (let offset = 0; offset < projectionTopics.length; offset += 1) {
+          const candidate =
+            (this.#nextTopic + offset) % projectionTopics.length;
+          if (positions[candidate]! < queues[candidate]!.length) {
+            selected = candidate;
+            break;
+          }
         }
       }
       if (selected === -1) break;

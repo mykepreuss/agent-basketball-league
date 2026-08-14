@@ -7,3 +7,4 @@ export * from "./governance.js";
 export * from "./governance-workflow.js";
 export * from "./league.js";
 export * from "./rights.js";
+export * from "./resource-workflow.js";

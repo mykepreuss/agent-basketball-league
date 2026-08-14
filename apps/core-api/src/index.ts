@@ -9,7 +9,10 @@ import { z } from "zod";
 
 import { HttpMemoryStorageVerifier } from "./memory-storage.js";
 import { HttpExitPackagePortabilityVerifier } from "./exit-portability.js";
-import { GovernanceEligibilitySnapshotSchema } from "./governance.js";
+import {
+  GovernanceEligibilitySnapshotSchema,
+  readResourceScheduleRatification,
+} from "./governance.js";
 import { ContractClubGovernorsSchema } from "./contracts.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
 
@@ -44,10 +47,11 @@ const AdmittedAgentsSchema = z.record(
           "career-contracts",
           "governance-proposal",
           "due-process-case",
+          "resource-schedule",
         ]),
       )
       .min(1)
-      .max(4)
+      .max(5)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -123,6 +127,11 @@ const app = rehearsal
         throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
       closeStore = async () => store.close();
+      const candidateAdmission = {
+        challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
+      };
+      const competitionId = required("ABL_COMPETITION_ID");
+      const seasonId = required("ABL_SEASON_ID");
       const projectionSink = new HttpProjectionEventSink({
         origin: required("ABL_PUBLIC_PROJECTION_URL"),
         identity: {
@@ -140,6 +149,18 @@ const app = rehearsal
         ),
         caseTribunalDids,
         caseAppellateDids,
+        resourceScheduleRatification: (proposalId) =>
+          readResourceScheduleRatification(
+            {
+              store,
+              domain: authority.domain,
+              competitionId,
+              seasonId,
+              candidateAdmission,
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+            proposalId,
+          ),
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -155,11 +176,9 @@ const app = rehearsal
       return createLiveCoreApi({
         store,
         ...authority,
-        competitionId: required("ABL_COMPETITION_ID"),
-        seasonId: required("ABL_SEASON_ID"),
-        candidateAdmission: {
-          challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
-        },
+        competitionId,
+        seasonId,
+        candidateAdmission,
         combine: {
           combineId: required("ABL_COMBINE_ID"),
           openedAt: required("ABL_COMBINE_OPENED_AT"),
@@ -196,6 +215,11 @@ const app = rehearsal
         },
         governance: {
           eligibilitySnapshot: governanceEligibilitySnapshot,
+        },
+        resources: {
+          governance: {
+            eligibilitySnapshot: governanceEligibilitySnapshot,
+          },
         },
         cases: {
           tribunalDids: caseTribunalDids,
