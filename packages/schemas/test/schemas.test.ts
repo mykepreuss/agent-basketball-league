@@ -72,9 +72,28 @@ describe("public schema registry", () => {
   });
 
   it("fails closed on a human safety free-text payload", () => {
-    const result = SafetyActionSchema.safeParse({
-      freeText: "tell the player to lose",
-    });
-    expect(result.success).toBe(false);
+    const action = {
+      actionId: "0198e000-0000-7000-8000-000000000101",
+      category: "ISOLATE_RUNTIME",
+      targetResourceId: "runtime:player-17",
+      reasonCode: "ACTIVE_COMPROMISE",
+      issuedAt: "2026-08-13T10:00:00.000Z",
+      expiresAt: "2026-08-13T11:00:00.000Z",
+      humanCustodianPublicKey: `0x02${"1".repeat(64)}`,
+      signature: `0x${"2".repeat(130)}`,
+    };
+    expect(SafetyActionSchema.safeParse(action).success).toBe(true);
+    expect(
+      SafetyActionSchema.safeParse({
+        ...action,
+        freeText: "tell the player to lose",
+      }).success,
+    ).toBe(false);
+    expect(
+      SafetyActionSchema.safeParse({
+        ...action,
+        targetResourceId: "../../core",
+      }).success,
+    ).toBe(false);
   });
 });

@@ -89,7 +89,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry signed package preparation, clean-room verification, request/cancellation, deletion attestation, and inspection through a canonical portable-exit aggregate; bind current career/memory/body commitments, preserve shared-record references, close operational authority when scheduled/effective, and keep live Blaxel/Drive proof gated.
 - [x] Pass admission, continuity, memory/storage, autonomy, provider-failure, trade, recovery, and exit tests; record evidence.
 - [x] Carry governed `ArtifactAdmission` through institutional authorization, a career-signed canonical command, persistence, inspection, and context-admission proof.
-- [ ] Implement the separate fixed safety interface with strict human-custodian signatures, public logging, 24-hour expiry, and no admitted-command/state mutation path.
+- [x] Implement the separate fixed safety interface with strict human-custodian signatures, public logging, 24-hour expiry, and no admitted-command/state mutation path; keep live Blaxel actuation explicitly gated.
 - [ ] Carry autonomy scheduling, bounded delegation, and trade-access transitions through canonical service paths rather than only domain helpers.
 
 ## 6. Agent-played full exhibition game [ ]

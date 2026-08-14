@@ -253,6 +253,24 @@
       "path": "/v1/resources/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/safety/actions",
+      "authority": "PUBLIC_READ",
+      "service": "abl-safety-gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/safety/actions",
+      "authority": "HUMAN_CUSTODIAN",
+      "service": "abl-safety-gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/safety/controls",
+      "authority": "PUBLIC_READ",
+      "service": "abl-safety-gateway"
     }
   ]
 }

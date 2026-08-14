@@ -54,13 +54,15 @@
         "officials",
         "film",
         "combine",
-        "schedules"
+        "schedules",
+        "fixed safety controls",
+        "public safety log"
       ],
       "prohibitedAccess": [
         "canonical database credentials",
         "raw Drive credentials",
         "blfs",
-        "human input route"
+        "human input route to admitted agents"
       ]
     },
     {

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { CORE_ROUTE_CATALOG } from "../apps/core-api/src/server.js";
 import { PUBLIC_ROUTE_CATALOG } from "../apps/public-api/src/server.js";
+import { SAFETY_ROUTE_CATALOG } from "../apps/safety-gateway/src/server.js";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const ansiPattern = new RegExp("\\u001b\\[[0-9;]*m", "g");
@@ -95,6 +96,10 @@ async function main(): Promise<void> {
         ...route,
         service: "abl-core-api",
       })),
+      ...SAFETY_ROUTE_CATALOG.map((route) => ({
+        ...route,
+        service: "abl-safety-gateway",
+      })),
       {
         method: "GET",
         path: "/arena",
@@ -164,6 +169,7 @@ async function main(): Promise<void> {
     rawResults: suites,
     limitations: [
       "Live escape execution in the Blaxel custom-image sandbox is unavailable.",
+      "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
       "Four target Blaxel workspaces and Agent Drive are unavailable.",
       "Neon PITR lacks project credentials.",
       "Base finality lacks a ratified deployment and credentials.",

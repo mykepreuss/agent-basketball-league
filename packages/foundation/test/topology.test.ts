@@ -106,6 +106,84 @@ describe("four-workspace topology", () => {
     }
   });
 
+  it("isolates the public fixed-safety gateway from every admitted-agent authority", async () => {
+    const resources = await readYamlDirectory("abl-competition");
+    const safetyGateway = resources.find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-safety-gateway",
+    );
+    expect(safetyGateway).toMatchObject({
+      kind: "Agent",
+      spec: {
+        public: true,
+        region: "us-was-1",
+        volumes: [
+          {
+            name: "${ABL_SAFETY_LEDGER_VOLUME_NAME}",
+            mountPath: "/mnt/abl-safety",
+          },
+        ],
+        runtime: { minScale: 1, maxScale: 1 },
+      },
+    });
+    const environment = envMap(safetyGateway!);
+    expect([...environment.keys()].sort()).toEqual(
+      [
+        "ABL_LOG_CONTENT",
+        "ABL_SAFETY_CUSTODIAN_PUBLIC_KEYS_JSON",
+        "ABL_SAFETY_DOMAIN_CHAIN_ID",
+        "ABL_SAFETY_DOMAIN_VERIFYING_CONTRACT",
+        "ABL_SAFETY_LEDGER_ROOT",
+        "BL_ENABLE_OPENTELEMETRY",
+        "DO_NOT_TRACK",
+        "TELEMETRY_ENABLED",
+      ].sort(),
+    );
+    expect(environment.get("ABL_SAFETY_LEDGER_ROOT")).toBe("/mnt/abl-safety");
+    const spec = safetyGateway!.spec as {
+      runtime: { envs: Array<{ name: string; secret: boolean }> };
+      triggers: Array<{
+        configuration: { authenticationType: string; path: string };
+      }>;
+    };
+    expect(spec.runtime.envs.every((entry) => entry.secret === false)).toBe(
+      true,
+    );
+    expect(spec.triggers.map((trigger) => trigger.configuration)).toEqual([
+      {
+        authenticationType: "public",
+        path: "/v1/safety/actions",
+      },
+      {
+        authenticationType: "public",
+        path: "/v1/safety/controls",
+      },
+      { authenticationType: "public", path: "/health" },
+    ]);
+
+    const [packageJson, indexSource, serverSource] = await Promise.all([
+      readFile(
+        new URL("../../../apps/safety-gateway/package.json", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../../../apps/safety-gateway/src/index.ts", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../../../apps/safety-gateway/src/server.ts", import.meta.url),
+        "utf8",
+      ),
+    ]);
+    expect(packageJson).not.toMatch(
+      /@abl\/(?:database|storage|career|institutions)/,
+    );
+    expect(`${indexSource}\n${serverSource}`).not.toMatch(
+      /DATABASE_URL|ABL_CORE|PRIVATE_STORAGE|MODEL_|DRIVE_|BLFS|\/v1\/commands/,
+    );
+  });
+
   it("disables content-bearing telemetry on every nonpublic workload", async () => {
     for (const directory of ["abl-core", "abl-private", "abl-competition"]) {
       for (const resource of await readYamlDirectory(directory)) {

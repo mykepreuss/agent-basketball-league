@@ -860,10 +860,16 @@ export const BroadcastCursorSchema = z.strictObject({
   signature: Eip712SignatureSchema,
 });
 
+export const SafetyTargetResourceIdSchema = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/);
+
 export const SafetyActionSchema = z.strictObject({
   actionId: UuidV7Schema,
   category: z.enum(["PAUSE_SCHEDULER", "ISOLATE_RUNTIME"]),
-  targetResourceId: z.string().min(1),
+  targetResourceId: SafetyTargetResourceIdSchema,
   reasonCode: z.enum([
     "IMMEDIATE_HARM_RISK",
     "ACTIVE_COMPROMISE",

@@ -253,6 +253,34 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)(yaml@2.9.0))
 
+  apps/safety-gateway:
+    dependencies:
+      "@abl/safety":
+        specifier: workspace:*
+        version: link:../../packages/safety
+      fastify:
+        specifier: "catalog:"
+        version: 5.11.3
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
+    devDependencies:
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)(yaml@2.9.0))
+
   packages/assurance:
     dependencies:
       "@abl/basketball":
@@ -541,6 +569,31 @@ importers:
       "@abl/storage":
         specifier: workspace:*
         version: link:../storage
+    devDependencies:
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/safety:
+    dependencies:
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
     devDependencies:
       "@types/node":
         specifier: "catalog:"

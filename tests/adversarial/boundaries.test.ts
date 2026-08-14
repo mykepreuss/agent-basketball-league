@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { createCoreApi } from "../../apps/core-api/src/server.js";
 import { createPublicApi } from "../../apps/public-api/src/server.js";
+import { createSafetyGateway } from "../../apps/safety-gateway/src/server.js";
 import { analyzeSandboxBoundary } from "../../packages/assurance/src/index.js";
 import {
   assertFoundingDecisionAuthority,
@@ -18,6 +20,13 @@ import {
   requireArtifactAdmissionRatification,
 } from "../../packages/institutions/src/index.js";
 import { validateRuleMapping } from "../../packages/policy/src/index.js";
+import { createSigningIdentity } from "../../packages/recognition/src/index.js";
+import {
+  FileSafetyLedger,
+  SAFETY_DOMAIN_NAME,
+  SAFETY_DOMAIN_VERSION,
+  signSafetyAction,
+} from "../../packages/safety/src/index.js";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -126,6 +135,88 @@ describe("adversarial acceptance", () => {
       }
     }
     await coreApi.close();
+  });
+
+  it("contains the human safety key inside an expiring non-command boundary", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-adversarial-safety-"));
+    const custodian = createSigningIdentity(`0x${"6".repeat(64)}`);
+    const attacker = createSigningIdentity(`0x${"7".repeat(64)}`);
+    const now = Date.parse("2026-08-13T10:00:00.000Z");
+    const domain = {
+      name: SAFETY_DOMAIN_NAME,
+      version: SAFETY_DOMAIN_VERSION,
+      chainId: 84532,
+      verifyingContract: "0x2222222222222222222222222222222222222222" as const,
+    };
+    const app = createSafetyGateway({
+      ledger: new FileSafetyLedger(root, {
+        domain,
+        custodianPublicKeys: new Set([custodian.publicKey]),
+      }),
+      now: () => now,
+    });
+    try {
+      const action = await signSafetyAction(custodian, domain, {
+        actionId: "0198e000-0000-7000-8000-000000000201",
+        category: "ISOLATE_RUNTIME",
+        targetResourceId: "runtime:player-17",
+        reasonCode: "ACTIVE_COMPROMISE",
+        issuedAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + 60 * 60 * 1_000).toISOString(),
+      });
+      const attackerAction = await signSafetyAction(attacker, domain, {
+        actionId: "0198e000-0000-7000-8000-000000000202",
+        category: action.category,
+        targetResourceId: action.targetResourceId,
+        reasonCode: action.reasonCode,
+        issuedAt: action.issuedAt,
+        expiresAt: action.expiresAt,
+      });
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/v1/safety/actions",
+            payload: attackerAction,
+          })
+        ).statusCode,
+      ).toBe(403);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/v1/safety/actions",
+            payload: { ...action, freeText: "silently rewrite the score" },
+          })
+        ).statusCode,
+      ).toBe(400);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/v1/commands",
+            payload: action,
+          })
+        ).statusCode,
+      ).toBe(404);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/v1/safety/actions",
+            payload: action,
+          })
+        ).json(),
+      ).toMatchObject({
+        accepted: true,
+        admittedCommandGatewayCalled: false,
+        recognizedStateMutated: false,
+        livePlatformExecutionVerified: false,
+      });
+    } finally {
+      await app.close();
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("rejects raw, player-targeted, or human-self-approved external artifacts", async () => {

@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0xf3975bb9cb49e31e8d6d023af674f4bb93782a042d6dc6bda130424f88b57f01",
-      "fileCount": 125,
+      "digest": "0xcddd961d84f6f6f896a4d5b2b79feaa7eb643b1495b337197f12cd3e1c7f9085",
+      "fileCount": 130,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -127,6 +127,14 @@
         {
           "path": "apps/public-api/src/server.ts",
           "digest": "0x898aa893a013a42e1573038d5ff2226eb5439172348f8e9fd096eb70e9c187d8"
+        },
+        {
+          "path": "apps/safety-gateway/src/index.ts",
+          "digest": "0x3ff8ed1b241827618c12d336327cebc27504e182512c4ee154bd1cbe97948b07"
+        },
+        {
+          "path": "apps/safety-gateway/src/server.ts",
+          "digest": "0x82be8123b6cc2ece8103f56e69a07e0a063c6b5ce61eb72bd3545b16ef8f404b"
         },
         {
           "path": "contracts/RecognitionRegistry.sol",
@@ -473,8 +481,20 @@
           "digest": "0xf8d1320248390a9cfe715534f906eb1dec5a69f0151dbee064aa84f7f4389f87"
         },
         {
+          "path": "packages/safety/src/authorization.ts",
+          "digest": "0xc7717782a719265330ddc61a998bdef9b4b0180a1f55ffc8f56c83222f1ba25a"
+        },
+        {
+          "path": "packages/safety/src/index.ts",
+          "digest": "0x296ae3c9b72eacd67760609fafeeb2fc81413a58c3ebef1d13b6555d70136c40"
+        },
+        {
+          "path": "packages/safety/src/ledger.ts",
+          "digest": "0x3ddea2134e2100eeb2f18091faa2e4bf4753449be603a91c9197d548b6536b18"
+        },
+        {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x425e191bea330a7b44614cb646c2ea4d566526060d41b5b75a86253272d4fcd4"
+          "digest": "0x498449c44a7403e125d740317b0486dd6edcf960948463029a691952c353f387"
         },
         {
           "path": "packages/storage/src/broker.ts",
@@ -494,7 +514,7 @@
         },
         {
           "path": "scripts/evidence.ts",
-          "digest": "0x1d94bdcd8d79fccbe801a626d0b3a1e3b7bd6dfe8b5a76cc200b9681f61ba852"
+          "digest": "0xaefbeb3430fffc8e1a40843a459f21ed952bbbc91c89311f767c4ec04820dcd9"
         },
         {
           "path": "scripts/prepare-genesis-readiness.ts",
@@ -555,7 +575,7 @@
       ]
     },
     "tools": {
-      "digest": "0xf78f166f2aa7759f1db8df97609913add905c769db8c183c9ed0a4964b514004",
+      "digest": "0xdb6a4a7b9c88264c3fe3ba3882259eaf981af776dcbfba35196dfc98c26a2534",
       "fileCount": 6,
       "files": [
         {
@@ -568,7 +588,7 @@
         },
         {
           "path": "pnpm-lock.yaml",
-          "digest": "0x3ca9ca9ddf8e1ac501a6d8cd3efd225e208229d0b2e4224b7fe5b90b23abc61c"
+          "digest": "0xbe4a037ea86a50ad6367e142d50615b50cc3f1923453e209bbe463557bc0db3a"
         },
         {
           "path": "pnpm-workspace.yaml",
@@ -585,12 +605,12 @@
       ]
     },
     "schemas": {
-      "digest": "0xc37cf15e5f5e2b495c788a171153283f9cbbbe73e80ea56c1faaa2665f8901ed",
+      "digest": "0x745fa18d42d98b84ceff35c2dff8ebc7a800d08ee14d0baae11e707523e1e841",
       "fileCount": 1,
       "files": [
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x425e191bea330a7b44614cb646c2ea4d566526060d41b5b75a86253272d4fcd4"
+          "digest": "0x498449c44a7403e125d740317b0486dd6edcf960948463029a691952c353f387"
         }
       ]
     },
@@ -617,8 +637,8 @@
       ]
     },
     "testSuite": {
-      "digest": "0xee88a5732bbd354af9ca6a0bf2033212556975fd95a5fef6b636b62906deaf85",
-      "fileCount": 41,
+      "digest": "0xa1a6090f6bceeba689967024b80b4796bd614b36c50e3a2fdaaddc66dbe60f42",
+      "fileCount": 43,
       "files": [
         {
           "path": "apps/body-broker/test/server.test.ts",
@@ -653,6 +673,10 @@
           "digest": "0xb2721be4a07093d8b9a9740eabf05e5297cafde1a04dedac4e251913e4144fa3"
         },
         {
+          "path": "apps/safety-gateway/test/server.test.ts",
+          "digest": "0x6e820c334c05518082dc5f7d1afe08a7dceb38210aeab4190819aac24d61c95c"
+        },
+        {
           "path": "packages/assurance/test/assurance.test.ts",
           "digest": "0xebc446b3d6f72b3c8f3f0fb2aafa0be98f07e779ff2658f634c0be76ee4b5e7c"
         },
@@ -682,7 +706,7 @@
         },
         {
           "path": "packages/foundation/test/topology.test.ts",
-          "digest": "0xec95d60e07bff31a6649f488d244ef6e32a99a811e5d0519239dfb2b153a328d"
+          "digest": "0xb15d259f7e9f7d763ed1467026813792111fbc299dc4fce9939d0d225bc6db95"
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
@@ -761,8 +785,12 @@
           "digest": "0x26f503346af34c8ad81b87df257f2fd28dfcd5f204a0e1fef4c120ee89bde417"
         },
         {
+          "path": "packages/safety/test/safety.test.ts",
+          "digest": "0x25969ede1962d468df34241c9738ba3aa29f6f886f26fdb5d3f3519f727755a6"
+        },
+        {
           "path": "packages/schemas/test/schemas.test.ts",
-          "digest": "0x15bb64fd9d23d4a7b966f328aedd0721017a69b67c97fdda07c6bad1f0484021"
+          "digest": "0xfe859acb84f8690aa1077811226e53076a92e28cbf399247bce4aa821a910e04"
         },
         {
           "path": "packages/storage/test/storage.test.ts",
@@ -770,11 +798,11 @@
         },
         {
           "path": "tests/acceptance/end-to-end.test.ts",
-          "digest": "0x2292d63f2aa776583a3d71b9dabf4f475234d4323add1d563f482523ecded148"
+          "digest": "0xf1feb45f9debc641a4c6059e82bff4897b3dca1c2a265ef5f174f647543e6f2f"
         },
         {
           "path": "tests/adversarial/boundaries.test.ts",
-          "digest": "0x40dc77fa44eeb9edb53777450b62cf4036407181e15880645868014ff198c712"
+          "digest": "0x85dc479e4ef799f8088ec3eee226fd7316fe0b318d1b51b6454da8d3c308a3b3"
         },
         {
           "path": "tests/vitest.acceptance.ts",
@@ -813,8 +841,8 @@
       ]
     },
     "deploymentManifests": {
-      "digest": "0x6c845d07cb1e1dd46072a6e7fcbcdaf17b943beb56885bc8a1f7710acd01fd9b",
-      "fileCount": 15,
+      "digest": "0x04b587daaf7ed8fbb9d0951264720fceac49f3dcf6829ced6cee99c74f8d1a8e",
+      "fileCount": 16,
       "files": [
         {
           "path": "infra/blaxel/abl-competition/arena-sandbox.example.yaml",
@@ -835,6 +863,10 @@
         {
           "path": "infra/blaxel/abl-competition/model-primary.yaml",
           "digest": "0xe275b4217a64c04f72ea16fa16d4ec79d77b74f63e3dca33269e27872eac3720"
+        },
+        {
+          "path": "infra/blaxel/abl-competition/safety-gateway.yaml",
+          "digest": "0x357c592e0eec0c8192a6771ca6dcd0d1725d69472e08619ab9a730555b87656c"
         },
         {
           "path": "infra/blaxel/abl-core/core-api.yaml",
@@ -874,7 +906,7 @@
         },
         {
           "path": "infra/blaxel/topology.json",
-          "digest": "0xa5ca1a4f11b9bee4da187c8731b113efb7a6b3180aafbec1b8367aa2aa12b331"
+          "digest": "0x1fb35d96cd8b044a890507a6a9143771466bec62259b4b0a1892c0c565dd47a2"
         }
       ]
     },
@@ -1008,7 +1040,7 @@
         }
       ]
     },
-    "testResultDigest": "0x99c3ead6df99a813dd95ab14df3de4960d5ca251b7dfb81c5879f6fb1dba23b5",
+    "testResultDigest": "0x6341d6ad5831640a42764793bbc209afaee927276058d6d6cdb433bf390fe51a",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -1180,16 +1212,16 @@
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
       "changeClasses": ["IDENTITY", "RECOGNITION", "VERIFIER"],
-      "sourceDigest": "0xf3975bb9cb49e31e8d6d023af674f4bb93782a042d6dc6bda130424f88b57f01",
+      "sourceDigest": "0xcddd961d84f6f6f896a4d5b2b79feaa7eb643b1495b337197f12cd3e1c7f9085",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
       "imageDigests": [],
       "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-      "toolDigest": "0xf78f166f2aa7759f1db8df97609913add905c769db8c183c9ed0a4964b514004",
-      "schemaDigest": "0xc37cf15e5f5e2b495c788a171153283f9cbbbe73e80ea56c1faaa2665f8901ed",
+      "toolDigest": "0xdb6a4a7b9c88264c3fe3ba3882259eaf981af776dcbfba35196dfc98c26a2534",
+      "schemaDigest": "0x745fa18d42d98b84ceff35c2dff8ebc7a800d08ee14d0baae11e707523e1e841",
       "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-      "testResultDigest": "0x99c3ead6df99a813dd95ab14df3de4960d5ca251b7dfb81c5879f6fb1dba23b5",
+      "testResultDigest": "0x6341d6ad5831640a42764793bbc209afaee927276058d6d6cdb433bf390fe51a",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -1275,7 +1307,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0xf3975bb9cb49e31e8d6d023af674f4bb93782a042d6dc6bda130424f88b57f01",
+        "digest": "0xcddd961d84f6f6f896a4d5b2b79feaa7eb643b1495b337197f12cd3e1c7f9085",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1323,7 +1355,7 @@
       {
         "name": "Blaxel deployment manifests",
         "path": "infra/blaxel/",
-        "digest": "0x6c845d07cb1e1dd46072a6e7fcbcdaf17b943beb56885bc8a1f7710acd01fd9b",
+        "digest": "0x04b587daaf7ed8fbb9d0951264720fceac49f3dcf6829ced6cee99c74f8d1a8e",
         "state": "PREPARED_LOCAL"
       },
       {

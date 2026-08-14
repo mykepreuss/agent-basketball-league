@@ -15,6 +15,7 @@ import {
   PUBLIC_ROUTE_CATALOG,
   createPublicApi,
 } from "../../apps/public-api/src/server.js";
+import { SAFETY_ROUTE_CATALOG } from "../../apps/safety-gateway/src/server.js";
 import { runLocalCapacityProof } from "../../packages/assurance/src/index.js";
 import {
   REHEARSAL_RECOGNITION_DOMAIN,
@@ -1900,6 +1901,7 @@ describe("complete local acceptance", () => {
     const actual = new Set([
       ...PUBLIC_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
       ...CORE_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
+      ...SAFETY_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
       "GET /arena",
     ]);
     const expected = new Set([
@@ -1944,6 +1946,9 @@ describe("complete local acceptance", () => {
       "GET /v1/public/games/:id/cursor",
       "GET /v1/public/games/:id/segments/:segment",
       "GET /v1/public/games/:id/live",
+      "POST /v1/safety/actions",
+      "GET /v1/safety/actions",
+      "GET /v1/safety/controls",
       "GET /arena",
     ]);
     expect(actual).toEqual(expected);
