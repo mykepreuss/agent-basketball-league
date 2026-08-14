@@ -142,7 +142,7 @@ describe("recovery and deliberative wind-down", () => {
         liveNeonPitrStatus: "NOT_EXECUTED_NEON_CREDENTIAL_GATE",
       },
       checkpoint: {
-        localVerificationLabel: "CANONICAL",
+        localVerificationLabel: "UNVERIFIABLE",
         liveBaseStatus: "NOT_EXECUTED_BASE_CREDENTIAL_GATE",
       },
       keys: { recovered: true, guardianThreshold: 2, hardwareBacked: false },

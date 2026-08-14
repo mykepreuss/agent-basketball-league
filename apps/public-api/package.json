@@ -20,12 +20,12 @@
     "@abl/foundation": "workspace:*",
     "@abl/institutions": "workspace:*",
     "@abl/projections": "workspace:*",
+    "@abl/recognition": "workspace:*",
     "fastify": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@abl/recognition": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

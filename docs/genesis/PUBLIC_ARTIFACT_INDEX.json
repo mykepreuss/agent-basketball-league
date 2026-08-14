@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0xb8f780529828fe92eaa919195e0124a44fc3d172f812b73fe3e33c7c640299ec",
+      "digest": "0x8452da57896fb8c920bcf8cf18198e927bc4151f6890dea0ea82c96b31ca3cd4",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,19 +53,19 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0x664c40294f1b5387ce044692b244d000b8fae060aa245154ad3b0733f61224fa",
+      "digest": "0x0cba9fd8e791641631f2ce2a1aee10c48d6dc30bbc97bcc1b59eefe6eb2bf9e0",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
       "path": null,
-      "digest": "0xd02abe14e44ce5e6fff107c11ff5cf51362b8a01229f82ab8ca5a88915c37d44",
+      "digest": "0xbcc5a26f35c72f01d98860084a53de4e25749f624bd9c413d77742455097bec6",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public verifier",
       "path": "packages/recognition/src/verifier.ts",
-      "digest": "0x78f268178d150aea1c3b5d0daff58a6b92c8d1010144ad252e966f12d7e37d15",
+      "digest": "0x0ea48b34aeea22807b45cbdf08592d8ec73352520d76092688dfc1ed279eb2e7",
       "state": "PREPARED_LOCAL"
     },
     {

@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0xb8f780529828fe92eaa919195e0124a44fc3d172f812b73fe3e33c7c640299ec",
-      "fileCount": 120,
+      "digest": "0x8452da57896fb8c920bcf8cf18198e927bc4151f6890dea0ea82c96b31ca3cd4",
+      "fileCount": 123,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -109,12 +109,20 @@
           "digest": "0x70c6b8bca25a4a7938c05abbe7d737c7e0c97dd7b84a946e467e9736d127c796"
         },
         {
+          "path": "apps/public-api/src/base-checkpoints.ts",
+          "digest": "0xb1abf0faa8afcc83b1bfd037b5fab02f39add31048afbf7c6880726ce6d5f839"
+        },
+        {
           "path": "apps/public-api/src/index.ts",
-          "digest": "0x1468909ab51d49e5eeef7cc5ad2e90acaf55f62fef05d2d47a823db90d1d6c13"
+          "digest": "0xf2e31f007dec91794387387c13de80073e6d137443a8d4137210e15268345756"
+        },
+        {
+          "path": "apps/public-api/src/recognition-anchor.ts",
+          "digest": "0x2589bae522d55f4b4779010e8551e6279147dd588e103d9f3e37c759c2f28148"
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0x7c235e520a5072fcb52eebf3b2e63b65858e6127b77b2760f46b67a0ba7c87d3"
+          "digest": "0x898aa893a013a42e1573038d5ff2226eb5439172348f8e9fd096eb70e9c187d8"
         },
         {
           "path": "contracts/RecognitionRegistry.sol",
@@ -134,7 +142,7 @@
         },
         {
           "path": "packages/assurance/src/recovery.ts",
-          "digest": "0x870549865e3473a68b436d27b0dc94cc6e8bdd4bc56183c4db013e5a1988f876"
+          "digest": "0xcb6c86340aff9a6de15c952398be1c659f620a235a02128ea6bd41bc8317e2ca"
         },
         {
           "path": "packages/assurance/src/wind-down.ts",
@@ -262,7 +270,7 @@
         },
         {
           "path": "packages/genesis/src/deployment.ts",
-          "digest": "0x9e55ca9586efbd6d3a645550a5b48487ad2bfa964e0be68ec0735a6c7687b6b8"
+          "digest": "0xa9c16a995626984e799f03d36e4a9274ff81cb7254d9aa8f35be90832b9f4e59"
         },
         {
           "path": "packages/genesis/src/digests.ts",
@@ -345,6 +353,10 @@
           "digest": "0x41338575c03e4c4eaf6e7c7fce829f7c9aae2c9d57fd2b8eb10062ecb18c9d41"
         },
         {
+          "path": "packages/projections/src/checkpoint-repository.ts",
+          "digest": "0x7de7b6c609693b36acd938f2a8a578b77c3303a168817a0241b67b24fe0d6b86"
+        },
+        {
           "path": "packages/projections/src/contract-envelope.ts",
           "digest": "0x26d76eff4c38aeb468dcb900e8e6659a95a201a7c40cc144c83c6fa0a4827aa7"
         },
@@ -370,7 +382,7 @@
         },
         {
           "path": "packages/projections/src/index.ts",
-          "digest": "0xaafb249bcf5add1866140a25c419a8433eeba132578d20df94694d6a7797e070"
+          "digest": "0xcb1b6ad1699c1a5467a01bf4973fcede33c62de4752047e096be4acf435c832f"
         },
         {
           "path": "packages/projections/src/model-envelope.ts",
@@ -418,7 +430,7 @@
         },
         {
           "path": "packages/recognition/src/checkpoints.ts",
-          "digest": "0x03970d751c7bd5da18439300418c86f75ed59f5da21e5e878016addbe352b295"
+          "digest": "0x445d953de0f2747b57d4837e56b84f779814bbcd3c6dc6fb1323f96f72120736"
         },
         {
           "path": "packages/recognition/src/events.ts",
@@ -442,7 +454,7 @@
         },
         {
           "path": "packages/recognition/src/verifier.ts",
-          "digest": "0x16cf3737ef4096f197264cb6fa6ca0359fad284946ae5123fc8b0b6edbebd867"
+          "digest": "0x9c35f0b89d88dc41e1b9914bf706cac7b889ee01f1640ea30e0f9eebcc300d0b"
         },
         {
           "path": "packages/rehearsal/src/index.ts",
@@ -454,7 +466,7 @@
         },
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x4e2ecac3f8545e21a2ab8aa50060986a7bc0d240b31d4ac474983ca05984772b"
+          "digest": "0xf81125e67c89dd8e01d81a65855a7c32046ef0a0a8a5bb5429c11b611979b0e7"
         },
         {
           "path": "packages/storage/src/broker.ts",
@@ -482,7 +494,7 @@
         },
         {
           "path": "scripts/prepare-recognition-deployment.ts",
-          "digest": "0xb40a0032801c1e1e49c69eae6a72b0203a76432587e37d936f128c210875a73a"
+          "digest": "0x1fefb8416c5df59598240b47c8e1ef371e58a2988fca6560a69775b008e7eb60"
         }
       ]
     },
@@ -535,7 +547,7 @@
       ]
     },
     "tools": {
-      "digest": "0x39c742b3954fe24d85a94aab4f74661cb6cb2ed32e5901668bd51f233fccc400",
+      "digest": "0xf78f166f2aa7759f1db8df97609913add905c769db8c183c9ed0a4964b514004",
       "fileCount": 6,
       "files": [
         {
@@ -548,7 +560,7 @@
         },
         {
           "path": "pnpm-lock.yaml",
-          "digest": "0xb90c03450b98510cbd212cc8e1505032a848d593b6ca67d148e3312b286f81e0"
+          "digest": "0x3ca9ca9ddf8e1ac501a6d8cd3efd225e208229d0b2e4224b7fe5b90b23abc61c"
         },
         {
           "path": "pnpm-workspace.yaml",
@@ -565,12 +577,12 @@
       ]
     },
     "schemas": {
-      "digest": "0x4c88543e8b1d98006d5ce6d1049a9f42d7a898cee35c941103ca7216f885a179",
+      "digest": "0x4c6df21668f309b73d37e5bdfe6558188ec6ed7e239760c81c082d13aa89d443",
       "fileCount": 1,
       "files": [
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x4e2ecac3f8545e21a2ab8aa50060986a7bc0d240b31d4ac474983ca05984772b"
+          "digest": "0xf81125e67c89dd8e01d81a65855a7c32046ef0a0a8a5bb5429c11b611979b0e7"
         }
       ]
     },
@@ -597,8 +609,8 @@
       ]
     },
     "testSuite": {
-      "digest": "0xfed706669c6f870c0ff96b702641dc42a905bfd9eb347327bc6ebb94ad63f47b",
-      "fileCount": 38,
+      "digest": "0x876c4c014c8fb7558ab210a344c9fb79ab64f584cf97b360aeba7c1b87bb9217",
+      "fileCount": 40,
       "files": [
         {
           "path": "apps/body-broker/test/server.test.ts",
@@ -625,12 +637,16 @@
           "digest": "0xc48bba2e846964759849d3150ddeca29d15dfd0ddf856b4931d6e346a28b01c4"
         },
         {
+          "path": "apps/public-api/test/checkpoints.test.ts",
+          "digest": "0xf046fb3f0b32b48078ad5b084795b69d6474b55cb35a46e683437a41baf59ba3"
+        },
+        {
           "path": "apps/public-api/test/server.test.ts",
           "digest": "0xb2721be4a07093d8b9a9740eabf05e5297cafde1a04dedac4e251913e4144fa3"
         },
         {
           "path": "packages/assurance/test/assurance.test.ts",
-          "digest": "0xf917ea9d56a97bfe8e1f95a9d885bbcb5a4746a976fd7bccb8f788840cb38c26"
+          "digest": "0xebc446b3d6f72b3c8f3f0fb2aafa0be98f07e779ff2658f634c0be76ee4b5e7c"
         },
         {
           "path": "packages/basketball/test/full-game.test.ts",
@@ -658,11 +674,11 @@
         },
         {
           "path": "packages/foundation/test/topology.test.ts",
-          "digest": "0xc1cfffda6825ab137402940969293e3811888acf6f61520f814c0c27b4bdc9b4"
+          "digest": "0x03966eaa3c5b64be6c282f5b0d7a3c8c9b03e1b53f968451614f7832296a2407"
         },
         {
           "path": "packages/genesis/test/genesis.test.ts",
-          "digest": "0x092614c5d382fa77f398b7b5983fde5b2ebc3a34709ffbe080fce33902c352e8"
+          "digest": "0x1fb48eb717c8f55903d23865f95ac9893360273bddb9ad58f340db721e1dcd7e"
         },
         {
           "path": "packages/institutions/test/case-workflow.test.ts",
@@ -687,6 +703,10 @@
         {
           "path": "packages/projections/test/case-repository.test.ts",
           "digest": "0xae609695a75a6d069bd3fe96966585f9f524308b6515f6b95232196096c0dfc6"
+        },
+        {
+          "path": "packages/projections/test/checkpoint-repository.test.ts",
+          "digest": "0xc43d7ba1791b1e6661c55324d6bbbf94068e8bd98e3acbb3f059b362c34651c3"
         },
         {
           "path": "packages/projections/test/contract-repository.test.ts",
@@ -722,7 +742,7 @@
         },
         {
           "path": "packages/recognition/test/recognition.test.ts",
-          "digest": "0xde62a89e423025fefff54954ec2d55d4da2b4cf040165c1f622d9052093c00a4"
+          "digest": "0x939786dec739b4295ddb0c4286b509f70afff918e9ebdb339b54b39c2e6f6a42"
         },
         {
           "path": "packages/rehearsal/test/rehearsal.test.ts",
@@ -738,7 +758,7 @@
         },
         {
           "path": "tests/acceptance/end-to-end.test.ts",
-          "digest": "0xe256b1ac067a23f8d6d40b256ad8b2acb755b99a628bb93c6d712e0c54c1b703"
+          "digest": "0x2292d63f2aa776583a3d71b9dabf4f475234d4323add1d563f482523ecded148"
         },
         {
           "path": "tests/adversarial/boundaries.test.ts",
@@ -755,7 +775,7 @@
       ]
     },
     "verifier": {
-      "digest": "0x78f268178d150aea1c3b5d0daff58a6b92c8d1010144ad252e966f12d7e37d15",
+      "digest": "0x0ea48b34aeea22807b45cbdf08592d8ec73352520d76092688dfc1ed279eb2e7",
       "fileCount": 5,
       "files": [
         {
@@ -764,11 +784,11 @@
         },
         {
           "path": "docs/architecture/VERIFIER_RULES.md",
-          "digest": "0x56c30fa95eee1e7d13cbd960867cea9e434592f9eb1ae53ea6dbed2509b10dcb"
+          "digest": "0x2a5b0121d291b0ba5b5acfe2018fe840147b33888e0e1c94a21f63ee91b53208"
         },
         {
           "path": "packages/recognition/src/checkpoints.ts",
-          "digest": "0x03970d751c7bd5da18439300418c86f75ed59f5da21e5e878016addbe352b295"
+          "digest": "0x445d953de0f2747b57d4837e56b84f779814bbcd3c6dc6fb1323f96f72120736"
         },
         {
           "path": "packages/recognition/src/registry.ts",
@@ -776,12 +796,12 @@
         },
         {
           "path": "packages/recognition/src/verifier.ts",
-          "digest": "0x16cf3737ef4096f197264cb6fa6ca0359fad284946ae5123fc8b0b6edbebd867"
+          "digest": "0x9c35f0b89d88dc41e1b9914bf706cac7b889ee01f1640ea30e0f9eebcc300d0b"
         }
       ]
     },
     "deploymentManifests": {
-      "digest": "0x664c40294f1b5387ce044692b244d000b8fae060aa245154ad3b0733f61224fa",
+      "digest": "0x0cba9fd8e791641631f2ce2a1aee10c48d6dc30bbc97bcc1b59eefe6eb2bf9e0",
       "fileCount": 15,
       "files": [
         {
@@ -830,7 +850,7 @@
         },
         {
           "path": "infra/blaxel/abl-public/public-api.yaml",
-          "digest": "0x31e4aee016d1698f522bc667db817215ad771337980a418db7e47db03fb1bb66"
+          "digest": "0x35cd3be457d25d6fafb60a66b1fc67aabd6cf11c916fed09aed44ad40569ac4d"
         },
         {
           "path": "infra/blaxel/capacity-plan.json",
@@ -847,8 +867,8 @@
       ]
     },
     "publicProjection": {
-      "digest": "0xd02abe14e44ce5e6fff107c11ff5cf51362b8a01229f82ab8ca5a88915c37d44",
-      "fileCount": 28,
+      "digest": "0xbcc5a26f35c72f01d98860084a53de4e25749f624bd9c413d77742455097bec6",
+      "fileCount": 31,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -879,12 +899,20 @@
           "digest": "0x56f27b1b8f2660336ae5f8d723816659ddf81f6cda4599dc069ab8f6b39e59ff"
         },
         {
+          "path": "apps/public-api/src/base-checkpoints.ts",
+          "digest": "0xb1abf0faa8afcc83b1bfd037b5fab02f39add31048afbf7c6880726ce6d5f839"
+        },
+        {
           "path": "apps/public-api/src/index.ts",
-          "digest": "0x1468909ab51d49e5eeef7cc5ad2e90acaf55f62fef05d2d47a823db90d1d6c13"
+          "digest": "0xf2e31f007dec91794387387c13de80073e6d137443a8d4137210e15268345756"
+        },
+        {
+          "path": "apps/public-api/src/recognition-anchor.ts",
+          "digest": "0x2589bae522d55f4b4779010e8551e6279147dd588e103d9f3e37c759c2f28148"
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0x7c235e520a5072fcb52eebf3b2e63b65858e6127b77b2760f46b67a0ba7c87d3"
+          "digest": "0x898aa893a013a42e1573038d5ff2226eb5439172348f8e9fd096eb70e9c187d8"
         },
         {
           "path": "packages/projections/src/case-envelope.ts",
@@ -893,6 +921,10 @@
         {
           "path": "packages/projections/src/case-repository.ts",
           "digest": "0x41338575c03e4c4eaf6e7c7fce829f7c9aae2c9d57fd2b8eb10062ecb18c9d41"
+        },
+        {
+          "path": "packages/projections/src/checkpoint-repository.ts",
+          "digest": "0x7de7b6c609693b36acd938f2a8a578b77c3303a168817a0241b67b24fe0d6b86"
         },
         {
           "path": "packages/projections/src/contract-envelope.ts",
@@ -920,7 +952,7 @@
         },
         {
           "path": "packages/projections/src/index.ts",
-          "digest": "0xaafb249bcf5add1866140a25c419a8433eeba132578d20df94694d6a7797e070"
+          "digest": "0xcb1b6ad1699c1a5467a01bf4973fcede33c62de4752047e096be4acf435c832f"
         },
         {
           "path": "packages/projections/src/model-envelope.ts",
@@ -964,7 +996,7 @@
         }
       ]
     },
-    "testResultDigest": "0x2cfed251c5c1c1ffb4e450f7a6adb9d8cfa7ddd48cdfedfa529a1c5e0dfeb4e6",
+    "testResultDigest": "0x7e6a0c97af292b822c459f93f4963c94df7738010fa7194cdb2ef331b36a9ffc",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -1136,16 +1168,16 @@
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
       "changeClasses": ["IDENTITY", "RECOGNITION", "VERIFIER"],
-      "sourceDigest": "0xb8f780529828fe92eaa919195e0124a44fc3d172f812b73fe3e33c7c640299ec",
+      "sourceDigest": "0x8452da57896fb8c920bcf8cf18198e927bc4151f6890dea0ea82c96b31ca3cd4",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
       "imageDigests": [],
       "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-      "toolDigest": "0x39c742b3954fe24d85a94aab4f74661cb6cb2ed32e5901668bd51f233fccc400",
-      "schemaDigest": "0x4c88543e8b1d98006d5ce6d1049a9f42d7a898cee35c941103ca7216f885a179",
+      "toolDigest": "0xf78f166f2aa7759f1db8df97609913add905c769db8c183c9ed0a4964b514004",
+      "schemaDigest": "0x4c6df21668f309b73d37e5bdfe6558188ec6ed7e239760c81c082d13aa89d443",
       "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-      "testResultDigest": "0x2cfed251c5c1c1ffb4e450f7a6adb9d8cfa7ddd48cdfedfa529a1c5e0dfeb4e6",
+      "testResultDigest": "0x7e6a0c97af292b822c459f93f4963c94df7738010fa7194cdb2ef331b36a9ffc",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -1175,7 +1207,8 @@
     "contract": {
       "sourceSha256": "1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
       "creationBytecodeSha256": "1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0",
-      "bytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
+      "creationBytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
+      "deployedRuntimeBytecodeKeccak256": null,
       "callableFunctions": [
         "CHECKPOINT_TYPEHASH",
         "KEY_REGISTRY",
@@ -1210,6 +1243,12 @@
       "role masks",
       "checkpoint policies"
     ],
+    "postDeploymentEvidenceRequired": [
+      "deployed contract address",
+      "successful deployment receipt and block",
+      "deployed runtime bytecode hash from eth_getCode",
+      "Base finalized-head evidence"
+    ],
     "irreversibleConsequences": [
       "The constructor permanently fixes constitution and verifier digests.",
       "No owner, deployer, sponsor, proxy, pause, or upgrade authority exists.",
@@ -1224,7 +1263,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0xb8f780529828fe92eaa919195e0124a44fc3d172f812b73fe3e33c7c640299ec",
+        "digest": "0x8452da57896fb8c920bcf8cf18198e927bc4151f6890dea0ea82c96b31ca3cd4",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1272,19 +1311,19 @@
       {
         "name": "Blaxel deployment manifests",
         "path": "infra/blaxel/",
-        "digest": "0x664c40294f1b5387ce044692b244d000b8fae060aa245154ad3b0733f61224fa",
+        "digest": "0x0cba9fd8e791641631f2ce2a1aee10c48d6dc30bbc97bcc1b59eefe6eb2bf9e0",
         "state": "PREPARED_LOCAL"
       },
       {
         "name": "public projections",
         "path": null,
-        "digest": "0xd02abe14e44ce5e6fff107c11ff5cf51362b8a01229f82ab8ca5a88915c37d44",
+        "digest": "0xbcc5a26f35c72f01d98860084a53de4e25749f624bd9c413d77742455097bec6",
         "state": "PREPARED_LOCAL"
       },
       {
         "name": "public verifier",
         "path": "packages/recognition/src/verifier.ts",
-        "digest": "0x78f268178d150aea1c3b5d0daff58a6b92c8d1010144ad252e966f12d7e37d15",
+        "digest": "0x0ea48b34aeea22807b45cbdf08592d8ec73352520d76092688dfc1ed279eb2e7",
         "state": "PREPARED_LOCAL"
       },
       {

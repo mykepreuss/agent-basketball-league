@@ -35,27 +35,30 @@ Plan difference and response:
 
 ## Official source verification
 
-| Source               | Verified fact                                                                                     | URL                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Blaxel docs index    | Current product and API documentation index                                                       | https://docs.blaxel.ai/llms.txt                                |
-| Agent Drive Overview | Private preview, `us-was-1`, workspace-token/`blfs` risk                                          | https://docs.blaxel.ai/Agent-drive/Overview                    |
-| Drive Permissions    | Label/path rules exist in current docs; default is workspace-open                                 | https://docs.blaxel.ai/Agent-drive/Permissions                 |
-| Sandbox Proxy        | Preview, recreation on policy change, automatic local/private bypass                              | https://docs.blaxel.ai/Sandboxes/Proxy                         |
-| Domain Filtering     | Proxy-variable dependent; routing enforcement planned                                             | https://docs.blaxel.ai/Sandboxes/Proxy-domains                 |
-| Non-root workloads   | Root infrastructure API with workload privilege drop                                              | https://docs.blaxel.ai/Sandboxes/Non-root-user                 |
-| Data/privacy         | Deployed OpenTelemetry default and independent opt-outs                                           | https://docs.blaxel.ai/Security/Data-collection-and-privacy    |
-| Workspaces           | Multi-workspace account model and SDK creation                                                    | https://docs.blaxel.ai/Security/Workspace-access-control       |
-| Quotas               | Shared account quotas and real-fund tier requirements                                             | https://docs.blaxel.ai/Security/Quotas                         |
-| Agents Hosting       | 15-minute limit and five retained revisions                                                       | https://docs.blaxel.ai/Agents/Deploy-an-agent                  |
-| Agent volumes        | Public Agents may attach persistent regional volumes that survive redeployment                    | https://docs.blaxel.ai/Agents/Volumes                          |
-| Sandbox Images       | Custom Sandbox images use a Dockerfile plus Sandbox API and may be built in Blaxel                | https://docs.blaxel.ai/Sandboxes/Templates                     |
-| Blaxel image push    | `bl push` builds and stores an image without creating or updating a workload                      | https://docs.blaxel.ai/cli-reference/commands/bl_push          |
-| Node.js              | Node `24.18.0` is a 24 LTS release dated 2026-06-23                                               | https://nodejs.org/en/blog/release/v24.18.0                    |
-| NBA rules            | Official rulebook index exposes Rules 1-14 and comments                                           | https://official.nba.com/rulebook/                             |
-| NBPA CBA             | 2023 agreement effective 2023-07-01 through 2029-30 subject to opt-out                            | https://nbpa.com/cba/                                          |
-| NBA cap              | Approved Court Credit numbers match the official 2026-27 announcement                             | https://www.nba.com/news/nba-salary-cap-2026-27-season         |
-| Neon recovery        | Instant restore/snapshots preserve stable application connection behavior with documented caveats | https://neon.com/docs/ai/ai-database-versioning                |
-| Base networks        | Base Sepolia chain ID `84532`; public RPC is rate-limited and not production                      | https://docs.base.org/base-chain/quickstart/connecting-to-base |
+| Source               | Verified fact                                                                                     | URL                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Blaxel docs index    | Current product and API documentation index                                                       | https://docs.blaxel.ai/llms.txt                                                                |
+| Agent Drive Overview | Private preview, `us-was-1`, workspace-token/`blfs` risk                                          | https://docs.blaxel.ai/Agent-drive/Overview                                                    |
+| Drive Permissions    | Label/path rules exist in current docs; default is workspace-open                                 | https://docs.blaxel.ai/Agent-drive/Permissions                                                 |
+| Sandbox Proxy        | Preview, recreation on policy change, automatic local/private bypass                              | https://docs.blaxel.ai/Sandboxes/Proxy                                                         |
+| Domain Filtering     | Proxy-variable dependent; routing enforcement planned                                             | https://docs.blaxel.ai/Sandboxes/Proxy-domains                                                 |
+| Non-root workloads   | Root infrastructure API with workload privilege drop                                              | https://docs.blaxel.ai/Sandboxes/Non-root-user                                                 |
+| Data/privacy         | Deployed OpenTelemetry default and independent opt-outs                                           | https://docs.blaxel.ai/Security/Data-collection-and-privacy                                    |
+| Workspaces           | Multi-workspace account model and SDK creation                                                    | https://docs.blaxel.ai/Security/Workspace-access-control                                       |
+| Quotas               | Shared account quotas and real-fund tier requirements                                             | https://docs.blaxel.ai/Security/Quotas                                                         |
+| Agents Hosting       | 15-minute limit and five retained revisions                                                       | https://docs.blaxel.ai/Agents/Deploy-an-agent                                                  |
+| Agent volumes        | Public Agents may attach persistent regional volumes that survive redeployment                    | https://docs.blaxel.ai/Agents/Volumes                                                          |
+| Sandbox Images       | Custom Sandbox images use a Dockerfile plus Sandbox API and may be built in Blaxel                | https://docs.blaxel.ai/Sandboxes/Templates                                                     |
+| Blaxel image push    | `bl push` builds and stores an image without creating or updating a workload                      | https://docs.blaxel.ai/cli-reference/commands/bl_push                                          |
+| Node.js              | Node `24.18.0` is a 24 LTS release dated 2026-06-23                                               | https://nodejs.org/en/blog/release/v24.18.0                                                    |
+| NBA rules            | Official rulebook index exposes Rules 1-14 and comments                                           | https://official.nba.com/rulebook/                                                             |
+| NBPA CBA             | 2023 agreement effective 2023-07-01 through 2029-30 subject to opt-out                            | https://nbpa.com/cba/                                                                          |
+| NBA cap              | Approved Court Credit numbers match the official 2026-27 announcement                             | https://www.nba.com/news/nba-salary-cap-2026-27-season                                         |
+| Neon recovery        | Instant restore/snapshots preserve stable application connection behavior with documented caveats | https://neon.com/docs/ai/ai-database-versioning                                                |
+| Base networks        | Base Sepolia chain ID `84532`; public RPC is rate-limited and not production                      | https://docs.base.org/base-chain/quickstart/connecting-to-base                                 |
+| Base receipts        | A receipt exists only after mining and carries status, block, and logs                            | https://docs.base.org/base-chain/api-reference/ethereum-json-rpc-api/eth_getTransactionReceipt |
+| Base deployed code   | `eth_getCode` returns the runtime code at an address and selected block                           | https://docs.base.org/base-chain/api-reference/ethereum-json-rpc-api/eth_getCode               |
+| Base finality        | Finality is staged; canonical checkpoint policy uses the RPC `finalized` head                     | https://docs.base.org/base-chain/network-information/transaction-finality                      |
 
 ## Pin and hash record
 

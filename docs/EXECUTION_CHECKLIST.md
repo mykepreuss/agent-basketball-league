@@ -54,6 +54,8 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement ownerless-after-genesis recognition contract and prepare-only local/test-chain deployment workflow.
 - [x] Implement public verifier for events, thresholds, releases, checkpoints, daily roots, and fork labels.
 - [x] Checkpoint constitution/verifier, keys, games, ballots, releases, rulings, and daily aggregate roots.
+- [x] Require exact Base transaction calldata, receipt/event, contract runtime bytecode, confirmation depth, and finalized-head evidence before a public checkpoint can be labeled canonical; keep unsubmitted local artifacts unverifiable.
+- [x] Keep the recognition contract address, deployed-runtime-code hash, chain, and finality policy in a source-bound release anchor rather than mutable host configuration; the pre-genesis anchor is explicitly unratified and cannot query Base.
 - [x] Pass human-administrator, rewritten-history, unsigned-release, invalid-threshold, replay, and fork tests; record evidence.
 - [x] Execute signer/policy rotation, removed-policy rejection, threshold changes, replay, stale signer, and malformed-signature paths on an in-process local EVM.
 - [!] Execute the same behavioral suite on Base Sepolia and record finality after approved test credentials are available.

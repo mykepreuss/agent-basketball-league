@@ -151,6 +151,8 @@ describe("genesis artifact preparation", () => {
       chainId: 84532,
       transaction: null,
       contract: {
+        creationBytecodeKeccak256: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+        deployedRuntimeBytecodeKeccak256: null,
         ownerAdminUpgradeSurfaceAbsent: true,
         constructorInputs: [
           "bytes32",
@@ -161,6 +163,10 @@ describe("genesis artifact preparation", () => {
           "tuple[]",
         ],
       },
+      postDeploymentEvidenceRequired: expect.arrayContaining([
+        "deployed runtime bytecode hash from eth_getCode",
+        "Base finalized-head evidence",
+      ]),
     });
     expect(deployment.contract.callableFunctions).toEqual([
       "CHECKPOINT_TYPEHASH",

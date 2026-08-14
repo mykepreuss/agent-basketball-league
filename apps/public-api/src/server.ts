@@ -16,6 +16,7 @@ import {
   verifyResourceProjectionEvent,
   verifyReleaseProjectionEvent,
   type ProjectionVerificationAuthority,
+  type PublicCheckpointProjectionReader,
   type PublicCaseProjectionReader,
   type PublicCaseProjectionWriter,
   type PublicContractProjectionReader,
@@ -155,6 +156,7 @@ export interface PublicApiOptions {
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
   releaseProjections?: PublicReleaseProjectionReader;
+  checkpointProjections?: PublicCheckpointProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
@@ -241,7 +243,8 @@ export function createPublicApi(
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
     options.modelProjections !== undefined ||
-    options.releaseProjections !== undefined;
+    options.releaseProjections !== undefined ||
+    options.checkpointProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -258,6 +261,7 @@ export function createPublicApi(
         options.resourceProjections?.refresh(),
         options.modelProjections?.refresh(),
         options.releaseProjections?.refresh(),
+        options.checkpointProjections?.refresh(),
       ]);
     }
   });
@@ -616,6 +620,8 @@ export function createPublicApi(
         items = options.modelProjections?.models() ?? [];
       } else if (path === "/v1/public/releases") {
         items = options.releaseProjections?.releases() ?? [];
+      } else if (path === "/v1/public/checkpoints") {
+        items = options.checkpointProjections?.checkpoints() ?? [];
       } else if (path === "/v1/public/governance") {
         items = [
           ...(options.governanceProjections?.governance() ?? []).map(
@@ -627,9 +633,18 @@ export function createPublicApi(
           ...(options.caseProjections?.cases() ?? []),
         ];
       }
+      const collectionCanonical =
+        path === "/v1/public/checkpoints"
+          ? items.length > 0 &&
+            items.every(
+              (item) =>
+                (item as { verification?: unknown }).verification ===
+                "CANONICAL",
+            )
+          : rehearsal;
       return {
         state,
-        canonical: rehearsal,
+        canonical: collectionCanonical,
         items,
         nextCursor:
           path === "/v1/public/events" && items.length > 0

@@ -198,6 +198,42 @@ describe("four-workspace topology", () => {
     expect(envMap(publicApi!).get("ABL_PROJECTION_INGEST_SERVICE_ID")).toBe(
       "core-projection-publisher",
     );
+    const publicEnvironment = envMap(publicApi!);
+    for (const name of [
+      "ABL_CHECKPOINT_PUBLICATIONS_JSON",
+      "ABL_BASE_RPC_URL",
+    ]) {
+      expect(publicEnvironment.get(name)).toBe(`\${${name}}`);
+    }
+    for (const name of [
+      "ABL_RECOGNITION_CONTRACT_ADDRESS",
+      "ABL_RECOGNITION_RUNTIME_BYTECODE_KECCAK256",
+      "ABL_CHECKPOINT_REQUIRED_CONFIRMATIONS",
+    ]) {
+      expect(publicEnvironment.has(name)).toBe(false);
+    }
+    const recognitionAnchorSource = await readFile(
+      new URL(
+        "../../../apps/public-api/src/recognition-anchor.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(recognitionAnchorSource).toContain(
+      'state: "PRE_GENESIS_UNRATIFIED"',
+    );
+    expect(recognitionAnchorSource).toContain("contractAddress: null");
+    expect(recognitionAnchorSource).toContain(
+      "deployedRuntimeBytecodeKeccak256: null",
+    );
+    const publicSpec = publicApi!.spec as {
+      runtime: { envs: Array<{ name: string; secret: boolean }> };
+    };
+    expect(
+      publicSpec.runtime.envs.find(
+        (entry) => entry.name === "ABL_BASE_RPC_URL",
+      ),
+    ).toMatchObject({ secret: true });
     const coreSpec = coreApi!.spec as {
       runtime: { envs: Array<{ name: string; secret: boolean }> };
       triggers: Array<{ configuration: { path: string } }>;

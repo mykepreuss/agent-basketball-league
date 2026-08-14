@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import { keccak256, toBytes, type Address, type Hex } from "viem";
 
 import { sha256Commitment } from "./canonical.js";
 import { merkleRoot } from "./merkle.js";
@@ -36,6 +36,73 @@ export interface CheckpointManifest {
   createdAt: string;
 }
 
+export interface CheckpointChainClaim {
+  checkpointType: CheckpointType;
+  subjectId: string;
+  root: Hex;
+  previousRoot: Hex;
+  nonce: Hex;
+  validAfter: bigint;
+  validBefore: bigint;
+  chainId: number;
+  contractAddress: Address;
+  transactionHash: Hex | null;
+  blockNumber: bigint | null;
+  signatures: readonly Hex[];
+}
+
+export interface CheckpointChainObservation {
+  checkpointTypeId: Hex;
+  subjectId: Hex;
+  root: Hex;
+  previousRoot: Hex;
+  nonce: Hex;
+  validAfter: bigint;
+  validBefore: bigint;
+  chainId: number;
+  contractAddress: Address;
+  transactionHash: Hex;
+  blockNumber: bigint;
+  blockTimestamp: bigint;
+  confirmations: number;
+  baseFinalized: boolean;
+  receiptSucceeded: boolean;
+  runtimeBytecodeKeccak256: Hex | null;
+  signatures: readonly Hex[];
+  observedAt: string;
+}
+
+interface CheckpointRecognitionAnchorBase {
+  chainId: number;
+  requiredConfirmations: number;
+}
+
+export interface PendingCheckpointRecognitionAnchor
+  extends CheckpointRecognitionAnchorBase {
+  state: "PRE_GENESIS_UNRATIFIED";
+  contractAddress: null;
+  deployedRuntimeBytecodeKeccak256: null;
+  releaseManifestDigest: null;
+  deploymentTransactionHash: null;
+  deploymentBlockNumber: null;
+  finalizedAt: null;
+}
+
+export interface RatifiedCheckpointRecognitionAnchor
+  extends CheckpointRecognitionAnchorBase {
+  state: "RATIFIED";
+  contractAddress: Address;
+  deployedRuntimeBytecodeKeccak256: Hex;
+  releaseManifestDigest: Hex;
+  deploymentTransactionHash: Hex;
+  deploymentBlockNumber: bigint;
+  finalizedAt: string;
+}
+
+export type CheckpointRecognitionAnchor =
+  | PendingCheckpointRecognitionAnchor
+  | RatifiedCheckpointRecognitionAnchor;
+
 export function createCheckpointManifest(
   input: Omit<
     CheckpointManifest,
@@ -52,6 +119,14 @@ export function createCheckpointManifest(
 
 export function checkpointManifestDigest(manifest: CheckpointManifest): Hex {
   return sha256Commitment(manifest);
+}
+
+export function checkpointTypeId(checkpointType: CheckpointType): Hex {
+  return keccak256(toBytes(checkpointType));
+}
+
+export function checkpointSubjectId(subjectId: string): Hex {
+  return keccak256(toBytes(subjectId));
 }
 
 export function dailyAggregateRoot(roots: Readonly<Record<string, Hex>>): Hex {

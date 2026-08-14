@@ -10,7 +10,8 @@
   "contract": {
     "sourceSha256": "1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
     "creationBytecodeSha256": "1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0",
-    "bytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
+    "creationBytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
+    "deployedRuntimeBytecodeKeccak256": null,
     "callableFunctions": [
       "CHECKPOINT_TYPEHASH",
       "KEY_REGISTRY",
@@ -44,6 +45,12 @@
     "institutional signer addresses",
     "role masks",
     "checkpoint policies"
+  ],
+  "postDeploymentEvidenceRequired": [
+    "deployed contract address",
+    "successful deployment receipt and block",
+    "deployed runtime bytecode hash from eth_getCode",
+    "Base finalized-head evidence"
   ],
   "irreversibleConsequences": [
     "The constructor permanently fixes constitution and verifier digests.",

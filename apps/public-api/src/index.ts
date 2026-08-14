@@ -5,6 +5,7 @@ import {
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
+  PublicCheckpointProjectionRepository,
   FilePublicReleaseProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
@@ -15,11 +16,17 @@ import {
   verifyReleaseProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
+  type CheckpointObservationReader,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
 import { createPublicApi, type PublicApiOptions } from "./server.js";
+import {
+  ViemBaseCheckpointObservationReader,
+  createBaseCheckpointRpc,
+} from "./base-checkpoints.js";
+import { COMPILED_RECOGNITION_ANCHOR } from "./recognition-anchor.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -170,6 +177,7 @@ let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 let modelProjections: FilePublicModelProjectionRepository | undefined;
 let releaseProjections: FilePublicReleaseProjectionRepository | undefined;
+let checkpointProjections: PublicCheckpointProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
@@ -245,6 +253,32 @@ await Promise.all([
   releaseProjections?.initialize(),
 ]);
 
+const checkpointPublications = process.env.ABL_CHECKPOINT_PUBLICATIONS_JSON;
+if (checkpointPublications !== undefined) {
+  let checkpointObservation: CheckpointObservationReader["checkpointObservation"] =
+    async () => null;
+  if (COMPILED_RECOGNITION_ANCHOR.state === "RATIFIED") {
+    const reader = new ViemBaseCheckpointObservationReader({
+      contractAddress: COMPILED_RECOGNITION_ANCHOR.contractAddress,
+      rpc: createBaseCheckpointRpc(
+        required("ABL_BASE_RPC_URL"),
+        COMPILED_RECOGNITION_ANCHOR.contractAddress,
+      ),
+    });
+    checkpointObservation = (publication) =>
+      reader.checkpointObservation(publication);
+  }
+  checkpointProjections = new PublicCheckpointProjectionRepository({
+    publications: z
+      .array(z.unknown())
+      .min(1)
+      .parse(JSON.parse(checkpointPublications)),
+    anchor: COMPILED_RECOGNITION_ANCHOR,
+    checkpointObservation,
+  });
+  await checkpointProjections.initialize();
+}
+
 let projectionIngress: PublicApiOptions["projectionIngress"];
 if (
   projections !== undefined &&
@@ -293,6 +327,8 @@ if (modelProjections !== undefined)
   apiOptions.modelProjections = modelProjections;
 if (releaseProjections !== undefined)
   apiOptions.releaseProjections = releaseProjections;
+if (checkpointProjections !== undefined)
+  apiOptions.checkpointProjections = checkpointProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

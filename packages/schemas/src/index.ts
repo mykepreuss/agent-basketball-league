@@ -726,7 +726,12 @@ export const RecognitionCheckpointSchema = z.strictObject({
   subjectId: z.string().min(1),
   manifestDigest: Sha256Schema,
   root: Sha256Schema,
+  previousRoot: Sha256Schema,
+  nonce: Sha256Schema,
+  validAfter: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  validBefore: z.string().regex(/^[1-9][0-9]*$/),
   chainId: z.number().int().positive(),
+  contractAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   transactionHash: z
     .string()
     .regex(/^0x[0-9a-f]{64}$/)
@@ -735,21 +740,29 @@ export const RecognitionCheckpointSchema = z.strictObject({
     .string()
     .regex(/^(0|[1-9][0-9]*)$/)
     .nullable(),
-  finalizedAt: IsoDateTimeSchema.nullable(),
+  signatures: z.array(Eip712SignatureSchema).min(1).max(11),
 });
 
 export const CheckpointManifestSchema = z.strictObject({
   manifestId: UuidV7Schema,
-  subjectType: z.string().min(1),
+  checkpointType: z.enum([
+    "CONSTITUTION",
+    "KEY_REGISTRY",
+    "GAME",
+    "BALLOT",
+    "RELEASE",
+    "RULING",
+    "DAILY_ROOT",
+  ]),
   subjectId: z.string().min(1),
-  leafCount: z.number().int().nonnegative(),
+  eventHashes: z.array(Sha256Schema).min(1),
   merkleRoot: Sha256Schema,
   firstEventHash: Sha256Schema.nullable(),
   lastEventHash: Sha256Schema.nullable(),
   institutionalKeyRegistryDigest: Sha256Schema,
   verifierDigest: Sha256Schema,
+  previousManifestDigest: Sha256Schema.nullable(),
   createdAt: IsoDateTimeSchema,
-  signatures: z.array(Eip712SignatureSchema).min(1),
 });
 
 export const DisclosurePolicySchema = z.strictObject({

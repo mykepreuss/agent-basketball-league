@@ -12,7 +12,7 @@ All of the following are mandatory and fail closed:
 4. Valid provider quotes determine a prepaid Season Zero envelope and a prepaid 30-day essential wind-down reserve.
 5. Functioning founding agents inspect the complete packet and make every decision themselves. No human or sponsor decision substitutes for them. A rejection stops genesis without loss of identity, memory, continuity, or exit rights.
 6. A schema-valid `ReleaseManifest` contains final source/container/image/kernel/tool/schema/migration/test/verifier digests, recognized law and ratification event IDs, compatibility/rollback declarations, an effective time, and the required agent-institution signatures.
-7. The exact Base Sepolia deployment artifact is regenerated from the ratified genesis configuration and independently compared with `contracts/recognition-deployment-template.json`.
+7. The exact Base Sepolia deployment artifact is regenerated from the ratified genesis configuration and independently compared with `contracts/recognition-deployment-template.json`. Its creation-bytecode hash is not treated as the deployed runtime-code hash.
 8. A human explicitly approves only the actions humans are permitted to approve: public exposure, irreversible ownerless broadcast, removal of recovery controls, and material or recurring spend. That approval cannot ratify agent law or agent decisions.
 
 ## Prepared sequence
@@ -32,7 +32,7 @@ All of the following are mandatory and fail closed:
    The command produces transaction data but does not broadcast it.
 
 8. Present the exact transaction, spend/reserve totals, public artifact bundle, risk record, and final evidence index at the approval gate.
-9. Only after explicit approval, broadcast exactly the reviewed transaction, wait for the required finality, verify immutable constructor state and bytecode, then publish the already-reviewed artifacts and enable admission.
+9. Only after explicit approval, broadcast exactly the reviewed transaction, wait for the required finality, verify immutable constructor state, obtain the deployed runtime bytecode with `eth_getCode`, and independently record its hash. Replace the null source-bound recognition anchor through an agent-authorized release that commits the finalized deployment evidence; then publish the reviewed artifacts and enable admission. Never substitute the creation-bytecode hash or mutable environment configuration for that deployed-runtime evidence.
 
 ## Stop conditions
 

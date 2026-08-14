@@ -185,11 +185,32 @@ export async function runLocalRecoveryProof() {
   const checkpointResult = verifyCheckpointClaim({
     manifest: checkpoint,
     manifestDigest: checkpointManifestDigest(checkpoint),
-    claimedRoot: checkpoint.merkleRoot,
-    transactionHash: digest("simulated-transaction"),
-    blockNumber: 100n,
-    confirmations: 12,
-    requiredConfirmations: 12,
+    claim: {
+      checkpointType: checkpoint.checkpointType,
+      subjectId: checkpoint.subjectId,
+      root: checkpoint.merkleRoot,
+      previousRoot: digest("previous-checkpoint-root"),
+      nonce: checkpointManifestDigest(checkpoint),
+      validAfter: BigInt(Math.floor(START / 1_000)),
+      validBefore: BigInt(Math.floor((START + DAY) / 1_000)),
+      chainId: 84532,
+      contractAddress: "0x1111111111111111111111111111111111111111",
+      transactionHash: null,
+      blockNumber: null,
+      signatures: [],
+    },
+    observation: null,
+    anchor: {
+      state: "PRE_GENESIS_UNRATIFIED",
+      chainId: 84532,
+      contractAddress: null,
+      deployedRuntimeBytecodeKeccak256: null,
+      releaseManifestDigest: null,
+      deploymentTransactionHash: null,
+      deploymentBlockNumber: null,
+      finalizedAt: null,
+      requiredConfirmations: 12,
+    },
   });
   const database = await databaseRebuild();
   const storageRoundTrip =
@@ -227,7 +248,7 @@ export async function runLocalRecoveryProof() {
       restoredBody.type === "BodyRehydrated" &&
       exit.penalty === null &&
       database.exact &&
-      checkpointResult.label === "CANONICAL" &&
+      checkpointResult.label === "UNVERIFIABLE" &&
       credentials.signingAddress === newIdentity.address,
   };
 }

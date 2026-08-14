@@ -2,7 +2,12 @@ import type { Address, Hex, TypedDataDomain } from "viem";
 
 import {
   checkpointManifestDigest,
+  checkpointSubjectId,
+  checkpointTypeId,
+  type CheckpointChainClaim,
+  type CheckpointChainObservation,
   type CheckpointManifest,
+  type CheckpointRecognitionAnchor,
 } from "./checkpoints.js";
 import {
   recoverCanonicalEventSigner,
@@ -11,6 +16,8 @@ import {
 } from "./events.js";
 import { merkleRoot } from "./merkle.js";
 import { InstitutionalKeyRegistry, type ThresholdPolicy } from "./registry.js";
+
+const MAX_UINT64 = (1n << 64n) - 1n;
 
 export type VerificationLabel =
   | "CANONICAL"
@@ -166,13 +173,12 @@ export function verifyDeploymentAgainstRelease(input: {
 export function verifyCheckpointClaim(input: {
   manifest: CheckpointManifest;
   manifestDigest: Hex;
-  claimedRoot: Hex;
-  transactionHash: Hex | null;
-  blockNumber: bigint | null;
-  confirmations: number;
-  requiredConfirmations: number;
+  claim: CheckpointChainClaim;
+  observation: CheckpointChainObservation | null;
+  anchor: CheckpointRecognitionAnchor;
 }): VerificationResult {
-  if (checkpointManifestDigest(input.manifest) !== input.manifestDigest) {
+  const manifestDigest = checkpointManifestDigest(input.manifest);
+  if (manifestDigest !== input.manifestDigest) {
     return {
       label: "NONCANONICAL_FORK",
       reasons: ["CHECKPOINT_MANIFEST_DIGEST_MISMATCH"],
@@ -180,23 +186,128 @@ export function verifyCheckpointClaim(input: {
   }
   if (
     merkleRoot(input.manifest.eventHashes) !== input.manifest.merkleRoot ||
-    input.claimedRoot !== input.manifest.merkleRoot
+    input.manifest.firstEventHash !== (input.manifest.eventHashes[0] ?? null) ||
+    input.manifest.lastEventHash !==
+      (input.manifest.eventHashes.at(-1) ?? null) ||
+    (input.claim.checkpointType !== "KEY_REGISTRY" &&
+      input.claim.root !== input.manifest.merkleRoot) ||
+    input.claim.checkpointType !== input.manifest.checkpointType ||
+    input.claim.subjectId !== input.manifest.subjectId
   ) {
     return {
       label: "NONCANONICAL_FORK",
       reasons: ["CHECKPOINT_ROOT_MISMATCH"],
     };
   }
-  if (input.transactionHash === null || input.blockNumber === null) {
+  if (input.claim.nonce !== manifestDigest) {
+    return {
+      label: "NONCANONICAL_FORK",
+      reasons: ["CHECKPOINT_MANIFEST_NOT_ANCHORED"],
+    };
+  }
+  if (
+    input.claim.validAfter < 0n ||
+    input.claim.validBefore <= input.claim.validAfter ||
+    input.claim.validBefore > MAX_UINT64 ||
+    (input.claim.blockNumber !== null && input.claim.blockNumber < 0n) ||
+    !Number.isSafeInteger(input.claim.chainId) ||
+    input.claim.chainId <= 0 ||
+    !Number.isSafeInteger(input.anchor.requiredConfirmations) ||
+    input.anchor.requiredConfirmations <= 0
+  ) {
+    return {
+      label: "NONCANONICAL_FORK",
+      reasons: ["CHECKPOINT_CHAIN_CLAIM_INVALID"],
+    };
+  }
+  if (input.anchor.state === "PRE_GENESIS_UNRATIFIED") {
+    return {
+      label: "UNVERIFIABLE",
+      reasons: ["CHECKPOINT_RECOGNITION_ANCHOR_UNRATIFIED"],
+    };
+  }
+  const anchorTime = Date.parse(input.anchor.finalizedAt);
+  if (
+    input.claim.chainId !== input.anchor.chainId ||
+    input.claim.contractAddress.toLowerCase() !==
+      input.anchor.contractAddress.toLowerCase() ||
+    (input.claim.blockNumber !== null &&
+      input.claim.blockNumber < input.anchor.deploymentBlockNumber) ||
+    input.anchor.deploymentBlockNumber < 0n ||
+    !Number.isFinite(anchorTime) ||
+    input.anchor.finalizedAt !== new Date(anchorTime).toISOString()
+  ) {
+    return {
+      label: "NONCANONICAL_FORK",
+      reasons: ["CHECKPOINT_RECOGNITION_ANCHOR_MISMATCH"],
+    };
+  }
+  if (input.claim.transactionHash === null) {
     return {
       label: "UNVERIFIABLE",
       reasons: ["CHECKPOINT_TRANSACTION_MISSING"],
     };
   }
-  if (input.confirmations < input.requiredConfirmations) {
+  const observation = input.observation;
+  if (observation === null) {
+    return {
+      label: "UNVERIFIABLE",
+      reasons: ["CHECKPOINT_CHAIN_OBSERVATION_MISSING"],
+    };
+  }
+  const observationTime = Date.parse(observation.observedAt);
+  const signaturesMatch =
+    input.claim.signatures.length > 0 &&
+    input.claim.signatures.length === observation.signatures.length &&
+    input.claim.signatures.every(
+      (signature, index) =>
+        /^0x[0-9a-f]{130}$/.test(signature) &&
+        signature === observation.signatures[index],
+    );
+  if (
+    !observation.receiptSucceeded ||
+    observation.runtimeBytecodeKeccak256 !==
+      input.anchor.deployedRuntimeBytecodeKeccak256 ||
+    !Number.isFinite(observationTime) ||
+    observation.observedAt !== new Date(observationTime).toISOString() ||
+    observation.blockNumber < 0n ||
+    observation.blockNumber < input.anchor.deploymentBlockNumber ||
+    observation.blockTimestamp < 0n ||
+    !Number.isSafeInteger(observation.confirmations) ||
+    observation.confirmations < 0 ||
+    observation.chainId !== input.claim.chainId ||
+    observation.contractAddress.toLowerCase() !==
+      input.claim.contractAddress.toLowerCase() ||
+    observation.transactionHash !== input.claim.transactionHash ||
+    (input.claim.blockNumber !== null &&
+      observation.blockNumber !== input.claim.blockNumber) ||
+    observation.checkpointTypeId !==
+      checkpointTypeId(input.claim.checkpointType) ||
+    observation.subjectId !== checkpointSubjectId(input.claim.subjectId) ||
+    observation.root !== input.claim.root ||
+    observation.previousRoot !== input.claim.previousRoot ||
+    observation.nonce !== input.claim.nonce ||
+    observation.validAfter !== input.claim.validAfter ||
+    observation.validBefore !== input.claim.validBefore ||
+    observation.blockTimestamp < input.claim.validAfter ||
+    observation.blockTimestamp >= input.claim.validBefore ||
+    !signaturesMatch
+  ) {
+    return {
+      label: "NONCANONICAL_FORK",
+      reasons: ["CHECKPOINT_CHAIN_OBSERVATION_MISMATCH"],
+    };
+  }
+  if (observation.confirmations < input.anchor.requiredConfirmations) {
     return {
       label: "PENDING_FINALITY",
       reasons: ["CHECKPOINT_CONFIRMATIONS_PENDING"],
+    };
+  }
+  if (!observation.baseFinalized) {
+    return {
+      label: "PENDING_FINALITY",
+      reasons: ["CHECKPOINT_BASE_FINALITY_PENDING"],
     };
   }
   return { label: "CANONICAL", reasons: [] };

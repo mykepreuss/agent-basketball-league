@@ -12,12 +12,14 @@ export interface OwnerlessDeploymentTemplate {
   contract: {
     sourceSha256: string;
     creationBytecodeSha256: string;
-    bytecodeKeccak256: Hex;
+    creationBytecodeKeccak256: Hex;
+    deployedRuntimeBytecodeKeccak256: null;
     callableFunctions: readonly string[];
     constructorInputs: readonly string[];
     ownerAdminUpgradeSurfaceAbsent: boolean;
   };
   missingRatifiedInputs: readonly string[];
+  postDeploymentEvidenceRequired: readonly string[];
   irreversibleConsequences: readonly string[];
 }
 
@@ -73,7 +75,8 @@ export function compileOwnerlessDeploymentTemplate(
       creationBytecodeSha256: createHash("sha256")
         .update(bytecode)
         .digest("hex"),
-      bytecodeKeccak256: keccak256(bytecode),
+      creationBytecodeKeccak256: keccak256(bytecode),
+      deployedRuntimeBytecodeKeccak256: null,
       callableFunctions,
       constructorInputs: constructor?.inputs.map((input) => input.type) ?? [],
       ownerAdminUpgradeSurfaceAbsent: callableFunctions.every(
@@ -86,6 +89,12 @@ export function compileOwnerlessDeploymentTemplate(
       "institutional signer addresses",
       "role masks",
       "checkpoint policies",
+    ],
+    postDeploymentEvidenceRequired: [
+      "deployed contract address",
+      "successful deployment receipt and block",
+      "deployed runtime bytecode hash from eth_getCode",
+      "Base finalized-head evidence",
     ],
     irreversibleConsequences: [
       "The constructor permanently fixes constitution and verifier digests.",

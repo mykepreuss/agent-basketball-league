@@ -204,13 +204,34 @@ describe("complete local acceptance", () => {
       verifyCheckpointClaim({
         manifest: checkpoint,
         manifestDigest: checkpointManifestDigest(checkpoint),
-        claimedRoot: checkpoint.merkleRoot,
-        transactionHash: sha256Commitment("local-evm-transaction"),
-        blockNumber: 1n,
-        confirmations: 12,
-        requiredConfirmations: 12,
+        claim: {
+          checkpointType: checkpoint.checkpointType,
+          subjectId: checkpoint.subjectId,
+          root: checkpoint.merkleRoot,
+          previousRoot: sha256Commitment("previous-game-root"),
+          nonce: checkpointManifestDigest(checkpoint),
+          validAfter: 1_765_707_899n,
+          validBefore: 1_765_711_500n,
+          chainId: 84532,
+          contractAddress: REHEARSAL_RECOGNITION_DOMAIN.verifyingContract!,
+          transactionHash: null,
+          blockNumber: null,
+          signatures: [],
+        },
+        observation: null,
+        anchor: {
+          state: "PRE_GENESIS_UNRATIFIED",
+          chainId: 84532,
+          contractAddress: null,
+          deployedRuntimeBytecodeKeccak256: null,
+          releaseManifestDigest: null,
+          deploymentTransactionHash: null,
+          deploymentBlockNumber: null,
+          finalizedAt: null,
+          requiredConfirmations: 12,
+        },
       }).label,
-    ).toBe("CANONICAL");
+    ).toBe("UNVERIFIABLE");
     const store = new InMemoryCanonicalStore();
     const coreApi = createLiveCoreApi({
       store,

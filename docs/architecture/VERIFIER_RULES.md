@@ -22,6 +22,14 @@ Every release transition is a signed `software-release` canonical event. The act
 
 The public release repository re-verifies every signature, role, transition, state root, prior-event hash, verifier result, and required ratification on ingest and restart. It reconstructs the final manifest from the stable body plus the recorded approval signatures and exposes the approval commands, event hashes, signer addresses, and signatures as independent authorization proofs. Local output is labeled `CANONICAL_LOCAL_REHEARSAL`, `recognizedGenesisRelease: false`, and `baseRecognition: NOT_SUBMITTED`. Only a separately verified finalized Base checkpoint may upgrade recognition; local authorization alone never does.
 
+## Base-checkpoint verification
+
+A transaction hash or block number supplied by a host is not checkpoint evidence. The verifier first recomputes the manifest Merkle root, endpoint hashes, and full digest. The signed checkpoint nonce must equal that digest, binding the key-registry digest, verifier digest, manifest lineage, time, event list, and Merkle root to the on-chain authorization. The checkpoint root equals the event Merkle root except for `KEY_REGISTRY`, where the contract requires it to commit the complete replacement registry. The verifier then requires an observed transaction to the ratified recognition-contract address on the declared Base chain. It decodes the actual `recognize` or `rotateRegistry` calldata and its ordered signatures, requires a successful receipt with the exact `CheckpointRecognized` event, matches checkpoint type, subject, root, previous root, nonce, validity window, block number, and block time, and compares the observed deployed-runtime-code hash with the source-bound recognition anchor. The included block must meet both the anchor's confirmation depth and Base's `finalized` head.
+
+The recognition anchor is not runtime configuration. Its chain, address, deployed-runtime-code hash, deployment transaction/block, release digest, finalized time, and confirmation policy are part of the verifier source authorized by a release. The checked-in pre-genesis build keeps all deployment evidence null and returns `CHECKPOINT_RECOGNITION_ANCHOR_UNRATIFIED` without querying Base. A host administrator cannot promote an environment value into trusted recognition evidence; changing the anchor changes the source and release digest.
+
+An unsubmitted artifact or unavailable RPC is `UNVERIFIABLE`; a mined but insufficiently confirmed or unfinalized artifact is `PENDING_FINALITY`; any decoded field, signature, chain, contract, bytecode, receipt, event, or time mismatch is `NONCANONICAL_FORK`. Only exact finalized chain evidence is `CANONICAL`. The public host's RPC and label remain untrusted inputs: an independent client can acquire the same transaction, receipt, block, finalized head, and bytecode from its own Base endpoint and rerun these rules.
+
 ## Fail-closed rules
 
 - Unknown schema/type/key/role/threshold/event/release classes are not canonical.
@@ -29,6 +37,7 @@ The public release repository re-verifies every signature, role, transition, sta
 - Duplicate nonce with different content, duplicate idempotency key with different result, version gap, hash mismatch, invalid time window, insufficient signatures, ineligible/recused signer, overbroad/expired delegation, or missing cognition receipt fails.
 - A software deployment without a matching effective release manifest is a fork even if its output resembles canonical state.
 - A self-declared verifier pass, a release actor without `software-release` scope, an aliased institutional key, an out-of-roster approval/recusal, or a missing/mismatched ratification is not an authorized release.
+- A checkpoint cannot become canonical from caller-supplied transaction metadata, a successful lookalike contract, an L2 receipt without finalized-head evidence, or a public host's assertion.
 - Database state inconsistent with signed events/checkpoints is a fork. A Base checkpoint alone cannot authorize an invalid event.
 - Emergency code expires at 72 hours unless normally ratified and can never validate a forbidden state category.
 - A public host's `CANONICAL` label is untrusted; clients derive their own result.

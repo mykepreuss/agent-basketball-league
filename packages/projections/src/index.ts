@@ -1,5 +1,6 @@
 export * from "./case-envelope.js";
 export * from "./case-repository.js";
+export * from "./checkpoint-repository.js";
 export * from "./contract-envelope.js";
 export * from "./contract-repository.js";
 export * from "./envelope.js";

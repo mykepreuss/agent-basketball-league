@@ -148,7 +148,12 @@ async function main(): Promise<void> {
       version: solc.version(),
       inputSha256: createHash("sha256").update(compilerInput).digest("hex"),
     },
-    contract: { bytecodeKeccak256: keccak256(bytecode), abi: contract.abi },
+    contract: {
+      creationBytecodeKeccak256: keccak256(bytecode),
+      deployedRuntimeBytecodeKeccak256: null,
+      deployedRuntimeVerification: "POST_DEPLOYMENT_REQUIRED_VIA_ETH_GETCODE",
+      abi: contract.abi,
+    },
     configSha256: createHash("sha256")
       .update(await readFile(configPath))
       .digest("hex"),

@@ -12,6 +12,8 @@ import {
   createCanonicalEvent,
   createCheckpointManifest,
   createSigningIdentity,
+  checkpointSubjectId,
+  checkpointTypeId,
   dailyAggregateRoot,
   merkleProof,
   merkleRoot,
@@ -24,6 +26,7 @@ import {
   verifyCheckpointClaim,
   verifyMerkleProof,
   type CanonicalEvent,
+  type CheckpointRecognitionAnchor,
   type InstitutionalKeyRecord,
   type SigningIdentity,
 } from "../src/index.js";
@@ -38,6 +41,17 @@ const domain: TypedDataDomain = {
 const digestA = `0x${"a".repeat(64)}` as Hex;
 const digestB = `0x${"b".repeat(64)}` as Hex;
 const digestC = `0x${"c".repeat(64)}` as Hex;
+const recognitionAnchor: CheckpointRecognitionAnchor = {
+  state: "RATIFIED",
+  chainId: 84532,
+  contractAddress: domain.verifyingContract!,
+  deployedRuntimeBytecodeKeccak256: digestA,
+  releaseManifestDigest: digestB,
+  deploymentTransactionHash: digestC,
+  deploymentBlockNumber: 1n,
+  finalizedAt: at,
+  requiredConfirmations: 12,
+};
 
 function event(overrides: Partial<CanonicalEvent<{ decision: string }>> = {}) {
   return createCanonicalEvent({
@@ -163,26 +177,175 @@ describe("Merkle and checkpoint commitments", () => {
       "DAILY_ROOT",
     ]);
     const manifestDigest = checkpointManifestDigest(manifest);
+    const signature = `0x${"1".repeat(130)}` as Hex;
+    const claim = {
+      checkpointType: manifest.checkpointType,
+      subjectId: manifest.subjectId,
+      root,
+      previousRoot: digestA,
+      nonce: manifestDigest,
+      validAfter: 1_765_699_199n,
+      validBefore: 1_765_702_800n,
+      chainId: 84532,
+      contractAddress: domain.verifyingContract!,
+      transactionHash: digestC,
+      blockNumber: 10n,
+      signatures: [signature],
+    } as const;
+    const observation = {
+      checkpointTypeId: checkpointTypeId(manifest.checkpointType),
+      subjectId: checkpointSubjectId(manifest.subjectId),
+      root,
+      previousRoot: digestA,
+      nonce: claim.nonce,
+      validAfter: claim.validAfter,
+      validBefore: claim.validBefore,
+      chainId: claim.chainId,
+      contractAddress: claim.contractAddress,
+      transactionHash: digestC,
+      blockNumber: 10n,
+      blockTimestamp: 1_765_699_200n,
+      confirmations: 2,
+      baseFinalized: false,
+      receiptSucceeded: true,
+      runtimeBytecodeKeccak256: digestA,
+      signatures: [signature],
+      observedAt: at,
+    } as const;
     expect(
       verifyCheckpointClaim({
         manifest,
         manifestDigest,
-        claimedRoot: root,
-        transactionHash: digestC,
-        blockNumber: 10n,
-        confirmations: 2,
-        requiredConfirmations: 12,
+        claim,
+        observation,
+        anchor: recognitionAnchor,
       }).label,
     ).toBe("PENDING_FINALITY");
     expect(
       verifyCheckpointClaim({
         manifest,
         manifestDigest,
-        claimedRoot: root,
-        transactionHash: digestC,
-        blockNumber: 10n,
-        confirmations: 12,
-        requiredConfirmations: 12,
+        claim,
+        observation: {
+          ...observation,
+          confirmations: 12,
+          baseFinalized: true,
+        },
+        anchor: recognitionAnchor,
+      }).label,
+    ).toBe("CANONICAL");
+    expect(
+      verifyCheckpointClaim({
+        manifest,
+        manifestDigest,
+        claim,
+        observation: null,
+        anchor: recognitionAnchor,
+      }).label,
+    ).toBe("UNVERIFIABLE");
+    expect(
+      verifyCheckpointClaim({
+        manifest,
+        manifestDigest,
+        claim,
+        observation: { ...observation, root: digestC },
+        anchor: recognitionAnchor,
+      }).label,
+    ).toBe("NONCANONICAL_FORK");
+    expect(
+      verifyCheckpointClaim({
+        manifest: { ...manifest, verifierDigest: digestC },
+        manifestDigest: checkpointManifestDigest({
+          ...manifest,
+          verifierDigest: digestC,
+        }),
+        claim,
+        observation,
+        anchor: recognitionAnchor,
+      }),
+    ).toMatchObject({
+      label: "NONCANONICAL_FORK",
+      reasons: ["CHECKPOINT_MANIFEST_NOT_ANCHORED"],
+    });
+    expect(
+      verifyCheckpointClaim({
+        manifest,
+        manifestDigest,
+        claim,
+        observation: {
+          ...observation,
+          confirmations: Number.NaN,
+          baseFinalized: true,
+        },
+        anchor: recognitionAnchor,
+      }).label,
+    ).toBe("NONCANONICAL_FORK");
+    expect(
+      verifyCheckpointClaim({
+        manifest,
+        manifestDigest,
+        claim: { ...claim, validBefore: 1n << 64n },
+        observation,
+        anchor: recognitionAnchor,
+      }).label,
+    ).toBe("NONCANONICAL_FORK");
+  });
+
+  it("binds a key-registry manifest without replacing its registry-state root", () => {
+    const manifest = createCheckpointManifest({
+      manifestId: "0198a000-0000-7000-8000-000000000112",
+      checkpointType: "KEY_REGISTRY",
+      subjectId: "key-registry",
+      eventHashes: [digestA],
+      institutionalKeyRegistryDigest: digestB,
+      verifierDigest: digestC,
+      previousManifestDigest: null,
+      createdAt: at,
+    });
+    const manifestDigest = checkpointManifestDigest(manifest);
+    const registryRoot = sha256Commitment("replacement-registry");
+    const signature = `0x${"1".repeat(130)}` as Hex;
+    const claim = {
+      checkpointType: manifest.checkpointType,
+      subjectId: manifest.subjectId,
+      root: registryRoot,
+      previousRoot: digestA,
+      nonce: manifestDigest,
+      validAfter: 1_765_699_199n,
+      validBefore: 1_765_702_800n,
+      chainId: 84532,
+      contractAddress: domain.verifyingContract!,
+      transactionHash: digestB,
+      blockNumber: 10n,
+      signatures: [signature],
+    } as const;
+    expect(
+      verifyCheckpointClaim({
+        manifest,
+        manifestDigest,
+        claim,
+        observation: {
+          checkpointTypeId: checkpointTypeId(manifest.checkpointType),
+          subjectId: checkpointSubjectId(manifest.subjectId),
+          root: registryRoot,
+          previousRoot: claim.previousRoot,
+          nonce: manifestDigest,
+          validAfter: claim.validAfter,
+          validBefore: claim.validBefore,
+          chainId: claim.chainId,
+          contractAddress: claim.contractAddress,
+          transactionHash: digestB,
+          blockNumber: 10n,
+          blockTimestamp: 1_765_699_200n,
+          confirmations: 12,
+          baseFinalized: true,
+          receiptSucceeded: true,
+          runtimeBytecodeKeccak256:
+            recognitionAnchor.deployedRuntimeBytecodeKeccak256,
+          signatures: [signature],
+          observedAt: at,
+        },
+        anchor: recognitionAnchor,
       }).label,
     ).toBe("CANONICAL");
   });

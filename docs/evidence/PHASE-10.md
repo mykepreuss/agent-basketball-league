@@ -25,7 +25,7 @@ This proves the in-process workload logic at 2x counts only. It does **not** pro
 
 ## Recovery and wind-down
 
-The local recovery harness proves an XChaCha20-Poly1305 encrypted round trip, ciphertext-only handling, guardian envelope recovery, body deletion and clean-room rehydration, portable exit without claiming subjective continuity, a three-event/three-outbox exact rebuild, locally canonical checkpoint verification, and 2-of-2 guardian signing recovery. Hardware-backed status remains false.
+The local recovery harness proves an XChaCha20-Poly1305 encrypted round trip, ciphertext-only handling, guardian envelope recovery, body deletion and clean-room rehydration, portable exit without claiming subjective continuity, a three-event/three-outbox exact rebuild, local checkpoint-manifest integrity with an explicit `UNVERIFIABLE` Base label, and 2-of-2 guardian signing recovery. Hardware-backed status remains false.
 
 The overload allocator strictly preserves games in progress, rights, government, due process, exit, continuity, and minimum autonomy before admissions and spectators. The 30-day exercise funds 100 essential units/day from a 3,000-unit reserve, preserves 64 portable exits, grants the sponsor no authority, and sheds spectators before admissions.
 
