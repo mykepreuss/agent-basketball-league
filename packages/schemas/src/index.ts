@@ -18,6 +18,39 @@ export const Eip712SignatureSchema = z.string().regex(/^0x[0-9a-f]{130}$/);
 export const NonceSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
 export const FixedPointSchema = z.number().int().safe();
 
+export const CanonicalEventWireSchema = z.strictObject({
+  eventId: z.uuid(),
+  actorDid: z.string().startsWith("did:"),
+  nonce: z.string().min(1).max(78),
+  idempotencyKey: z.uuid(),
+  aggregateType: z.string().min(1).max(100),
+  aggregateId: z.string().min(1).max(200),
+  aggregateVersion: z.string().regex(/^[1-9]\d*$/),
+  eventType: z.string().min(1).max(100),
+  previousEventHash: Sha256Schema.nullable(),
+  payloadCommitment: Sha256Schema,
+  payload: z.unknown(),
+  stateRoot: Sha256Schema,
+  schemaDigest: Sha256Schema,
+  timestamp: IsoDateTimeSchema,
+  eventHash: Sha256Schema,
+});
+
+export const SignedCanonicalCommandSchema = z.strictObject({
+  event: CanonicalEventWireSchema,
+  signatures: z.array(Eip712SignatureSchema).length(1),
+});
+
+export const SignedCanonicalMultiCommandSchema = z.strictObject({
+  event: CanonicalEventWireSchema,
+  signatures: z.array(Eip712SignatureSchema).min(1).max(5),
+});
+
+export const SignedCanonicalAssemblyCommandSchema = z.strictObject({
+  event: CanonicalEventWireSchema,
+  signatures: z.array(Eip712SignatureSchema).min(1).max(45),
+});
+
 export const DisclosureClassSchema = z.enum([
   "PUBLIC_NOW",
   "SEALED_30D",

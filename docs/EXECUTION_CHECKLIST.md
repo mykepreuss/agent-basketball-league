@@ -125,7 +125,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry trades, mutual or final-due-process waivers, player-opened free agency, new signings, and complete four-club cap exception/certification state through ordered multi-career commands, canonical persistence, authenticated delivery, independently verified public projections, and restart replay.
 - [x] Carry disclosure communication through canonical persistence and independently verified released-social projections without admitting raw content or ciphertext.
 - [x] Derive schedule-authorized nonempty standings from finalized canonical games while keeping context-free exhibitions standings-neutral.
-- [ ] Implement the declared government MCP service rather than only its deployment manifest.
+- [x] Implement strict Streamable HTTP discovery, career, basketball, and government MCP services; bind every forwarding tool to fixed routes, preserve original career signatures, reject unapproved origins, and give basketball no service credential.
 
 ## 8. Development conference [!]
 
@@ -146,7 +146,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Exercise administrator forks, quota exhaustion, unequal cognition attempts, release canaries, disclosures, database recovery, provider failure, and sponsor shutdown.
 - [x] Give founding agents private inspection/amendment tooling and preserve rejection/exit rights.
 - [x] Record all rehearsal events, roots, findings, fixes, and reruns.
-- [ ] Re-run the rehearsal through the completed canonical service paths and actual basketball/government MCP interfaces; live model/body execution remains a Blaxel gate.
+- [!] Exercise all four actual MCP interfaces across local public/core sockets, including exact signed-possession replay and the pre-genesis government gate. A full agent/model-driven season invoking them on Blaxel remains externally gated.
 
 ## 10. Security, capacity, and recovery proof [!]
 

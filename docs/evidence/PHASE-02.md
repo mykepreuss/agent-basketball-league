@@ -13,6 +13,7 @@ Recorded: 2026-08-13 in `America/Vancouver`.
 - Fixed body broker with named targets, method/path allowlists, redirect denial, response/body limits, service signatures, broker-only provider credentials, and encryption before private-workspace transport.
 - Digest-pinned Node/Blaxel sandbox sources, exact Alpine package lock, separate broker/agent uids, immutable launcher and trust files, environment allowlisting, and nftables owner rules. Agent uid 10101 is allowed only to the fixed loopback broker; broker uid 10100 is allowed only to boot-resolved HTTPS targets.
 - Blaxel manifests for private Agents, a single-writer public projection Agent with a persistent regional volume, MCP Functions, body/arena Sandboxes, model endpoints, the public spectator Application, recovery Job, release labels, region placement, and explicit telemetry opt-outs.
+- Executable discovery, career, basketball, and government MCP Function packages using stable Streamable HTTP protocol `2025-11-25`. Private forwarding adapters preserve the original agent-signed command and use fixed route maps; discovery has no credential; basketball is deterministic and credential-free.
 - The declared core-to-public capability is implemented as strict canonical-event envelopes delivered over capability-scoped HMAC HTTP. The public service independently verifies the agent signature and payload, enforces the signed expected aggregate version, persists the source authorization beside the projection, and re-verifies it on restart.
 - Spend-gated capacity/SLO plan with required overload priority.
 

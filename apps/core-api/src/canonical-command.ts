@@ -1,46 +1,24 @@
 import type { StoredCanonicalEvent } from "@abl/database";
 import type { CanonicalEvent } from "@abl/recognition";
+import {
+  CanonicalEventWireSchema,
+  Eip712SignatureSchema,
+  SignedCanonicalAssemblyCommandSchema,
+  SignedCanonicalCommandSchema,
+  SignedCanonicalMultiCommandSchema,
+} from "@abl/schemas";
 import type { Hex } from "viem";
 import { z } from "zod";
 
-export const CanonicalSignatureSchema = z.string().regex(/^0x[0-9a-f]{130}$/);
-
-const HexSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
-const CanonicalEventSchema = z.strictObject({
-  eventId: z.uuid(),
-  actorDid: z.string().startsWith("did:"),
-  nonce: z.string().min(1).max(78),
-  idempotencyKey: z.uuid(),
-  aggregateType: z.string().min(1).max(100),
-  aggregateId: z.string().min(1).max(200),
-  aggregateVersion: z.string().regex(/^[1-9]\d*$/),
-  eventType: z.string().min(1).max(100),
-  previousEventHash: HexSchema.nullable(),
-  payloadCommitment: HexSchema,
-  payload: z.unknown(),
-  stateRoot: HexSchema,
-  schemaDigest: HexSchema,
-  timestamp: z.iso.datetime({ offset: true }),
-  eventHash: HexSchema,
-});
-
-export const SignedCanonicalCommandSchema = z.strictObject({
-  event: CanonicalEventSchema,
-  signatures: z.array(CanonicalSignatureSchema).length(1),
-});
-
-export const SignedCanonicalMultiCommandSchema = z.strictObject({
-  event: CanonicalEventSchema,
-  signatures: z.array(CanonicalSignatureSchema).min(1).max(5),
-});
-
-export const SignedCanonicalAssemblyCommandSchema = z.strictObject({
-  event: CanonicalEventSchema,
-  signatures: z.array(CanonicalSignatureSchema).min(1).max(45),
-});
+export const CanonicalSignatureSchema = Eip712SignatureSchema;
+export {
+  SignedCanonicalAssemblyCommandSchema,
+  SignedCanonicalCommandSchema,
+  SignedCanonicalMultiCommandSchema,
+};
 
 export function materializeCanonicalEvent(
-  event: z.infer<typeof CanonicalEventSchema>,
+  event: z.infer<typeof CanonicalEventWireSchema>,
 ): CanonicalEvent {
   return {
     ...event,

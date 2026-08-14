@@ -2,38 +2,39 @@
 
 This is a pre-genesis evidence record. Every result must include the command or harness, environment, timestamp, inputs/digests, result, limitations, and linked artifacts. A claimed pass without reproducible artifacts is not an acceptance pass.
 
-| Evidence area                        | Status                                     | Artifact                                            |
-| ------------------------------------ | ------------------------------------------ | --------------------------------------------------- |
-| Authoritative-plan integrity         | Pass                                       | Plan/objective hashes in `PLATFORM_VERIFICATION.md` |
-| Workspace/tooling inspection         | Pass with staging blockers                 | `PLATFORM_VERIFICATION.md`                          |
-| Dependency and image locks           | Dependency pass; image source locked       | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs         |
-| Constitutional invariant tests       | Phase baseline pass                        | `PHASE-00-01.md`, `@abl/policy`                     |
-| Schema and interface coverage        | 43/43 primary types pass                   | `PHASE-00-01.md`, `@abl/schemas`                    |
-| NBA rule classification              | 15/15 pass                                 | `docs/rules/nba-rule-mapping.json`                  |
-| 2023 CBA classification              | 42 articles + 17 exhibits pass             | `docs/rules/cba-mapping.json`                       |
-| Deterministic possession/game replay | Local exact-replay pass                    | `PHASE-04.md`, `PHASE-06.md`, proof fixtures        |
-| Signed possession vertical path      | Local rehearsal pass; staging gate         | `PHASE-04.md`, acceptance suite, `@abl/projections` |
-| Signed finalized-game vertical       | Local rehearsal pass; staging gate         | `PHASE-06.md`, acceptance suite, `@abl/projections` |
-| Signed premier draft vertical        | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
-| Signed season-economy vertical       | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
-| Administrator-fork resistance        | Local adversarial pass                     | `PHASE-09.md`, rehearsal report fixture             |
-| Admission/human-boundary proof       | Local pass; live safety actuation gated    | `PHASE-05.md`, `@abl/career`, `@abl/safety`         |
-| Storage isolation/cryptography       | Local restart/recovery pass; Drive gate    | `PHASE-02.md`, broker and cross-domain tests        |
-| Network escape resistance            | Static/local broker pass; live gate        | `PHASE-02.md`, custom-image adversarial report      |
-| Disclosure and telemetry             | Local signed/replayed projection pass      | `PHASE-07.md`, `PHASE-12.md`, acceptance suite      |
-| Compute fairness/calibration         | Local rule/harness pass                    | `PHASE-06.md`, `@abl/basketball`                    |
-| Government/release validity          | Local end-to-end signed/replayed pass      | `PHASE-07.md`, `PHASE-12.md`, release acceptance    |
-| Base checkpoint recognition          | Reader implemented; live finality gated    | `PHASE-03.md`, `PHASE-12.md`, checkpoint tests      |
-| Signed development vertical          | Local rehearsal pass; live Blaxel gated    | `PHASE-08.md`, core/projection/acceptance suites    |
-| Model concentration/substitution     | Local reporting/trigger pass               | `PHASE-07.md`; live registry pending                |
-| Database/projection recovery         | Local event/outbox/projection rebuild pass | `PHASE-04.md`, `PHASE-10.md`; live Neon gated       |
-| Provider/sponsor failure             | Local game/wind-down pass                  | `PHASE-09.md`, `PHASE-10.md`; live exercise gated   |
-| Private rehearsal                    | Local deterministic pass                   | `PHASE-09.md`, rehearsal report fixture             |
-| Capacity/SLOs                        | Local 2x synthetic pass; live gate         | `PHASE-10.md`; reservations not requested           |
-| Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
-| Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
-| Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 246 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Evidence area                              | Status                                     | Artifact                                            |
+| ------------------------------------------ | ------------------------------------------ | --------------------------------------------------- |
+| Authoritative-plan integrity               | Pass                                       | Plan/objective hashes in `PLATFORM_VERIFICATION.md` |
+| Workspace/tooling inspection               | Pass with staging blockers                 | `PLATFORM_VERIFICATION.md`                          |
+| Dependency and image locks                 | Dependency pass; image source locked       | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs         |
+| Constitutional invariant tests             | Phase baseline pass                        | `PHASE-00-01.md`, `@abl/policy`                     |
+| Schema and interface coverage              | 43/43 primary types pass                   | `PHASE-00-01.md`, `@abl/schemas`                    |
+| NBA rule classification                    | 15/15 pass                                 | `docs/rules/nba-rule-mapping.json`                  |
+| 2023 CBA classification                    | 42 articles + 17 exhibits pass             | `docs/rules/cba-mapping.json`                       |
+| Deterministic possession/game replay       | Local exact-replay pass                    | `PHASE-04.md`, `PHASE-06.md`, proof fixtures        |
+| Signed possession vertical path            | Local rehearsal pass; staging gate         | `PHASE-04.md`, acceptance suite, `@abl/projections` |
+| Signed finalized-game vertical             | Local rehearsal pass; staging gate         | `PHASE-06.md`, acceptance suite, `@abl/projections` |
+| Signed premier draft vertical              | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
+| Signed season-economy vertical             | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
+| Administrator-fork resistance              | Local adversarial pass                     | `PHASE-09.md`, rehearsal report fixture             |
+| Admission/human-boundary proof             | Local pass; live safety actuation gated    | `PHASE-05.md`, `@abl/career`, `@abl/safety`         |
+| Storage isolation/cryptography             | Local restart/recovery pass; Drive gate    | `PHASE-02.md`, broker and cross-domain tests        |
+| Network escape resistance                  | Static/local broker pass; live gate        | `PHASE-02.md`, custom-image adversarial report      |
+| Disclosure and telemetry                   | Local signed/replayed projection pass      | `PHASE-07.md`, `PHASE-12.md`, acceptance suite      |
+| Compute fairness/calibration               | Local rule/harness pass                    | `PHASE-06.md`, `@abl/basketball`                    |
+| Government/release validity                | Local end-to-end signed/replayed pass      | `PHASE-07.md`, `PHASE-12.md`, release acceptance    |
+| Discovery/career/basketball/government MCP | Local protocol/interface pass; Blaxel gate | `MCP-SERVICES.md`, MCP and acceptance suites        |
+| Base checkpoint recognition                | Reader implemented; live finality gated    | `PHASE-03.md`, `PHASE-12.md`, checkpoint tests      |
+| Signed development vertical                | Local rehearsal pass; live Blaxel gated    | `PHASE-08.md`, core/projection/acceptance suites    |
+| Model concentration/substitution           | Local reporting/trigger pass               | `PHASE-07.md`; live registry pending                |
+| Database/projection recovery               | Local event/outbox/projection rebuild pass | `PHASE-04.md`, `PHASE-10.md`; live Neon gated       |
+| Provider/sponsor failure                   | Local game/wind-down pass                  | `PHASE-09.md`, `PHASE-10.md`; live exercise gated   |
+| Private rehearsal                          | Local deterministic pass                   | `PHASE-09.md`, rehearsal report fixture             |
+| Capacity/SLOs                              | Local 2x synthetic pass; live gate         | `PHASE-10.md`; reservations not requested           |
+| Clean-room exit/recovery                   | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
+| Founding convention                        | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
+| Genesis readiness                          | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
+| Final local acceptance                     | 266 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 
@@ -48,6 +49,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 ## Phase records
 
 - Approved-plan completion audit: [`COMPLETION_AUDIT.md`](./COMPLETION_AUDIT.md)
+- MCP services: [`MCP-SERVICES.md`](./MCP-SERVICES.md)
 - Phases 0-1: [`PHASE-00-01.md`](./PHASE-00-01.md)
 - Phase 2: [`PHASE-02.md`](./PHASE-02.md)
 - Phase 3: [`PHASE-03.md`](./PHASE-03.md)

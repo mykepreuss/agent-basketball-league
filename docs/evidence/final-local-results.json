@@ -18,26 +18,26 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 31,
-      "totalTasks": 31
+      "successfulTasks": 37,
+      "totalTasks": 37
     },
     {
       "name": "unit-integration-property-contract-migration-api",
       "command": "pnpm turbo run test --force",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 228,
-      "testFiles": 49,
-      "successfulTasks": 31,
-      "totalTasks": 31
+      "assertions": 241,
+      "testFiles": 54,
+      "successfulTasks": 37,
+      "totalTasks": 37
     },
     {
       "name": "acceptance-replay-load-recovery",
       "command": "pnpm test:acceptance",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 15,
-      "testFiles": 1,
+      "assertions": 16,
+      "testFiles": 2,
       "successfulTasks": null,
       "totalTasks": null
     },
@@ -58,11 +58,11 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 20,
-      "totalTasks": 20
+      "successfulTasks": 25,
+      "totalTasks": 25
     }
   ],
-  "recordedAt": "2026-08-14T08:04:52.856Z",
+  "recordedAt": "2026-08-14T08:35:19.152Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -70,7 +70,7 @@
     "pnpm": "11.21.0"
   },
   "overall": "PASS_LOCAL_WITH_EXTERNAL_GATES",
-  "stableResultDigest": "0x34028fb8a777075e236d3dc2b4303c6b9e87b687fcda2dbcaabed6b01b56f954",
+  "stableResultDigest": "0x219d22629c07ba4ec23521aef5803cc421d9a6bd70c834ce2b4850b4d798a6e5",
   "routeCount": 48,
   "rawResults": [
     {
@@ -96,30 +96,30 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 31,
-      "totalTasks": 31,
-      "outputSha256": "20e8bf9d966804eb7818371c12f18dde08309b8e79a2662ea6d5286dd38e452a",
+      "successfulTasks": 37,
+      "totalTasks": 37,
+      "outputSha256": "3a9bea9953a299068d0fb53ec430321e6d2813ce130b7557ee8392333aa32092",
       "outputTail": [
-        "@abl/safety:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/institutions:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/safety-gateway:check: cache bypass, force executing 2604c1dcfcf8677e",
+        "@abl/safety-gateway:check: cache bypass, force executing 70b6d784b2ba9a16",
         "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/rehearsal:check: cache bypass, force executing 2b2e5e8aba2bf3f4",
-        "@abl/assurance:check: cache bypass, force executing 1836a7b99d493db4",
-        "@abl/projections:check: cache bypass, force executing 457ea758f677fe13",
+        "@abl/basketball-mcp:check: cache bypass, force executing 26039e0de7d781e8",
+        "@abl/basketball-mcp:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/rehearsal:check: cache bypass, force executing c8dde3d4c294d033",
+        "@abl/projections:check: cache bypass, force executing 6573dc6dfd75439e",
+        "@abl/assurance:check: cache bypass, force executing e8400211e389c292",
+        "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/public-api:check: cache bypass, force executing f032db94804be776",
-        "@abl/core-api:check: cache bypass, force executing a4ea6f9fd8e1e473",
-        "@abl/arena:check: cache bypass, force executing d23ba717aaf07118",
+        "@abl/public-api:check: cache bypass, force executing fa7d93f8aad91964",
+        "@abl/arena:check: cache bypass, force executing 69d5909d74e1597c",
+        "@abl/core-api:check: cache bypass, force executing c01d2e0bdd8f98ba",
+        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/arena:check: $ tsc --noEmit",
-        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
-        " Tasks:    31 successful, 31 total",
-        "Cached:    0 cached, 31 total",
-        "  Time:    18.019s"
+        " Tasks:    37 successful, 37 total",
+        "Cached:    0 cached, 37 total",
+        "  Time:    21.353s"
       ]
     },
     {
@@ -127,22 +127,22 @@
       "command": "pnpm turbo run test --force",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 228,
-      "testFiles": 49,
-      "successfulTasks": 31,
-      "totalTasks": 31,
-      "outputSha256": "71d5816ff67d03ce4c0c97757a344edc8b3abbfe8dfd97587d7d3a8c92595579",
+      "assertions": 241,
+      "testFiles": 54,
+      "successfulTasks": 37,
+      "totalTasks": 37,
+      "outputSha256": "bdc269f9ae89138d7b9d91f0316bca49f808ad2e145bed4afda07697a5d0b75e",
       "outputTail": [
-        " WARNING  no output files found for task @abl/arena#test. Please check your `outputs` key in `turbo.json`",
-        " WARNING  no output files found for task @abl/assurance#test. Please check your `outputs` key in `turbo.json`",
-        " WARNING  no output files found for task @abl/basketball#test. Please check your `outputs` key in `turbo.json`",
-        " WARNING  no output files found for task @abl/body-broker#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/career#test. Please check your `outputs` key in `turbo.json`",
+        " WARNING  no output files found for task @abl/career-mcp#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/core-api#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/database#test. Please check your `outputs` key in `turbo.json`",
+        " WARNING  no output files found for task @abl/discovery-mcp#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/foundation#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/genesis#test. Please check your `outputs` key in `turbo.json`",
+        " WARNING  no output files found for task @abl/government-mcp#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/institutions#test. Please check your `outputs` key in `turbo.json`",
+        " WARNING  no output files found for task @abl/mcp-protocol#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/policy#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/private-storage-broker#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/projections#test. Please check your `outputs` key in `turbo.json`",
@@ -160,21 +160,21 @@
       "command": "pnpm test:acceptance",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 15,
-      "testFiles": 1,
+      "assertions": 16,
+      "testFiles": 2,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "5b2aa0f6bb230937e9cdbc5a74d9ee48c22e3dbddafb32ec6aaa0054a8945152",
+      "outputSha256": "c976d48a140fd874f8c61bc5d5d3fbc817c63b89a85d1e91e0c05e656323c200",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
         " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league",
         "",
         "",
-        " Test Files  1 passed (1)",
-        "      Tests  15 passed (15)",
-        "   Start at  01:04:32",
-        "   Duration  10.37s (transform 562ms, setup 0ms, import 1.02s, tests 9.28s, environment 0ms)"
+        " Test Files  2 passed (2)",
+        "      Tests  16 passed (16)",
+        "   Start at  01:34:56",
+        "   Duration  10.38s (transform 921ms, setup 0ms, import 1.88s, tests 9.50s, environment 0ms)"
       ]
     },
     {
@@ -186,7 +186,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "a3cde2032d4c9905b01a15d2570cb87b104e844ac57fd5268b7d8b9042be82c9",
+      "outputSha256": "af3f14c0e1fa101279dcb592cabf8ab47af5f6e65638b3b78f28071dfdc90bc6",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
@@ -195,8 +195,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  01:04:42",
-        "   Duration  1.17s (transform 390ms, setup 0ms, import 977ms, tests 129ms, environment 0ms)"
+        "   Start at  01:35:07",
+        "   Duration  1.18s (transform 394ms, setup 0ms, import 979ms, tests 132ms, environment 0ms)"
       ]
     },
     {
@@ -206,15 +206,15 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 20,
-      "totalTasks": 20,
-      "outputSha256": "340451b8216b218806c680d7778b4c16c26d6ff8661f8334d705fdf0dfcfc884",
+      "successfulTasks": 25,
+      "totalTasks": 25,
+      "outputSha256": "520e3e9bc72fdbcad0d81d064680aece611c9ac740b531092f48d5233932ea8a",
       "outputTail": [
         "@abl/arena:build:   Running TypeScript ...",
-        "@abl/arena:build:   Finished TypeScript in 1075ms ...",
+        "@abl/arena:build:   Finished TypeScript in 1076ms ...",
         "@abl/arena:build:   Collecting page data using 5 workers ...",
         "@abl/arena:build:   Generating static pages using 5 workers (0/3) ...",
-        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 187ms",
+        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 188ms",
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
         "@abl/arena:build: Route (app)",
@@ -227,9 +227,9 @@
         "@abl/arena:build: ƒ  (Dynamic)  server-rendered on demand",
         "@abl/arena:build: ",
         "",
-        " Tasks:    20 successful, 20 total",
-        "Cached:    0 cached, 20 total",
-        "  Time:    8.152s"
+        " Tasks:    25 successful, 25 total",
+        "Cached:    0 cached, 25 total",
+        "  Time:    9.859s"
       ]
     }
   ],

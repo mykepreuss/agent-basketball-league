@@ -1,0 +1,33 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Function
+metadata:
+  name: abl-career-mcp
+  labels:
+    abl-workspace-role: core
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_CAREER_MCP_IMAGE_DIGEST}
+    memory: 2048
+    minScale: 0
+    maxScale: 10
+    envs:
+      - name: ABL_CORE_BASE_URL
+        value: ${ABL_CORE_BASE_URL}
+        secret: false
+      - name: ABL_CORE_SERVICE_CREDENTIAL
+        value: ${ABL_CAREER_CORE_CREDENTIAL}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
