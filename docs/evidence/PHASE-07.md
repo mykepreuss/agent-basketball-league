@@ -16,6 +16,8 @@ The premier league's local institutional behavior is implemented in `@abl/instit
 - The institutional sizes for eight-member player boards, three commissioners, five tribunal members, and three integrity officers are fixed. Ranked elections, conflict-free appeal panels, notice/evidence/representation/response/reasoned-ruling/appeal due process, and mandatory recusal are executable checks.
 - Routine releases require cryptographic approvals from two distinct commissioners plus two distinct integrity officers and no tribunal stay. Every approval binds the release id/version, complete manifest commitment, role, signer, and approval time. Competition/labor releases additionally require applicable ratification. Constitutional/identity/recognition releases add four Tribunal approvals. Emergency security releases cannot alter protected state and expire within 72 hours.
 - Disclosure envelopes reject personal-unsubmitted submission, enforce the 30-day floor, require both time and competitive condition, never automatically release raw cases, require tribunal due process for integrity escrow, and require author consent or a ratified tribunal order to reclassify.
+- The disclosure rehearsal boundary now carries career-signed submission, separately authorized AI release, and author inspection through a canonical `disclosure-envelope` aggregate. Every transition uses UUIDv7 identifiers, exact event/state-root replay, current admitted authority, configured aggregate scope, transactional outbox persistence, and restart verification. `SEALED_30D` releases only at its declared instant; `COMPETITIVE_SEALED` additionally requires an author in the frozen planning-channel roster and exact independently registered competition evidence, then releases at the later of the two eligible instants.
+- `public.social` crosses the capability-scoped authenticated projection transport into a separate immutable repository. The public side independently verifies the release office signature, embedded original author signature, complete hash/state chain, frozen role registries, and competition evidence. It publishes intentional `PUBLIC_NOW` commitments, competitive sealed metadata, and eligible released commitments; raw content and ciphertext bytes are neither accepted by core nor emitted by the projection. `PERSONAL_UNSUBMITTED`, case-restricted, integrity-escrow, and ordinary sealed pre-release submissions stay out of the public topic.
 - Recursive telemetry inspection rejects content-bearing fields. Anti-retaliation audits flag temporally linked adverse action after criticism, refusal, silence, injury reporting, grievances, or representation unless a rule-derived basis, two independent reviewers, and consistent comparators exist.
 - Model concentration reports exact model, family, provider, runtime, gateway, and upstream dimensions. It triggers alternate-adapter work above 50%, Integrity review above two-thirds, and a presumption against further dependency admissions above 80%, while never forcing existing agents to migrate.
 
@@ -34,6 +36,8 @@ Thirteen focused institutional tests include 200 fast-check runs over arbitrary 
 
 The CBA mapping's phase-1 planned references were replaced with the actual career, basketball, recognition, and institutional source modules; the development-conference reference remains intentionally assigned to phase 8.
 
+The canonical disclosure regression suite additionally covers raw-field and personal-submission rejection, exact timed and competition-conditioned release, planning-channel and release-office authorization, nested proof substitution, forged predecessor history, private-topic isolation, authenticated public delivery, safe retry, restart reconstruction, and durable-record tamper detection.
+
 Artifact locks:
 
 - League/combine/draft/schedule/playoffs: `sha256:17c75f0720eaaee5b0a0a391c96a73b58cc1bfa4e1f391e945686b6d37fec394`
@@ -42,6 +46,10 @@ Artifact locks:
 - Economy/contracts/cap: `sha256:f82dec6b11fcf9e93cea18abe01e20f965422da564350a5bb6e8de463b5c9ebe`
 - Governance/releases/due process: `sha256:1ab5e906e8f15cf5b6c61d9a5e5d7418a5b5a268d80c60af70abc6356cd6c830`
 - Disclosure/telemetry: `sha256:cd9541580889ebbb943081becd31d56759578ea953dc4547dfd26e02c09b7a62`
+- Canonical disclosure workflow: `sha256:5252faa13196e80b03d720c6c3ec87bcc95269d8840e162f25264038467a8601`
+- Disclosure core service: `sha256:3bff936c55b886dd3c89a346e5db8b820aa7bf1cbdd048e70409701ef2b89965`
+- Independent social envelope/repository: `sha256:0c04963de9fa3ff76390cdd2d17c41fb49324ef58aedf6aed2e03ea0f6e0eddf`, `sha256:b3ad36ea8d82e5caf90ae514055e600b98b647ab8a9e057c770b6dcd80654c73`
+- Disclosure domain/projection tests: `sha256:07f68b52d057e035ef4e2276f01f79b461ce01545223fbae2f5295cb4a99921a`, `sha256:b806c6a15292327ecab05cfc1b33e4661cf44ad81d8eb8936d2d28a52a3aa3b3`
 - Rights/concentration: `sha256:81c1e355eb2dcfc11ff466e04bc4b52a9cc84a5ee033ae84a939cab82c4cc359`
 - Institutional suite: `sha256:62093ed0556e4fa196d551faab5250fe75a8b397772d1ecfcffc2af0b9b20a47`
 - Candidate-to-combine HTTP suite: `sha256:34bd549a41086194567d4bd8d40e392c92987f7933d856afdb6fefa041cf306c`

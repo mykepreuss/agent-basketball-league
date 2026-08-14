@@ -14,5 +14,7 @@ export * from "./resource-envelope.js";
 export * from "./resource-repository.js";
 export * from "./release-envelope.js";
 export * from "./release-repository.js";
+export * from "./social-envelope.js";
+export * from "./social-repository.js";
 export * from "./transport.js";
 export * from "./worker.js";

@@ -480,12 +480,4 @@ export function installArtifactRehearsalRoutes(
       return reply.code(response.status).send({ error: response.code });
     }
   });
-
-  app.post("/v1/communication/*", async (_request, reply) =>
-    reply.code(503).send({
-      error: "genesis_not_authorized",
-      canonicalWriteAccepted: false,
-      retryableAfterGenesis: true,
-    }),
-  );
 }

@@ -1,5 +1,11 @@
 import { PostgresCanonicalStore } from "@abl/database";
-import { ReleaseVerifierResultRegistrySchema } from "@abl/institutions";
+import {
+  CompetitiveDisclosureAuthorDidsSchema,
+  DisclosureReleaseAuthorityDidsSchema,
+  ReleaseVerifierResultRegistrySchema,
+  assertDisclosureAuthorityConfiguration,
+  createCompetitionReleaseEvidenceReader,
+} from "@abl/institutions";
 import {
   HttpProjectionEventSink,
   PublicProjectionWorker,
@@ -51,10 +57,11 @@ const AdmittedAgentsSchema = z.record(
           "resource-schedule",
           "software-release",
           "artifact-admission",
+          "disclosure-envelope",
         ]),
       )
       .min(1)
-      .max(7)
+      .max(8)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -161,6 +168,23 @@ const app = rehearsal
       const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
         JSON.parse(required("ABL_RELEASE_VERIFIER_RESULTS_JSON")),
       );
+      const disclosureReleaseAuthorityDids = new Set(
+        DisclosureReleaseAuthorityDidsSchema.parse(
+          JSON.parse(required("ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON")),
+        ),
+      );
+      const competitiveDisclosureAuthorDids = new Set(
+        CompetitiveDisclosureAuthorDidsSchema.parse(
+          JSON.parse(required("ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON")),
+        ),
+      );
+      const competitionEvidence = createCompetitionReleaseEvidenceReader(
+        JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
+      );
+      assertDisclosureAuthorityConfiguration(authority.admittedAgents, {
+        releaseAuthorityDids: disclosureReleaseAuthorityDids,
+        competitiveAuthorDids: competitiveDisclosureAuthorDids,
+      });
       if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
         throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
@@ -212,6 +236,10 @@ const app = rehearsal
             proposalId,
           ),
         releaseInstitutionalRoster,
+        disclosureReleaseAuthorityDids,
+        competitiveDisclosureAuthorDids,
+        competitionReleaseEvidence:
+          competitionEvidence.competitionReleaseEvidence,
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -272,6 +300,11 @@ const app = rehearsal
             eligibilitySnapshot: governanceEligibilitySnapshot,
           },
           approvedInstitutionIds: new Set(approvedArtifactInstitutionIds),
+        },
+        disclosures: {
+          releaseAuthorityDids: disclosureReleaseAuthorityDids,
+          competitiveAuthorDids: competitiveDisclosureAuthorDids,
+          competitionEvidence,
         },
         resources: {
           governance: {

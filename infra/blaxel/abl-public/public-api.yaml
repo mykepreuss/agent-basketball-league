@@ -49,6 +49,15 @@ spec:
       - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
         value: ${ABL_RELEASE_VERIFIER_RESULTS_JSON}
         secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
       - name: ABL_CHECKPOINT_PUBLICATIONS_JSON
         value: ${ABL_CHECKPOINT_PUBLICATIONS_JSON}
         secret: false

@@ -28,6 +28,12 @@ import {
   ARTIFACT_INSPECTED_EVENT_TYPE,
   ARTIFACT_INSPECTION_FORMAT,
   CASE_WORKFLOW_SCHEMA_DIGEST,
+  DISCLOSURE_AGGREGATE_TYPE,
+  DISCLOSURE_INSPECTED_EVENT_TYPE,
+  DISCLOSURE_INSPECTION_FORMAT,
+  DISCLOSURE_RELEASED_EVENT_TYPE,
+  DISCLOSURE_SUBMITTED_EVENT_TYPE,
+  DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
@@ -35,9 +41,11 @@ import {
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyArtifactAdmissionTransition,
   applyCaseWorkflowTransition,
+  applyDisclosureWorkflowTransition,
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
   caseWorkflowStateRoot,
+  disclosureWorkflowStateRoot,
   evaluateProposal,
   artifactAdmissionExecutableDigest,
   artifactAdmissionStateRoot,
@@ -56,6 +64,9 @@ import {
   type GovernanceBallot,
   type GovernanceDecision,
   type EligibilitySnapshot,
+  type DisclosureWorkflowEventType,
+  type DisclosureWorkflowPayload,
+  type DisclosureWorkflowSnapshot,
   type GovernanceProposal,
   type GovernanceVote,
   type ResourceSchedule,
@@ -857,6 +868,64 @@ async function artifactCommand(input: {
   };
 }
 
+async function disclosureCommand(input: {
+  actor: Harness;
+  envelopeId: string;
+  snapshot: DisclosureWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: DisclosureWorkflowEventType;
+  payload: DisclosureWorkflowPayload;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const randomEventId = crypto.randomUUID();
+  const randomIdempotencyKey = crypto.randomUUID();
+  const eventId = `${randomEventId.slice(0, 14)}7${randomEventId.slice(15)}`;
+  const idempotencyKey = `${randomIdempotencyKey.slice(0, 14)}7${randomIdempotencyKey.slice(15)}`;
+  const eventInput = {
+    eventId,
+    actorDid: input.actor.candidateDid,
+    nonce: `disclosure-${input.envelopeId}-${aggregateVersion}`,
+    idempotencyKey,
+    aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+    aggregateId: input.envelopeId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyDisclosureWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: disclosureWorkflowStateRoot(next),
+  });
+  const signature = await signCanonicalEvent(
+    input.signer ?? input.actor.candidate,
+    domain,
+    event,
+  );
+  return {
+    next,
+    event,
+    signature,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [signature],
+    },
+  };
+}
+
 async function releaseCommand(input: {
   actor: Harness;
   releaseId: string;
@@ -1239,6 +1308,7 @@ async function admitCandidate(h: Harness) {
     allowedAggregateTypes: [
       RELEASE_WORKFLOW_AGGREGATE_TYPE,
       ARTIFACT_ADMISSION_AGGREGATE_TYPE,
+      DISCLOSURE_AGGREGATE_TYPE,
     ],
   });
   return admitted;
@@ -4032,6 +4102,400 @@ describe("signed candidate rehearsal API", () => {
       ).statusCode,
     ).toBe(403);
     await h.app.close();
+  });
+
+  it("persists signed disclosures and releases only exact commitment projections", async () => {
+    const authorHarness = await harness();
+    await admitCandidate(authorHarness);
+    const releaseOffice = await additionalCareer(
+      authorHarness,
+      "did:abl:disclosure-release-office",
+      "3",
+    );
+    await admitCandidate(releaseOffice);
+    authorHarness.admittedAgents.set(releaseOffice.candidateDid, {
+      signerAddress: releaseOffice.candidate.address,
+      allowedAggregateTypes: [DISCLOSURE_AGGREGATE_TYPE],
+    });
+
+    const disclosureOptions = {
+      releaseAuthorityDids: new Set([releaseOffice.candidateDid]),
+      competitiveAuthorDids: new Set([authorHarness.candidateDid]),
+      competitionEvidence: {
+        competitionReleaseEvidence: async () => null,
+      },
+    };
+    await authorHarness.app.close();
+    authorHarness.app = createLiveCoreApi({
+      store: authorHarness.store,
+      domain,
+      admittedAgents: authorHarness.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => authorHarness.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      disclosures: disclosureOptions,
+    });
+
+    authorHarness.now.value += 60_000;
+    const submittedAt = new Date(authorHarness.now.value).toISOString();
+    const publicEnvelopeId = uuid("480");
+    const publicEnvelope = {
+      envelopeId: publicEnvelopeId,
+      authorDid: authorHarness.candidateDid,
+      classification: "PUBLIC_NOW" as const,
+      contentCommitment: digest("4"),
+      ciphertextCommitment: null,
+      declaredReleaseAt: null,
+      competitionCondition: null,
+      caseId: null,
+      integrityAccessRuleDigest: null,
+      submittedAt,
+      releasedAt: submittedAt,
+    };
+
+    const forged = await disclosureCommand({
+      actor: authorHarness,
+      envelopeId: uuid("481"),
+      snapshot: null,
+      previousEventHash: null,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      payload: {
+        envelope: { ...publicEnvelope, envelopeId: uuid("481") },
+      },
+      signer: authorHarness.formerOperator,
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/submit",
+          payload: forged.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const rawPayload = {
+      envelope: {
+        ...publicEnvelope,
+        envelopeId: uuid("482"),
+        rawContent: "undeclared operator text",
+      },
+    };
+    const rawEvent = createCanonicalEvent({
+      eventId: uuid("483"),
+      actorDid: authorHarness.candidateDid,
+      nonce: "disclosure-raw-content",
+      idempotencyKey: uuid("484"),
+      aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+      aggregateId: uuid("482"),
+      aggregateVersion: 1n,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: rawPayload,
+      stateRoot: digest("0"),
+      schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: submittedAt,
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/submit",
+          payload: {
+            event: { ...rawEvent, aggregateVersion: "1" },
+            signatures: [
+              await signCanonicalEvent(
+                authorHarness.candidate,
+                domain,
+                rawEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const personalPayload = {
+      envelope: {
+        ...publicEnvelope,
+        envelopeId: uuid("485"),
+        classification: "PERSONAL_UNSUBMITTED" as const,
+        ciphertextCommitment: digest("5"),
+        releasedAt: null,
+      },
+    };
+    const personalEvent = createCanonicalEvent({
+      eventId: uuid("486"),
+      actorDid: authorHarness.candidateDid,
+      nonce: "disclosure-personal-unsubmitted",
+      idempotencyKey: uuid("487"),
+      aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+      aggregateId: uuid("485"),
+      aggregateVersion: 1n,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: personalPayload,
+      stateRoot: digest("0"),
+      schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: submittedAt,
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/submit",
+          payload: {
+            event: { ...personalEvent, aggregateVersion: "1" },
+            signatures: [
+              await signCanonicalEvent(
+                authorHarness.candidate,
+                domain,
+                personalEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const publicSubmission = await disclosureCommand({
+      actor: authorHarness,
+      envelopeId: publicEnvelopeId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      payload: { envelope: publicEnvelope },
+    });
+    const publicResponse = await authorHarness.app.inject({
+      method: "POST",
+      url: "/v1/communication/disclosures/submit",
+      payload: publicSubmission.body,
+    });
+    expect(publicResponse.statusCode).toBe(201);
+    expect(publicResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      recognizedGenesisDisclosure: false,
+      rawContentAccepted: false,
+      envelope: {
+        envelopeId: publicEnvelopeId,
+        classification: "PUBLIC_NOW",
+        contentCommitment: digest("4"),
+      },
+    });
+    expect(authorHarness.store.events.at(-1)?.outboxTopic).toBe(
+      "public.social",
+    );
+
+    authorHarness.now.value += 60_000;
+    const sealedSubmittedAt = new Date(authorHarness.now.value).toISOString();
+    const declaredReleaseAt = new Date(
+      authorHarness.now.value + 30 * day,
+    ).toISOString();
+    const sealedEnvelopeId = uuid("488");
+    const sealedEnvelope = {
+      envelopeId: sealedEnvelopeId,
+      authorDid: authorHarness.candidateDid,
+      classification: "SEALED_30D" as const,
+      contentCommitment: digest("6"),
+      ciphertextCommitment: digest("7"),
+      declaredReleaseAt,
+      competitionCondition: null,
+      caseId: null,
+      integrityAccessRuleDigest: null,
+      submittedAt: sealedSubmittedAt,
+      releasedAt: null,
+    };
+    const sealedSubmission = await disclosureCommand({
+      actor: authorHarness,
+      envelopeId: sealedEnvelopeId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      payload: { envelope: sealedEnvelope },
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/submit",
+          payload: sealedSubmission.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    expect(authorHarness.store.events.at(-1)?.outboxTopic).toBe(
+      "disclosure.lifecycle",
+    );
+
+    const submissionProof = {
+      event: {
+        ...sealedSubmission.event,
+        aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+        aggregateVersion: "1" as const,
+        eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+        previousEventHash: null,
+        payload: { envelope: sealedEnvelope },
+        schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+      },
+      signature: sealedSubmission.signature,
+    } as const;
+    authorHarness.now.value = Date.parse(declaredReleaseAt) - 1;
+    const earlyPayload = {
+      envelopeId: sealedEnvelopeId,
+      releasedAt: new Date(authorHarness.now.value).toISOString(),
+      submissionProof,
+      competitionEvidence: null,
+    };
+    const earlyEvent = createCanonicalEvent({
+      eventId: uuid("489"),
+      actorDid: releaseOffice.candidateDid,
+      nonce: "disclosure-early-release",
+      idempotencyKey: uuid("490"),
+      aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+      aggregateId: sealedEnvelopeId,
+      aggregateVersion: 2n,
+      eventType: DISCLOSURE_RELEASED_EVENT_TYPE,
+      previousEventHash: sealedSubmission.event.eventHash,
+      payload: earlyPayload,
+      stateRoot: digest("0"),
+      schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: earlyPayload.releasedAt,
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/release",
+          payload: {
+            event: { ...earlyEvent, aggregateVersion: "2" },
+            signatures: [
+              await signCanonicalEvent(
+                releaseOffice.candidate,
+                domain,
+                earlyEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    authorHarness.now.value = Date.parse(declaredReleaseAt);
+    const released = await disclosureCommand({
+      actor: releaseOffice,
+      envelopeId: sealedEnvelopeId,
+      snapshot: sealedSubmission.next,
+      previousEventHash: sealedSubmission.event.eventHash,
+      eventType: DISCLOSURE_RELEASED_EVENT_TYPE,
+      payload: {
+        envelopeId: sealedEnvelopeId,
+        releasedAt: declaredReleaseAt,
+        submissionProof,
+        competitionEvidence: null,
+      },
+    });
+    const releaseResponse = await authorHarness.app.inject({
+      method: "POST",
+      url: "/v1/communication/disclosures/release",
+      payload: released.body,
+    });
+    expect(releaseResponse.statusCode).toBe(201);
+    expect(releaseResponse.json()).toMatchObject({
+      release: {
+        envelopeId: sealedEnvelopeId,
+        classification: "SEALED_30D",
+        releasedAt: declaredReleaseAt,
+        contentCommitment: digest("6"),
+        rawContentReleasedByCore: false,
+      },
+    });
+    expect(authorHarness.store.events.at(-1)?.outboxTopic).toBe(
+      "public.social",
+    );
+
+    authorHarness.now.value += 60_000;
+    const inspected = await disclosureCommand({
+      actor: authorHarness,
+      envelopeId: sealedEnvelopeId,
+      snapshot: released.next,
+      previousEventHash: released.event.eventHash,
+      eventType: DISCLOSURE_INSPECTED_EVENT_TYPE,
+      payload: {
+        envelopeId: sealedEnvelopeId,
+        requestedByDid: authorHarness.candidateDid,
+        requestedAt: new Date(authorHarness.now.value).toISOString(),
+        format: DISCLOSURE_INSPECTION_FORMAT,
+      },
+    });
+    const inspectResponse = await authorHarness.app.inject({
+      method: "POST",
+      url: "/v1/communication/disclosures/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectResponse.statusCode).toBe(201);
+    expect(inspectResponse.json()).toMatchObject({
+      rawContentReturned: false,
+      envelope: {
+        envelopeId: sealedEnvelopeId,
+        contentCommitment: digest("6"),
+        ciphertextCommitment: digest("7"),
+      },
+    });
+    expect(inspectResponse.json()).not.toHaveProperty("content");
+
+    await authorHarness.app.close();
+    authorHarness.app = createLiveCoreApi({
+      store: authorHarness.store,
+      domain,
+      admittedAgents: authorHarness.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => authorHarness.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      disclosures: disclosureOptions,
+    });
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/inspect",
+          payload: inspected.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/not-a-command",
+          payload: {},
+        })
+      ).statusCode,
+    ).toBe(503);
+
+    const submissionRecord = authorHarness.store.events.find(
+      (event) =>
+        event.aggregateId === sealedEnvelopeId &&
+        event.eventType === DISCLOSURE_SUBMITTED_EVENT_TYPE,
+    )!;
+    const originalStateRoot = submissionRecord.stateRoot;
+    submissionRecord.stateRoot = digest("f");
+    expect(
+      (
+        await authorHarness.app.inject({
+          method: "POST",
+          url: "/v1/communication/disclosures/inspect",
+          payload: inspected.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    submissionRecord.stateRoot = originalStateRoot;
+    await authorHarness.app.close();
   });
 
   it("persists role-bound release authorization and fails closed across restart", async () => {

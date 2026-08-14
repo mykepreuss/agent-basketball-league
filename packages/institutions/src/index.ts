@@ -1,4 +1,5 @@
 export * from "./disclosure.js";
+export * from "./disclosure-workflow.js";
 export * from "./development.js";
 export * from "./artifact-workflow.js";
 export * from "./contract-workflow.js";

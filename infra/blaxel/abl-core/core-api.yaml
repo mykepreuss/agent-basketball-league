@@ -88,6 +88,15 @@ spec:
       - name: ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON
         value: ${ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON}
         secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
       - name: ABL_CASE_TRIBUNAL_DIDS_JSON
         value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
         secret: false
@@ -305,6 +314,21 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/communication/artifacts/inspect
+    - id: disclosure-submit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/submit
+    - id: disclosure-release
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/release
+    - id: disclosure-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/disclosures/inspect
     - id: resource-schedule-publish
       type: http
       configuration:

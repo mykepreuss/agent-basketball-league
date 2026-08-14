@@ -30,6 +30,9 @@ import {
 import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  DISCLOSURE_AGGREGATE_TYPE,
+  DISCLOSURE_SUBMITTED_EVENT_TYPE,
+  DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
   GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
@@ -38,12 +41,14 @@ import {
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
+  applyDisclosureWorkflowTransition,
   applyGovernanceWorkflowTransition,
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
   contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
+  disclosureWorkflowStateRoot,
   evaluateGovernanceWorkflowDecision,
   governanceVoteFromAuthorization,
   governanceWorkflowStateRoot,
@@ -73,6 +78,7 @@ import {
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
   FilePublicReleaseProjectionRepository,
+  FilePublicSocialProjectionRepository,
   HttpProjectionEventSink,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
@@ -85,10 +91,12 @@ import {
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
   verifyReleaseProjectionEvent,
+  verifySocialProjectionEvent,
   type ContractProjectionEventEnvelope,
   type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
+  type SocialProjectionEventEnvelope,
 } from "../../packages/projections/src/index.js";
 import {
   createCanonicalEvent,
@@ -1854,6 +1862,207 @@ describe("complete local acceptance", () => {
     });
     expect(result.observed.cursorSegmentP95Milliseconds).toBeLessThan(750);
     expect(result.observed.broadcastLagMaximumMilliseconds).toBeLessThan(2_000);
+  });
+
+  it("carries an intentional signed disclosure to verified released-social history", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-social-acceptance-"),
+    );
+    const authorDid = "did:abl:social-acceptance-author";
+    const releaseDid = "did:abl:social-acceptance-release-office";
+    const author = createSigningIdentity(`0x${"6".repeat(64)}`);
+    const releaseOffice = createSigningIdentity(`0x${"7".repeat(64)}`);
+    const timestamp = "2026-08-13T13:00:00.000Z";
+    const envelopeId = "0198f000-0000-7000-8000-000000000601";
+    const payload = {
+      envelope: {
+        envelopeId,
+        authorDid,
+        classification: "PUBLIC_NOW" as const,
+        contentCommitment: sha256Commitment(
+          "intentional-public-social-statement",
+        ),
+        ciphertextCommitment: null,
+        declaredReleaseAt: null,
+        competitionCondition: null,
+        caseId: null,
+        integrityAccessRuleDigest: null,
+        submittedAt: timestamp,
+        releasedAt: timestamp,
+      },
+    };
+    const eventInput = {
+      eventId: "0198f000-0000-7000-8000-000000000602",
+      actorDid: authorDid,
+      nonce: "social-acceptance-submission",
+      idempotencyKey: "0198f000-0000-7000-8000-000000000603",
+      aggregateType: DISCLOSURE_AGGREGATE_TYPE,
+      aggregateId: envelopeId,
+      aggregateVersion: 1n,
+      eventType: DISCLOSURE_SUBMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: sha256Commitment("social-acceptance-provisional"),
+      schemaDigest: DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp,
+    } as const;
+    const snapshot = applyDisclosureWorkflowTransition(
+      null,
+      createCanonicalEvent(eventInput),
+      payload,
+    );
+    const event = createCanonicalEvent({
+      ...eventInput,
+      stateRoot: disclosureWorkflowStateRoot(snapshot),
+    });
+    const signature = await signCanonicalEvent(
+      author,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      event,
+    );
+    const store = new InMemoryCanonicalStore();
+    await store.append({
+      eventId: event.eventId,
+      actorDid: event.actorDid,
+      nonce: event.nonce,
+      idempotencyKey: event.idempotencyKey,
+      requestHash: sha256Commitment({
+        eventHash: event.eventHash,
+        signatures: [signature],
+      }),
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      expectedVersion: 0n,
+      competitionId: "social-acceptance",
+      seasonId: "pre-genesis",
+      eventType: event.eventType,
+      previousEventHash: event.previousEventHash,
+      eventHash: event.eventHash,
+      payloadSchemaDigest: event.schemaDigest,
+      payloadCommitment: event.payloadCommitment,
+      payload: event.payload,
+      stateRoot: event.stateRoot,
+      signatures: [signature],
+      occurredAt: new Date(event.timestamp),
+      outboxTopic: "public.social",
+    });
+
+    const authority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          authorDid,
+          {
+            signerAddress: author.address,
+            allowedAggregateTypes: [DISCLOSURE_AGGREGATE_TYPE],
+          },
+        ],
+        [
+          releaseDid,
+          {
+            signerAddress: releaseOffice.address,
+            allowedAggregateTypes: [DISCLOSURE_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+      releaseAuthorityDids: new Set([releaseDid]),
+      competitiveAuthorDids: new Set([authorDid]),
+      competitionReleaseEvidence: async () => null,
+    };
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const socialRepositoryOptions = {
+      verifyAuthorization: (authorization: SocialProjectionEventEnvelope) =>
+        verifySocialProjectionEvent(authorization, authority),
+    };
+    const social = new FilePublicSocialProjectionRepository(
+      projectionRoot,
+      socialRepositoryOptions,
+    );
+    await Promise.all([games.initialize(), social.initialize()]);
+    const projectionIdentity = {
+      serviceId: "core-social-projection-publisher",
+      secret: new TextEncoder().encode("s".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const serviceNow = Date.parse("2026-08-13T13:00:01.000Z");
+    const publicApi = createPublicApi({
+      projections: games,
+      socialProjections: social,
+      projectionIngress: {
+        writer: games,
+        socialWriter: social,
+        disclosureReleaseAuthorityDids: authority.releaseAuthorityDids,
+        competitiveDisclosureAuthorDids: authority.competitiveAuthorDids,
+        competitionReleaseEvidence: authority.competitionReleaseEvidence,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        domain: authority.domain,
+        admittedAgents: authority.admittedAgents,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "social-acceptance-transport",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        domain: authority.domain,
+        admittedAgents: authority.admittedAgents,
+        disclosureReleaseAuthorityDids: authority.releaseAuthorityDids,
+        competitiveDisclosureAuthorDids: authority.competitiveAuthorDids,
+        competitionReleaseEvidence: authority.competitionReleaseEvidence,
+      });
+      expect(await worker.drain()).toBe(1);
+      const response = await publicApi.inject({
+        method: "GET",
+        url: "/v1/public/social",
+      });
+      expect(response.json()).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            envelopeId,
+            authorDid,
+            classification: "PUBLIC_NOW",
+            visibility: "RELEASED_COMMITMENT",
+            contentCommitment: payload.envelope.contentCommitment,
+            rawContentIncluded: false,
+            ciphertextIncluded: false,
+            recognizedGenesisSocial: false,
+          },
+        ],
+      });
+      expect(response.body).not.toContain(
+        "intentional-public-social-statement",
+      );
+    } finally {
+      await publicApi.close();
+    }
+
+    const restarted = new FilePublicSocialProjectionRepository(
+      projectionRoot,
+      socialRepositoryOptions,
+    );
+    await restarted.initialize();
+    expect(restarted.social()).toMatchObject([
+      {
+        envelopeId,
+        canonicalEventHash: event.eventHash,
+        aggregateVersion: "1",
+      },
+    ]);
   });
 
   it("exports all 43 primary schemas as fail-closed strict JSON Schema", () => {

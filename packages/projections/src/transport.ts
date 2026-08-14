@@ -15,6 +15,7 @@ import type { CaseProjectionEventEnvelope } from "./case-envelope.js";
 import type { ResourceProjectionEventEnvelope } from "./resource-envelope.js";
 import type { ModelProjectionEventEnvelope } from "./model-envelope.js";
 import type { ReleaseProjectionEventEnvelope } from "./release-envelope.js";
+import type { SocialProjectionEventEnvelope } from "./social-envelope.js";
 
 export const PROJECTION_APPEND_CAPABILITY = "projection:append";
 export const PROJECTION_APPEND_PATH = "/v1/internal/projections";
@@ -26,7 +27,8 @@ export type PublicProjectionEnvelope =
   | CaseProjectionEventEnvelope
   | ResourceProjectionEventEnvelope
   | ModelProjectionEventEnvelope
-  | ReleaseProjectionEventEnvelope;
+  | ReleaseProjectionEventEnvelope
+  | SocialProjectionEventEnvelope;
 
 export interface ProjectionEventSink {
   publish(envelope: PublicProjectionEnvelope): Promise<void>;

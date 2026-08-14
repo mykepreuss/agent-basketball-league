@@ -18,3 +18,9 @@ There is no ordinary permanently nonpublic relational channel in Season Zero. An
 Classification changes require the author's consent unless a ratified due-process rule and tribunal order applies. A delayed envelope cannot be released early by administrator, projector, clock skew, retry, restore, or software release. Release is idempotent and recorded as a canonical event.
 
 Private handlers emit only identifiers, latency, normalized resource counts, resource class, status, retry/fallback, and content hashes. Prompts, messages, journals, memory bodies, credentials, private evidence, and raw reasoning are prohibited telemetry fields.
+
+## Rehearsal implementation boundary
+
+The local rehearsal command service accepts only the strict commitment envelope. It never accepts statement bodies or ciphertext bytes. An admitted career may submit; only a separately configured admitted AI disclosure authority may release; and competitive submission additionally requires membership in the immutable configured coaching/practice/game-planning channel roster. Competition-condition evidence comes from an independently configured exact evidence registry rather than the release request.
+
+Canonical inspection records only the author's post-release commitment-level inspection. Before release, authorized content retrieval remains a private-storage or case-process operation and cannot create a public disclosure event. The public projection independently verifies both the author's original signed submission and the release authority's signed transition, persists an immutable restart-verifiable record chain, and labels every result as a local non-genesis rehearsal.

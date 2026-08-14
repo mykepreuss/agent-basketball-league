@@ -359,6 +359,14 @@ describe("four-workspace topology", () => {
     expect(
       envMap(coreApi!).get("ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON"),
     ).toBe("${ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON}");
+    for (const name of [
+      "ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON",
+      "ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON",
+      "ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON",
+    ]) {
+      expect(envMap(coreApi!).get(name)).toBe(`\${${name}}`);
+      expect(envMap(publicApi!).get(name)).toBe(`\${${name}}`);
+    }
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -401,6 +409,9 @@ describe("four-workspace topology", () => {
         "/v1/governance/proposals/inspect",
         "/v1/communication/artifacts/admit",
         "/v1/communication/artifacts/inspect",
+        "/v1/communication/disclosures/submit",
+        "/v1/communication/disclosures/release",
+        "/v1/communication/disclosures/inspect",
         "/v1/resources/schedules/publish",
         "/v1/releases/propose",
         "/v1/releases/approve",

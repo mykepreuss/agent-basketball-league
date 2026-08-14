@@ -195,6 +195,63 @@ describe("public API", () => {
     await app.close();
   });
 
+  it("serves only commitment-level released social records", async () => {
+    let refreshes = 0;
+    const app = createPublicApi({
+      socialProjections: {
+        refresh: async () => {
+          refreshes += 1;
+        },
+        social: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            recognizedGenesisSocial: false,
+            envelopeId: "0198a000-0000-7000-8000-000000000701",
+            aggregateVersion: "2",
+            canonicalEventHash: `0x${"a".repeat(64)}`,
+            stateRoot: `0x${"b".repeat(64)}`,
+            authorDid: "did:abl:public-social-author",
+            classification: "SEALED_30D",
+            contentCommitment: `0x${"c".repeat(64)}`,
+            ciphertextCommitment: `0x${"d".repeat(64)}`,
+            declaredReleaseAt: "2026-09-12T10:00:00.000Z",
+            competitionCondition: null,
+            visibility: "RELEASED_COMMITMENT",
+            releasedAt: "2026-09-12T10:00:00.000Z",
+            competitionReleaseEvidence: null,
+            rawContentIncluded: false,
+            ciphertextIncluded: false,
+            projectedAt: "2026-09-12T10:00:01.000Z",
+          },
+        ],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/public/social",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
+    expect(response.json()).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          classification: "SEALED_30D",
+          visibility: "RELEASED_COMMITMENT",
+          contentCommitment: `0x${"c".repeat(64)}`,
+          rawContentIncluded: false,
+          ciphertextIncluded: false,
+        },
+      ],
+    });
+    expect(response.body).not.toContain('rawContent"');
+    expect(refreshes).toBe(1);
+    await app.close();
+  });
+
   it("serves only independently replayed rehearsal resource schedules", async () => {
     let refreshes = 0;
     const scheduleId = "0198a000-0000-7000-8000-000000000690";

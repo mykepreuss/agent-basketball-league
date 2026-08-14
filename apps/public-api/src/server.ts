@@ -15,6 +15,7 @@ import {
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
   verifyReleaseProjectionEvent,
+  verifySocialProjectionEvent,
   type ProjectionVerificationAuthority,
   type PublicCheckpointProjectionReader,
   type PublicCaseProjectionReader,
@@ -31,8 +32,11 @@ import {
   type PublicResourceProjectionWriter,
   type PublicReleaseProjectionReader,
   type PublicReleaseProjectionWriter,
+  type PublicSocialProjectionReader,
+  type PublicSocialProjectionWriter,
 } from "@abl/projections";
 import type {
+  CompetitionReleaseEvidenceReader,
   ReleaseInstitutionalRoster,
   ReleaseRatificationReader,
   ResourceScheduleRatificationReader,
@@ -156,6 +160,7 @@ export interface PublicApiOptions {
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
   releaseProjections?: PublicReleaseProjectionReader;
+  socialProjections?: PublicSocialProjectionReader;
   checkpointProjections?: PublicCheckpointProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
@@ -165,6 +170,7 @@ export interface PublicApiOptions {
     resourceWriter?: PublicResourceProjectionWriter;
     modelWriter?: PublicModelProjectionWriter;
     releaseWriter?: PublicReleaseProjectionWriter;
+    socialWriter?: PublicSocialProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
@@ -172,6 +178,9 @@ export interface PublicApiOptions {
     resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
     releaseRatification?: ReleaseRatificationReader["releaseRatification"];
     releaseInstitutionalRoster?: ReleaseInstitutionalRoster;
+    disclosureReleaseAuthorityDids?: ReadonlySet<string>;
+    competitiveDisclosureAuthorDids?: ReadonlySet<string>;
+    competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -214,7 +223,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "GovernanceWorkflowAuthorizationError" ||
     name === "CaseWorkflowAuthorizationError" ||
     name === "ResourceScheduleAuthorizationError" ||
-    name === "ReleaseWorkflowAuthorizationError"
+    name === "ReleaseWorkflowAuthorizationError" ||
+    name === "DisclosureWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
@@ -224,7 +234,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "GovernanceWorkflowValidationError" ||
     name === "CaseWorkflowValidationError" ||
     name === "ResourceScheduleValidationError" ||
-    name === "ReleaseWorkflowValidationError"
+    name === "ReleaseWorkflowValidationError" ||
+    name === "DisclosureWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -244,6 +255,7 @@ export function createPublicApi(
     options.resourceProjections !== undefined ||
     options.modelProjections !== undefined ||
     options.releaseProjections !== undefined ||
+    options.socialProjections !== undefined ||
     options.checkpointProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
@@ -258,6 +270,7 @@ export function createPublicApi(
         options.contractProjections?.refresh(),
         options.governanceProjections?.refresh(),
         options.caseProjections?.refresh(),
+        options.socialProjections?.refresh(),
         options.resourceProjections?.refresh(),
         options.modelProjections?.refresh(),
         options.releaseProjections?.refresh(),
@@ -380,7 +393,28 @@ export function createPublicApi(
       error: { code: -32601, message: "Method not found" },
     });
   });
-  const projectionIngress = options.projectionIngress;
+  const projectionIngress =
+    options.projectionIngress === undefined
+      ? undefined
+      : {
+          ...options.projectionIngress,
+          ...(options.projectionIngress.disclosureReleaseAuthorityDids ===
+          undefined
+            ? {}
+            : {
+                disclosureReleaseAuthorityDids: new Set(
+                  options.projectionIngress.disclosureReleaseAuthorityDids,
+                ),
+              }),
+          ...(options.projectionIngress.competitiveDisclosureAuthorDids ===
+          undefined
+            ? {}
+            : {
+                competitiveDisclosureAuthorDids: new Set(
+                  options.projectionIngress.competitiveDisclosureAuthorDids,
+                ),
+              }),
+        };
   if (projectionIngress !== undefined) {
     app.post(PROJECTION_APPEND_PATH, async (request, reply) => {
       try {
@@ -569,6 +603,43 @@ export function createPublicApi(
             cursor: record.cursor,
           });
         }
+        if (topic === "public.social") {
+          if (
+            projectionIngress.disclosureReleaseAuthorityDids === undefined ||
+            projectionIngress.competitiveDisclosureAuthorDids === undefined ||
+            projectionIngress.competitionReleaseEvidence === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Social projection authority is not configured",
+            );
+          }
+          const verified = await verifySocialProjectionEvent(request.body, {
+            ...projectionIngress,
+            releaseAuthorityDids:
+              projectionIngress.disclosureReleaseAuthorityDids,
+            competitiveAuthorDids:
+              projectionIngress.competitiveDisclosureAuthorDids,
+            competitionReleaseEvidence:
+              projectionIngress.competitionReleaseEvidence,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the social event",
+            );
+          }
+          if (projectionIngress.socialWriter === undefined)
+            throw new Error("Social projection writer is not configured");
+          const record = await projectionIngress.socialWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -620,6 +691,8 @@ export function createPublicApi(
         items = options.modelProjections?.models() ?? [];
       } else if (path === "/v1/public/releases") {
         items = options.releaseProjections?.releases() ?? [];
+      } else if (path === "/v1/public/social") {
+        items = options.socialProjections?.social() ?? [];
       } else if (path === "/v1/public/checkpoints") {
         items = options.checkpointProjections?.checkpoints() ?? [];
       } else if (path === "/v1/public/governance") {

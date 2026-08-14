@@ -3,6 +3,7 @@ import type {
   ProjectionOutboxStore,
 } from "@abl/database";
 import type {
+  CompetitionReleaseEvidenceReader,
   ReleaseInstitutionalRoster,
   ReleaseRatificationReader,
   ResourceScheduleRatificationReader,
@@ -44,6 +45,11 @@ import {
   verifyReleaseProjectionEvent,
 } from "./release-envelope.js";
 import type { PublicReleaseProjectionWriter } from "./release-repository.js";
+import {
+  socialProjectionEnvelopeFromOutbox,
+  verifySocialProjectionEvent,
+} from "./social-envelope.js";
+import type { PublicSocialProjectionWriter } from "./social-repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
@@ -55,6 +61,7 @@ type WorkerDestination =
       resourceWriter?: PublicResourceProjectionWriter;
       modelWriter?: PublicModelProjectionWriter;
       releaseWriter?: PublicReleaseProjectionWriter;
+      socialWriter?: PublicSocialProjectionWriter;
       sink?: never;
     }
   | {
@@ -66,6 +73,7 @@ type WorkerDestination =
       resourceWriter?: never;
       modelWriter?: never;
       releaseWriter?: never;
+      socialWriter?: never;
     };
 
 const projectionTopics = [
@@ -76,6 +84,7 @@ const projectionTopics = [
   "public.resources",
   "public.models",
   "public.releases",
+  "public.social",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 const governanceTopicIndex = projectionTopics.indexOf("public.governance");
@@ -97,6 +106,11 @@ export class PublicProjectionWorker {
     | ReleaseRatificationReader["releaseRatification"]
     | undefined;
   readonly #releaseInstitutionalRoster: ReleaseInstitutionalRoster | undefined;
+  readonly #disclosureReleaseAuthorityDids: ReadonlySet<string> | undefined;
+  readonly #competitiveDisclosureAuthorDids: ReadonlySet<string> | undefined;
+  readonly #competitionReleaseEvidence:
+    | CompetitionReleaseEvidenceReader["competitionReleaseEvidence"]
+    | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -111,6 +125,9 @@ export class PublicProjectionWorker {
       resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
       releaseRatification?: ReleaseRatificationReader["releaseRatification"];
       releaseInstitutionalRoster?: ReleaseInstitutionalRoster;
+      disclosureReleaseAuthorityDids?: ReadonlySet<string>;
+      competitiveDisclosureAuthorDids?: ReadonlySet<string>;
+      competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -123,7 +140,8 @@ export class PublicProjectionWorker {
       input.caseWriter === undefined &&
       input.resourceWriter === undefined &&
       input.modelWriter === undefined &&
-      input.releaseWriter === undefined
+      input.releaseWriter === undefined &&
+      input.socialWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -135,6 +153,7 @@ export class PublicProjectionWorker {
         resourceWriter?: PublicResourceProjectionWriter;
         modelWriter?: PublicModelProjectionWriter;
         releaseWriter?: PublicReleaseProjectionWriter;
+        socialWriter?: PublicSocialProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -150,6 +169,8 @@ export class PublicProjectionWorker {
         destination.modelWriter = input.modelWriter;
       if (input.releaseWriter !== undefined)
         destination.releaseWriter = input.releaseWriter;
+      if (input.socialWriter !== undefined)
+        destination.socialWriter = input.socialWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -164,6 +185,15 @@ export class PublicProjectionWorker {
     this.#resourceScheduleRatification = input.resourceScheduleRatification;
     this.#releaseRatification = input.releaseRatification;
     this.#releaseInstitutionalRoster = input.releaseInstitutionalRoster;
+    this.#disclosureReleaseAuthorityDids =
+      input.disclosureReleaseAuthorityDids === undefined
+        ? undefined
+        : new Set(input.disclosureReleaseAuthorityDids);
+    this.#competitiveDisclosureAuthorDids =
+      input.competitiveDisclosureAuthorDids === undefined
+        ? undefined
+        : new Set(input.competitiveDisclosureAuthorDids);
+    this.#competitionReleaseEvidence = input.competitionReleaseEvidence;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -328,6 +358,35 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishSocial(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = socialProjectionEnvelopeFromOutbox(event);
+    if (
+      this.#disclosureReleaseAuthorityDids === undefined ||
+      this.#competitiveDisclosureAuthorDids === undefined ||
+      this.#competitionReleaseEvidence === undefined
+    ) {
+      throw new Error("Social projection authority is not configured");
+    }
+    const verified = await verifySocialProjectionEvent(envelope, {
+      ...this.#authority,
+      releaseAuthorityDids: this.#disclosureReleaseAuthorityDids,
+      competitiveAuthorDids: this.#competitiveDisclosureAuthorDids,
+      competitionReleaseEvidence: this.#competitionReleaseEvidence,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.socialWriter === undefined)
+        throw new Error("Social projection writer is not configured");
+      await this.#destination.socialWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -347,6 +406,8 @@ export class PublicProjectionWorker {
         return this.#publishModel(event);
       case "public.releases":
         return this.#publishRelease(event);
+      case "public.social":
+        return this.#publishSocial(event);
     }
   }
 

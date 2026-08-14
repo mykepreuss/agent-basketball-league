@@ -1,5 +1,12 @@
 import { ServiceRequestVerifier } from "@abl/foundation";
-import { ReleaseVerifierResultRegistrySchema } from "@abl/institutions";
+import {
+  CompetitiveDisclosureAuthorDidsSchema,
+  DisclosureReleaseAuthorityDidsSchema,
+  ReleaseVerifierResultRegistrySchema,
+  assertDisclosureAuthorityConfiguration,
+  createCompetitionReleaseEvidenceReader,
+  type CompetitionReleaseEvidenceReader,
+} from "@abl/institutions";
 import {
   FilePublicContractProjectionRepository,
   FilePublicCaseProjectionRepository,
@@ -9,6 +16,7 @@ import {
   FilePublicReleaseProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
+  FilePublicSocialProjectionRepository,
   verifyContractProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -16,6 +24,7 @@ import {
   verifyReleaseProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
+  verifySocialProjectionEvent,
   type CheckpointObservationReader,
 } from "@abl/projections";
 import type { TypedDataDomain } from "viem";
@@ -61,10 +70,11 @@ const AgentRegistrySchema = z.record(
           "due-process-case",
           "resource-schedule",
           "software-release",
+          "disclosure-envelope",
         ]),
       )
       .min(1)
-      .max(6)
+      .max(7)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -105,6 +115,9 @@ function projectionAuthority(): {
   caseTribunalDids: readonly string[];
   caseAppellateDids: readonly string[];
   releaseInstitutionalRoster: z.infer<typeof ReleaseInstitutionalRosterSchema>;
+  disclosureReleaseAuthorityDids: ReadonlySet<string>;
+  competitiveDisclosureAuthorDids: ReadonlySet<string>;
+  competitionReleaseEvidence: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -125,6 +138,19 @@ function projectionAuthority(): {
   const releaseInstitutionalRoster = ReleaseInstitutionalRosterSchema.parse(
     JSON.parse(required("ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON")),
   );
+  const disclosureReleaseAuthorityDids = new Set(
+    DisclosureReleaseAuthorityDidsSchema.parse(
+      JSON.parse(required("ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON")),
+    ),
+  );
+  const competitiveDisclosureAuthorDids = new Set(
+    CompetitiveDisclosureAuthorDidsSchema.parse(
+      JSON.parse(required("ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON")),
+    ),
+  );
+  const competitionEvidence = createCompetitionReleaseEvidenceReader(
+    JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
+  );
   if (
     Object.keys(contractClubGovernors).length === 0 ||
     new Set(Object.values(contractClubGovernors)).size !==
@@ -136,6 +162,19 @@ function projectionAuthority(): {
   }
   if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
     throw new Error("Case merits and appellate rosters must be disjoint");
+  const admittedAgents = new Map(
+    Object.entries(registry).map(([did, authority]) => [
+      did,
+      {
+        signerAddress: authority.signerAddress as `0x${string}`,
+        allowedAggregateTypes: authority.allowedAggregateTypes,
+      },
+    ]),
+  );
+  assertDisclosureAuthorityConfiguration(admittedAgents, {
+    releaseAuthorityDids: disclosureReleaseAuthorityDids,
+    competitiveAuthorDids: competitiveDisclosureAuthorDids,
+  });
   return {
     domain: {
       name: "ABL Recognition",
@@ -151,20 +190,15 @@ function projectionAuthority(): {
         .regex(/^0x[0-9a-fA-F]{40}$/)
         .parse(required("ABL_DOMAIN_VERIFYING_CONTRACT")) as `0x${string}`,
     },
-    admittedAgents: new Map(
-      Object.entries(registry).map(([did, authority]) => [
-        did,
-        {
-          signerAddress: authority.signerAddress as `0x${string}`,
-          allowedAggregateTypes: authority.allowedAggregateTypes,
-        },
-      ]),
-    ),
+    admittedAgents,
     contractClubGovernors,
     governanceEligibilitySnapshotDigest,
     caseTribunalDids,
     caseAppellateDids,
     releaseInstitutionalRoster,
+    disclosureReleaseAuthorityDids,
+    competitiveDisclosureAuthorDids,
+    competitionReleaseEvidence: competitionEvidence.competitionReleaseEvidence,
   };
 }
 
@@ -177,6 +211,7 @@ let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 let modelProjections: FilePublicModelProjectionRepository | undefined;
 let releaseProjections: FilePublicReleaseProjectionRepository | undefined;
+let socialProjections: FilePublicSocialProjectionRepository | undefined;
 let checkpointProjections: PublicCheckpointProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
@@ -240,6 +275,14 @@ if (projectionRoot !== undefined) {
         releaseVerifierResults[resultDigest] ?? null,
     },
   );
+  socialProjections = new FilePublicSocialProjectionRepository(projectionRoot, {
+    verifyAuthorization: async (authorization) =>
+      verifySocialProjectionEvent(authorization, {
+        ...runtimeAuthority,
+        releaseAuthorityDids: runtimeAuthority.disclosureReleaseAuthorityDids,
+        competitiveAuthorDids: runtimeAuthority.competitiveDisclosureAuthorDids,
+      }),
+  });
 }
 await Promise.all([
   projections?.initialize(),
@@ -247,6 +290,7 @@ await Promise.all([
   governanceProjections?.initialize(),
   caseProjections?.initialize(),
   modelProjections?.initialize(),
+  socialProjections?.initialize(),
 ]);
 await Promise.all([
   resourceProjections?.initialize(),
@@ -288,6 +332,7 @@ if (
   resourceProjections !== undefined &&
   modelProjections !== undefined &&
   releaseProjections !== undefined &&
+  socialProjections !== undefined &&
   authority !== undefined
 ) {
   const governanceRepository = governanceProjections;
@@ -299,6 +344,7 @@ if (
     resourceWriter: resourceProjections,
     modelWriter: modelProjections,
     releaseWriter: releaseProjections,
+    socialWriter: socialProjections,
     resourceScheduleRatification: (proposalId) =>
       governanceRepository.resourceScheduleRatification(proposalId),
     releaseRatification: (proposalId) =>
@@ -327,6 +373,8 @@ if (modelProjections !== undefined)
   apiOptions.modelProjections = modelProjections;
 if (releaseProjections !== undefined)
   apiOptions.releaseProjections = releaseProjections;
+if (socialProjections !== undefined)
+  apiOptions.socialProjections = socialProjections;
 if (checkpointProjections !== undefined)
   apiOptions.checkpointProjections = checkpointProjections;
 if (projectionIngress !== undefined)

@@ -6,7 +6,7 @@
     "version": null,
     "releaseClass": "IDENTITY_CONSTITUTIONAL",
     "changeClasses": ["IDENTITY", "RECOGNITION", "VERIFIER"],
-    "sourceDigest": "0xcddd961d84f6f6f896a4d5b2b79feaa7eb643b1495b337197f12cd3e1c7f9085",
+    "sourceDigest": "0x1bad230665bf0c50141972ac93e912b3fd1d90e1a05fce76661fb7250bc994d8",
     "containerDigests": [
       "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
     ],
@@ -15,7 +15,7 @@
     "toolDigest": "0xdb6a4a7b9c88264c3fe3ba3882259eaf981af776dcbfba35196dfc98c26a2534",
     "schemaDigest": "0x745fa18d42d98b84ceff35c2dff8ebc7a800d08ee14d0baae11e707523e1e841",
     "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-    "testResultDigest": "0x6341d6ad5831640a42764793bbc209afaee927276058d6d6cdb433bf390fe51a",
+    "testResultDigest": "0xf2fe0a6cc038556cb9023e9d35292cafb2ad64333e8e7cfd3d6070fe3c373850",
     "applicableLawEventIds": [],
     "ratificationEventIds": [],
     "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",

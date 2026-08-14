@@ -123,7 +123,8 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.
 - [ ] Carry combine results and the eight-round draft through signed canonical persistence and roster projections.
 - [ ] Carry trades, waivers, free agency, cap exceptions/certification, and adverse contract enforcement through their multi-party and due-process service paths.
-- [ ] Carry disclosure communication through canonical persistence and independently verified released-social projections; derive nonempty standings from finalized games.
+- [x] Carry disclosure communication through canonical persistence and independently verified released-social projections without admitting raw content or ciphertext.
+- [ ] Derive nonempty standings from finalized canonical games.
 - [ ] Implement the declared government MCP service rather than only its deployment manifest.
 
 ## 8. Development conference [ ]

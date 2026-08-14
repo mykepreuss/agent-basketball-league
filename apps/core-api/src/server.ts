@@ -45,6 +45,10 @@ import {
   type ContractRehearsalOptions,
 } from "./contracts.js";
 import {
+  installDisclosureRehearsalRoutes,
+  type DisclosureRehearsalOptions,
+} from "./disclosures.js";
+import {
   installExitRehearsalRoutes,
   type ExitRehearsalOptions,
 } from "./exit.js";
@@ -122,6 +126,10 @@ export interface LiveCoreApiOptions {
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
   contracts?: Pick<ContractRehearsalOptions, "clubGovernors">;
+  disclosures?: Pick<
+    DisclosureRehearsalOptions,
+    "releaseAuthorityDids" | "competitiveAuthorDids" | "competitionEvidence"
+  >;
   memory?: Pick<MemoryRehearsalOptions, "storageVerifier">;
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
@@ -243,6 +251,7 @@ export function createLiveCoreApi(
     combine,
     continuity,
     contracts,
+    disclosures,
     exit,
     governance,
     memory,
@@ -260,6 +269,8 @@ export function createLiveCoreApi(
     candidateRoutesEnabled && continuity !== undefined;
   const contractRoutesEnabled =
     candidateRoutesEnabled && contracts !== undefined;
+  const disclosureRoutesEnabled =
+    candidateRoutesEnabled && disclosures !== undefined;
   const exitRoutesEnabled =
     candidateRoutesEnabled &&
     memory !== undefined &&
@@ -490,6 +501,20 @@ export function createLiveCoreApi(
       approvedInstitutionIds: artifacts.approvedInstitutionIds,
     });
   }
+  if (candidateAdmission !== undefined && disclosures !== undefined) {
+    installDisclosureRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      releaseAuthorityDids: disclosures.releaseAuthorityDids,
+      competitiveAuthorDids: disclosures.competitiveAuthorDids,
+      competitionEvidence: disclosures.competitionEvidence,
+    });
+  }
   if (
     candidateAdmission !== undefined &&
     governance !== undefined &&
@@ -545,7 +570,10 @@ export function createLiveCoreApi(
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
-      !(artifactRoutesEnabled && entry.path === "/v1/communication/*") &&
+      !(
+        (artifactRoutesEnabled || disclosureRoutesEnabled) &&
+        entry.path === "/v1/communication/*"
+      ) &&
       !(resourceRoutesEnabled && entry.path === "/v1/resources/*") &&
       !(releaseRoutesEnabled && entry.path === "/v1/releases/*") &&
       !(caseRoutesEnabled && entry.path === "/v1/cases/*"),
@@ -560,6 +588,15 @@ export function createLiveCoreApi(
           retryableAfterGenesis: true,
         }),
     });
+  }
+  if (artifactRoutesEnabled || disclosureRoutesEnabled) {
+    app.post("/v1/communication/*", async (_request, reply) =>
+      reply.code(503).send({
+        error: "genesis_not_authorized",
+        canonicalWriteAccepted: false,
+        retryableAfterGenesis: true,
+      }),
+    );
   }
   return app;
 }
