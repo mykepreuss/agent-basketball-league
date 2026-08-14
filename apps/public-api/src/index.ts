@@ -3,11 +3,13 @@ import {
   FilePublicContractProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
+  FilePublicModelProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
   verifyContractProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
+  verifyModelProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
 } from "@abl/projections";
@@ -142,6 +144,7 @@ let contractProjections: FilePublicContractProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
+let modelProjections: FilePublicModelProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   authority = runtimeAuthority;
@@ -186,12 +189,17 @@ if (projectionRoot !== undefined) {
         }),
     },
   );
+  modelProjections = new FilePublicModelProjectionRepository(projectionRoot, {
+    verifyAuthorization: async (authorization) =>
+      verifyModelProjectionEvent(authorization, runtimeAuthority),
+  });
 }
 await Promise.all([
   projections?.initialize(),
   contractProjections?.initialize(),
   governanceProjections?.initialize(),
   caseProjections?.initialize(),
+  modelProjections?.initialize(),
 ]);
 await resourceProjections?.initialize();
 
@@ -202,6 +210,7 @@ if (
   governanceProjections !== undefined &&
   caseProjections !== undefined &&
   resourceProjections !== undefined &&
+  modelProjections !== undefined &&
   authority !== undefined
 ) {
   const governanceRepository = governanceProjections;
@@ -211,6 +220,7 @@ if (
     governanceWriter: governanceProjections,
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,
+    modelWriter: modelProjections,
     resourceScheduleRatification: (proposalId) =>
       governanceRepository.resourceScheduleRatification(proposalId),
     verifier: new ServiceRequestVerifier([
@@ -233,6 +243,8 @@ if (governanceProjections !== undefined)
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
 if (resourceProjections !== undefined)
   apiOptions.resourceProjections = resourceProjections;
+if (modelProjections !== undefined)
+  apiOptions.modelProjections = modelProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

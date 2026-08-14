@@ -269,6 +269,64 @@ describe("public API", () => {
     await app.close();
   });
 
+  it("serves independently derived model concentration without claiming genesis", async () => {
+    let refreshes = 0;
+    const app = createPublicApi({
+      modelProjections: {
+        refresh: async () => {
+          refreshes += 1;
+        },
+        models: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            recognizedGenesisConcentration: false,
+            totalAgents: 1,
+            exactModel: [{ value: "model-a-r1", count: 1, bps: 10_000 }],
+            family: [{ value: "family-a", count: 1, bps: 10_000 }],
+            provider: [{ value: "provider-a", count: 1, bps: 10_000 }],
+            runtimeArchitecture: [
+              { value: "runtime-a", count: 1, bps: 10_000 },
+            ],
+            gateway: [{ value: "gateway-a", count: 1, bps: 10_000 }],
+            upstreamDependency: [
+              { value: "upstream-a", count: 1, bps: 10_000 },
+            ],
+            triggers: {
+              alternateAdaptersAndRecruitment: true,
+              integrityStudyAndCompetitiveReview: true,
+              presumptionAgainstFurtherAdmissions: true,
+              forceExistingAgentsToChange: false,
+            },
+            canonicalEventHash: `0x${"9".repeat(64)}`,
+            projectedAt: "2026-08-13T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/public/models/concentration",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
+    expect(response.json()).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          totalAgents: 1,
+          recognizedGenesisConcentration: false,
+          provider: [{ value: "provider-a", bps: 10_000 }],
+          triggers: { forceExistingAgentsToChange: false },
+        },
+      ],
+    });
+    expect(refreshes).toBe(1);
+    await app.close();
+  });
+
   it("serves independently replayed governance from the durable reader", async () => {
     const app = createPublicApi({
       governanceProjections: {

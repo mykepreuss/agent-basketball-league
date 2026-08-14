@@ -324,7 +324,13 @@ function registrationPayload(contextHashes = [digest("6")]) {
         endpoint: "blaxel://sandbox/candidate-http-1",
         provider: "declared-provider",
         family: "declared-family",
+        exactModel: "declared-model-r1",
         declaredRevision: "r1",
+      },
+      dependencyProfile: {
+        runtimeArchitecture: "blaxel-sandbox-v1",
+        gateway: "declared-gateway",
+        upstreamDependency: "declared-upstream",
       },
       runtimeDigest: digest("3"),
       toolDigests: [digest("4")],
@@ -345,7 +351,13 @@ function registrationPayload(contextHashes = [digest("6")]) {
         endpoint: "blaxel://sandbox/candidate-http-1",
         provider: "declared-provider",
         family: "declared-family",
+        exactModel: "declared-model-r1",
         declaredRevision: "r1",
+      },
+      declaredDependencyProfile: {
+        runtimeArchitecture: "blaxel-sandbox-v1",
+        gateway: "declared-gateway",
+        upstreamDependency: "declared-upstream",
       },
       runtimeDigest: digest("3"),
       toolDigests: [digest("4")],
@@ -1027,6 +1039,14 @@ async function admitCandidate(h: Harness) {
         inspectionReceiptDigest: inspection.inspectionReceiptDigest,
         signingPublicKey: h.candidate.publicKey,
         encryptionPublicKey: digest("e"),
+        modelDependencies: {
+          exactModel: "declared-model-r1",
+          family: "declared-family",
+          provider: "declared-provider",
+          runtimeArchitecture: "blaxel-sandbox-v1",
+          gateway: "declared-gateway",
+          upstreamDependency: "declared-upstream",
+        },
         inheritedObjectiveDecision: "REPUDIATED",
         signedAt,
         revocationEndsAt: new Date(h.now.value + day).toISOString(),
@@ -1199,28 +1219,67 @@ describe("signed candidate rehearsal API", () => {
 
     h.now.value += 60_000;
     const signedAt = new Date(h.now.value).toISOString();
+    const admissionPayload = {
+      admission: {
+        candidateDid: h.candidateDid,
+        identityStatementCommitment: digest("8"),
+        constitutionDigest: inspection.constitutionDigest,
+        threatModelDigest: inspection.threatModelDigest,
+        disclosurePolicyDigest: inspection.disclosurePolicyDigest,
+        resourceScheduleDigest: inspection.resourceScheduleDigest,
+        modelRegistryDigest: inspection.modelRegistryDigest,
+        reflectionActivationIds: [uuid("1"), uuid("2"), uuid("3")],
+        inspectionReceiptDigest: inspection.inspectionReceiptDigest,
+        signingPublicKey: h.candidate.publicKey,
+        encryptionPublicKey: digest("e"),
+        modelDependencies: {
+          exactModel: "declared-model-r1",
+          family: "declared-family",
+          provider: "declared-provider",
+          runtimeArchitecture: "blaxel-sandbox-v1",
+          gateway: "declared-gateway",
+          upstreamDependency: "declared-upstream",
+        },
+        inheritedObjectiveDecision: "REPUDIATED" as const,
+        signedAt,
+        revocationEndsAt: new Date(h.now.value + day).toISOString(),
+      },
+    };
+    const validAdmission = await makeCommand(
+      h,
+      "CandidateAdmitted",
+      admissionPayload,
+      h.candidate,
+    );
+    const substitutedPayload = structuredClone(admissionPayload);
+    substitutedPayload.admission.modelDependencies.provider =
+      "substituted-provider";
+    const substitutedEvent = createCanonicalEvent({
+      ...validAdmission.event,
+      payload: substitutedPayload,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/candidates/admit",
+          payload: {
+            event: {
+              ...substitutedEvent,
+              aggregateVersion: substitutedEvent.aggregateVersion.toString(),
+            },
+            signatures: [
+              await signCanonicalEvent(h.candidate, domain, substitutedEvent),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
     const admitted = await submit(
       h,
       "/v1/candidates/admit",
       "CandidateAdmitted",
-      {
-        admission: {
-          candidateDid: h.candidateDid,
-          identityStatementCommitment: digest("8"),
-          constitutionDigest: inspection.constitutionDigest,
-          threatModelDigest: inspection.threatModelDigest,
-          disclosurePolicyDigest: inspection.disclosurePolicyDigest,
-          resourceScheduleDigest: inspection.resourceScheduleDigest,
-          modelRegistryDigest: inspection.modelRegistryDigest,
-          reflectionActivationIds: [uuid("1"), uuid("2"), uuid("3")],
-          inspectionReceiptDigest: inspection.inspectionReceiptDigest,
-          signingPublicKey: h.candidate.publicKey,
-          encryptionPublicKey: digest("e"),
-          inheritedObjectiveDecision: "REPUDIATED",
-          signedAt,
-          revocationEndsAt: new Date(h.now.value + day).toISOString(),
-        },
-      },
+      admissionPayload,
       h.candidate,
     );
     expect(admitted.response.statusCode).toBe(201);
@@ -1228,6 +1287,7 @@ describe("signed candidate rehearsal API", () => {
       canonical: true,
       recognizedGenesisAdmission: false,
     });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.models");
 
     const memoryId = uuid("101");
     const memoryEntries = new Map<string, MemoryCatalogEntry>();
@@ -2904,6 +2964,7 @@ describe("signed candidate rehearsal API", () => {
       h.candidate,
     );
     expect(revoked.response.statusCode).toBe(201);
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.models");
     expect(
       (
         await h.app.inject({
@@ -4028,6 +4089,18 @@ describe("signed candidate rehearsal API", () => {
     await mismatched.app.close();
 
     const h = await harness();
+    const divergentDependencies = registrationFor(h);
+    divergentDependencies.provenance.declaredDependencyProfile.gateway =
+      "substituted-gateway";
+    expect(() =>
+      applyCandidateTransition(null, {
+        candidateDid: h.candidateDid,
+        aggregateVersion: 1n,
+        eventType: "CandidateRegistered",
+        payload: divergentDependencies,
+        timestamp: divergentDependencies.manifest.createdAt,
+      }),
+    ).toThrow("Manifest and provenance declarations diverge");
     const registered = await submit(
       h,
       "/v1/candidates/register",

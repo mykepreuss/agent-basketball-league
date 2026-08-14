@@ -121,7 +121,7 @@ export type CandidateWorkflowEventType =
 
 export const CANDIDATE_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
   protocol: "abl-candidate-workflow",
-  version: 1,
+  version: 2,
   eventTypes: Object.keys(CandidateWorkflowPayloadSchemas).sort(),
 });
 
@@ -221,6 +221,7 @@ function applyRegistration(
   requireEventTime(provenance.registeredAt, transition.timestamp);
   if (
     !equal(manifest.model, provenance.declaredModel) ||
+    !equal(manifest.dependencyProfile, provenance.declaredDependencyProfile) ||
     manifest.runtimeDigest !== provenance.runtimeDigest ||
     !equal(manifest.toolDigests, provenance.toolDigests) ||
     !equal(
@@ -429,6 +430,15 @@ function requireAdmissionMatch(
   const expectedReflectionIds = snapshot.reflections.map(
     ({ reflectionId }) => reflectionId,
   );
+  const manifest = snapshot.registration.manifest;
+  const expectedModelDependencies = {
+    exactModel: manifest.model.exactModel,
+    family: manifest.model.family,
+    provider: manifest.model.provider,
+    runtimeArchitecture: manifest.dependencyProfile.runtimeArchitecture,
+    gateway: manifest.dependencyProfile.gateway,
+    upstreamDependency: manifest.dependencyProfile.upstreamDependency,
+  };
   if (
     admission.candidateDid !== snapshot.candidateDid ||
     admission.identityStatementCommitment !==
@@ -441,6 +451,7 @@ function requireAdmissionMatch(
     admission.inspectionReceiptDigest !== inspection.inspectionReceiptDigest ||
     admission.signingPublicKey !== transfer.signingPublicKey ||
     admission.encryptionPublicKey !== transfer.encryptionPublicKey ||
+    !equal(admission.modelDependencies, expectedModelDependencies) ||
     admission.inheritedObjectiveDecision !== objectives.decision ||
     !equal(admission.reflectionActivationIds, expectedReflectionIds)
   ) {

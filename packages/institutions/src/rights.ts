@@ -82,8 +82,8 @@ export function modelConcentration(records: readonly ModelDependencyRecord[]) {
       );
   };
   const byFamily = aggregate("family");
-  const dependencyGroups = records.map(
-    (record) => `${record.provider}|${record.runtimeArchitecture}`,
+  const dependencyGroups = records.map((record) =>
+    JSON.stringify([record.provider, record.runtimeArchitecture]),
   );
   const dependencyCounts = new Map<string, number>();
   dependencyGroups.forEach((value) =>

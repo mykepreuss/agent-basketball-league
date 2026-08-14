@@ -455,6 +455,9 @@ importers:
 
   packages/projections:
     dependencies:
+      "@abl/career":
+        specifier: workspace:*
+        version: link:../career
       "@abl/database":
         specifier: workspace:*
         version: link:../database

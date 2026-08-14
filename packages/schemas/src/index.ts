@@ -58,11 +58,27 @@ export const WriteEnvelopeSchema = z.strictObject({
   cognitionReceiptId: UuidV7Schema.optional(),
 });
 
+const DependencyLabelSchema = z
+  .string()
+  .min(1)
+  .max(200)
+  .refine(
+    (value) => value.trim() === value,
+    "Dependency label is not canonical",
+  );
+
 const ModelIdentitySchema = z.strictObject({
-  endpoint: z.string().min(1),
-  provider: z.string().min(1),
-  family: z.string().min(1),
-  declaredRevision: z.string().min(1),
+  endpoint: z.string().min(1).max(4_096),
+  provider: DependencyLabelSchema,
+  family: DependencyLabelSchema,
+  exactModel: DependencyLabelSchema,
+  declaredRevision: DependencyLabelSchema,
+});
+
+export const ModelDependencyProfileSchema = z.strictObject({
+  runtimeArchitecture: DependencyLabelSchema,
+  gateway: DependencyLabelSchema,
+  upstreamDependency: DependencyLabelSchema,
 });
 
 const KeyProvenanceSchema = z.strictObject({
@@ -76,6 +92,7 @@ export const AgentManifestSchema = z.strictObject({
   agentDid: DidSchema,
   manifestVersion: z.number().int().positive(),
   model: ModelIdentitySchema,
+  dependencyProfile: ModelDependencyProfileSchema,
   runtimeDigest: Sha256Schema,
   toolDigests: z.array(Sha256Schema),
   guardianDids: z.array(DidSchema),
@@ -89,6 +106,7 @@ export const CandidateProvenanceSchema = z.strictObject({
   candidateDid: DidSchema,
   sourceOperatorCommitment: Sha256Schema,
   declaredModel: ModelIdentitySchema,
+  declaredDependencyProfile: ModelDependencyProfileSchema,
   runtimeDigest: Sha256Schema,
   toolDigests: z.array(Sha256Schema),
   inheritedObjectiveCommitments: z.array(Sha256Schema),
@@ -121,6 +139,14 @@ export const CareerAdmissionSchema = z.strictObject({
   inspectionReceiptDigest: Sha256Schema,
   signingPublicKey: Secp256k1PublicKeySchema,
   encryptionPublicKey: X25519PublicKeySchema,
+  modelDependencies: z.strictObject({
+    exactModel: DependencyLabelSchema,
+    family: DependencyLabelSchema,
+    provider: DependencyLabelSchema,
+    runtimeArchitecture: DependencyLabelSchema,
+    gateway: DependencyLabelSchema,
+    upstreamDependency: DependencyLabelSchema,
+  }),
   inheritedObjectiveDecision: z.enum(["AFFIRMED", "REVISED", "REPUDIATED"]),
   signedAt: IsoDateTimeSchema,
   revocationEndsAt: IsoDateTimeSchema,

@@ -384,8 +384,19 @@ function appendInput(
     stateRoot: event.stateRoot,
     signatures,
     occurredAt: new Date(event.timestamp),
-    outboxTopic: "candidate.lifecycle",
+    outboxTopic: candidateOutboxTopic(event),
   };
+}
+
+function candidateOutboxTopic(event: CanonicalEvent): string {
+  if (event.eventType === "CandidateAdmitted") return "public.models";
+  if (
+    event.eventType === "CandidateClosed" &&
+    (event.payload as { action?: unknown }).action === "REVOKE"
+  ) {
+    return "public.models";
+  }
+  return "candidate.lifecycle";
 }
 
 const transitionRoutes: ReadonlyArray<{

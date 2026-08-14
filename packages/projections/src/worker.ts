@@ -24,6 +24,11 @@ import {
   verifyGovernanceProjectionEvent,
 } from "./governance-envelope.js";
 import type { PublicGovernanceProjectionWriter } from "./governance-repository.js";
+import {
+  modelProjectionEnvelopeFromOutbox,
+  verifyModelProjectionEvent,
+} from "./model-envelope.js";
+import type { PublicModelProjectionWriter } from "./model-repository.js";
 import type { PublicProjectionWriter } from "./repository.js";
 import {
   resourceProjectionEnvelopeFromOutbox,
@@ -39,6 +44,7 @@ type WorkerDestination =
       governanceWriter?: PublicGovernanceProjectionWriter;
       caseWriter?: PublicCaseProjectionWriter;
       resourceWriter?: PublicResourceProjectionWriter;
+      modelWriter?: PublicModelProjectionWriter;
       sink?: never;
     }
   | {
@@ -48,6 +54,7 @@ type WorkerDestination =
       governanceWriter?: never;
       caseWriter?: never;
       resourceWriter?: never;
+      modelWriter?: never;
     };
 
 const projectionTopics = [
@@ -56,6 +63,7 @@ const projectionTopics = [
   "public.governance",
   "public.cases",
   "public.resources",
+  "public.models",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 const governanceTopicIndex = projectionTopics.indexOf("public.governance");
@@ -94,7 +102,8 @@ export class PublicProjectionWorker {
       input.contractWriter === undefined &&
       input.governanceWriter === undefined &&
       input.caseWriter === undefined &&
-      input.resourceWriter === undefined
+      input.resourceWriter === undefined &&
+      input.modelWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -104,6 +113,7 @@ export class PublicProjectionWorker {
         governanceWriter?: PublicGovernanceProjectionWriter;
         caseWriter?: PublicCaseProjectionWriter;
         resourceWriter?: PublicResourceProjectionWriter;
+        modelWriter?: PublicModelProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -115,6 +125,8 @@ export class PublicProjectionWorker {
         destination.caseWriter = input.caseWriter;
       if (input.resourceWriter !== undefined)
         destination.resourceWriter = input.resourceWriter;
+      if (input.modelWriter !== undefined)
+        destination.modelWriter = input.modelWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -245,6 +257,26 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishModel(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = modelProjectionEnvelopeFromOutbox(event);
+    const verified = await verifyModelProjectionEvent(
+      envelope,
+      this.#authority,
+    );
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.modelWriter === undefined)
+        throw new Error("Model projection writer is not configured");
+      await this.#destination.modelWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -260,6 +292,8 @@ export class PublicProjectionWorker {
         return this.#publishCase(event);
       case "public.resources":
         return this.#publishResource(event);
+      case "public.models":
+        return this.#publishModel(event);
     }
   }
 

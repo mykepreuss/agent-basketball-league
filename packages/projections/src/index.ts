@@ -5,6 +5,8 @@ export * from "./contract-repository.js";
 export * from "./envelope.js";
 export * from "./governance-envelope.js";
 export * from "./governance-repository.js";
+export * from "./model-envelope.js";
+export * from "./model-repository.js";
 export * from "./payload.js";
 export * from "./repository.js";
 export * from "./resource-envelope.js";

@@ -1,8 +1,8 @@
 {
   "digests": {
     "source": {
-      "digest": "0x8d9a48e734e5d87c6e71c11093c8bd64b2cf67b12bb4739f58c7e1d6c1df47c1",
-      "fileCount": 114,
+      "digest": "0xa07522325b2a6c804efa74ea817d6a04ad9da7ed1adce2dcfbc41e9226bae7e6",
+      "fileCount": 116,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -38,7 +38,7 @@
         },
         {
           "path": "apps/core-api/src/candidates.ts",
-          "digest": "0x455ff98a6e6ae1ffdead93b0175520a5d3d2cb69f6eadf52a2bbcd0c8c0693f0"
+          "digest": "0xea171aa398d302885180a23ffe559e7acd22e19101b79f1e0f3099bcf34336d8"
         },
         {
           "path": "apps/core-api/src/canonical-command.ts",
@@ -106,11 +106,11 @@
         },
         {
           "path": "apps/public-api/src/index.ts",
-          "digest": "0x995b6f6f4c6f1e7259a4c52f753cbf681ccaf59811bc08db8fb8a1c449aee4dd"
+          "digest": "0xd59f292d163d90ad0a7a5486b9943f6b6e5ac951ed8381b35a65444fe6251704"
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0xf3006e78e92552abbcb629b93a3cfa6e0b17f2e455c368449bd4b735d8675c67"
+          "digest": "0x504d30306dd68ab3664fb059b6e3da212b3391c0c078b0e0b236e0ddbb6b8660"
         },
         {
           "path": "contracts/RecognitionRegistry.sol",
@@ -210,7 +210,7 @@
         },
         {
           "path": "packages/career/src/candidate-workflow.ts",
-          "digest": "0xcf7825f810798bb8e1dd025d5f659b15c562858ed961d571a80279f38cbd75b7"
+          "digest": "0x4c27f9d6f8d95f6b2c94b28f9434fa9b457af24f9591b4fb11d4bae983497d3d"
         },
         {
           "path": "packages/career/src/continuity-workflow.ts",
@@ -322,7 +322,7 @@
         },
         {
           "path": "packages/institutions/src/rights.ts",
-          "digest": "0x81c1e355eb2dcfc11ff466e04bc4b52a9cc84a5ee033ae84a939cab82c4cc359"
+          "digest": "0x137eacd652b785a339963541f542256a727209d5afb3a698c7f536a1802e79d1"
         },
         {
           "path": "packages/policy/src/index.ts",
@@ -362,7 +362,15 @@
         },
         {
           "path": "packages/projections/src/index.ts",
-          "digest": "0xd7d3278c23d6944cb814629457bda726ded3ee25e0d5d1816fbf59f88fa2662f"
+          "digest": "0x9c8d5babe6dd49fda8b064043bbd6e8766840a6134b8a005ce25f9a5b52bc7a6"
+        },
+        {
+          "path": "packages/projections/src/model-envelope.ts",
+          "digest": "0x7b8e4894616e30edaa350f4ddb10d4efb0b13e8d4c19f5c42b16a4a002c5ab00"
+        },
+        {
+          "path": "packages/projections/src/model-repository.ts",
+          "digest": "0x0034e5b3458dbd5efc1a88c7a3dcd348d6adac44231a077a0d380f774decadde"
         },
         {
           "path": "packages/projections/src/payload.ts",
@@ -382,11 +390,11 @@
         },
         {
           "path": "packages/projections/src/transport.ts",
-          "digest": "0x84a6fb9318bb1c60f025a7578004181900d10d166f73524bca0368e4cc45ed70"
+          "digest": "0x6a5abe30aac7b906152f57031e3b89a977f36bb44c4eec2be92b86e6419dbf14"
         },
         {
           "path": "packages/projections/src/worker.ts",
-          "digest": "0x2197a250f2efc5da50dfae274cab64a00e64bc829870a63c1f90b808875dee21"
+          "digest": "0xdcc5b0ed0971860115c06d929efa8ec90a4e78d0504648c7a7886a374cc9b919"
         },
         {
           "path": "packages/recognition/src/canonical.ts",
@@ -430,7 +438,7 @@
         },
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x279d2137764f906a5ec8d48eb4176a5c6d8ce66d1f7ce82180db026cbc258bce"
+          "digest": "0xbc1e009c2cc259f708e3976480319342ffb73a1b8549413be2a8c0c9be2280ce"
         },
         {
           "path": "packages/storage/src/broker.ts",
@@ -511,7 +519,7 @@
       ]
     },
     "tools": {
-      "digest": "0x311758e502fa416ed259a34a1c9cc035c686cef32da47555bbabe781422c4d26",
+      "digest": "0x0ca176218147b761c58b4a746ccb4d2652a35cc24e5980a9508cb4fdd22d7744",
       "fileCount": 6,
       "files": [
         {
@@ -524,7 +532,7 @@
         },
         {
           "path": "pnpm-lock.yaml",
-          "digest": "0x45fe35d614058dfbedf344dcf1b9a2ecdf7a31e1cbce7749737819067db4176a"
+          "digest": "0x5c0e0a9225b300efb5cea29c9f3f22828784bb75e090b76edec3084c678afd5d"
         },
         {
           "path": "pnpm-workspace.yaml",
@@ -541,12 +549,12 @@
       ]
     },
     "schemas": {
-      "digest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
+      "digest": "0x94e46dee8ce468c3b1429a7bf327db71f66906d5b4b247385949058b2bb96ed5",
       "fileCount": 1,
       "files": [
         {
           "path": "packages/schemas/src/index.ts",
-          "digest": "0x279d2137764f906a5ec8d48eb4176a5c6d8ce66d1f7ce82180db026cbc258bce"
+          "digest": "0xbc1e009c2cc259f708e3976480319342ffb73a1b8549413be2a8c0c9be2280ce"
         }
       ]
     },
@@ -573,8 +581,8 @@
       ]
     },
     "testSuite": {
-      "digest": "0xa07b8868932976199433c439bb45235989b1d66bcb2cd76a405728c23bfc2600",
-      "fileCount": 36,
+      "digest": "0x7801af3d8ef8eca834ab11a3c4ada3938e35e4cca3c05cb9eaeb2b94e3d87191",
+      "fileCount": 37,
       "files": [
         {
           "path": "apps/body-broker/test/server.test.ts",
@@ -582,7 +590,7 @@
         },
         {
           "path": "apps/core-api/test/candidates.test.ts",
-          "digest": "0x15d0444c8f6bc4a437dec045b15dd46360a8fdc2ce40460b26e91fbf2d134fdd"
+          "digest": "0xe27331d92c4df722038864421a20dcbf0e8c2efa31c1fc1014e02fb2e22501b2"
         },
         {
           "path": "apps/core-api/test/exit-portability.test.ts",
@@ -602,7 +610,7 @@
         },
         {
           "path": "apps/public-api/test/server.test.ts",
-          "digest": "0x80e5b8a5cc7a9f0bca2356981e16443cb72c1e6de06cd4e27747ff76e1e7597a"
+          "digest": "0x556fc0e07e2287a8c5e15a69e2c48b73b5d60f3e6ba4360132ee6211eaca3bd5"
         },
         {
           "path": "packages/assurance/test/assurance.test.ts",
@@ -673,6 +681,10 @@
           "digest": "0x13441798d3865b0ba824099946f49da13cebef1f278277849ebe7e60a7426c3c"
         },
         {
+          "path": "packages/projections/test/model-repository.test.ts",
+          "digest": "0x4f3e641a8b3c52f15dfdfc52a2ba00607d2ed91b5c08a9b86087940990f24120"
+        },
+        {
           "path": "packages/projections/test/repository.test.ts",
           "digest": "0x5bed5a1e337e038f7ab63c0a571686bb7eda88bd39d4ceb9ff175a139f57283e"
         },
@@ -706,7 +718,7 @@
         },
         {
           "path": "tests/acceptance/end-to-end.test.ts",
-          "digest": "0x16244a59180b4e36798b6265f24f8f65cef47260156a34e3b632a57927060003"
+          "digest": "0x8f5ad3f19ff6d69d3b5c960a0b357238581f50032cff5e530dbc826801fb1785"
         },
         {
           "path": "tests/adversarial/boundaries.test.ts",
@@ -815,8 +827,8 @@
       ]
     },
     "publicProjection": {
-      "digest": "0x58a81eb9f9508dfbc6dadbd551a207c4547882b1996442ed16ce479fcc9dc9c4",
-      "fileCount": 24,
+      "digest": "0xd301a420e7ba87cb0a46b9de1f190926661ac7636adc3585051ab145604aa8b9",
+      "fileCount": 26,
       "files": [
         {
           "path": "apps/arena/app/arena/page.tsx",
@@ -848,11 +860,11 @@
         },
         {
           "path": "apps/public-api/src/index.ts",
-          "digest": "0x995b6f6f4c6f1e7259a4c52f753cbf681ccaf59811bc08db8fb8a1c449aee4dd"
+          "digest": "0xd59f292d163d90ad0a7a5486b9943f6b6e5ac951ed8381b35a65444fe6251704"
         },
         {
           "path": "apps/public-api/src/server.ts",
-          "digest": "0xf3006e78e92552abbcb629b93a3cfa6e0b17f2e455c368449bd4b735d8675c67"
+          "digest": "0x504d30306dd68ab3664fb059b6e3da212b3391c0c078b0e0b236e0ddbb6b8660"
         },
         {
           "path": "packages/projections/src/case-envelope.ts",
@@ -888,7 +900,15 @@
         },
         {
           "path": "packages/projections/src/index.ts",
-          "digest": "0xd7d3278c23d6944cb814629457bda726ded3ee25e0d5d1816fbf59f88fa2662f"
+          "digest": "0x9c8d5babe6dd49fda8b064043bbd6e8766840a6134b8a005ce25f9a5b52bc7a6"
+        },
+        {
+          "path": "packages/projections/src/model-envelope.ts",
+          "digest": "0x7b8e4894616e30edaa350f4ddb10d4efb0b13e8d4c19f5c42b16a4a002c5ab00"
+        },
+        {
+          "path": "packages/projections/src/model-repository.ts",
+          "digest": "0x0034e5b3458dbd5efc1a88c7a3dcd348d6adac44231a077a0d380f774decadde"
         },
         {
           "path": "packages/projections/src/payload.ts",
@@ -908,15 +928,15 @@
         },
         {
           "path": "packages/projections/src/transport.ts",
-          "digest": "0x84a6fb9318bb1c60f025a7578004181900d10d166f73524bca0368e4cc45ed70"
+          "digest": "0x6a5abe30aac7b906152f57031e3b89a977f36bb44c4eec2be92b86e6419dbf14"
         },
         {
           "path": "packages/projections/src/worker.ts",
-          "digest": "0x2197a250f2efc5da50dfae274cab64a00e64bc829870a63c1f90b808875dee21"
+          "digest": "0xdcc5b0ed0971860115c06d929efa8ec90a4e78d0504648c7a7886a374cc9b919"
         }
       ]
     },
-    "testResultDigest": "0x0b3bedd91d41194932b137d136ca7e25f55f8c48807f168a9b54ef124b5a3fc0",
+    "testResultDigest": "0xc348ba00897444f57cf2a84c3bae38e89a2ad2c407e3093b7780d79e0fe688b3",
     "imageDigests": [],
     "imageStatus": "NOT_BUILT_BLAXEL_IMAGE_GATE"
   },
@@ -1087,16 +1107,16 @@
       "releaseId": null,
       "version": null,
       "releaseClass": "IDENTITY_CONSTITUTIONAL",
-      "sourceDigest": "0x8d9a48e734e5d87c6e71c11093c8bd64b2cf67b12bb4739f58c7e1d6c1df47c1",
+      "sourceDigest": "0xa07522325b2a6c804efa74ea817d6a04ad9da7ed1adce2dcfbc41e9226bae7e6",
       "containerDigests": [
         "0xd3cef723e16ae6bd03bd1b3566dae0cb8369acac8dc5ce43205422691d329fd1"
       ],
       "imageDigests": [],
       "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-      "toolDigest": "0x311758e502fa416ed259a34a1c9cc035c686cef32da47555bbabe781422c4d26",
-      "schemaDigest": "0x33509c3c9be971e0d6f5e3775429fd52e9f94753404863b4e99ba4f04c98f399",
+      "toolDigest": "0x0ca176218147b761c58b4a746ccb4d2652a35cc24e5980a9508cb4fdd22d7744",
+      "schemaDigest": "0x94e46dee8ce468c3b1429a7bf327db71f66906d5b4b247385949058b2bb96ed5",
       "migrationDigest": "0x65200a2ac773b7e17f2f81006dc997cfa670fc522ee1f975d8b819a7aa9b0f52",
-      "testResultDigest": "0x0b3bedd91d41194932b137d136ca7e25f55f8c48807f168a9b54ef124b5a3fc0",
+      "testResultDigest": "0xc348ba00897444f57cf2a84c3bae38e89a2ad2c407e3093b7780d79e0fe688b3",
       "applicableLawEventIds": [],
       "ratificationEventIds": [],
       "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",
@@ -1175,7 +1195,7 @@
       {
         "name": "source tree",
         "path": null,
-        "digest": "0x8d9a48e734e5d87c6e71c11093c8bd64b2cf67b12bb4739f58c7e1d6c1df47c1",
+        "digest": "0xa07522325b2a6c804efa74ea817d6a04ad9da7ed1adce2dcfbc41e9226bae7e6",
         "state": "PREPARED_LOCAL"
       },
       {
@@ -1229,7 +1249,7 @@
       {
         "name": "public projections",
         "path": null,
-        "digest": "0x58a81eb9f9508dfbc6dadbd551a207c4547882b1996442ed16ce479fcc9dc9c4",
+        "digest": "0xd301a420e7ba87cb0a46b9de1f190926661ac7636adc3585051ab145604aa8b9",
         "state": "PREPARED_LOCAL"
       },
       {

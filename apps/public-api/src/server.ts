@@ -11,6 +11,7 @@ import {
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
   verifyGovernanceProjectionEvent,
+  verifyModelProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
   type ProjectionVerificationAuthority,
@@ -20,6 +21,8 @@ import {
   type PublicContractProjectionWriter,
   type PublicGovernanceProjectionReader,
   type PublicGovernanceProjectionWriter,
+  type PublicModelProjectionReader,
+  type PublicModelProjectionWriter,
   type PublicProjectionReader,
   type PublicProjectionWriter,
   type PublicResourceProjectionReader,
@@ -143,12 +146,14 @@ export interface PublicApiOptions {
   governanceProjections?: PublicGovernanceProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
+  modelProjections?: PublicModelProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
+    modelWriter?: PublicModelProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
@@ -221,7 +226,8 @@ export function createPublicApi(
     options.contractProjections !== undefined ||
     options.governanceProjections !== undefined ||
     options.caseProjections !== undefined ||
-    options.resourceProjections !== undefined;
+    options.resourceProjections !== undefined ||
+    options.modelProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -236,6 +242,7 @@ export function createPublicApi(
         options.governanceProjections?.refresh(),
         options.caseProjections?.refresh(),
         options.resourceProjections?.refresh(),
+        options.modelProjections?.refresh(),
       ]);
     }
   });
@@ -488,6 +495,29 @@ export function createPublicApi(
             cursor: record.cursor,
           });
         }
+        if (topic === "public.models") {
+          const verified = await verifyModelProjectionEvent(
+            request.body,
+            projectionIngress,
+          );
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the model dependency event",
+            );
+          }
+          if (projectionIngress.modelWriter === undefined)
+            throw new Error("Model projection writer is not configured");
+          const record = await projectionIngress.modelWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -535,6 +565,8 @@ export function createPublicApi(
         items = options.contractProjections?.rosters() ?? [];
       } else if (path === "/v1/public/resources") {
         items = options.resourceProjections?.resources() ?? [];
+      } else if (path === "/v1/public/models/concentration") {
+        items = options.modelProjections?.models() ?? [];
       } else if (path === "/v1/public/governance") {
         items = [
           ...(options.governanceProjections?.governance() ?? []).map(

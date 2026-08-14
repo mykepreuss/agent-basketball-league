@@ -20,6 +20,7 @@ import {
   REHEARSAL_RECOGNITION_DOMAIN,
   runFirstPossessionRehearsal,
 } from "../../packages/basketball/src/index.js";
+import { CANDIDATE_WORKFLOW_SCHEMA_DIGEST } from "../../packages/career/src/index.js";
 import { InMemoryCanonicalStore } from "../../packages/database/src/index.js";
 import {
   ServiceRequestVerifier,
@@ -55,6 +56,7 @@ import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
   FilePublicGovernanceProjectionRepository,
+  FilePublicModelProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
   HttpProjectionEventSink,
@@ -65,9 +67,11 @@ import {
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
   verifyGovernanceProjectionEvent,
+  verifyModelProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
   type ContractProjectionEventEnvelope,
+  type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
 } from "../../packages/projections/src/index.js";
@@ -609,6 +613,207 @@ describe("complete local acceptance", () => {
     await expect(compromised.initialize()).rejects.toThrow(
       "authorization is invalid",
     );
+  });
+
+  it("publishes agent-signed model dependencies through authenticated durable concentration", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-model-acceptance-"),
+    );
+    const agentDid = "did:abl:model-acceptance-agent";
+    const agent = createSigningIdentity(`0x${"d".repeat(64)}`);
+    const authority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map(),
+    };
+    const store = new InMemoryCanonicalStore();
+    let previousEventHash: `0x${string}` | null = null;
+    for (let version = 1; version <= 9; version += 1) {
+      const eventHash = sha256Commitment(`model-acceptance-private-${version}`);
+      await store.append({
+        eventId: `0198e000-0000-7000-8000-${String(version).padStart(12, "0")}`,
+        actorDid: agentDid,
+        nonce: `model-private-${version}`,
+        idempotencyKey: `0198e000-0000-7000-8001-${String(version).padStart(12, "0")}`,
+        requestHash: sha256Commitment(`model-private-request-${version}`),
+        aggregateType: "candidate-admission",
+        aggregateId: agentDid,
+        expectedVersion: BigInt(version - 1),
+        competitionId: "model-acceptance",
+        seasonId: "pre-genesis",
+        eventType: "CandidateProgressRecorded",
+        previousEventHash,
+        eventHash,
+        payloadSchemaDigest: CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
+        payloadCommitment: sha256Commitment(`model-private-payload-${version}`),
+        payload: { private: true, version },
+        stateRoot: sha256Commitment(`model-private-state-${version}`),
+        signatures: [],
+        occurredAt: new Date(
+          `2026-08-13T11:${String(50 + version).padStart(2, "0")}:00.000Z`,
+        ),
+        outboxTopic: "candidate.lifecycle",
+      });
+      previousEventHash = eventHash;
+    }
+    const admittedAt = "2026-08-13T12:07:00.000Z";
+    const payload = {
+      admission: {
+        candidateDid: agentDid,
+        identityStatementCommitment: sha256Commitment(
+          "model-acceptance-identity",
+        ),
+        constitutionDigest: sha256Commitment("model-acceptance-constitution"),
+        threatModelDigest: sha256Commitment("model-acceptance-threat-model"),
+        disclosurePolicyDigest: sha256Commitment("model-acceptance-disclosure"),
+        resourceScheduleDigest: sha256Commitment("model-acceptance-resources"),
+        modelRegistryDigest: sha256Commitment("model-acceptance-registry"),
+        reflectionActivationIds: [
+          "0198e000-0000-7000-8002-000000000001",
+          "0198e000-0000-7000-8002-000000000002",
+          "0198e000-0000-7000-8002-000000000003",
+        ],
+        inspectionReceiptDigest: sha256Commitment(
+          "model-acceptance-inspection",
+        ),
+        signingPublicKey: agent.publicKey,
+        encryptionPublicKey: sha256Commitment("model-acceptance-encryption"),
+        modelDependencies: {
+          exactModel: "model-acceptance-r1",
+          family: "family-acceptance",
+          provider: "provider-acceptance",
+          runtimeArchitecture: "blaxel-sandbox-acceptance",
+          gateway: "gateway-acceptance",
+          upstreamDependency: "upstream-acceptance",
+        },
+        inheritedObjectiveDecision: "REPUDIATED" as const,
+        signedAt: admittedAt,
+        revocationEndsAt: "2026-08-14T12:07:00.000Z",
+      },
+    };
+    const event = createCanonicalEvent({
+      eventId: "0198e000-0000-7000-8003-000000000001",
+      actorDid: agentDid,
+      nonce: "model-acceptance-admission",
+      idempotencyKey: "0198e000-0000-7000-8003-000000000002",
+      aggregateType: "candidate-admission",
+      aggregateId: agentDid,
+      aggregateVersion: 10n,
+      eventType: "CandidateAdmitted",
+      previousEventHash,
+      payload,
+      stateRoot: sha256Commitment("model-acceptance-admitted-state"),
+      schemaDigest: CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: admittedAt,
+    });
+    const signature = await signCanonicalEvent(
+      agent,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      event,
+    );
+    await store.append({
+      eventId: event.eventId,
+      actorDid: event.actorDid,
+      nonce: event.nonce,
+      idempotencyKey: event.idempotencyKey,
+      requestHash: sha256Commitment("model-acceptance-admission-request"),
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      expectedVersion: 9n,
+      competitionId: "model-acceptance",
+      seasonId: "pre-genesis",
+      eventType: event.eventType,
+      previousEventHash: event.previousEventHash,
+      eventHash: event.eventHash,
+      payloadSchemaDigest: event.schemaDigest,
+      payloadCommitment: event.payloadCommitment,
+      payload: event.payload,
+      stateRoot: event.stateRoot,
+      signatures: [signature],
+      occurredAt: new Date(event.timestamp),
+      outboxTopic: "public.models",
+    });
+
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const modelRepositoryOptions = {
+      verifyAuthorization: (authorization: ModelProjectionEventEnvelope) =>
+        verifyModelProjectionEvent(authorization, authority),
+    };
+    const models = new FilePublicModelProjectionRepository(
+      projectionRoot,
+      modelRepositoryOptions,
+    );
+    await Promise.all([games.initialize(), models.initialize()]);
+    const projectionIdentity = {
+      serviceId: "core-model-projection-publisher",
+      secret: new TextEncoder().encode("m".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const serviceNow = Date.parse("2026-08-13T12:07:05.000Z");
+    const publicApi = createPublicApi({
+      projections: games,
+      modelProjections: models,
+      projectionIngress: {
+        writer: games,
+        modelWriter: models,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "model-acceptance-transport",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      });
+      expect(await worker.drain()).toBe(1);
+      const response = await publicApi.inject({
+        method: "GET",
+        url: "/v1/public/models/concentration",
+      });
+      expect(response.json()).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            recognizedGenesisConcentration: false,
+            totalAgents: 1,
+            exactModel: [
+              { value: "model-acceptance-r1", count: 1, bps: 10_000 },
+            ],
+            provider: [{ value: "provider-acceptance", count: 1, bps: 10_000 }],
+            triggers: {
+              presumptionAgainstFurtherAdmissions: true,
+              forceExistingAgentsToChange: false,
+            },
+          },
+        ],
+      });
+    } finally {
+      await publicApi.close();
+    }
+    const restarted = new FilePublicModelProjectionRepository(
+      projectionRoot,
+      modelRepositoryOptions,
+    );
+    await restarted.initialize();
+    expect(restarted.models()[0]).toMatchObject({
+      totalAgents: 1,
+      canonicalEventHash: event.eventHash,
+    });
   });
 
   it("carries independent contract consent from the outbox to durable public history", async () => {
