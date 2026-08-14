@@ -8,6 +8,7 @@ import {
   REGULATION_PERIOD_MS,
   SHOT_CLOCK_MS,
   FullGameEngine,
+  FinalizedGamePayloadSchema,
   PacedBroadcast,
   PreparationComputeLedger,
   PrivatePracticeLab,
@@ -16,8 +17,10 @@ import {
   developAvatar,
   evaluateGameReadiness,
   fallibleCall,
+  finalizedGameStateRoot,
   mirroredCalibration,
   replayFullGame,
+  replayFinalizedGamePayload,
   resolveChallenge,
   rotateOfficialCrew,
   runAgentPlayedExhibition,
@@ -64,9 +67,9 @@ describe("complete deterministic exhibition rules", () => {
     const exhibition = await runAgentPlayedExhibition();
     expect(exhibition.finalState).toMatchObject({
       phase: "FINAL",
-      winner: "HOME",
+      winner: "AWAY",
       period: 4,
-      score: { home: 74, away: 72 },
+      score: { home: 78, away: 82 },
     });
     expect(exhibition.possessionProofs).toHaveLength(128);
     expect(
@@ -89,6 +92,38 @@ describe("complete deterministic exhibition rules", () => {
       exact: true,
       inferenceInvocations: 0,
     });
+    const finalizedAt = iso(0);
+    const payload = FinalizedGamePayloadSchema.parse({
+      gameId: exhibition.input.gameId,
+      finalizedAt,
+      input: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      agentEvidence: exhibition.agentEvidence,
+      filmCommitment: digest(exhibition.events),
+      broadcastStartedAt: finalizedAt,
+      broadcastIntervalMs: 1,
+    });
+    expect(replayFinalizedGamePayload(payload)).toMatchObject({
+      state: exhibition.finalState,
+      events: exhibition.events,
+    });
+    expect(finalizedGameStateRoot(payload)).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(() =>
+      replayFinalizedGamePayload({
+        ...payload,
+        agentEvidence: {
+          ...payload.agentEvidence,
+          possessionCount: payload.agentEvidence.possessionCount + 1,
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      replayFinalizedGamePayload({
+        ...payload,
+        broadcastStartedAt: iso(1),
+      }),
+    ).toThrow("cannot start after finalization");
   }, 20_000);
 
   it("locks the canonical exhibition transcript to an exactly replayable proof", () => {

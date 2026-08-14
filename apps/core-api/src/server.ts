@@ -1,6 +1,15 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
 import {
+  FINALIZED_GAME_AGGREGATE_TYPE,
+  FINALIZED_GAME_SCHEMA_DIGEST,
+  GAME_FINALIZED_EVENT_TYPE,
+  finalizedGameStateRoot,
+  replayFinalizedGamePayload,
+  requireFinalizedGameEvidence,
+  type FinalizedGameEvidenceReader,
+} from "@abl/basketball";
+import {
   CanonicalConflictError,
   HashChainConflictError,
   IdempotencyConflictError,
@@ -15,6 +24,7 @@ import {
 import Fastify, { type FastifyInstance } from "fastify";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
+import { UuidV7Schema } from "@abl/schemas";
 
 import {
   installArtifactRehearsalRoutes,
@@ -140,6 +150,10 @@ export interface LiveCoreApiOptions {
     "governance" | "institutionalRoster" | "verifierResults"
   >;
   cases?: Pick<CaseRehearsalOptions, "tribunalDids" | "appellateDids">;
+  finalizedGames?: {
+    finalizerDids: ReadonlySet<string>;
+    evidence: FinalizedGameEvidenceReader;
+  };
 }
 
 export interface CoreApiOptions {
@@ -258,6 +272,13 @@ export function createLiveCoreApi(
     resources,
     releases,
   } = options;
+  const finalizedGames =
+    options.finalizedGames === undefined
+      ? undefined
+      : {
+          finalizerDids: new Set(options.finalizedGames.finalizerDids),
+          evidence: options.finalizedGames.evidence,
+        };
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const artifactRoutesEnabled =
     candidateRoutesEnabled &&
@@ -343,22 +364,65 @@ export function createLiveCoreApi(
           throw authorizationError("Career is not operational");
         }
       }
-      if (
-        event.aggregateType !== "game-possession" ||
-        event.eventType !== "PossessionResolved"
-      ) {
+      const possessionCommand =
+        event.aggregateType === "game-possession" &&
+        event.eventType === "PossessionResolved";
+      const finalizedGameCommand =
+        event.aggregateType === FINALIZED_GAME_AGGREGATE_TYPE &&
+        event.eventType === GAME_FINALIZED_EVENT_TYPE;
+      if (!possessionCommand && !finalizedGameCommand) {
         throw authorizationError("Command type is not enabled in rehearsal");
       }
-      try {
-        validatePossessionResolvedPayload(
-          event.payload,
-          event.aggregateId,
-          event.stateRoot,
-        );
-      } catch (error) {
-        throw commandValidationError(
-          error instanceof Error ? error.message : "Invalid command payload",
-        );
+      let outboxTopic = "public.game";
+      if (possessionCommand) {
+        try {
+          validatePossessionResolvedPayload(
+            event.payload,
+            event.aggregateId,
+            event.stateRoot,
+          );
+        } catch (error) {
+          throw commandValidationError(
+            error instanceof Error ? error.message : "Invalid command payload",
+          );
+        }
+      } else {
+        if (
+          finalizedGames === undefined ||
+          !finalizedGames.finalizerDids.has(event.actorDid)
+        ) {
+          throw authorizationError(
+            "Actor is not a configured finalized-game authority",
+          );
+        }
+        try {
+          UuidV7Schema.parse(event.eventId);
+          UuidV7Schema.parse(event.idempotencyKey);
+          UuidV7Schema.parse(event.aggregateId);
+          const replayed = replayFinalizedGamePayload(event.payload);
+          await requireFinalizedGameEvidence(
+            replayed.payload,
+            finalizedGames.evidence,
+          );
+          if (
+            event.aggregateVersion !== 1n ||
+            event.previousEventHash !== null ||
+            event.schemaDigest !== FINALIZED_GAME_SCHEMA_DIGEST ||
+            event.aggregateId !== replayed.payload.gameId ||
+            event.timestamp !== replayed.payload.finalizedAt ||
+            Math.abs(now() - occurredAt) > 60_000 ||
+            finalizedGameStateRoot(replayed.payload) !== event.stateRoot
+          ) {
+            throw new Error("Finalized game event does not bind exact replay");
+          }
+        } catch (error) {
+          throw commandValidationError(
+            error instanceof Error
+              ? error.message
+              : "Invalid finalized game command",
+          );
+        }
+        outboxTopic = "public.finalized-game";
       }
       const result = await options.store.append({
         eventId: event.eventId,
@@ -383,7 +447,7 @@ export function createLiveCoreApi(
         stateRoot: event.stateRoot,
         signatures: parsed.signatures,
         occurredAt: new Date(occurredAt),
-        outboxTopic: "public.game",
+        outboxTopic,
       });
       return reply.code(result.duplicate ? 200 : 201).send({
         accepted: true,

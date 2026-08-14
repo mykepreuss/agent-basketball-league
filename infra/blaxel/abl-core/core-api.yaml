@@ -97,6 +97,12 @@ spec:
       - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
         value: ${ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
         secret: false
+      - name: ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON
+        value: ${ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_EVIDENCE_JSON}
+        secret: false
       - name: ABL_CASE_TRIBUNAL_DIDS_JSON
         value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
         secret: false

@@ -10,6 +10,7 @@ import {
   projectionEnvelopeBytes,
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
+  verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
   verifyProjectionEvent,
@@ -22,6 +23,10 @@ import {
   type PublicCaseProjectionWriter,
   type PublicContractProjectionReader,
   type PublicContractProjectionWriter,
+  type PublicFinalGameProjectionReader,
+  type PublicFinalGameProjectionWriter,
+  type PublicFinalizedGameProjection,
+  type PublicGameProjection,
   type PublicGovernanceProjectionReader,
   type PublicGovernanceProjectionWriter,
   type PublicModelProjectionReader,
@@ -35,6 +40,7 @@ import {
   type PublicSocialProjectionReader,
   type PublicSocialProjectionWriter,
 } from "@abl/projections";
+import type { FinalizedGameEvidenceReader } from "@abl/basketball";
 import type {
   CompetitionReleaseEvidenceReader,
   ReleaseInstitutionalRoster,
@@ -162,6 +168,7 @@ export interface PublicApiOptions {
   releaseProjections?: PublicReleaseProjectionReader;
   socialProjections?: PublicSocialProjectionReader;
   checkpointProjections?: PublicCheckpointProjectionReader;
+  finalGameProjections?: PublicFinalGameProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
@@ -171,6 +178,7 @@ export interface PublicApiOptions {
     modelWriter?: PublicModelProjectionWriter;
     releaseWriter?: PublicReleaseProjectionWriter;
     socialWriter?: PublicSocialProjectionWriter;
+    finalGameWriter?: PublicFinalGameProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
@@ -181,6 +189,8 @@ export interface PublicApiOptions {
     disclosureReleaseAuthorityDids?: ReadonlySet<string>;
     competitiveDisclosureAuthorDids?: ReadonlySet<string>;
     competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
+    finalizedGameAuthorityDids?: ReadonlySet<string>;
+    finalizedGameEvidence?: FinalizedGameEvidenceReader["finalizedGameEvidence"];
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -256,6 +266,7 @@ export function createPublicApi(
     options.modelProjections !== undefined ||
     options.releaseProjections !== undefined ||
     options.socialProjections !== undefined ||
+    options.finalGameProjections !== undefined ||
     options.checkpointProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
@@ -271,6 +282,7 @@ export function createPublicApi(
         options.governanceProjections?.refresh(),
         options.caseProjections?.refresh(),
         options.socialProjections?.refresh(),
+        options.finalGameProjections?.refresh(),
         options.resourceProjections?.refresh(),
         options.modelProjections?.refresh(),
         options.releaseProjections?.refresh(),
@@ -414,6 +426,13 @@ export function createPublicApi(
                   options.projectionIngress.competitiveDisclosureAuthorDids,
                 ),
               }),
+          ...(options.projectionIngress.finalizedGameAuthorityDids === undefined
+            ? {}
+            : {
+                finalizedGameAuthorityDids: new Set(
+                  options.projectionIngress.finalizedGameAuthorityDids,
+                ),
+              }),
         };
   if (projectionIngress !== undefined) {
     app.post(PROJECTION_APPEND_PATH, async (request, reply) => {
@@ -428,6 +447,40 @@ export function createPublicApi(
           body: projectionEnvelopeBytes(request.body),
         });
         const topic = projectionTopic(request.body);
+        if (topic === "public.finalized-game") {
+          if (
+            projectionIngress.finalizedGameAuthorityDids === undefined ||
+            projectionIngress.finalizedGameEvidence === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Finalized game projection authority is not configured",
+            );
+          }
+          const verified = await verifyFinalGameProjectionEvent(request.body, {
+            ...projectionIngress,
+            finalizerDids: projectionIngress.finalizedGameAuthorityDids,
+            finalizedGameEvidence: projectionIngress.finalizedGameEvidence,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the finalized game event",
+            );
+          }
+          if (projectionIngress.finalGameWriter === undefined)
+            throw new Error(
+              "Finalized game projection writer is not configured",
+            );
+          const record = await projectionIngress.finalGameWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         if (topic === "public.contracts") {
           if (projectionIngress.contractClubGovernors === undefined)
             throw new ServiceAuthenticationError(
@@ -680,7 +733,18 @@ export function createPublicApi(
             Number.isInteger(afterCursor) ? afterCursor : -1,
           ) ?? [];
       } else if (path === "/v1/public/games") {
-        items = options.projections?.games() ?? [];
+        const games = new Map<
+          string,
+          PublicGameProjection | PublicFinalizedGameProjection
+        >(
+          (options.projections?.games() ?? []).map((game) => [
+            game.gameId,
+            game,
+          ]),
+        );
+        for (const game of options.finalGameProjections?.games() ?? [])
+          games.set(game.gameId, game);
+        items = [...games.values()];
       } else if (path === "/v1/public/contracts") {
         items = options.contractProjections?.contracts() ?? [];
       } else if (path === "/v1/public/rosters") {
@@ -729,7 +793,9 @@ export function createPublicApi(
   app.get<{ Params: { id: string } }>(
     "/v1/public/games/:id/cursor",
     async (request) => {
-      const cursor = options.projections?.cursor(request.params.id);
+      const cursor =
+        options.finalGameProjections?.cursor(request.params.id) ??
+        options.projections?.cursor(request.params.id);
       return {
         state,
         gameId: request.params.id,
@@ -746,7 +812,8 @@ export function createPublicApi(
         ? Number.parseInt(request.params.segment, 10)
         : -1;
       const segment = Number.isSafeInteger(sequence)
-        ? options.projections?.segment(request.params.id, sequence)
+        ? (options.finalGameProjections?.segment(request.params.id, sequence) ??
+          options.projections?.segment(request.params.id, sequence))
         : undefined;
       if (segment !== undefined)
         return reply.send({ state, canonical: true, segment });
@@ -761,7 +828,9 @@ export function createPublicApi(
   app.get<{ Params: { id: string } }>(
     "/v1/public/games/:id/live",
     async (request, reply) => {
-      const projection = options.projections?.game(request.params.id);
+      const projection =
+        options.finalGameProjections?.game(request.params.id) ??
+        options.projections?.game(request.params.id);
       return reply.type("text/event-stream; charset=utf-8").send(
         `event: state\ndata: ${JSON.stringify(
           projection ?? {

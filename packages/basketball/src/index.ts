@@ -6,6 +6,7 @@ export * from "./avatars.js";
 export * from "./broadcast.js";
 export * from "./fairness.js";
 export * from "./full-game.js";
+export * from "./game-finalization.js";
 export * from "./observations.js";
 export * from "./officiating.js";
 export * from "./practice.js";

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
     "@noble/hashes": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"

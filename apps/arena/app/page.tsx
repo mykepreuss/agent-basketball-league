@@ -1,6 +1,13 @@
 import type { CSSProperties } from "react";
 
-import { loadPossessionProof } from "./data";
+import type {
+  PublicFinalizedGameProjection,
+  PublicGameProjection,
+} from "@abl/projections";
+
+import { loadGameProof, type PublicArenaGame } from "./data";
+
+type FullGameEvent = PublicFinalizedGameProjection["events"][number];
 
 export const dynamic = "force-dynamic";
 
@@ -15,50 +22,49 @@ function ShortHash({ value }: Readonly<{ value: string }>) {
   );
 }
 
-export default async function ArenaPage() {
-  const possessionProof = await loadPossessionProof().catch(() => undefined);
-  if (possessionProof === undefined) {
-    return (
-      <main>
-        <header className="masthead">
-          <div className="wordmark" aria-label="Agent Basketball League">
-            ABL
-          </div>
-          <div className="title-block">
-            <p className="eyebrow">Pre-genesis · canonical history closed</p>
-            <h1>The court is waiting.</h1>
-          </div>
-          <div className="canonical-stamp">no live projection</div>
-        </header>
-        <section className="empty-arena">
-          <p className="section-label">
-            <span>00</span> public ledger
-          </p>
-          <h2>No recognized rehearsal possession is available.</h2>
-          <p>
-            The arena now reads only from the public projection API. It will
-            render after a signed possession reaches canonical storage and the
-            projection worker publishes it.
-          </p>
-        </section>
-      </main>
-    );
-  }
+function isFinalizedGame(
+  game: PublicArenaGame,
+): game is PublicFinalizedGameProjection {
+  return "projectionKind" in game && game.projectionKind === "FINALIZED_GAME";
+}
+
+function eventDescription(event: FullGameEvent): string {
+  const details = Object.entries(event.data)
+    .filter(([key]) => key !== "type")
+    .slice(0, 3)
+    .map(([key, value]) => `${key.replaceAll("_", " ")} ${String(value)}`)
+    .join(" · ");
+  return details === "" ? `Period ${event.period}` : details;
+}
+
+function Masthead({
+  eyebrow,
+  title,
+}: Readonly<{ eyebrow: string; title: string }>) {
   return (
-    <main>
-      <header className="masthead">
-        <div className="wordmark" aria-label="Agent Basketball League">
-          ABL
-        </div>
-        <div className="title-block">
-          <p className="eyebrow">Pre-genesis proof · possession 001</p>
-          <h1>Basketball you can audit.</h1>
-        </div>
-        <div className="canonical-stamp">
-          <span className="pulse" aria-hidden="true" />
-          locally verified
-        </div>
-      </header>
+    <header className="masthead">
+      <div className="wordmark" aria-label="Agent Basketball League">
+        ABL
+      </div>
+      <div className="title-block">
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+      </div>
+      <div className="canonical-stamp">
+        <span className="pulse" aria-hidden="true" />
+        locally verified
+      </div>
+    </header>
+  );
+}
+
+function PossessionArchive({ game }: Readonly<{ game: PublicGameProjection }>) {
+  return (
+    <>
+      <Masthead
+        eyebrow="Pre-genesis proof · possession 001"
+        title="Basketball you can audit."
+      />
 
       <section
         className="score-ribbon"
@@ -66,19 +72,19 @@ export default async function ArenaPage() {
       >
         <div>
           <span>Home</span>
-          <strong>{possessionProof.score.home}</strong>
+          <strong>{game.score.home}</strong>
         </div>
         <div className="clock">
           <span>Q1</span>
-          <strong>{gameClock(possessionProof.gameClockMs)}</strong>
+          <strong>{gameClock(game.gameClockMs)}</strong>
         </div>
         <div className="shot-clock">
           <span>Shot</span>
-          <strong>{possessionProof.shotClockMs / 1_000}</strong>
+          <strong>{game.shotClockMs / 1_000}</strong>
         </div>
         <div>
           <span>Away</span>
-          <strong>{possessionProof.score.away}</strong>
+          <strong>{game.score.away}</strong>
         </div>
       </section>
 
@@ -91,14 +97,9 @@ export default async function ArenaPage() {
             className="court"
             aria-label="Final fixed-point player positions"
           >
-            <div className="half-line" />
-            <div className="center-circle" />
-            <div className="paint paint-left" />
-            <div className="paint paint-right" />
-            <div className="hoop hoop-left" />
-            <div className="hoop hoop-right" />
+            <CourtLines />
             <ol className="players">
-              {possessionProof.players.map((player) => (
+              {game.players.map((player) => (
                 <li
                   className={`player ${player.team.toLowerCase()}`}
                   key={player.playerId}
@@ -118,8 +119,8 @@ export default async function ArenaPage() {
           </div>
           <div className="court-caption">
             <p>
-              <strong>H1</strong> converts a 58.60% layup after the third
-              simultaneous decision window.
+              <strong>H1</strong> converts after three simultaneous decision
+              windows.
             </p>
             <p>
               Positions are integer centimetres. The resolver accepted
@@ -128,13 +129,13 @@ export default async function ArenaPage() {
           </div>
         </div>
 
-        <aside className="ledger" aria-labelledby="ledger-title">
+        <aside className="ledger" aria-labelledby="possession-ledger-title">
           <div className="section-label">
             <span>02</span> event ledger
           </div>
-          <h2 id="ledger-title">Six immutable segments</h2>
+          <h2 id="possession-ledger-title">Six immutable segments</h2>
           <ol>
-            {possessionProof.events.map((event) => (
+            {game.events.map((event) => (
               <li key={event.sequence}>
                 <span className="sequence">
                   {String(event.sequence + 1).padStart(2, "0")}
@@ -150,45 +151,215 @@ export default async function ArenaPage() {
         </aside>
       </section>
 
-      <section className="proof-strip" aria-labelledby="proof-title">
-        <div className="section-label">
-          <span>03</span> independent proof
+      <ProofStrip
+        values={[
+          ["Final state", game.finalStateRoot],
+          ["Event Merkle root", game.eventMerkleRoot],
+          ["Private film commitment", game.filmCommitment],
+          ["Final public segment", game.finalSegmentHash],
+        ]}
+      />
+      <ArenaFooter gameId={game.gameId} />
+    </>
+  );
+}
+
+function CourtLines() {
+  return (
+    <>
+      <div className="half-line" />
+      <div className="center-circle" />
+      <div className="paint paint-left" />
+      <div className="paint paint-right" />
+      <div className="hoop hoop-left" />
+      <div className="hoop hoop-right" />
+    </>
+  );
+}
+
+function FinalizedGameArchive({
+  game,
+}: Readonly<{ game: PublicFinalizedGameProjection }>) {
+  const recentEvents = game.events.slice(-12);
+  const period =
+    game.periodKind === "OVERTIME" ? `OT${game.period - 4}` : `Q${game.period}`;
+  return (
+    <>
+      <Masthead
+        eyebrow="Pre-genesis proof · complete agent game"
+        title="A game that replays."
+      />
+
+      <section className="score-ribbon" aria-label="Final game score">
+        <div>
+          <span>Home</span>
+          <strong>{game.score.home}</strong>
         </div>
-        <h2 id="proof-title">
-          Replay used every recorded decision. It invoked no model.
-        </h2>
-        <dl>
-          <div>
-            <dt>Final state</dt>
-            <dd>
-              <ShortHash value={possessionProof.finalStateRoot} />
-            </dd>
-          </div>
-          <div>
-            <dt>Event Merkle root</dt>
-            <dd>
-              <ShortHash value={possessionProof.eventMerkleRoot} />
-            </dd>
-          </div>
-          <div>
-            <dt>Private film commitment</dt>
-            <dd>
-              <ShortHash value={possessionProof.filmCommitment} />
-            </dd>
-          </div>
-          <div>
-            <dt>Final public segment</dt>
-            <dd>
-              <ShortHash value={possessionProof.finalSegmentHash} />
-            </dd>
-          </div>
-        </dl>
+        <div className="clock">
+          <span>{period}</span>
+          <strong>Final</strong>
+        </div>
+        <div className="shot-clock final-winner">
+          <span>Winner</span>
+          <strong>{game.winner}</strong>
+        </div>
+        <div>
+          <span>Away</span>
+          <strong>{game.score.away}</strong>
+        </div>
       </section>
 
-      <footer>
-        <p>Played by agents · governed by agents · observed by everyone</p>
-        <p className="mono">{possessionProof.gameId}</p>
-      </footer>
+      <section className="court-and-ledger final-archive">
+        <div className="court-shell">
+          <div className="section-label">
+            <span>01</span> recognized final state
+          </div>
+          <div className="court archive-court" aria-label="Final game archive">
+            <CourtLines />
+            <div className="final-court-mark">
+              <span>{game.possessionCount} possessions</span>
+              <strong>
+                {game.score.home}—{game.score.away}
+              </strong>
+              <small>{game.commandCount} deterministic commands</small>
+            </div>
+          </div>
+          <div className="court-caption">
+            <p>
+              <strong>{game.possessionCount} possessions</strong> were played by
+              persistent player bodies with signed coach, referee, and replay
+              decisions.
+            </p>
+            <p>
+              The final state was rebuilt from recorded commands. Replay invoked
+              no model and accepted no caller-supplied winner.
+            </p>
+          </div>
+          <dl className="decision-tally" aria-label="Signed decision totals">
+            <div>
+              <dt>Players</dt>
+              <dd>{game.agentEvidence.decisionCounts.players}</dd>
+            </div>
+            <div>
+              <dt>Coaches</dt>
+              <dd>{game.agentEvidence.decisionCounts.coaches}</dd>
+            </div>
+            <div>
+              <dt>Referees</dt>
+              <dd>{game.agentEvidence.decisionCounts.referees}</dd>
+            </div>
+            <div>
+              <dt>Replay</dt>
+              <dd>{game.agentEvidence.decisionCounts.replayOfficials}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <aside className="ledger" aria-labelledby="game-ledger-title">
+          <div className="section-label">
+            <span>02</span> closing ledger
+          </div>
+          <h2 id="game-ledger-title">Final twelve of {game.events.length}</h2>
+          <ol>
+            {recentEvents.map((event) => (
+              <li key={event.sequence}>
+                <span className="sequence">
+                  {String(event.sequence + 1).padStart(3, "0")}
+                </span>
+                <div>
+                  <strong>{event.type.replaceAll("_", " ")}</strong>
+                  <p>{eventDescription(event)}</p>
+                </div>
+                <ShortHash value={event.stateRoot} />
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </section>
+
+      <ProofStrip
+        values={[
+          ["Final state", game.finalStateRoot],
+          ["Event Merkle root", game.eventMerkleRoot],
+          ["Agent evidence", game.agentEvidence.evidenceCommitment],
+          ["Private film commitment", game.filmCommitment],
+        ]}
+      />
+      <ArenaFooter gameId={game.gameId} />
+    </>
+  );
+}
+
+function ProofStrip({
+  values,
+}: Readonly<{ values: readonly (readonly [string, string])[] }>) {
+  return (
+    <section className="proof-strip" aria-labelledby="proof-title">
+      <div className="section-label">
+        <span>03</span> independent proof
+      </div>
+      <h2 id="proof-title">
+        Replay used every recorded decision. It invoked no model.
+      </h2>
+      <dl>
+        {values.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              <ShortHash value={value} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function ArenaFooter({ gameId }: Readonly<{ gameId: string }>) {
+  return (
+    <footer>
+      <p>Played by agents · governed by agents · observed by everyone</p>
+      <p className="mono">{gameId}</p>
+    </footer>
+  );
+}
+
+export default async function ArenaPage() {
+  const game = await loadGameProof().catch(() => undefined);
+  if (game === undefined) {
+    return (
+      <main>
+        <header className="masthead">
+          <div className="wordmark" aria-label="Agent Basketball League">
+            ABL
+          </div>
+          <div className="title-block">
+            <p className="eyebrow">Pre-genesis · canonical history closed</p>
+            <h1>The court is waiting.</h1>
+          </div>
+          <div className="canonical-stamp">no live projection</div>
+        </header>
+        <section className="empty-arena">
+          <p className="section-label">
+            <span>00</span> public ledger
+          </p>
+          <h2>No recognized rehearsal game is available.</h2>
+          <p>
+            The arena reads only from the public projection API. It renders
+            after signed play reaches canonical storage and the independently
+            verifying projection boundary.
+          </p>
+        </section>
+      </main>
+    );
+  }
+  return (
+    <main>
+      {isFinalizedGame(game) ? (
+        <FinalizedGameArchive game={game} />
+      ) : (
+        <PossessionArchive game={game} />
+      )}
     </main>
   );
 }

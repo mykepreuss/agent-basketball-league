@@ -1,5 +1,11 @@
 import { ServiceRequestVerifier } from "@abl/foundation";
 import {
+  FinalizedGameAuthorityDidsSchema,
+  assertFinalizedGameAuthorityConfiguration,
+  createFinalizedGameEvidenceReader,
+  type FinalizedGameEvidenceReader,
+} from "@abl/basketball";
+import {
   CompetitiveDisclosureAuthorDidsSchema,
   DisclosureReleaseAuthorityDidsSchema,
   ReleaseVerifierResultRegistrySchema,
@@ -9,6 +15,7 @@ import {
 } from "@abl/institutions";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicFinalGameProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
@@ -18,6 +25,7 @@ import {
   FilePublicResourceProjectionRepository,
   FilePublicSocialProjectionRepository,
   verifyContractProjectionEvent,
+  verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -71,10 +79,11 @@ const AgentRegistrySchema = z.record(
           "resource-schedule",
           "software-release",
           "disclosure-envelope",
+          "finalized-game",
         ]),
       )
       .min(1)
-      .max(7)
+      .max(8)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -118,6 +127,8 @@ function projectionAuthority(): {
   disclosureReleaseAuthorityDids: ReadonlySet<string>;
   competitiveDisclosureAuthorDids: ReadonlySet<string>;
   competitionReleaseEvidence: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
+  finalizedGameAuthorityDids: ReadonlySet<string>;
+  finalizedGameEvidence: FinalizedGameEvidenceReader["finalizedGameEvidence"];
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -151,6 +162,14 @@ function projectionAuthority(): {
   const competitionEvidence = createCompetitionReleaseEvidenceReader(
     JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
   );
+  const finalizedGameAuthorityDids = new Set(
+    FinalizedGameAuthorityDidsSchema.parse(
+      JSON.parse(required("ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON")),
+    ),
+  );
+  const finalizedGameEvidence = createFinalizedGameEvidenceReader(
+    JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
+  );
   if (
     Object.keys(contractClubGovernors).length === 0 ||
     new Set(Object.values(contractClubGovernors)).size !==
@@ -175,6 +194,10 @@ function projectionAuthority(): {
     releaseAuthorityDids: disclosureReleaseAuthorityDids,
     competitiveAuthorDids: competitiveDisclosureAuthorDids,
   });
+  assertFinalizedGameAuthorityConfiguration(
+    admittedAgents,
+    finalizedGameAuthorityDids,
+  );
   return {
     domain: {
       name: "ABL Recognition",
@@ -199,6 +222,8 @@ function projectionAuthority(): {
     disclosureReleaseAuthorityDids,
     competitiveDisclosureAuthorDids,
     competitionReleaseEvidence: competitionEvidence.competitionReleaseEvidence,
+    finalizedGameAuthorityDids,
+    finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
   };
 }
 
@@ -213,6 +238,7 @@ let modelProjections: FilePublicModelProjectionRepository | undefined;
 let releaseProjections: FilePublicReleaseProjectionRepository | undefined;
 let socialProjections: FilePublicSocialProjectionRepository | undefined;
 let checkpointProjections: PublicCheckpointProjectionRepository | undefined;
+let finalGameProjections: FilePublicFinalGameProjectionRepository | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
@@ -283,6 +309,20 @@ if (projectionRoot !== undefined) {
         competitiveAuthorDids: runtimeAuthority.competitiveDisclosureAuthorDids,
       }),
   });
+  finalGameProjections = new FilePublicFinalGameProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization, projectedAt) =>
+        verifyFinalGameProjectionEvent(
+          authorization,
+          {
+            ...runtimeAuthority,
+            finalizerDids: runtimeAuthority.finalizedGameAuthorityDids,
+          },
+          projectedAt,
+        ),
+    },
+  );
 }
 await Promise.all([
   projections?.initialize(),
@@ -291,6 +331,7 @@ await Promise.all([
   caseProjections?.initialize(),
   modelProjections?.initialize(),
   socialProjections?.initialize(),
+  finalGameProjections?.initialize(),
 ]);
 await Promise.all([
   resourceProjections?.initialize(),
@@ -333,6 +374,7 @@ if (
   modelProjections !== undefined &&
   releaseProjections !== undefined &&
   socialProjections !== undefined &&
+  finalGameProjections !== undefined &&
   authority !== undefined
 ) {
   const governanceRepository = governanceProjections;
@@ -345,6 +387,7 @@ if (
     modelWriter: modelProjections,
     releaseWriter: releaseProjections,
     socialWriter: socialProjections,
+    finalGameWriter: finalGameProjections,
     resourceScheduleRatification: (proposalId) =>
       governanceRepository.resourceScheduleRatification(proposalId),
     releaseRatification: (proposalId) =>
@@ -377,6 +420,8 @@ if (socialProjections !== undefined)
   apiOptions.socialProjections = socialProjections;
 if (checkpointProjections !== undefined)
   apiOptions.checkpointProjections = checkpointProjections;
+if (finalGameProjections !== undefined)
+  apiOptions.finalGameProjections = finalGameProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

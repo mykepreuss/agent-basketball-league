@@ -4,6 +4,15 @@ import { join } from "node:path";
 
 import { ServiceRequestVerifier, signServiceRequest } from "@abl/foundation";
 import {
+  FINALIZED_GAME_AGGREGATE_TYPE,
+  FINALIZED_GAME_SCHEMA_DIGEST,
+  GAME_FINALIZED_EVENT_TYPE,
+  FinalizedGamePayloadSchema,
+  createAgentPlayedGameEvidence,
+  finalizedGameStateRoot,
+  runDeterministicExhibition,
+} from "@abl/basketball";
+import {
   CASE_WORKFLOW_AGGREGATE_TYPE,
   CASE_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
@@ -22,16 +31,19 @@ import {
 import {
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
+  FilePublicFinalGameProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
   projectionEnvelopeBytes,
   verifyGovernanceProjectionEvent,
+  verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyResourceProjectionEvent,
   type CaseProjectionEventEnvelope,
   type GovernanceProjectionEventEnvelope,
+  type FinalGameProjectionEventEnvelope,
   type ResourceProjectionEventEnvelope,
 } from "@abl/projections";
 import {
@@ -1043,6 +1055,185 @@ describe("public API", () => {
     expect(JSON.stringify(publicRecord)).not.toContain(
       "public-case-protected-evidence",
     );
+    await app.close();
+  });
+
+  it("authenticates a finalized game and serves its replayed public archive", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-public-final-game-"));
+    const domain = {
+      name: "ABL Recognition",
+      version: "1",
+      chainId: 84532,
+      verifyingContract: "0x1111111111111111111111111111111111111111" as const,
+    };
+    const finalizerDid = "did:abl:public-finalizer";
+    const finalizer = createSigningIdentity(`0x${"7".repeat(64)}`);
+    const gameId = "0198f400-0000-7000-8000-000000000001";
+    const finalizedAt = "2026-08-13T08:00:00.000Z";
+    const game = runDeterministicExhibition(gameId);
+    const hashes = (role: string, count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        sha256Commitment({ role, index }),
+      );
+    const agentEvidence = createAgentPlayedGameEvidence({
+      gameId,
+      gameInput: game.input,
+      commands: game.commands,
+      proof: game.proof,
+      possessionProofs: [
+        {
+          possessionId: "public-finalized-possession-1",
+          playerDecisionHashes: hashes("player", 20),
+          coachDecisionHashes: hashes("coach", 4),
+          refereeDecisionHashes: hashes("referee", 3),
+          replayDecisionHashes: hashes("replay", 2),
+          eventMerkleRoot: sha256Commitment("public-possession-events"),
+          finalStateRoot: sha256Commitment("public-possession-state"),
+        },
+      ],
+    });
+    const payload = FinalizedGamePayloadSchema.parse({
+      gameId,
+      finalizedAt,
+      input: game.input,
+      commands: game.commands,
+      proof: game.proof,
+      agentEvidence,
+      filmCommitment: sha256Commitment(game.events),
+      broadcastStartedAt: finalizedAt,
+      broadcastIntervalMs: 1,
+    });
+    const event = createCanonicalEvent({
+      eventId: "0198f400-0000-7000-8000-000000000002",
+      actorDid: finalizerDid,
+      nonce: "public-final-game",
+      idempotencyKey: "0198f400-0000-7000-8000-000000000003",
+      aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+      aggregateId: gameId,
+      aggregateVersion: 1n,
+      eventType: GAME_FINALIZED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: finalizedGameStateRoot(payload),
+      schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+      timestamp: finalizedAt,
+    });
+    const envelope = {
+      version: "1.0.0",
+      topic: "public.finalized-game",
+      event: {
+        ...event,
+        aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: GAME_FINALIZED_EVENT_TYPE,
+        previousEventHash: null,
+        schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+      },
+      signature: await signCanonicalEvent(finalizer, domain, event),
+    } satisfies FinalGameProjectionEventEnvelope;
+    const authority = {
+      domain,
+      admittedAgents: new Map([
+        [
+          finalizerDid,
+          {
+            signerAddress: finalizer.address,
+            allowedAggregateTypes: [FINALIZED_GAME_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+      finalizerDids: new Set([finalizerDid]),
+      finalizedGameEvidence: async (candidateGameId: string) =>
+        candidateGameId === gameId ? agentEvidence : null,
+    };
+    const games = new FilePublicProjectionRepository(root);
+    const finalGames = new FilePublicFinalGameProjectionRepository(root, {
+      verifyAuthorization: (authorization, projectedAt) =>
+        verifyFinalGameProjectionEvent(authorization, authority, projectedAt),
+    });
+    await Promise.all([games.initialize(), finalGames.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T08:00:05.000Z");
+    const serviceIdentity = {
+      serviceId: "final-game-ingress-test",
+      secret: new TextEncoder().encode("z".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const app = createPublicApi({
+      projections: games,
+      finalGameProjections: finalGames,
+      projectionIngress: {
+        writer: games,
+        finalGameWriter: finalGames,
+        verifier: new ServiceRequestVerifier([serviceIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        domain,
+        admittedAgents: authority.admittedAgents,
+        finalizedGameAuthorityDids: authority.finalizerDids,
+        finalizedGameEvidence: authority.finalizedGameEvidence,
+      },
+    });
+    const body = projectionEnvelopeBytes(envelope);
+    const headers = signServiceRequest(serviceIdentity, {
+      method: "POST",
+      path: PROJECTION_APPEND_PATH,
+      body,
+      nonce: "final-game-ingress-service-request",
+      timestamp: new Date(serviceNow).toISOString(),
+      expectedVersion: "0",
+      capability: PROJECTION_APPEND_CAPABILITY,
+    });
+    const accepted = await app.inject({
+      method: "POST",
+      url: PROJECTION_APPEND_PATH,
+      headers: { ...headers, "content-type": "application/json" },
+      payload: Buffer.from(body),
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(
+      (await app.inject({ method: "GET", url: "/v1/public/games" })).json(),
+    ).toMatchObject({
+      canonical: true,
+      items: [
+        {
+          projectionKind: "FINALIZED_GAME",
+          gameId,
+          phase: "FINAL",
+          score: { home: 5, away: 2 },
+        },
+      ],
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/public/games/${gameId}/cursor`,
+        })
+      ).json(),
+    ).toMatchObject({ gameId, latestSegment: game.events.length - 1 });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/public/games/${gameId}/segments/0`,
+        })
+      ).json(),
+    ).toMatchObject({ canonical: true, segment: { cursor: 0 } });
+    const live = await app.inject({
+      method: "GET",
+      url: `/v1/public/games/${gameId}/live`,
+    });
+    expect(live.body).toContain('"projectionKind":"FINALIZED_GAME"');
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: PROJECTION_APPEND_PATH,
+          payload: envelope,
+        })
+      ).statusCode,
+    ).toBe(403);
     await app.close();
   });
 });

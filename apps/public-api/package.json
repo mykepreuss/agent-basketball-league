@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/basketball": "workspace:*",
     "@abl/foundation": "workspace:*",
     "@abl/institutions": "workspace:*",
     "@abl/projections": "workspace:*",

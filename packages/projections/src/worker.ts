@@ -8,6 +8,7 @@ import type {
   ReleaseRatificationReader,
   ResourceScheduleRatificationReader,
 } from "@abl/institutions";
+import type { FinalizedGameEvidenceReader } from "@abl/basketball";
 
 import {
   caseProjectionEnvelopeFromOutbox,
@@ -50,6 +51,11 @@ import {
   verifySocialProjectionEvent,
 } from "./social-envelope.js";
 import type { PublicSocialProjectionWriter } from "./social-repository.js";
+import {
+  finalGameProjectionEnvelopeFromOutbox,
+  verifyFinalGameProjectionEvent,
+} from "./final-game-envelope.js";
+import type { PublicFinalGameProjectionWriter } from "./final-game-repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
@@ -62,6 +68,7 @@ type WorkerDestination =
       modelWriter?: PublicModelProjectionWriter;
       releaseWriter?: PublicReleaseProjectionWriter;
       socialWriter?: PublicSocialProjectionWriter;
+      finalGameWriter?: PublicFinalGameProjectionWriter;
       sink?: never;
     }
   | {
@@ -74,6 +81,7 @@ type WorkerDestination =
       modelWriter?: never;
       releaseWriter?: never;
       socialWriter?: never;
+      finalGameWriter?: never;
     };
 
 const projectionTopics = [
@@ -85,6 +93,7 @@ const projectionTopics = [
   "public.models",
   "public.releases",
   "public.social",
+  "public.finalized-game",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 const governanceTopicIndex = projectionTopics.indexOf("public.governance");
@@ -111,6 +120,10 @@ export class PublicProjectionWorker {
   readonly #competitionReleaseEvidence:
     | CompetitionReleaseEvidenceReader["competitionReleaseEvidence"]
     | undefined;
+  readonly #finalizedGameAuthorityDids: ReadonlySet<string> | undefined;
+  readonly #finalizedGameEvidence:
+    | FinalizedGameEvidenceReader["finalizedGameEvidence"]
+    | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -128,6 +141,8 @@ export class PublicProjectionWorker {
       disclosureReleaseAuthorityDids?: ReadonlySet<string>;
       competitiveDisclosureAuthorDids?: ReadonlySet<string>;
       competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
+      finalizedGameAuthorityDids?: ReadonlySet<string>;
+      finalizedGameEvidence?: FinalizedGameEvidenceReader["finalizedGameEvidence"];
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -141,7 +156,8 @@ export class PublicProjectionWorker {
       input.resourceWriter === undefined &&
       input.modelWriter === undefined &&
       input.releaseWriter === undefined &&
-      input.socialWriter === undefined
+      input.socialWriter === undefined &&
+      input.finalGameWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -154,6 +170,7 @@ export class PublicProjectionWorker {
         modelWriter?: PublicModelProjectionWriter;
         releaseWriter?: PublicReleaseProjectionWriter;
         socialWriter?: PublicSocialProjectionWriter;
+        finalGameWriter?: PublicFinalGameProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -171,6 +188,8 @@ export class PublicProjectionWorker {
         destination.releaseWriter = input.releaseWriter;
       if (input.socialWriter !== undefined)
         destination.socialWriter = input.socialWriter;
+      if (input.finalGameWriter !== undefined)
+        destination.finalGameWriter = input.finalGameWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -194,6 +213,11 @@ export class PublicProjectionWorker {
         ? undefined
         : new Set(input.competitiveDisclosureAuthorDids);
     this.#competitionReleaseEvidence = input.competitionReleaseEvidence;
+    this.#finalizedGameAuthorityDids =
+      input.finalizedGameAuthorityDids === undefined
+        ? undefined
+        : new Set(input.finalizedGameAuthorityDids);
+    this.#finalizedGameEvidence = input.finalizedGameEvidence;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -387,6 +411,33 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishFinalizedGame(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = finalGameProjectionEnvelopeFromOutbox(event);
+    if (
+      this.#finalizedGameAuthorityDids === undefined ||
+      this.#finalizedGameEvidence === undefined
+    ) {
+      throw new Error("Finalized game projection authority is not configured");
+    }
+    const verified = await verifyFinalGameProjectionEvent(envelope, {
+      ...this.#authority,
+      finalizerDids: this.#finalizedGameAuthorityDids,
+      finalizedGameEvidence: this.#finalizedGameEvidence,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.finalGameWriter === undefined)
+        throw new Error("Finalized game projection writer is not configured");
+      await this.#destination.finalGameWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -408,6 +459,8 @@ export class PublicProjectionWorker {
         return this.#publishRelease(event);
       case "public.social":
         return this.#publishSocial(event);
+      case "public.finalized-game":
+        return this.#publishFinalizedGame(event);
     }
   }
 

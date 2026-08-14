@@ -13,6 +13,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | 2023 CBA classification              | 42 articles + 17 exhibits pass             | `docs/rules/cba-mapping.json`                       |
 | Deterministic possession/game replay | Local exact-replay pass                    | `PHASE-04.md`, `PHASE-06.md`, proof fixtures        |
 | Signed possession vertical path      | Local rehearsal pass; staging gate         | `PHASE-04.md`, acceptance suite, `@abl/projections` |
+| Signed finalized-game vertical       | Local rehearsal pass; staging gate         | `PHASE-06.md`, acceptance suite, `@abl/projections` |
 | Administrator-fork resistance        | Local adversarial pass                     | `PHASE-09.md`, rehearsal report fixture             |
 | Admission/human-boundary proof       | Local pass; live safety actuation gated    | `PHASE-05.md`, `@abl/career`, `@abl/safety`         |
 | Storage isolation/cryptography       | Local restart/recovery pass; Drive gate    | `PHASE-02.md`, broker and cross-domain tests        |

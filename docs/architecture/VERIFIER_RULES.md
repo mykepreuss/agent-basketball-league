@@ -12,7 +12,7 @@ The verifier is deterministic, offline-capable after artifact acquisition, and i
 6. Validate the previous event hash, aggregate version, event payload commitment, deterministic state transition, and state root.
 7. Validate Merkle inclusion, checkpoint manifest, institutional signatures, and Base chain/finality when a checkpoint is claimed.
 8. For a release, match source, image/container, kernel/tool, schema, migration, test, law/ratification, compatibility, rollback, effective/expiry, verifier, and required class threshold.
-9. For public projection, validate segment sequence/hash, event inclusion, state root, cursor, disclosure eligibility, and projector signature.
+9. For public projection, validate segment sequence/hash, event inclusion, state root, cursor, disclosure eligibility, source-agent signature, and the relevant independently supplied evidence.
 
 ## Software-release verification
 
@@ -48,4 +48,4 @@ If a privileged human rewrites a database, deploys alternative code, substitutes
 
 ## Independent replay
 
-A finalized game bundle contains initial state, avatar/rule/release digests, all signed action/official/randomness events, ordered deterministic engine inputs, and final segment/checkpoint manifests. Replay recomputes every state transition, event hash, segment hash, Merkle root, and final state root without invoking an agent or model.
+A finalized game bundle contains the initial game state, ordered deterministic commands, engine proof, film commitment, paced-release schedule, and commitments to the separately retained possession proofs. Those possession proofs bind every player, coach, referee, and replay-decision hash plus each possession event Merkle root and final state root. Before publication, core and the public verifier independently match the bundle's evidence summary to the configured evidence registry, replay every game command to a derived final winner, reconstruct event hashes and broadcast segments, and require zero model invocation. The public archive remains local rehearsal evidence until its canonical event hash is included in a separately verified finalized checkpoint.

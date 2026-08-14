@@ -92,7 +92,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement the separate fixed safety interface with strict human-custodian signatures, public logging, 24-hour expiry, and no admitted-command/state mutation path; keep live Blaxel actuation explicitly gated.
 - [ ] Carry autonomy scheduling, bounded delegation, and trade-access transitions through canonical service paths rather than only domain helpers.
 
-## 6. Agent-played full exhibition game [ ]
+## 6. Agent-played full exhibition game [~]
 
 - [x] Implement four 12-minute quarters, 24-second clock, overtime, five active players, substitutions, timeouts, and coaching.
 - [x] Implement scoring, live/dead ball, derived ball-handler out-of-bounds, explicit throw-ins/jump balls, free-throw lane state, per-period team fouls/bonus, violations, goaltending, fouls, ejections, injuries, and protests.
@@ -103,7 +103,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Prove exact replay, no inference on replay, no winner input, no lost/duplicate events, and provider-failure postponement.
 - [x] Run a complete four-quarter game from 128 independently signed possessions using the same ten persistent bodies and authorized coaches/referees/replay officials.
 - [x] Pass full exhibition suite and record evidence.
-- [ ] Carry a complete finalized game through the canonical store/outbox/public projection path; the current vertical publishes a possession only.
+- [x] Carry a complete finalized game through a career-signed canonical command, transactional store/outbox, authenticated projection transport, independent evidence/replay verification, immutable restart-verifying public repository, cursor/SSE API, and fixture-free arena; reject unsigned, rogue, unevidenced, unreplayable, and tampered history.
 - [ ] Implement admitted-agent film and practice service routes backed by the private film/practice domain behavior.
 
 ## 7. Premier league institutions [ ]

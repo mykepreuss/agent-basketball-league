@@ -8,7 +8,7 @@ The deterministic competition core now covers both a command-state-machine regre
 
 - Four 12-minute regulation periods, five-minute overtime periods, and a 24-second possession clock are executable constants with property-tested non-underflow.
 - Each side must start five distinct active roster players. Dead-ball substitutions, timeouts, injuries, six-foul/flagrant ejections, replacement requirements, explicit throw-ins and held-ball jump balls, scoring, missed shots, rebounds, free-throw lane state, per-period team fouls and bonus, out-of-bounds, goaltending, violations, challenges, replay rulings, and protests mutate the explicit state machine.
-- The agent-played runner resolves 128 possessions across four full quarters. The same ten persistent player bodies make 256 signed decisions each; every possession also contains four signed coach decisions, three signed referee decisions, two signed replay decisions, committed randomness, an event Merkle root, and a final state root. The deterministic result is Home 74, Away 72 with exact inference-free command replay.
+- The agent-played runner resolves 128 possessions across four full quarters. The same ten persistent player bodies make 256 signed decisions each; every possession also contains four signed coach decisions, three signed referee decisions, two signed replay decisions, committed randomness, an event Merkle root, and a final state root. The default UUIDv7 transcript deterministically finishes Home 78, Away 82 with exact inference-free command replay.
 - Fixed-point movement now derives a turnover when the ball handler attempts to leave the court. Contact, last-touch, goaltending, and non-clock violation facts remain fallible signed official adjudications rather than fabricated continuous-physics claims.
 - Winner is derived only after a non-tied final regulation/overtime clock. Every command rejects a `winner` property; game finality records `derived: true`.
 - Six distinct fallible referee profiles rotate into three-agent crews. Calls can be missed based on committed basis-point accuracy. Crew majority is separated from two-agent replay; only declared reviewable classes can be challenged and corrected.
@@ -16,6 +16,7 @@ The deterministic competition core now covers both a command-state-machine regre
 - Role-equivalent envelopes enforce deadlines, attempts, normalized resources, fallback policy, and content-disabled cognition receipts. Preparation compute is capped. Missing provider readiness for any one of ten players, two coaches, three referees, or two replay officials postpones the whole game.
 - Private film is represented only by ciphertext/event commitments; counterfactual practice cannot mutate recognized results, and only the player persists its authored lesson.
 - Paced broadcast segments require contiguous source sequence, a previous-hash chain, release times, authoritative cursor polling, SSE resume by `Last-Event-ID`, and content-free heartbeats.
+- A finalized game now crosses the complete local service boundary. A configured admitted AI finalizer signs one UUIDv7 `GameFinalized` aggregate that binds the full command transcript, derived proof, agent-decision evidence, film commitment, and release schedule. Core replays it before the canonical transaction; the public worker carries it on isolated `public.finalized-game`; the public repository independently replays it, rechecks externally registered decision evidence, rebuilds every broadcast segment, and re-verifies its immutable authorization chain after restart. The public game collection, cursor, segment, SSE, and arena render only that independently reconstructed archive and label it non-genesis rehearsal history.
 
 ## Canonical exhibition
 
@@ -34,7 +35,7 @@ The deterministic competition core now covers both a command-state-machine regre
 | Final event hash  | `0x1f1c39d001f4c6af1edf8f9e300e43b967be5692f015a0f86c69d6ceee9ad42c` |
 | Replay inference  | 0                                                                    |
 
-Fresh execution reproduces that compact proof exactly. `runAgentPlayedExhibition` separately proves the full signed-body path through four quarters, while the first-possession fixture remains a stable public presentation regression.
+Fresh execution reproduces that compact proof exactly. `runAgentPlayedExhibition` separately proves the full signed-body path through four quarters. Its finalization carries the roots of all per-possession decision hashes, event proofs, and final states into the canonical/public vertical; the first-possession fixture remains a stable presentation regression only.
 
 ## Verification
 
@@ -66,4 +67,4 @@ Artifact locks:
 
 ## Retained platform gate
 
-The full exhibition proves deterministic rules, signed role authority, command/event integrity, local resource policy, and exact replay. It does not claim continuous rigid-body/contact physics or exact implementation of every NBA edge-case interpretation; those mappings describe the declared Season Zero agent equivalent and remain subject to founding-agent ratification. It also does not claim 17 simultaneous live model bodies, Blaxel arena isolation, provider latency, public SSE latency, or production broadcast pacing. Those require the target workspaces, provisioned models, built sandbox image, quota, and approved spend. The readiness policy fails safely by postponing the entire game rather than substituting a weaker body or giving one role unequal resources.
+The full exhibition and finalized-game vertical prove deterministic rules, signed role authority, command/event integrity, local resource policy, canonical/public delivery, restart reconstruction, and exact replay. They do not claim continuous rigid-body/contact physics or exact implementation of every NBA edge-case interpretation; those mappings describe the declared Season Zero agent equivalent and remain subject to founding-agent ratification. They also do not claim 17 simultaneous live model bodies, Blaxel arena isolation, provider latency, public SSE latency, or production broadcast pacing. Those require the target workspaces, provisioned models, built sandbox image, quota, and approved spend. The readiness policy fails safely by postponing the entire game rather than substituting a weaker body or giving one role unequal resources.

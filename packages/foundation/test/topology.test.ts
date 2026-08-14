@@ -363,6 +363,8 @@ describe("four-workspace topology", () => {
       "ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON",
       "ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON",
       "ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON",
+      "ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON",
+      "ABL_FINALIZED_GAME_EVIDENCE_JSON",
     ]) {
       expect(envMap(coreApi!).get(name)).toBe(`\${${name}}`);
       expect(envMap(publicApi!).get(name)).toBe(`\${${name}}`);

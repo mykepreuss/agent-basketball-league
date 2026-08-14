@@ -3,6 +3,7 @@ import {
   FullGameEngine,
   type FullGameInput,
 } from "./full-game.js";
+import { createAgentPlayedGameEvidence } from "./game-finalization.js";
 import {
   createRehearsalPlayerBodies,
   runFirstPossessionRehearsal,
@@ -42,7 +43,7 @@ function shot(events: readonly ResolutionEvent[]): ResolutionEvent {
 }
 
 export async function runAgentPlayedExhibition(
-  gameId = "agent-played-exhibition-001",
+  gameId = "0198f100-0000-7000-8000-000000000001",
 ) {
   const input = gameInput(gameId);
   const engine = new FullGameEngine(input);
@@ -131,6 +132,13 @@ export async function runAgentPlayedExhibition(
     proof,
     replay,
     possessionProofs,
+    agentEvidence: createAgentPlayedGameEvidence({
+      gameId,
+      gameInput: input,
+      commands: engine.commands(),
+      proof,
+      possessionProofs,
+    }),
     persistentPlayerDecisionVersions: Object.fromEntries(
       [...bodies].map(([playerId, body]) => [
         playerId,

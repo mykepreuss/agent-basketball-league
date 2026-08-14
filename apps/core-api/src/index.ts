@@ -1,5 +1,10 @@
 import { PostgresCanonicalStore } from "@abl/database";
 import {
+  FinalizedGameAuthorityDidsSchema,
+  assertFinalizedGameAuthorityConfiguration,
+  createFinalizedGameEvidenceReader,
+} from "@abl/basketball";
+import {
   CompetitiveDisclosureAuthorDidsSchema,
   DisclosureReleaseAuthorityDidsSchema,
   ReleaseVerifierResultRegistrySchema,
@@ -58,10 +63,11 @@ const AdmittedAgentsSchema = z.record(
           "software-release",
           "artifact-admission",
           "disclosure-envelope",
+          "finalized-game",
         ]),
       )
       .min(1)
-      .max(8)
+      .max(9)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -181,10 +187,22 @@ const app = rehearsal
       const competitionEvidence = createCompetitionReleaseEvidenceReader(
         JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
       );
+      const finalizedGameAuthorityDids = new Set(
+        FinalizedGameAuthorityDidsSchema.parse(
+          JSON.parse(required("ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON")),
+        ),
+      );
+      const finalizedGameEvidence = createFinalizedGameEvidenceReader(
+        JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
+      );
       assertDisclosureAuthorityConfiguration(authority.admittedAgents, {
         releaseAuthorityDids: disclosureReleaseAuthorityDids,
         competitiveAuthorDids: competitiveDisclosureAuthorDids,
       });
+      assertFinalizedGameAuthorityConfiguration(
+        authority.admittedAgents,
+        finalizedGameAuthorityDids,
+      );
       if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
         throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
@@ -240,6 +258,8 @@ const app = rehearsal
         competitiveDisclosureAuthorDids,
         competitionReleaseEvidence:
           competitionEvidence.competitionReleaseEvidence,
+        finalizedGameAuthorityDids,
+        finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -305,6 +325,10 @@ const app = rehearsal
           releaseAuthorityDids: disclosureReleaseAuthorityDids,
           competitiveAuthorDids: competitiveDisclosureAuthorDids,
           competitionEvidence,
+        },
+        finalizedGames: {
+          finalizerDids: finalizedGameAuthorityDids,
+          evidence: finalizedGameEvidence,
         },
         resources: {
           governance: {

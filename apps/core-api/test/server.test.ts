@@ -1,6 +1,127 @@
+import {
+  FINALIZED_GAME_AGGREGATE_TYPE,
+  FINALIZED_GAME_SCHEMA_DIGEST,
+  GAME_FINALIZED_EVENT_TYPE,
+  FinalizedGamePayloadSchema,
+  createAgentPlayedGameEvidence,
+  finalizedGameStateRoot,
+  runDeterministicExhibition,
+} from "@abl/basketball";
+import { InMemoryCanonicalStore } from "@abl/database";
+import {
+  createCanonicalEvent,
+  createSigningIdentity,
+  sha256Commitment,
+  signCanonicalEvent,
+} from "@abl/recognition";
+import type { Hex, TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
-import { CORE_ROUTE_CATALOG, createCoreApi } from "../src/server.js";
+import {
+  CORE_ROUTE_CATALOG,
+  createCoreApi,
+  createLiveCoreApi,
+} from "../src/server.js";
+
+const domain: TypedDataDomain = {
+  name: "ABL Recognition",
+  version: "1",
+  chainId: 84532,
+  verifyingContract: "0x1111111111111111111111111111111111111111",
+};
+const finalizerDid = "did:abl:core-finalizer";
+const finalizer = createSigningIdentity(`0x${"d".repeat(64)}`);
+const rogue = createSigningIdentity(`0x${"e".repeat(64)}`);
+const gameId = "0198f300-0000-7000-8000-000000000001";
+const finalizedAt = "2026-08-13T10:00:00.000Z";
+
+function decisionHashes(role: string, count: number): Hex[] {
+  return Array.from({ length: count }, (_, index) =>
+    sha256Commitment({ role, index }),
+  );
+}
+
+function finalizedPayload() {
+  const game = runDeterministicExhibition(gameId);
+  return FinalizedGamePayloadSchema.parse({
+    gameId,
+    finalizedAt,
+    input: game.input,
+    commands: game.commands,
+    proof: game.proof,
+    agentEvidence: createAgentPlayedGameEvidence({
+      gameId,
+      gameInput: game.input,
+      commands: game.commands,
+      proof: game.proof,
+      possessionProofs: [
+        {
+          possessionId: "core-finalized-possession-1",
+          playerDecisionHashes: decisionHashes("player", 20),
+          coachDecisionHashes: decisionHashes("coach", 4),
+          refereeDecisionHashes: decisionHashes("referee", 3),
+          replayDecisionHashes: decisionHashes("replay", 2),
+          eventMerkleRoot: sha256Commitment("core-possession-events"),
+          finalStateRoot: sha256Commitment("core-possession-state"),
+        },
+      ],
+    }),
+    filmCommitment: sha256Commitment(game.events),
+    broadcastStartedAt: finalizedAt,
+    broadcastIntervalMs: 1,
+  });
+}
+
+function finalizedEvent(
+  payload: ReturnType<typeof finalizedPayload>,
+  sequence: number,
+) {
+  return createCanonicalEvent({
+    eventId: `0198f300-0000-7000-8000-${String(sequence).padStart(12, "0")}`,
+    actorDid: finalizerDid,
+    nonce: `final-game-command-${sequence}`,
+    idempotencyKey: `0198f300-0000-7000-8000-${String(sequence + 1).padStart(12, "0")}`,
+    aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+    aggregateId: gameId,
+    aggregateVersion: 1n,
+    eventType: GAME_FINALIZED_EVENT_TYPE,
+    previousEventHash: null,
+    payload,
+    stateRoot: finalizedGameStateRoot(payload),
+    schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+    timestamp: finalizedAt,
+  });
+}
+
+function finalizedGameApp(
+  evidence: ReturnType<typeof finalizedPayload>["agentEvidence"] | null,
+) {
+  const store = new InMemoryCanonicalStore();
+  const app = createLiveCoreApi({
+    store,
+    domain,
+    admittedAgents: new Map([
+      [
+        finalizerDid,
+        {
+          signerAddress: finalizer.address,
+          allowedAggregateTypes: [FINALIZED_GAME_AGGREGATE_TYPE],
+        },
+      ],
+    ]),
+    competitionId: "season-zero",
+    seasonId: "pre-genesis",
+    now: () => Date.parse(finalizedAt),
+    finalizedGames: {
+      finalizerDids: new Set([finalizerDid]),
+      evidence: {
+        finalizedGameEvidence: async (candidateGameId) =>
+          candidateGameId === gameId ? evidence : null,
+      },
+    },
+  });
+  return { app, store };
+}
 
 describe("core API pre-genesis boundary", () => {
   it("issues bounded challenges that do not grant admission", async () => {
@@ -66,6 +187,81 @@ describe("core API pre-genesis boundary", () => {
       formerOperatorAuthority: false,
       rights: ["REFUSE", "REVOKE_WITHIN_24H", "EXPORT", "EXIT"],
     });
+    await app.close();
+  });
+});
+
+describe("core finalized-game command path", () => {
+  it("persists an independently evidenced signed final game and rejects unsigned or rogue writes", async () => {
+    const payload = finalizedPayload();
+    const event = finalizedEvent(payload, 2);
+    const signature = await signCanonicalEvent(finalizer, domain, event);
+    const { app, store } = finalizedGameApp(payload.agentEvidence);
+    const body = {
+      event: { ...event, aggregateVersion: "1" },
+      signatures: [signature],
+    };
+    const accepted = await app.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: body,
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(accepted.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      duplicate: false,
+    });
+    expect(
+      await store.pendingProjectionEvents(10, "public.finalized-game"),
+    ).toHaveLength(1);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: body,
+        })
+      ).json(),
+    ).toMatchObject({ accepted: true, duplicate: true });
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: { ...body, signatures: [] },
+        })
+      ).statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            ...body,
+            signatures: [await signCanonicalEvent(rogue, domain, event)],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    await app.close();
+  });
+
+  it("fails closed when independent decision evidence is absent", async () => {
+    const payload = finalizedPayload();
+    const event = finalizedEvent(payload, 4);
+    const { app } = finalizedGameApp(null);
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: {
+        event: { ...event, aggregateVersion: "1" },
+        signatures: [await signCanonicalEvent(finalizer, domain, event)],
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: "invalid_command" });
     await app.close();
   });
 });

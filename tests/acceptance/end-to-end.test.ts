@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { loadPossessionProof } from "../../apps/arena/app/data.js";
+import {
+  loadGameProof,
+  loadPossessionProof,
+} from "../../apps/arena/app/data.js";
 import {
   CORE_ROUTE_CATALOG,
   createCoreApi,
@@ -18,7 +21,13 @@ import {
 import { SAFETY_ROUTE_CATALOG } from "../../apps/safety-gateway/src/server.js";
 import { runLocalCapacityProof } from "../../packages/assurance/src/index.js";
 import {
+  FINALIZED_GAME_AGGREGATE_TYPE,
+  FINALIZED_GAME_SCHEMA_DIGEST,
+  GAME_FINALIZED_EVENT_TYPE,
+  FinalizedGamePayloadSchema,
   REHEARSAL_RECOGNITION_DOMAIN,
+  finalizedGameStateRoot,
+  runAgentPlayedExhibition,
   runFirstPossessionRehearsal,
 } from "../../packages/basketball/src/index.js";
 import { CANDIDATE_WORKFLOW_SCHEMA_DIGEST } from "../../packages/career/src/index.js";
@@ -73,6 +82,7 @@ import {
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicFinalGameProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
   FilePublicProjectionRepository,
@@ -86,6 +96,7 @@ import {
   projectionEnvelopeBytes,
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
+  verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
   verifyProjectionEvent,
@@ -657,6 +668,246 @@ describe("complete local acceptance", () => {
     await expect(compromised.initialize()).rejects.toThrow(
       "authorization is invalid",
     );
+  });
+
+  it("carries a complete agent-played game into independently replayed public history", async () => {
+    const gameId = "0198f500-0000-7000-8000-000000000001";
+    const finalizedAt = "2026-08-13T10:15:00.000Z";
+    const exhibition = await runAgentPlayedExhibition(gameId);
+    const payload = FinalizedGamePayloadSchema.parse({
+      gameId,
+      finalizedAt,
+      input: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      agentEvidence: exhibition.agentEvidence,
+      filmCommitment: sha256Commitment(exhibition.events),
+      broadcastStartedAt: finalizedAt,
+      broadcastIntervalMs: 1,
+    });
+    const finalizerDid = "did:abl:acceptance-game-finalizer";
+    const finalizer = createSigningIdentity(`0x${"6".repeat(64)}`);
+    const event = createCanonicalEvent({
+      eventId: "0198f500-0000-7000-8000-000000000002",
+      actorDid: finalizerDid,
+      nonce: "final-agent-game-1",
+      idempotencyKey: "0198f500-0000-7000-8000-000000000003",
+      aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+      aggregateId: gameId,
+      aggregateVersion: 1n,
+      eventType: GAME_FINALIZED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: finalizedGameStateRoot(payload),
+      schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+      timestamp: finalizedAt,
+    });
+    const signature = await signCanonicalEvent(
+      finalizer,
+      REHEARSAL_RECOGNITION_DOMAIN,
+      event,
+    );
+    const authority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map([
+        [
+          finalizerDid,
+          {
+            signerAddress: finalizer.address,
+            allowedAggregateTypes: [FINALIZED_GAME_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+      finalizerDids: new Set([finalizerDid]),
+      finalizedGameEvidence: async (candidateGameId: string) =>
+        candidateGameId === gameId
+          ? structuredClone(exhibition.agentEvidence)
+          : null,
+    };
+    expect(
+      (
+        await new PublicVerifier().verifyAndApply({
+          event,
+          signatures: [signature],
+          domain: REHEARSAL_RECOGNITION_DOMAIN,
+          registry: new InstitutionalKeyRegistry([
+            {
+              address: finalizer.address,
+              did: finalizerDid,
+              role: "GAME_FINALIZER",
+              validFrom: "2026-08-01T00:00:00.000Z",
+              validUntil: null,
+              revokedAt: null,
+              purpose: "SIGNING",
+            },
+          ]),
+          threshold: {
+            policyId: "LOCAL_REHEARSAL_FINALIZED_GAME",
+            groups: [{ role: "GAME_FINALIZER", required: 1 }],
+          },
+          now: finalizedAt,
+        })
+      ).label,
+    ).toBe("CANONICAL");
+
+    const store = new InMemoryCanonicalStore();
+    const coreApi = createLiveCoreApi({
+      store,
+      domain: authority.domain,
+      admittedAgents: authority.admittedAgents,
+      competitionId: "season-zero-rehearsal",
+      seasonId: "season-zero",
+      now: () => Date.parse(finalizedAt),
+      finalizedGames: {
+        finalizerDids: authority.finalizerDids,
+        evidence: {
+          finalizedGameEvidence: authority.finalizedGameEvidence,
+        },
+      },
+    });
+    const command = {
+      event: { ...event, aggregateVersion: "1" },
+      signatures: [signature],
+    };
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: command,
+        })
+      ).statusCode,
+    ).toBe(201);
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: { ...command, signatures: [] },
+        })
+      ).statusCode,
+    ).toBe(400);
+    const rogue = createSigningIdentity(`0x${"5".repeat(64)}`);
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            ...command,
+            signatures: [
+              await signCanonicalEvent(
+                rogue,
+                REHEARSAL_RECOGNITION_DOMAIN,
+                event,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-final-game-acceptance-"),
+    );
+    const possessionGames = new FilePublicProjectionRepository(projectionRoot);
+    const finalGames = new FilePublicFinalGameProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization, projectedAt) =>
+          verifyFinalGameProjectionEvent(authorization, authority, projectedAt),
+      },
+    );
+    await Promise.all([possessionGames.initialize(), finalGames.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T10:15:01.000Z");
+    const projectionIdentity = {
+      serviceId: "final-game-projection-publisher",
+      secret: new TextEncoder().encode("f".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const publicApi = createPublicApi({
+      projections: possessionGames,
+      finalGameProjections: finalGames,
+      projectionIngress: {
+        writer: possessionGames,
+        finalGameWriter: finalGames,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        domain: authority.domain,
+        admittedAgents: authority.admittedAgents,
+        finalizedGameAuthorityDids: authority.finalizerDids,
+        finalizedGameEvidence: authority.finalizedGameEvidence,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "final-game-worker-request",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        domain: authority.domain,
+        admittedAgents: authority.admittedAgents,
+        finalizedGameAuthorityDids: authority.finalizerDids,
+        finalizedGameEvidence: authority.finalizedGameEvidence,
+      });
+      expect(await worker.drain()).toBe(1);
+      expect(await worker.drain()).toBe(0);
+      const arenaGame = await loadGameProof(publicAddress);
+      expect(arenaGame).toMatchObject({
+        projectionKind: "FINALIZED_GAME",
+        gameId,
+        canonical: true,
+        phase: "FINAL",
+        score: exhibition.finalState.score,
+        winner: exhibition.finalState.winner,
+        possessionCount: exhibition.possessionProofs.length,
+        replayInferenceInvocations: 0,
+      });
+      expect(
+        (
+          await publicApi.inject({
+            method: "GET",
+            url: `/v1/public/games/${gameId}/cursor`,
+          })
+        ).json(),
+      ).toMatchObject({
+        authoritative: true,
+        latestSegment: exhibition.events.length - 1,
+      });
+      const stream = await publicApi.inject({
+        method: "GET",
+        url: `/v1/public/games/${gameId}/live`,
+      });
+      expect(stream.body).toContain('"projectionKind":"FINALIZED_GAME"');
+      expect(stream.body).toContain(event.eventHash);
+    } finally {
+      await Promise.all([publicApi.close(), coreApi.close()]);
+    }
+
+    const restarted = new FilePublicFinalGameProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization, projectedAt) =>
+          verifyFinalGameProjectionEvent(authorization, authority, projectedAt),
+      },
+    );
+    await restarted.initialize();
+    expect(restarted.game(gameId)).toMatchObject({
+      canonicalEventHash: event.eventHash,
+      agentEvidence: exhibition.agentEvidence,
+      replayInferenceInvocations: 0,
+    });
   });
 
   it("publishes agent-signed model dependencies through authenticated durable concentration", async () => {

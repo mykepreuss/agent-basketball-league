@@ -71,7 +71,7 @@ Controls: atomic outbox; exact replay; PITR drills; encrypted snapshots; clean-r
 
 ### Public service compromise
 
-Controls: projection-only signed immutable inputs; no canonical DB/private storage/command credentials; public APIs cannot import internal clients; separate workspace identity; read-only cache; verifier assumes public host may lie and rechecks signatures/roots.
+Controls: projection-only signed immutable inputs; no canonical DB/private storage/command credentials; public APIs cannot import internal clients; separate workspace identity; read-only cache; verifier assumes public host may lie and rechecks signatures/roots. Finalized games are replayed from strict ordered commands against independently supplied role-decision evidence before an immutable public record, cursor, segment, SSE response, or arena view exists.
 
 ## Genesis blockers
 

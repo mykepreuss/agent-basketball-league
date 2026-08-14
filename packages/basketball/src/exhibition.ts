@@ -1,8 +1,10 @@
 import { FullGameEngine, type FullGameInput } from "./full-game.js";
 
-export function deterministicExhibitionInput(): FullGameInput {
+export function deterministicExhibitionInput(
+  gameId = "season-zero-exhibition-001",
+): FullGameInput {
   return {
-    gameId: "season-zero-exhibition-001",
+    gameId,
     roster: {
       home: ["H1", "H2", "H3", "H4", "H5", "H6", "H7"],
       away: ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
@@ -21,8 +23,8 @@ function finishPeriod(engine: FullGameEngine): void {
   engine.apply({ type: "END_PERIOD" });
 }
 
-export function runDeterministicExhibition() {
-  const input = deterministicExhibitionInput();
+export function runDeterministicExhibition(gameId?: string) {
+  const input = deterministicExhibitionInput(gameId);
   const engine = new FullGameEngine(input);
   engine.apply({
     type: "SHOT",

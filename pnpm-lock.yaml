@@ -150,6 +150,9 @@ importers:
 
   apps/core-api:
     dependencies:
+      "@abl/basketball":
+        specifier: workspace:*
+        version: link:../../packages/basketball
       "@abl/career":
         specifier: workspace:*
         version: link:../../packages/career
@@ -221,6 +224,9 @@ importers:
 
   apps/public-api:
     dependencies:
+      "@abl/basketball":
+        specifier: workspace:*
+        version: link:../../packages/basketball
       "@abl/foundation":
         specifier: workspace:*
         version: link:../../packages/foundation
@@ -317,6 +323,9 @@ importers:
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
       "@noble/hashes":
         specifier: "catalog:"
         version: 2.3.0
@@ -483,6 +492,9 @@ importers:
 
   packages/projections:
     dependencies:
+      "@abl/basketball":
+        specifier: workspace:*
+        version: link:../basketball
       "@abl/career":
         specifier: workspace:*
         version: link:../career

@@ -659,6 +659,8 @@ export function replayFullGame(
   return {
     exact: sha256Commitment(proof) === sha256Commitment(expected),
     proof,
+    state: replay.snapshot(),
+    events: replay.events(),
     inferenceInvocations: 0 as const,
   };
 }
