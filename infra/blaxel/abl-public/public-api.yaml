@@ -40,6 +40,27 @@ spec:
       - name: ABL_DRAFT_EVIDENCE_JSON
         value: ${ABL_DRAFT_EVIDENCE_JSON}
         secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_ECONOMY_DRAFT_ID}
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: ${ABL_COMPETITION_ID}
+        secret: false
+      - name: ABL_SEASON_ID
+        value: ${ABL_SEASON_ID}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_TRADE_ACCESS_EVIDENCE_JSON}
+        secret: false
       - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST
         value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST}
         secret: false

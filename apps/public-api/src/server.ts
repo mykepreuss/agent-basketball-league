@@ -11,6 +11,7 @@ import {
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -26,6 +27,8 @@ import {
   type PublicContractProjectionWriter,
   type PublicDraftProjectionReader,
   type PublicDraftProjectionWriter,
+  type PublicEconomyProjectionReader,
+  type PublicEconomyProjectionWriter,
   type PublicFinalGameProjectionReader,
   type PublicFinalGameProjectionWriter,
   type PublicFinalizedGameProjection,
@@ -44,12 +47,14 @@ import {
   type PublicSocialProjectionWriter,
 } from "@abl/projections";
 import type { FinalizedGameEvidenceReader } from "@abl/basketball";
-import type {
-  CompetitionReleaseEvidenceReader,
-  PremierDraftEvidenceReader,
-  ReleaseInstitutionalRoster,
-  ReleaseRatificationReader,
-  ResourceScheduleRatificationReader,
+import {
+  ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+  type CompetitionReleaseEvidenceReader,
+  type PremierDraftEvidenceReader,
+  type ReleaseInstitutionalRoster,
+  type ReleaseRatificationReader,
+  type ResourceScheduleRatificationReader,
+  type TradeAccessEvidenceReader,
 } from "@abl/institutions";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 
@@ -172,6 +177,7 @@ export interface PublicApiOptions {
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   draftProjections?: PublicDraftProjectionReader;
+  economyProjections?: PublicEconomyProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
@@ -184,6 +190,7 @@ export interface PublicApiOptions {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
     draftWriter?: PublicDraftProjectionWriter;
+    economyWriter?: PublicEconomyProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
@@ -195,6 +202,13 @@ export interface PublicApiOptions {
     draftAuthorityDid?: string;
     draftClubGovernors?: Readonly<Record<string, string>>;
     premierDraftEvidence?: PremierDraftEvidenceReader["premierDraftEvidence"];
+    economyId?: string;
+    competitionId?: string;
+    seasonId?: string;
+    capAuthorityDid?: string;
+    economyPlayerDids?: readonly string[];
+    freeAgencyWindow?: { opensAt: string; closesAt: string };
+    tradeAccessEvidence?: TradeAccessEvidenceReader;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
@@ -237,6 +251,20 @@ function projectionTopic(body: unknown): unknown {
   return body.topic;
 }
 
+function projectionAggregateType(body: unknown): unknown {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("event" in body) ||
+    typeof body.event !== "object" ||
+    body.event === null ||
+    !("aggregateType" in body.event)
+  ) {
+    return undefined;
+  }
+  return body.event.aggregateType;
+}
+
 function projectionError(error: unknown): { status: number; code: string } {
   const name = error instanceof Error ? error.name : "";
   if (name === "ServiceReplayError")
@@ -249,7 +277,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "CaseWorkflowAuthorizationError" ||
     name === "ResourceScheduleAuthorizationError" ||
     name === "ReleaseWorkflowAuthorizationError" ||
-    name === "DisclosureWorkflowAuthorizationError"
+    name === "DisclosureWorkflowAuthorizationError" ||
+    name === "EconomyWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
@@ -260,7 +289,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "CaseWorkflowValidationError" ||
     name === "ResourceScheduleValidationError" ||
     name === "ReleaseWorkflowValidationError" ||
-    name === "DisclosureWorkflowValidationError"
+    name === "DisclosureWorkflowValidationError" ||
+    name === "EconomyWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -276,6 +306,7 @@ export function createPublicApi(
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
     options.draftProjections !== undefined ||
+    options.economyProjections !== undefined ||
     options.governanceProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
@@ -305,6 +336,7 @@ export function createPublicApi(
         options.releaseProjections?.refresh(),
         options.checkpointProjections?.refresh(),
       ]);
+      await options.economyProjections?.refresh();
     }
   });
   app.get("/", async () => ({
@@ -533,6 +565,59 @@ export function createPublicApi(
           });
         }
         if (topic === "public.contracts") {
+          if (
+            projectionAggregateType(request.body) ===
+            ECONOMY_WORKFLOW_AGGREGATE_TYPE
+          ) {
+            if (
+              projectionIngress.contractClubGovernors === undefined ||
+              projectionIngress.economyId === undefined ||
+              projectionIngress.competitionId === undefined ||
+              projectionIngress.seasonId === undefined ||
+              projectionIngress.capAuthorityDid === undefined ||
+              projectionIngress.economyPlayerDids === undefined ||
+              projectionIngress.freeAgencyWindow === undefined ||
+              projectionIngress.tradeAccessEvidence === undefined ||
+              options.contractProjections === undefined ||
+              options.caseProjections === undefined
+            ) {
+              throw new ServiceAuthenticationError(
+                "Economy projection authority is not configured",
+              );
+            }
+            const verified = await verifyEconomyProjectionEvent(request.body, {
+              ...projectionIngress,
+              economyId: projectionIngress.economyId,
+              competitionId: projectionIngress.competitionId,
+              seasonId: projectionIngress.seasonId,
+              contractClubGovernors: projectionIngress.contractClubGovernors,
+              capAuthorityDid: projectionIngress.capAuthorityDid,
+              playerDids: projectionIngress.economyPlayerDids,
+              freeAgencyWindow: projectionIngress.freeAgencyWindow,
+              tradeAccessEvidence: projectionIngress.tradeAccessEvidence,
+              contractReader: options.contractProjections,
+              caseReader: options.caseProjections,
+            });
+            if (
+              headers["x-abl-expected-version"] !== verified.expectedVersion
+            ) {
+              throw new ProjectionVersionConflictError(
+                "Signed expected version does not precede the economy event",
+              );
+            }
+            if (projectionIngress.economyWriter === undefined)
+              throw new Error("Economy projection writer is not configured");
+            const record = await projectionIngress.economyWriter.publish(
+              verified.envelope,
+              verified.expectedVersion,
+              projectionIngress.now?.().toISOString(),
+            );
+            return reply.code(201).send({
+              accepted: true,
+              canonicalEventHash: verified.event.eventHash,
+              cursor: record.cursor,
+            });
+          }
           if (projectionIngress.contractClubGovernors === undefined)
             throw new ServiceAuthenticationError(
               "Contract projection authority is not configured",
@@ -797,12 +882,18 @@ export function createPublicApi(
           games.set(game.gameId, game);
         items = [...games.values()];
       } else if (path === "/v1/public/contracts") {
-        items = options.contractProjections?.contracts() ?? [];
+        items = [
+          ...(options.contractProjections?.contracts() ?? []),
+          ...(options.economyProjections?.economies() ?? []),
+        ];
       } else if (path === "/v1/public/drafts") {
         items = options.draftProjections?.drafts() ?? [];
       } else if (path === "/v1/public/rosters") {
+        const economyRosters = options.economyProjections?.rosters() ?? [];
         items = [
-          ...(options.contractProjections?.rosters() ?? []),
+          ...(economyRosters.length > 0
+            ? economyRosters
+            : (options.contractProjections?.rosters() ?? [])),
           ...(options.draftProjections?.rosters() ?? []),
         ];
       } else if (path === "/v1/public/resources") {

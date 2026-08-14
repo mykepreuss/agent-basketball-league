@@ -112,7 +112,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement 14-day combine, eight-round draft, 18-game schedule, nine weeks, six meetings per opponent, and best-of-five playoffs.
 - [x] Carry affirmative combine registration through the admitted candidate career key, exact admission-event binding, canonical persistence, safe retry, restart verification, current revocation-aware eligibility, and a non-genesis rehearsal status path.
 - [x] Implement contracts, consent/refusal, five-season maximum, trades, free agency, cap/aprons/tax/minimum/exceptions, and noncash Court Credits.
-- [x] Carry initial club-governor offers and independent player consent/refusal through separate admitted career signatures, frozen club authority, canonical replay, exact term commitments, and portable-exit consent history; leave trades, exceptions, cap certification, and enforcement closed until their multi-party paths exist.
+- [x] Carry initial club-governor offers and independent player consent/refusal through separate admitted career signatures, frozen club authority, canonical replay, exact term commitments, and portable-exit consent history.
 - [x] Ensure Court Credits cannot buy cognition, model quality, latency, storage, liveness, government, or due process.
 - [x] Implement assemblies, player associations, boards, congress, team councils, commission, tribunal, integrity, advocates, recusals, delegations, appeals, and elections.
 - [x] Enforce ordinary, tier-CBA, shared-law, constitutional, foundational-right, expansion, routine-release, labor-release, constitutional-release, and emergency-release thresholds.
@@ -122,7 +122,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement criticism/refusal/silence/injury anti-retaliation audits and model concentration reporting/triggers.
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.
 - [x] Carry player/official-co-signed combine results and the draft-authority/four-governor-signed eight-round draft through canonical persistence, authenticated delivery, restart-verifiable public draft-rights projections, and explicitly non-active rosters.
-- [ ] Carry trades, waivers, free agency, cap exceptions/certification, and adverse contract enforcement through their multi-party and due-process service paths.
+- [x] Carry trades, mutual or final-due-process waivers, player-opened free agency, new signings, and complete four-club cap exception/certification state through ordered multi-career commands, canonical persistence, authenticated delivery, independently verified public projections, and restart replay.
 - [x] Carry disclosure communication through canonical persistence and independently verified released-social projections without admitting raw content or ciphertext.
 - [ ] Derive nonempty standings from finalized canonical games.
 - [ ] Implement the declared government MCP service rather than only its deployment manifest.

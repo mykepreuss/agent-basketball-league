@@ -8,10 +8,12 @@ import {
 import {
   CompetitiveDisclosureAuthorDidsSchema,
   DisclosureReleaseAuthorityDidsSchema,
+  PremierDraftEvidenceRegistrySchema,
   ReleaseVerifierResultRegistrySchema,
   assertDisclosureAuthorityConfiguration,
   createCompetitionReleaseEvidenceReader,
   createPremierDraftEvidenceReader,
+  createTradeAccessEvidenceReader,
 } from "@abl/institutions";
 import {
   HttpProjectionEventSink,
@@ -70,10 +72,11 @@ const AdmittedAgentsSchema = z.record(
           "private-practice-ledger",
           "combine-result",
           "premier-draft",
+          "season-economy",
         ]),
       )
       .min(1)
-      .max(13)
+      .max(14)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -168,8 +171,26 @@ const app = rehearsal
         .string()
         .startsWith("did:")
         .parse(required("ABL_DRAFT_AUTHORITY_DID"));
-      const draftEvidence = createPremierDraftEvidenceReader(
+      const draftEvidenceRegistry = PremierDraftEvidenceRegistrySchema.parse(
         JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
+      );
+      const draftEvidence = createPremierDraftEvidenceReader(
+        draftEvidenceRegistry,
+      );
+      const economyDraftId = required("ABL_ECONOMY_DRAFT_ID");
+      const economyDraftEvidence = draftEvidenceRegistry.find(
+        ({ draftId }) => draftId === economyDraftId,
+      );
+      if (economyDraftEvidence === undefined)
+        throw new Error(
+          "ABL_ECONOMY_DRAFT_ID is absent from the draft evidence registry",
+        );
+      const capAuthorityDid = z
+        .string()
+        .startsWith("did:")
+        .parse(required("ABL_CAP_AUTHORITY_DID"));
+      const tradeAccessEvidence = createTradeAccessEvidenceReader(
+        JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
       );
       const governanceEligibilitySnapshot =
         GovernanceEligibilitySnapshotSchema.parse(
@@ -240,6 +261,7 @@ const app = rehearsal
       };
       const competitionId = required("ABL_COMPETITION_ID");
       const seasonId = required("ABL_SEASON_ID");
+      const economyId = `${competitionId}:${seasonId}`;
       const projectionSink = new HttpProjectionEventSink({
         origin: required("ABL_PUBLIC_PROJECTION_URL"),
         identity: {
@@ -321,6 +343,16 @@ const app = rehearsal
         },
         contracts: {
           clubGovernors: contractClubGovernors,
+        },
+        economy: {
+          economyId,
+          capAuthorityDid,
+          playerDids: economyDraftEvidence.eligiblePlayerDids,
+          freeAgencyWindow: {
+            opensAt: required("ABL_FREE_AGENCY_OPENS_AT"),
+            closesAt: required("ABL_FREE_AGENCY_CLOSES_AT"),
+          },
+          tradeAccessEvidence,
         },
         memory: {
           storageVerifier: privateStorageVerifier,

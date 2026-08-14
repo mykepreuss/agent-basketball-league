@@ -61,6 +61,8 @@ import {
   COMBINE_RESULT_AGGREGATE_TYPE,
   COMBINE_RESULT_CERTIFIED_EVENT_TYPE,
   COMBINE_RESULT_SCHEMA_DIGEST,
+  ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+  ECONOMY_WORKFLOW_SCHEMA_DIGEST,
   FOUNDING_CLUBS,
   PREMIER_DRAFT_AGGREGATE_TYPE,
   PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
@@ -73,13 +75,18 @@ import {
   applyArtifactAdmissionTransition,
   applyCaseWorkflowTransition,
   applyDisclosureWorkflowTransition,
+  applyEconomyWorkflowTransition,
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
   caseWorkflowStateRoot,
   combineResultStateRoot,
   conductEightRoundDraft,
+  createEconomyCapCertification,
   disclosureWorkflowStateRoot,
+  economyTransactionTermsCommitment,
+  economyWorkflowStateRoot,
   evaluateProposal,
+  freeAgencyWindowCommitment,
   artifactAdmissionExecutableDigest,
   artifactAdmissionStateRoot,
   resourceScheduleExecutableDigest,
@@ -88,6 +95,7 @@ import {
   releaseVerifierResultDigest,
   releaseWorkflowStateRoot,
   premierDraftStateRoot,
+  tradeAccessEvidenceCommitment,
   type ArtifactAdmission,
   type ArtifactAdmissionSnapshot,
   type ArtifactWorkflowEventType,
@@ -101,6 +109,9 @@ import {
   type DisclosureWorkflowEventType,
   type DisclosureWorkflowPayload,
   type DisclosureWorkflowSnapshot,
+  type EconomyWorkflowEventType,
+  type EconomyWorkflowPayload,
+  type EconomyWorkflowSnapshot,
   type GovernanceProposal,
   type GovernanceVote,
   type PremierDraftEvidence,
@@ -112,6 +123,7 @@ import {
   type ReleaseWorkflowEventType,
   type ReleaseWorkflowPayload,
   type ReleaseWorkflowSnapshot,
+  type TradeAccessEvidence,
 } from "@abl/institutions";
 import {
   createCanonicalEvent,
@@ -1164,6 +1176,58 @@ async function contractCommand(input: {
           event,
         ),
       ],
+    },
+  };
+}
+
+async function economyCommand(input: {
+  actor: Harness;
+  economyId: string;
+  snapshot: EconomyWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: EconomyWorkflowEventType;
+  payload: EconomyWorkflowPayload;
+  signers: readonly SigningIdentity[];
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `economy-${input.economyId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+    aggregateId: input.economyId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: ECONOMY_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyEconomyWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: economyWorkflowStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: await Promise.all(
+        input.signers.map((signer) =>
+          signCanonicalEvent(signer, domain, event),
+        ),
+      ),
     },
   };
 }
@@ -6574,6 +6638,612 @@ describe("signed candidate rehearsal API", () => {
         })
       ).statusCode,
     ).toBe(403);
+    await player.app.close();
+  });
+
+  it("serializes cap-certified player mobility with exact career authority", async () => {
+    const player = await harness();
+    await admitCandidate(player);
+    const economyClubIds = FOUNDING_CLUBS.map(({ clubId }) => clubId).sort();
+    const governorDids = economyClubIds.map(
+      (_, index) => `did:abl:economy-governor-${index + 1}`,
+    );
+    const governorActors: Harness[] = [];
+    for (const [index, did] of governorDids.entries()) {
+      const actor = await additionalCareer(player, did!, String(20 + index));
+      await admitCandidate(actor);
+      governorActors.push(actor);
+    }
+    const capAuthorityDid = "did:abl:economy-cap-office";
+    const capAuthority = await additionalCareer(player, capAuthorityDid, "30");
+    await admitCandidate(capAuthority);
+    const clubGovernors = Object.fromEntries(
+      economyClubIds.map((clubId, index) => [clubId, governorDids[index]!]),
+    );
+    const economyId = "admission-rehearsal:pre-genesis";
+    const tradeEvidence = new Map<string, TradeAccessEvidence>();
+    for (const actor of [player, ...governorActors, capAuthority]) {
+      player.admittedAgents.set(actor.candidateDid, {
+        signerAddress: actor.candidate.address,
+        allowedAggregateTypes: [ECONOMY_WORKFLOW_AGGREGATE_TYPE],
+      });
+    }
+    const freeAgencyWindow = {
+      opensAt: new Date(player.now.value - hour).toISOString(),
+      closesAt: new Date(player.now.value + 7 * day).toISOString(),
+    };
+    const liveOptions = () => ({
+      store: player.store,
+      domain,
+      admittedAgents: player.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => player.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      contracts: { clubGovernors },
+      cases: { tribunalDids, appellateDids },
+      economy: {
+        economyId,
+        capAuthorityDid,
+        playerDids: [player.candidateDid],
+        freeAgencyWindow,
+        tradeAccessEvidence: {
+          tradeAccessEvidence: async (evidenceId: string) =>
+            structuredClone(tradeEvidence.get(evidenceId) ?? null),
+        },
+      },
+    });
+    await player.app.close();
+    player.app = createLiveCoreApi(liveOptions());
+    for (const actor of [...governorActors, capAuthority])
+      actor.app = player.app;
+
+    const authorityDigest = contractClubAuthoritySnapshotDigest(clubGovernors);
+    const sourceClubId = economyClubIds[0]!;
+    const destinationClubId = economyClubIds[1]!;
+    const sourceGovernor = governorActors[0]!;
+    const destinationGovernor = governorActors[1]!;
+    const offeredAt = new Date(player.now.value).toISOString();
+    const initialTransaction = {
+      transactionId: uuid("801"),
+      kind: "SIGN" as const,
+      playerDid: player.candidateDid,
+      fromTeamId: null,
+      toTeamId: sourceClubId,
+      seasons: 3,
+      courtCredits: 20_000,
+      capMechanism: "DRAFT_SCALE" as const,
+      termsCommitment: digest("1"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const offered = await contractCommand({
+      actor: sourceGovernor,
+      playerDid: player.candidateDid,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "ContractOffered",
+      payload: {
+        command: initialTransaction,
+        offeredByDid: sourceGovernor.candidateDid,
+        offeredAt,
+        clubAuthoritySnapshotDigest: authorityDigest,
+      },
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/offer",
+          payload: offered.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    player.now.value += 60_000;
+    const consent = {
+      consentId: uuid("802"),
+      agentDid: player.candidateDid,
+      subjectType: "PLAYER_CONTRACT" as const,
+      subjectId: initialTransaction.transactionId,
+      decision: "CONSENT" as const,
+      scope: ["PLAYING_RIGHTS"] as ["PLAYING_RIGHTS"],
+      proposalCommitment: contractOfferCommitment(offered.next.contracts[0]!),
+      recordedAt: new Date(player.now.value).toISOString(),
+    };
+    const consented = await contractCommand({
+      actor: player,
+      playerDid: player.candidateDid,
+      snapshot: offered.next,
+      previousEventHash: offered.event.eventHash,
+      eventType: "ContractResponded",
+      payload: { command: consent },
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/respond",
+          payload: consented.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    player.now.value += 60_000;
+    const initialRight = {
+      playerDid: player.candidateDid,
+      transactionId: initialTransaction.transactionId,
+      consentId: consent.consentId,
+      clubId: sourceClubId,
+      seasons: initialTransaction.seasons,
+      courtCredits: initialTransaction.courtCredits,
+      capMechanism: initialTransaction.capMechanism,
+      termsCommitment: initialTransaction.termsCommitment,
+      effectiveAt: initialTransaction.effectiveAt,
+      origin: "INITIAL_CONTRACT" as const,
+      sourceAggregateVersion: "2",
+      sourceEventHash: consented.event.eventHash,
+      sourceStateRoot: consented.event.stateRoot,
+    };
+    const certifiedAt = new Date(player.now.value).toISOString();
+    const initialCertification = createEconomyCapCertification({
+      certificationId: uuid("803"),
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds: economyClubIds,
+      rights: [initialRight],
+      waiverCharges: [],
+    });
+    const initialized = await economyCommand({
+      actor: capAuthority,
+      economyId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "CapSheetCertified",
+      payload: {
+        command: {
+          economyId,
+          competitionId: "admission-rehearsal",
+          seasonId: "pre-genesis",
+          clubIds: economyClubIds,
+          initialRights: [initialRight],
+          certification: initialCertification,
+        },
+      },
+      signers: [
+        capAuthority.candidate,
+        ...governorActors.map((h) => h.candidate),
+      ],
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/cap/certify",
+          payload: {
+            ...initialized.body,
+            signatures: initialized.body.signatures.slice(0, -1),
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    const initializedResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/cap/certify",
+      payload: initialized.body,
+    });
+    expect(initializedResponse.statusCode).toBe(201);
+    expect(initializedResponse.json()).toMatchObject({
+      capCertified: true,
+      currency: "NONCASH_COURT_CREDITS",
+      playerTradeConsentRequired: true,
+    });
+
+    player.now.value += 60_000;
+    const completedAt = new Date(player.now.value).toISOString();
+    const tradeTransaction = {
+      transactionId: uuid("804"),
+      kind: "TRADE" as const,
+      playerDid: player.candidateDid,
+      fromTeamId: sourceClubId,
+      toTeamId: destinationClubId,
+      seasons: initialRight.seasons,
+      courtCredits: initialRight.courtCredits,
+      capMechanism: initialRight.capMechanism,
+      termsCommitment: economyTransactionTermsCommitment({
+        kind: "TRADE",
+        playerDid: player.candidateDid,
+        fromTeamId: sourceClubId,
+        toTeamId: destinationClubId,
+        seasons: initialRight.seasons,
+        courtCredits: initialRight.courtCredits,
+        capMechanism: initialRight.capMechanism,
+        effectiveAt: new Date(player.now.value + hour).toISOString(),
+        sourceTransactionId: initialRight.transactionId,
+      }),
+      consentRecordId: uuid("805"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const accessEvidenceBody = {
+      evidenceId: uuid("806"),
+      transactionId: tradeTransaction.transactionId,
+      playerDid: player.candidateDid,
+      fromClubId: sourceClubId,
+      toClubId: destinationClubId,
+      priorGrantCommitment: digest("2"),
+      nextGrantCommitment: digest("3"),
+      revokedAt: new Date(player.now.value - 3_000).toISOString(),
+      rotatedAt: new Date(player.now.value - 2_000).toISOString(),
+      grantedAt: new Date(player.now.value - 1_000).toISOString(),
+    };
+    const accessEvidence = {
+      ...accessEvidenceBody,
+      evidenceCommitment: tradeAccessEvidenceCommitment(accessEvidenceBody),
+    };
+    const tradedRight = {
+      playerDid: player.candidateDid,
+      transactionId: tradeTransaction.transactionId,
+      consentId: tradeTransaction.consentRecordId,
+      clubId: destinationClubId,
+      seasons: tradeTransaction.seasons,
+      courtCredits: tradeTransaction.courtCredits,
+      capMechanism: tradeTransaction.capMechanism,
+      termsCommitment: tradeTransaction.termsCommitment,
+      effectiveAt: tradeTransaction.effectiveAt,
+      origin: "TRADE" as const,
+    };
+    const tradeCertification = createEconomyCapCertification({
+      certificationId: uuid("807"),
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt: completedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds: economyClubIds,
+      rights: [tradedRight],
+      waiverCharges: [],
+    });
+    const trade = await economyCommand({
+      actor: sourceGovernor,
+      economyId,
+      snapshot: initialized.next,
+      previousEventHash: initialized.event.eventHash,
+      eventType: "ContractTraded",
+      payload: {
+        command: {
+          transaction: tradeTransaction,
+          sourceTransactionId: initialRight.transactionId,
+          accessEvidence,
+          authorizedByDids: [
+            sourceGovernor.candidateDid,
+            destinationGovernor.candidateDid,
+            player.candidateDid,
+            capAuthorityDid,
+          ],
+          completedAt,
+          certification: tradeCertification,
+        },
+      },
+      signers: [
+        sourceGovernor.candidate,
+        destinationGovernor.candidate,
+        player.candidate,
+        capAuthority.candidate,
+      ],
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/trades/complete",
+          payload: trade.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    tradeEvidence.set(accessEvidence.evidenceId, accessEvidence);
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/trades/complete",
+          payload: {
+            ...trade.body,
+            signatures: [
+              trade.body.signatures[0],
+              trade.body.signatures[2],
+              trade.body.signatures[1],
+              trade.body.signatures[3],
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    const tradeResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/trades/complete",
+      payload: trade.body,
+    });
+    expect(tradeResponse.statusCode).toBe(201);
+    expect(tradeResponse.json()).toMatchObject({
+      accepted: true,
+      capCertified: true,
+      playerTradeConsentRequired: true,
+    });
+
+    await player.app.close();
+    tradeEvidence.delete(accessEvidence.evidenceId);
+    player.app = createLiveCoreApi(liveOptions());
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/trades/complete",
+          payload: trade.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    tradeEvidence.set(accessEvidence.evidenceId, accessEvidence);
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/trades/complete",
+          payload: trade.body,
+        })
+      ).json(),
+    ).toMatchObject({ accepted: true, duplicate: true });
+
+    player.now.value += 60_000;
+    const waivedAt = new Date(player.now.value).toISOString();
+    const waiverTransaction = {
+      transactionId: uuid("808"),
+      kind: "WAIVE" as const,
+      playerDid: player.candidateDid,
+      fromTeamId: destinationClubId,
+      toTeamId: null,
+      seasons: 0 as const,
+      courtCredits: 5_000,
+      capMechanism: "WAIVER" as const,
+      termsCommitment: economyTransactionTermsCommitment({
+        kind: "WAIVE",
+        playerDid: player.candidateDid,
+        fromTeamId: destinationClubId,
+        toTeamId: null,
+        seasons: 0,
+        courtCredits: 5_000,
+        capMechanism: "WAIVER",
+        effectiveAt: new Date(player.now.value + hour).toISOString(),
+        sourceTransactionId: tradeTransaction.transactionId,
+      }),
+      consentRecordId: uuid("809"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const waiverCharge = {
+      playerDid: player.candidateDid,
+      waiverTransactionId: waiverTransaction.transactionId,
+      clubId: destinationClubId,
+      courtCredits: waiverTransaction.courtCredits,
+      effectiveAt: waiverTransaction.effectiveAt,
+    };
+    const waiverCertification = createEconomyCapCertification({
+      certificationId: uuid("810"),
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt: waivedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds: economyClubIds,
+      rights: [],
+      waiverCharges: [waiverCharge],
+    });
+    const waived = await economyCommand({
+      actor: destinationGovernor,
+      economyId,
+      snapshot: trade.next,
+      previousEventHash: trade.event.eventHash,
+      eventType: "ContractWaived",
+      payload: {
+        command: {
+          transaction: waiverTransaction,
+          sourceTransactionId: tradeTransaction.transactionId,
+          authorization: {
+            mode: "MUTUAL",
+            authorizedByDids: [
+              destinationGovernor.candidateDid,
+              player.candidateDid,
+              capAuthorityDid,
+            ],
+          },
+          completedAt: waivedAt,
+          certification: waiverCertification,
+        },
+      },
+      signers: [
+        destinationGovernor.candidate,
+        player.candidate,
+        capAuthority.candidate,
+      ],
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/waivers/complete",
+          payload: {
+            ...waived.body,
+            signatures: [waived.body.signatures[0], waived.body.signatures[2]],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/waivers/complete",
+          payload: waived.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    player.now.value += 60_000;
+    const openedAt = new Date(player.now.value).toISOString();
+    const freeAgencyId = uuid("811");
+    const opened = await economyCommand({
+      actor: player,
+      economyId,
+      snapshot: waived.next,
+      previousEventHash: waived.event.eventHash,
+      eventType: "FreeAgencyOpened",
+      payload: {
+        command: {
+          freeAgencyId,
+          playerDid: player.candidateDid,
+          sourceWaiverTransactionId: waiverTransaction.transactionId,
+          windowOpensAt: freeAgencyWindow.opensAt,
+          windowClosesAt: freeAgencyWindow.closesAt,
+          windowCommitment: freeAgencyWindowCommitment({
+            economyId,
+            opensAt: freeAgencyWindow.opensAt,
+            closesAt: freeAgencyWindow.closesAt,
+          }),
+          openedAt,
+        },
+      },
+      signers: [player.candidate],
+    });
+    const openedResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/free-agency/open",
+      payload: opened.body,
+    });
+    expect(openedResponse.statusCode).toBe(201);
+    expect(openedResponse.json()).toMatchObject({
+      accepted: true,
+      capCertified: false,
+    });
+
+    player.now.value += 60_000;
+    const signedAt = new Date(player.now.value).toISOString();
+    const signingGovernor = governorActors[2]!;
+    const signingClubId = economyClubIds[2]!;
+    const signingTransaction = {
+      transactionId: uuid("812"),
+      kind: "SIGN" as const,
+      playerDid: player.candidateDid,
+      fromTeamId: null,
+      toTeamId: signingClubId,
+      seasons: 2,
+      courtCredits: 15_000,
+      capMechanism: "STANDARD_CAP" as const,
+      termsCommitment: economyTransactionTermsCommitment({
+        kind: "SIGN",
+        playerDid: player.candidateDid,
+        fromTeamId: null,
+        toTeamId: signingClubId,
+        seasons: 2,
+        courtCredits: 15_000,
+        capMechanism: "STANDARD_CAP",
+        effectiveAt: new Date(player.now.value + hour).toISOString(),
+        sourceTransactionId: null,
+      }),
+      consentRecordId: uuid("813"),
+      effectiveAt: new Date(player.now.value + hour).toISOString(),
+    };
+    const signedRight = {
+      playerDid: player.candidateDid,
+      transactionId: signingTransaction.transactionId,
+      consentId: signingTransaction.consentRecordId,
+      clubId: signingClubId,
+      seasons: signingTransaction.seasons,
+      courtCredits: signingTransaction.courtCredits,
+      capMechanism: signingTransaction.capMechanism,
+      termsCommitment: signingTransaction.termsCommitment,
+      effectiveAt: signingTransaction.effectiveAt,
+      origin: "FREE_AGENCY" as const,
+    };
+    const signingCertification = createEconomyCapCertification({
+      certificationId: uuid("814"),
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt: signedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds: economyClubIds,
+      rights: [signedRight],
+      waiverCharges: [waiverCharge],
+    });
+    const signed = await economyCommand({
+      actor: signingGovernor,
+      economyId,
+      snapshot: opened.next,
+      previousEventHash: opened.event.eventHash,
+      eventType: "FreeAgentSigned",
+      payload: {
+        command: {
+          transaction: signingTransaction,
+          freeAgencyId,
+          authorizedByDids: [
+            signingGovernor.candidateDid,
+            player.candidateDid,
+            capAuthorityDid,
+          ],
+          completedAt: signedAt,
+          certification: signingCertification,
+        },
+      },
+      signers: [
+        signingGovernor.candidate,
+        player.candidate,
+        capAuthority.candidate,
+      ],
+    });
+    expect(
+      (
+        await player.app.inject({
+          method: "POST",
+          url: "/v1/contracts/free-agency/sign",
+          payload: signed.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    player.now.value += 60_000;
+    const inspected = await economyCommand({
+      actor: player,
+      economyId,
+      snapshot: signed.next,
+      previousEventHash: signed.event.eventHash,
+      eventType: "EconomyInspected",
+      payload: {
+        command: {
+          economyId,
+          requestedByDid: player.candidateDid,
+          requestedAt: new Date(player.now.value).toISOString(),
+          format: "ABL-SEASON-ECONOMY-INSPECTION-V1",
+        },
+      },
+      signers: [player.candidate],
+    });
+    const inspectionResponse = await player.app.inject({
+      method: "POST",
+      url: "/v1/contracts/economy/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      economy: {
+        version: 6,
+        rights: [{ playerDid: player.candidateDid, clubId: signingClubId }],
+        waiverCharges: [waiverCharge],
+        freeAgency: [
+          {
+            freeAgencyId,
+            status: "SIGNED",
+            signingTransactionId: signingTransaction.transactionId,
+          },
+        ],
+      },
+    });
     await player.app.close();
   });
 

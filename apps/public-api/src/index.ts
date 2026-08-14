@@ -8,16 +8,20 @@ import {
 import {
   CompetitiveDisclosureAuthorDidsSchema,
   DisclosureReleaseAuthorityDidsSchema,
+  PremierDraftEvidenceRegistrySchema,
   ReleaseVerifierResultRegistrySchema,
   assertDisclosureAuthorityConfiguration,
   createCompetitionReleaseEvidenceReader,
   createPremierDraftEvidenceReader,
+  createTradeAccessEvidenceReader,
   type CompetitionReleaseEvidenceReader,
   type PremierDraftEvidenceReader,
+  type TradeAccessEvidenceReader,
 } from "@abl/institutions";
 import {
   FilePublicContractProjectionRepository,
   FilePublicDraftProjectionRepository,
+  FilePublicEconomyProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
@@ -29,6 +33,7 @@ import {
   FilePublicSocialProjectionRepository,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -86,10 +91,11 @@ const AgentRegistrySchema = z.record(
           "finalized-game",
           "combine-result",
           "premier-draft",
+          "season-economy",
         ]),
       )
       .min(1)
-      .max(10)
+      .max(11)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -129,6 +135,13 @@ function projectionAuthority(): {
   draftAuthorityDid: string;
   draftClubGovernors: Readonly<Record<string, string>>;
   premierDraftEvidence: PremierDraftEvidenceReader["premierDraftEvidence"];
+  economyId: string;
+  competitionId: string;
+  seasonId: string;
+  capAuthorityDid: string;
+  economyPlayerDids: readonly string[];
+  freeAgencyWindow: { opensAt: string; closesAt: string };
+  tradeAccessEvidence: TradeAccessEvidenceReader;
   governanceEligibilitySnapshotDigest: string;
   caseTribunalDids: readonly string[];
   caseAppellateDids: readonly string[];
@@ -153,8 +166,26 @@ function projectionAuthority(): {
     .string()
     .startsWith("did:")
     .parse(required("ABL_DRAFT_AUTHORITY_DID"));
-  const draftEvidence = createPremierDraftEvidenceReader(
+  const draftEvidenceRegistry = PremierDraftEvidenceRegistrySchema.parse(
     JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
+  );
+  const draftEvidence = createPremierDraftEvidenceReader(draftEvidenceRegistry);
+  const economyDraftId = required("ABL_ECONOMY_DRAFT_ID");
+  const economyDraftEvidence = draftEvidenceRegistry.find(
+    ({ draftId }) => draftId === economyDraftId,
+  );
+  if (economyDraftEvidence === undefined)
+    throw new Error(
+      "ABL_ECONOMY_DRAFT_ID is absent from the draft evidence registry",
+    );
+  const competitionId = required("ABL_COMPETITION_ID");
+  const seasonId = required("ABL_SEASON_ID");
+  const capAuthorityDid = z
+    .string()
+    .startsWith("did:")
+    .parse(required("ABL_CAP_AUTHORITY_DID"));
+  const tradeAccessEvidence = createTradeAccessEvidenceReader(
+    JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
   );
   const caseTribunalDids = caseAdjudicatorRoster(5).parse(
     JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
@@ -234,6 +265,16 @@ function projectionAuthority(): {
     draftAuthorityDid,
     draftClubGovernors: contractClubGovernors,
     premierDraftEvidence: draftEvidence.premierDraftEvidence,
+    economyId: `${competitionId}:${seasonId}`,
+    competitionId,
+    seasonId,
+    capAuthorityDid,
+    economyPlayerDids: economyDraftEvidence.eligiblePlayerDids,
+    freeAgencyWindow: {
+      opensAt: required("ABL_FREE_AGENCY_OPENS_AT"),
+      closesAt: required("ABL_FREE_AGENCY_CLOSES_AT"),
+    },
+    tradeAccessEvidence,
     governanceEligibilitySnapshotDigest,
     caseTribunalDids,
     caseAppellateDids,
@@ -251,6 +292,7 @@ let authority: ReturnType<typeof projectionAuthority> | undefined;
 let projections: FilePublicProjectionRepository | undefined;
 let contractProjections: FilePublicContractProjectionRepository | undefined;
 let draftProjections: FilePublicDraftProjectionRepository | undefined;
+let economyProjections: FilePublicEconomyProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
@@ -299,6 +341,18 @@ if (projectionRoot !== undefined) {
     verifyAuthorization: async (authorization) =>
       verifyCaseProjectionEvent(authorization, runtimeAuthority),
   });
+  economyProjections = new FilePublicEconomyProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization) =>
+        verifyEconomyProjectionEvent(authorization, {
+          ...runtimeAuthority,
+          playerDids: runtimeAuthority.economyPlayerDids,
+          contractReader: contractProjections!,
+          caseReader: caseProjections!,
+        }),
+    },
+  );
   resourceProjections = new FilePublicResourceProjectionRepository(
     projectionRoot,
     {
@@ -358,6 +412,7 @@ await Promise.all([
   socialProjections?.initialize(),
   finalGameProjections?.initialize(),
 ]);
+await economyProjections?.initialize();
 await Promise.all([
   resourceProjections?.initialize(),
   releaseProjections?.initialize(),
@@ -396,6 +451,7 @@ if (
   draftProjections !== undefined &&
   governanceProjections !== undefined &&
   caseProjections !== undefined &&
+  economyProjections !== undefined &&
   resourceProjections !== undefined &&
   modelProjections !== undefined &&
   releaseProjections !== undefined &&
@@ -408,6 +464,7 @@ if (
     writer: projections,
     contractWriter: contractProjections,
     draftWriter: draftProjections,
+    economyWriter: economyProjections,
     governanceWriter: governanceProjections,
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,
@@ -436,6 +493,8 @@ if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;
 if (draftProjections !== undefined)
   apiOptions.draftProjections = draftProjections;
+if (economyProjections !== undefined)
+  apiOptions.economyProjections = economyProjections;
 if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;

@@ -15,6 +15,7 @@ import {
   type CaseWorkflowEventType,
   type CaseWorkflowPayload,
   type CaseWorkflowSnapshot,
+  type AdverseContractCaseRecord,
 } from "@abl/institutions";
 import {
   CanonicalConflictError,
@@ -391,6 +392,36 @@ async function replayCaseAggregate(
     previousTimestamp = occurredAt;
   }
   return { records, snapshot };
+}
+
+export async function readAdverseContractCase(
+  options: CaseRehearsalOptions,
+  caseId: string,
+  headEventHash: string,
+): Promise<AdverseContractCaseRecord | null> {
+  const aggregate = await replayCaseAggregate(options, caseId);
+  const headIndex = aggregate.records.findIndex(
+    (record) => record.eventHash === headEventHash,
+  );
+  if (headIndex < 0) return null;
+  let snapshot: CaseWorkflowSnapshot | null = null;
+  for (const record of aggregate.records.slice(0, headIndex + 1)) {
+    const event = canonicalEventFromStored(record);
+    if (!isCaseWorkflowEventType(event.eventType)) return null;
+    snapshot = applyCaseWorkflowTransition(
+      snapshot,
+      event,
+      parseCaseWorkflowPayload(event.eventType, event.payload),
+    );
+  }
+  const head = aggregate.records[headIndex]!;
+  if (snapshot === null) return null;
+  return {
+    snapshot,
+    aggregateVersion: head.aggregateVersion.toString(),
+    headEventHash: head.eventHash,
+    stateRoot: head.stateRoot,
+  };
 }
 
 function appendInput(

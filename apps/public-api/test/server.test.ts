@@ -521,6 +521,7 @@ describe("public API", () => {
       },
       caseProjections: {
         refresh: async () => undefined,
+        caseAtHead: () => null,
         cases: () => [
           {
             recordType: "DUE_PROCESS_CASE",

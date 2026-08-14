@@ -367,6 +367,11 @@ describe("four-workspace topology", () => {
       "ABL_FINALIZED_GAME_EVIDENCE_JSON",
       "ABL_DRAFT_AUTHORITY_DID",
       "ABL_DRAFT_EVIDENCE_JSON",
+      "ABL_ECONOMY_DRAFT_ID",
+      "ABL_CAP_AUTHORITY_DID",
+      "ABL_FREE_AGENCY_OPENS_AT",
+      "ABL_FREE_AGENCY_CLOSES_AT",
+      "ABL_TRADE_ACCESS_EVIDENCE_JSON",
     ]) {
       expect(envMap(coreApi!).get(name)).toBe(`\${${name}}`);
       expect(envMap(publicApi!).get(name)).toBe(`\${${name}}`);
@@ -396,6 +401,12 @@ describe("four-workspace topology", () => {
         "/v1/contracts/offer",
         "/v1/contracts/respond",
         "/v1/contracts/inspect",
+        "/v1/contracts/cap/certify",
+        "/v1/contracts/trades/complete",
+        "/v1/contracts/waivers/complete",
+        "/v1/contracts/free-agency/open",
+        "/v1/contracts/free-agency/sign",
+        "/v1/contracts/economy/inspect",
         "/v1/memory/persist",
         "/v1/memory/correct",
         "/v1/memory/delete",

@@ -15,6 +15,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Signed possession vertical path      | Local rehearsal pass; staging gate         | `PHASE-04.md`, acceptance suite, `@abl/projections` |
 | Signed finalized-game vertical       | Local rehearsal pass; staging gate         | `PHASE-06.md`, acceptance suite, `@abl/projections` |
 | Signed premier draft vertical        | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
+| Signed season-economy vertical       | Local rehearsal pass; staging gate         | `PHASE-07.md`, core/projection/public suites        |
 | Administrator-fork resistance        | Local adversarial pass                     | `PHASE-09.md`, rehearsal report fixture             |
 | Admission/human-boundary proof       | Local pass; live safety actuation gated    | `PHASE-05.md`, `@abl/career`, `@abl/safety`         |
 | Storage isolation/cryptography       | Local restart/recovery pass; Drive gate    | `PHASE-02.md`, broker and cross-domain tests        |
@@ -32,7 +33,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
 | Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
 | Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 239 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Final local acceptance               | 246 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 

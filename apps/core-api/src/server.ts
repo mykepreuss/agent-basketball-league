@@ -55,6 +55,10 @@ import {
   type ContractRehearsalOptions,
 } from "./contracts.js";
 import {
+  installEconomyRehearsalRoutes,
+  type EconomyRehearsalOptions,
+} from "./economy.js";
+import {
   installDisclosureRehearsalRoutes,
   type DisclosureRehearsalOptions,
 } from "./disclosures.js";
@@ -144,6 +148,14 @@ export interface LiveCoreApiOptions {
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
   contracts?: Pick<ContractRehearsalOptions, "clubGovernors">;
+  economy?: Pick<
+    EconomyRehearsalOptions,
+    | "economyId"
+    | "capAuthorityDid"
+    | "playerDids"
+    | "freeAgencyWindow"
+    | "tradeAccessEvidence"
+  >;
   disclosures?: Pick<
     DisclosureRehearsalOptions,
     "releaseAuthorityDids" | "competitiveAuthorDids" | "competitionEvidence"
@@ -286,6 +298,7 @@ export function createLiveCoreApi(
     contracts,
     disclosures,
     draft,
+    economy,
     exit,
     filmPractice,
     governance,
@@ -530,6 +543,20 @@ export function createLiveCoreApi(
     });
   }
   if (candidateAdmission !== undefined && contracts !== undefined) {
+    if (cases !== undefined && economy !== undefined) {
+      installEconomyRehearsalRoutes(app, {
+        store: options.store,
+        domain: options.domain,
+        admittedAgents: options.admittedAgents,
+        competitionId: options.competitionId,
+        seasonId: options.seasonId,
+        now,
+        candidateAdmission,
+        clubGovernors: contracts.clubGovernors,
+        cases,
+        ...economy,
+      });
+    }
     installContractRehearsalRoutes(app, {
       store: options.store,
       domain: options.domain,

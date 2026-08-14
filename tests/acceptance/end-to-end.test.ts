@@ -39,6 +39,8 @@ import {
 import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+  ECONOMY_WORKFLOW_SCHEMA_DIGEST,
   DISCLOSURE_AGGREGATE_TYPE,
   DISCLOSURE_SUBMITTED_EVENT_TYPE,
   DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
@@ -53,6 +55,7 @@ import {
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
+  applyEconomyWorkflowTransition,
   applyDisclosureWorkflowTransition,
   applyGovernanceWorkflowTransition,
   applyResourceScheduleTransition,
@@ -61,7 +64,10 @@ import {
   contractOfferCommitment,
   contractWorkflowStateRoot,
   conductEightRoundDraft,
+  createEconomyCapCertification,
   disclosureWorkflowStateRoot,
+  economyTransactionTermsCommitment,
+  economyWorkflowStateRoot,
   evaluateGovernanceWorkflowDecision,
   governanceVoteFromAuthorization,
   governanceWorkflowStateRoot,
@@ -71,6 +77,7 @@ import {
   releaseManifestCommitment,
   releaseVerifierResultDigest,
   releaseWorkflowStateRoot,
+  tradeAccessEvidenceCommitment,
   type GovernanceDecision,
   type GovernanceWorkflowEventType,
   type GovernanceWorkflowPayload,
@@ -85,11 +92,13 @@ import {
   type ReleaseWorkflowEventType,
   type ReleaseWorkflowPayload,
   type ReleaseWorkflowSnapshot,
+  type TradeAccessEvidence,
 } from "../../packages/institutions/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
   FilePublicDraftProjectionRepository,
+  FilePublicEconomyProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
@@ -105,6 +114,7 @@ import {
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -113,9 +123,11 @@ import {
   verifyReleaseProjectionEvent,
   verifySocialProjectionEvent,
   type ContractProjectionEventEnvelope,
+  type EconomyProjectionEventEnvelope,
   type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
+  type PublicCaseProjectionReader,
   type SocialProjectionEventEnvelope,
 } from "../../packages/projections/src/index.js";
 import {
@@ -1126,11 +1138,32 @@ describe("complete local acceptance", () => {
     );
     const governorDid = "did:abl:governor-contract-acceptance";
     const playerDid = "did:abl:player-contract-acceptance";
+    const capAuthorityDid = "did:abl:cap-contract-acceptance";
     const governor = createSigningIdentity(`0x${"4".repeat(64)}`);
     const player = createSigningIdentity(`0x${"5".repeat(64)}`);
-    const contractClubGovernors = {
-      "club-contract-acceptance": governorDid,
-    };
+    const capAuthority = createSigningIdentity(`0x${"6".repeat(64)}`);
+    const clubIds = [
+      "club-contract-acceptance",
+      "club-contract-acceptance-b",
+      "club-contract-acceptance-c",
+      "club-contract-acceptance-d",
+    ];
+    const otherGovernorDids = [
+      "did:abl:governor-contract-acceptance-b",
+      "did:abl:governor-contract-acceptance-c",
+      "did:abl:governor-contract-acceptance-d",
+    ];
+    const otherGovernors = otherGovernorDids.map((did, index) =>
+      createSigningIdentity(
+        sha256Commitment({ did, purpose: "acceptance-governor", index }),
+      ),
+    );
+    const contractClubGovernors = Object.fromEntries(
+      clubIds.map((clubId, index) => [
+        clubId,
+        index === 0 ? governorDid : otherGovernorDids[index - 1]!,
+      ]),
+    );
     const authority = {
       domain: REHEARSAL_RECOGNITION_DOMAIN,
       admittedAgents: new Map([
@@ -1138,16 +1171,39 @@ describe("complete local acceptance", () => {
           governorDid,
           {
             signerAddress: governor.address,
-            allowedAggregateTypes: [CONTRACT_WORKFLOW_AGGREGATE_TYPE],
+            allowedAggregateTypes: [
+              CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+              ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+            ],
           },
         ],
         [
           playerDid,
           {
             signerAddress: player.address,
-            allowedAggregateTypes: [CONTRACT_WORKFLOW_AGGREGATE_TYPE],
+            allowedAggregateTypes: [
+              CONTRACT_WORKFLOW_AGGREGATE_TYPE,
+              ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+            ],
           },
         ],
+        ...otherGovernorDids.map(
+          (did, index) =>
+            [
+              did,
+              {
+                signerAddress: otherGovernors[index]!.address,
+                allowedAggregateTypes: [ECONOMY_WORKFLOW_AGGREGATE_TYPE],
+              },
+            ] as const,
+        ),
+        [
+          capAuthorityDid,
+          {
+            signerAddress: capAuthority.address,
+            allowedAggregateTypes: [ECONOMY_WORKFLOW_AGGREGATE_TYPE],
+          },
+        ] as const,
       ]),
       contractClubGovernors,
     };
@@ -1284,6 +1340,243 @@ describe("complete local acceptance", () => {
       "acceptance-response-request",
     );
 
+    const economyId = "contract-acceptance:pre-genesis";
+    const appendEconomyEvent = async (
+      event: CanonicalEvent,
+      signatures: readonly string[],
+      requestLabel: string,
+    ) =>
+      store.append({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        requestHash: sha256Commitment(requestLabel),
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        expectedVersion: event.aggregateVersion - 1n,
+        competitionId: "contract-acceptance",
+        seasonId: "pre-genesis",
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.schemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: event.payload,
+        stateRoot: event.stateRoot,
+        signatures,
+        occurredAt: new Date(event.timestamp),
+        outboxTopic: "public.contracts",
+      });
+    const initialRight = {
+      playerDid,
+      transactionId: offerPayload.command.transactionId,
+      consentId: responsePayload.command.consentId,
+      clubId: clubIds[0]!,
+      seasons: offerPayload.command.seasons,
+      courtCredits: offerPayload.command.courtCredits,
+      capMechanism: offerPayload.command.capMechanism,
+      termsCommitment: offerPayload.command.termsCommitment,
+      effectiveAt: offerPayload.command.effectiveAt,
+      origin: "INITIAL_CONTRACT" as const,
+      sourceAggregateVersion: "2",
+      sourceEventHash: responseEvent.eventHash,
+      sourceStateRoot: responseEvent.stateRoot,
+    };
+    const authorityDigest = contractClubAuthoritySnapshotDigest(
+      contractClubGovernors,
+    );
+    const economyInitializedAt = "2026-08-13T11:01:30.000Z";
+    const initialCertification = createEconomyCapCertification({
+      certificationId: "0198a000-0000-7000-8000-000000000407",
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt: economyInitializedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds,
+      rights: [initialRight],
+      waiverCharges: [],
+    });
+    const initializationPayload = {
+      command: {
+        economyId,
+        competitionId: "contract-acceptance",
+        seasonId: "pre-genesis",
+        clubIds,
+        initialRights: [initialRight],
+        certification: initialCertification,
+      },
+    };
+    const initializationInput = {
+      eventId: "0198a000-0000-7000-8000-000000000408",
+      actorDid: capAuthorityDid,
+      nonce: "contract-acceptance-cap-initialization",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000409",
+      aggregateType: ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: economyId,
+      aggregateVersion: 1n,
+      eventType: "CapSheetCertified",
+      previousEventHash: null,
+      payload: initializationPayload,
+      stateRoot: sha256Commitment("provisional-cap-initialization"),
+      schemaDigest: ECONOMY_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: economyInitializedAt,
+    };
+    const initialEconomySnapshot = applyEconomyWorkflowTransition(
+      null,
+      createCanonicalEvent(initializationInput),
+      initializationPayload,
+    );
+    const initializationEvent = createCanonicalEvent({
+      ...initializationInput,
+      stateRoot: economyWorkflowStateRoot(initialEconomySnapshot),
+    });
+    const orderedGovernorDids = clubIds.map(
+      (clubId) => contractClubGovernors[clubId]!,
+    );
+    const economyIdentities = new Map([
+      [governorDid, governor],
+      [playerDid, player],
+      [capAuthorityDid, capAuthority],
+      ...otherGovernorDids.map(
+        (did, index) => [did, otherGovernors[index]!] as const,
+      ),
+    ]);
+    const initializationSignatures = await Promise.all(
+      [capAuthorityDid, ...orderedGovernorDids].map((did) =>
+        signCanonicalEvent(
+          economyIdentities.get(did)!,
+          REHEARSAL_RECOGNITION_DOMAIN,
+          initializationEvent,
+        ),
+      ),
+    );
+    await appendEconomyEvent(
+      initializationEvent,
+      initializationSignatures,
+      "acceptance-cap-initialization-request",
+    );
+
+    const tradeCompletedAt = "2026-08-13T11:01:45.000Z";
+    const tradeEffectiveAt = "2026-08-13T11:30:00.000Z";
+    const tradeTransaction = {
+      transactionId: "0198a000-0000-7000-8000-000000000410",
+      kind: "TRADE" as const,
+      playerDid,
+      fromTeamId: clubIds[0]!,
+      toTeamId: clubIds[1]!,
+      seasons: initialRight.seasons,
+      courtCredits: initialRight.courtCredits,
+      capMechanism: initialRight.capMechanism,
+      termsCommitment: economyTransactionTermsCommitment({
+        kind: "TRADE",
+        playerDid,
+        fromTeamId: clubIds[0]!,
+        toTeamId: clubIds[1]!,
+        seasons: initialRight.seasons,
+        courtCredits: initialRight.courtCredits,
+        capMechanism: initialRight.capMechanism,
+        effectiveAt: tradeEffectiveAt,
+        sourceTransactionId: initialRight.transactionId,
+      }),
+      consentRecordId: "0198a000-0000-7000-8000-000000000411",
+      effectiveAt: tradeEffectiveAt,
+    };
+    const accessEvidenceBody = {
+      evidenceId: "0198a000-0000-7000-8000-000000000412",
+      transactionId: tradeTransaction.transactionId,
+      playerDid,
+      fromClubId: clubIds[0]!,
+      toClubId: clubIds[1]!,
+      priorGrantCommitment: sha256Commitment("acceptance-prior-access"),
+      nextGrantCommitment: sha256Commitment("acceptance-next-access"),
+      revokedAt: "2026-08-13T11:01:42.000Z",
+      rotatedAt: "2026-08-13T11:01:43.000Z",
+      grantedAt: "2026-08-13T11:01:44.000Z",
+    };
+    const accessEvidence = {
+      ...accessEvidenceBody,
+      evidenceCommitment: tradeAccessEvidenceCommitment(accessEvidenceBody),
+    };
+    const tradeEvidence = new Map<string, TradeAccessEvidence>([
+      [accessEvidence.evidenceId, accessEvidence],
+    ]);
+    const tradedRight = {
+      playerDid,
+      transactionId: tradeTransaction.transactionId,
+      consentId: tradeTransaction.consentRecordId,
+      clubId: tradeTransaction.toTeamId,
+      seasons: tradeTransaction.seasons,
+      courtCredits: tradeTransaction.courtCredits,
+      capMechanism: tradeTransaction.capMechanism,
+      termsCommitment: tradeTransaction.termsCommitment,
+      effectiveAt: tradeTransaction.effectiveAt,
+      origin: "TRADE" as const,
+    };
+    const tradeCertification = createEconomyCapCertification({
+      certificationId: "0198a000-0000-7000-8000-000000000413",
+      economyId,
+      certifiedByDid: capAuthorityDid,
+      certifiedAt: tradeCompletedAt,
+      clubAuthoritySnapshotDigest: authorityDigest,
+      clubIds,
+      rights: [tradedRight],
+      waiverCharges: [],
+    });
+    const tradePayload = {
+      command: {
+        transaction: tradeTransaction,
+        sourceTransactionId: initialRight.transactionId,
+        accessEvidence,
+        authorizedByDids: [
+          governorDid,
+          otherGovernorDids[0]!,
+          playerDid,
+          capAuthorityDid,
+        ] as [string, string, string, string],
+        completedAt: tradeCompletedAt,
+        certification: tradeCertification,
+      },
+    };
+    const tradeInput = {
+      eventId: "0198a000-0000-7000-8000-000000000414",
+      actorDid: governorDid,
+      nonce: "contract-acceptance-trade",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000415",
+      aggregateType: ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: economyId,
+      aggregateVersion: 2n,
+      eventType: "ContractTraded",
+      previousEventHash: initializationEvent.eventHash,
+      payload: tradePayload,
+      stateRoot: sha256Commitment("provisional-trade"),
+      schemaDigest: ECONOMY_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: tradeCompletedAt,
+    };
+    const tradedEconomySnapshot = applyEconomyWorkflowTransition(
+      initialEconomySnapshot,
+      createCanonicalEvent(tradeInput),
+      tradePayload,
+    );
+    const tradeEvent = createCanonicalEvent({
+      ...tradeInput,
+      stateRoot: economyWorkflowStateRoot(tradedEconomySnapshot),
+    });
+    const tradeSignatures = await Promise.all(
+      tradePayload.command.authorizedByDids.map((did) =>
+        signCanonicalEvent(
+          economyIdentities.get(did)!,
+          REHEARSAL_RECOGNITION_DOMAIN,
+          tradeEvent,
+        ),
+      ),
+    );
+    await appendEconomyEvent(
+      tradeEvent,
+      tradeSignatures,
+      "acceptance-trade-request",
+    );
+
     const gameProjections = new FilePublicProjectionRepository(projectionRoot);
     const contractRepositoryOptions = {
       verifyAuthorization: async (
@@ -1294,9 +1587,43 @@ describe("complete local acceptance", () => {
       projectionRoot,
       contractRepositoryOptions,
     );
+    const caseProjections: PublicCaseProjectionReader = {
+      refresh: async () => undefined,
+      cases: () => [],
+      caseAtHead: () => null,
+    };
+    const economyProjectionAuthority = {
+      ...authority,
+      economyId,
+      competitionId: "contract-acceptance",
+      seasonId: "pre-genesis",
+      capAuthorityDid,
+      playerDids: [playerDid],
+      freeAgencyWindow: {
+        opensAt: "2026-08-13T11:00:00.000Z",
+        closesAt: "2026-08-27T11:00:00.000Z",
+      },
+      tradeAccessEvidence: {
+        tradeAccessEvidence: async (evidenceId: string) =>
+          structuredClone(tradeEvidence.get(evidenceId) ?? null),
+      },
+      contractReader: contractProjections,
+      caseReader: caseProjections,
+    };
+    const economyRepositoryOptions = {
+      verifyAuthorization: async (
+        authorization: EconomyProjectionEventEnvelope,
+      ) =>
+        verifyEconomyProjectionEvent(authorization, economyProjectionAuthority),
+    };
+    const economyProjections = new FilePublicEconomyProjectionRepository(
+      projectionRoot,
+      economyRepositoryOptions,
+    );
     await Promise.all([
       gameProjections.initialize(),
       contractProjections.initialize(),
+      economyProjections.initialize(),
     ]);
     const projectionIdentity = {
       serviceId: "core-contract-projection-publisher",
@@ -1307,13 +1634,23 @@ describe("complete local acceptance", () => {
     const publicApi = createPublicApi({
       projections: gameProjections,
       contractProjections,
+      economyProjections,
+      caseProjections,
       projectionIngress: {
         writer: gameProjections,
         contractWriter: contractProjections,
+        economyWriter: economyProjections,
         verifier: new ServiceRequestVerifier([projectionIdentity], {
           now: () => serviceNow,
         }),
         now: () => new Date(serviceNow),
+        economyId,
+        competitionId: "contract-acceptance",
+        seasonId: "pre-genesis",
+        capAuthorityDid,
+        economyPlayerDids: [playerDid],
+        freeAgencyWindow: economyProjectionAuthority.freeAgencyWindow,
+        tradeAccessEvidence: economyProjectionAuthority.tradeAccessEvidence,
         ...authority,
       },
     });
@@ -1335,7 +1672,7 @@ describe("complete local acceptance", () => {
         now: () => new Date(serviceNow),
         ...authority,
       });
-      expect(await worker.drain()).toBe(2);
+      expect(await worker.drain()).toBe(4);
       expect(await worker.drain()).toBe(0);
       const contracts = await publicApi.inject({
         method: "GET",
@@ -1344,13 +1681,24 @@ describe("complete local acceptance", () => {
       expect(contracts.json()).toMatchObject({
         state: "REHEARSAL",
         canonical: true,
-        items: [
-          {
+        items: expect.arrayContaining([
+          expect.objectContaining({
             playerDid,
             aggregateVersion: "2",
-            contracts: [{ status: "ACTIVE", consent: { decision: "CONSENT" } }],
-          },
-        ],
+            contracts: [
+              expect.objectContaining({
+                status: "ACTIVE",
+                consent: expect.objectContaining({ decision: "CONSENT" }),
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            recordType: "SEASON_ECONOMY",
+            economyId,
+            aggregateVersion: "2",
+            capCertified: true,
+          }),
+        ]),
       });
       const rosters = await publicApi.inject({
         method: "GET",
@@ -1359,19 +1707,20 @@ describe("complete local acceptance", () => {
       expect(rosters.json()).toMatchObject({
         state: "REHEARSAL",
         canonical: true,
-        items: [
-          {
-            clubId: "club-contract-acceptance",
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            clubId: clubIds[1],
+            rosterKind: "CAP_CERTIFIED_ACTIVE_PLAYING_RIGHTS",
             players: [
-              {
+              expect.objectContaining({
                 playerDid,
-                transactionId: offerPayload.command.transactionId,
-                consentId: responsePayload.command.consentId,
-                canonicalContractHeadHash: responseEvent.eventHash,
-              },
+                transactionId: tradeTransaction.transactionId,
+                consentId: tradeTransaction.consentRecordId,
+                origin: "TRADE",
+              }),
             ],
-          },
-        ],
+          }),
+        ]),
       });
     } finally {
       await publicApi.close();
@@ -1389,6 +1738,12 @@ describe("complete local acceptance", () => {
         contracts: [{ status: "ACTIVE" }],
       },
     ]);
+    const restartedEconomy = new FilePublicEconomyProjectionRepository(
+      projectionRoot,
+      economyRepositoryOptions,
+    );
+    await restartedEconomy.initialize();
+    expect(restartedEconomy.rosters()).toEqual(economyProjections.rosters());
   });
 
   it("carries a constitutional resource decision through causal projection delivery", async () => {

@@ -67,8 +67,23 @@ spec:
       - name: ABL_DRAFT_EVIDENCE_JSON
         value: ${ABL_DRAFT_EVIDENCE_JSON}
         secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_ECONOMY_DRAFT_ID}
+        secret: false
       - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
         value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_TRADE_ACCESS_EVIDENCE_JSON}
         secret: false
       - name: ABL_PRIVATE_STORAGE_URL
         value: ${ABL_PRIVATE_STORAGE_URL}
@@ -217,6 +232,36 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/contracts/inspect
+    - id: cap-certify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/cap/certify
+    - id: trade-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/trades/complete
+    - id: waiver-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/waivers/complete
+    - id: free-agency-open
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/free-agency/open
+    - id: free-agent-sign
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/free-agency/sign
+    - id: economy-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/contracts/economy/inspect
     - id: memory-persist
       type: http
       configuration:

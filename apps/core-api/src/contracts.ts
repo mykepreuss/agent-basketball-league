@@ -87,6 +87,13 @@ interface ContractAggregate {
   snapshot: ContractWorkflowSnapshot | null;
 }
 
+export interface ContractRehearsalState {
+  snapshot: ContractWorkflowSnapshot | null;
+  aggregateVersion: string;
+  headEventHash: string | null;
+  stateRoot: string | null;
+}
+
 function canonicalInstant(value: string): number {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed) || value !== new Date(parsed).toISOString())
@@ -254,6 +261,20 @@ async function replayContractAggregate(
     previousTimestamp = occurredAt;
   }
   return { records, snapshot };
+}
+
+export async function readContractRehearsalState(
+  options: ContractRehearsalOptions,
+  playerDid: string,
+): Promise<ContractRehearsalState> {
+  const aggregate = await replayContractAggregate(options, playerDid);
+  const head = aggregate.records.at(-1);
+  return {
+    snapshot: structuredClone(aggregate.snapshot),
+    aggregateVersion: (head?.aggregateVersion ?? 0n).toString(),
+    headEventHash: head?.eventHash ?? null,
+    stateRoot: head?.stateRoot ?? null,
+  };
 }
 
 export async function readContractConsentHistory(

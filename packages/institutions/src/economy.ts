@@ -84,8 +84,15 @@ export function evaluateCapSheet(sheet: ClubCapSheet) {
     TAXPAYER_MLE: COURT_CREDIT_LIMITS.taxpayerMidLevel,
     ROOM_MLE: COURT_CREDIT_LIMITS.roomMidLevel,
   } as const;
+  const exceptionTotals = new Map<keyof typeof exceptionLimits, number>();
   for (const use of sheet.exceptionUses) {
-    if (use.amount < 0 || use.amount > exceptionLimits[use.kind])
+    const total = (exceptionTotals.get(use.kind) ?? 0) + use.amount;
+    exceptionTotals.set(use.kind, total);
+    if (
+      !Number.isInteger(use.amount) ||
+      use.amount < 0 ||
+      total > exceptionLimits[use.kind]
+    )
       throw new Error("Court Credit exception exceeds its fixed limit");
   }
   return {

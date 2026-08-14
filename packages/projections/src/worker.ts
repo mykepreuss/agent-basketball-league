@@ -62,6 +62,13 @@ import {
   verifyDraftProjectionEvent,
 } from "./draft-envelope.js";
 import type { PublicDraftProjectionWriter } from "./draft-repository.js";
+import { ECONOMY_WORKFLOW_AGGREGATE_TYPE } from "@abl/institutions";
+import {
+  economyProjectionEnvelopeFromOutbox,
+  verifyEconomyProjectionEvent,
+  type EconomyProjectionVerificationAuthority,
+} from "./economy-envelope.js";
+import type { PublicEconomyProjectionWriter } from "./economy-repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
@@ -76,6 +83,7 @@ type WorkerDestination =
       socialWriter?: PublicSocialProjectionWriter;
       finalGameWriter?: PublicFinalGameProjectionWriter;
       draftWriter?: PublicDraftProjectionWriter;
+      economyWriter?: PublicEconomyProjectionWriter;
       sink?: never;
     }
   | {
@@ -90,6 +98,7 @@ type WorkerDestination =
       socialWriter?: never;
       finalGameWriter?: never;
       draftWriter?: never;
+      economyWriter?: never;
     };
 
 const projectionTopics = [
@@ -106,6 +115,8 @@ const projectionTopics = [
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 const governanceTopicIndex = projectionTopics.indexOf("public.governance");
+const contractTopicIndex = projectionTopics.indexOf("public.contracts");
+const caseTopicIndex = projectionTopics.indexOf("public.cases");
 const resourceTopicIndex = projectionTopics.indexOf("public.resources");
 const releaseTopicIndex = projectionTopics.indexOf("public.releases");
 
@@ -138,6 +149,12 @@ export class PublicProjectionWorker {
   readonly #premierDraftEvidence:
     | PremierDraftEvidenceReader["premierDraftEvidence"]
     | undefined;
+  readonly #economyAuthority:
+    | Omit<
+        EconomyProjectionVerificationAuthority,
+        keyof ProjectionVerificationAuthority
+      >
+    | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -160,6 +177,10 @@ export class PublicProjectionWorker {
       draftAuthorityDid?: string;
       draftClubGovernors?: Readonly<Record<string, string>>;
       premierDraftEvidence?: PremierDraftEvidenceReader["premierDraftEvidence"];
+      economyAuthority?: Omit<
+        EconomyProjectionVerificationAuthority,
+        keyof ProjectionVerificationAuthority
+      >;
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -175,7 +196,8 @@ export class PublicProjectionWorker {
       input.releaseWriter === undefined &&
       input.socialWriter === undefined &&
       input.finalGameWriter === undefined &&
-      input.draftWriter === undefined
+      input.draftWriter === undefined &&
+      input.economyWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -190,6 +212,7 @@ export class PublicProjectionWorker {
         socialWriter?: PublicSocialProjectionWriter;
         finalGameWriter?: PublicFinalGameProjectionWriter;
         draftWriter?: PublicDraftProjectionWriter;
+        economyWriter?: PublicEconomyProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -211,6 +234,8 @@ export class PublicProjectionWorker {
         destination.finalGameWriter = input.finalGameWriter;
       if (input.draftWriter !== undefined)
         destination.draftWriter = input.draftWriter;
+      if (input.economyWriter !== undefined)
+        destination.economyWriter = input.economyWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -242,6 +267,7 @@ export class PublicProjectionWorker {
     this.#draftAuthorityDid = input.draftAuthorityDid;
     this.#draftClubGovernors = input.draftClubGovernors;
     this.#premierDraftEvidence = input.premierDraftEvidence;
+    this.#economyAuthority = input.economyAuthority;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -265,6 +291,30 @@ export class PublicProjectionWorker {
   }
 
   async #publishContract(event: ProjectionOutboxEvent): Promise<void> {
+    if (event.aggregateType === ECONOMY_WORKFLOW_AGGREGATE_TYPE) {
+      const envelope = economyProjectionEnvelopeFromOutbox(event);
+      if (this.#destination.sink === undefined) {
+        if (
+          this.#economyAuthority === undefined ||
+          this.#destination.economyWriter === undefined
+        ) {
+          throw new Error("Economy projection authority is not configured");
+        }
+        const verified = await verifyEconomyProjectionEvent(envelope, {
+          ...this.#authority,
+          ...this.#economyAuthority,
+        });
+        await this.#destination.economyWriter.publish(
+          envelope,
+          verified.expectedVersion,
+          this.#now().toISOString(),
+        );
+      } else {
+        await this.#destination.sink.publish(envelope);
+      }
+      await this.#store.markProjected(event.outboxId, this.#now());
+      return;
+    }
     const envelope = contractProjectionEnvelopeFromOutbox(event);
     if (this.#contractClubGovernors === undefined)
       throw new Error("Contract projection authority is not configured");
@@ -535,7 +585,14 @@ export class PublicProjectionWorker {
         resourceTopicIndex,
         releaseTopicIndex,
       ].some((index) => positions[index]! < queues[index]!.length);
+      const caseDependentPending =
+        positions[contractTopicIndex]! < queues[contractTopicIndex]!.length;
       if (
+        caseDependentPending &&
+        positions[caseTopicIndex]! < queues[caseTopicIndex]!.length
+      ) {
+        selected = caseTopicIndex;
+      } else if (
         ratificationDependentPending &&
         positions[governanceTopicIndex]! < queues[governanceTopicIndex]!.length
       ) {
