@@ -279,6 +279,9 @@ describe("four-workspace topology", () => {
       envMap(coreApi!).get("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON"),
     ).toBe("${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}");
     expect(
+      envMap(coreApi!).get("ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON"),
+    ).toBe("${ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON}");
+    expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
       expect.arrayContaining([
@@ -318,6 +321,8 @@ describe("four-workspace topology", () => {
         "/v1/governance/ballots/cast",
         "/v1/governance/proposals/close",
         "/v1/governance/proposals/inspect",
+        "/v1/communication/artifacts/admit",
+        "/v1/communication/artifacts/inspect",
         "/v1/resources/schedules/publish",
         "/v1/releases/propose",
         "/v1/releases/approve",

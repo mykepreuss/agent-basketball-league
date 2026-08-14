@@ -12,6 +12,11 @@ import {
   buildPendingReleaseManifest,
   prepareGenesisArtifactDigests,
 } from "../../packages/genesis/src/index.js";
+import {
+  ArtifactAdmissionPayloadSchema,
+  artifactAdmissionExecutableDigest,
+  requireArtifactAdmissionRatification,
+} from "../../packages/institutions/src/index.js";
 import { validateRuleMapping } from "../../packages/policy/src/index.js";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -121,6 +126,50 @@ describe("adversarial acceptance", () => {
       }
     }
     await coreApi.close();
+  });
+
+  it("rejects raw, player-targeted, or human-self-approved external artifacts", async () => {
+    const artifact = {
+      artifactId: "0198e000-0000-7000-8000-000000000101",
+      initiatedByDid: "did:abl:curator-1",
+      approvedByInstitution: "did:abl:artifact-council",
+      contentDigest: `0x${"1".repeat(64)}`,
+      provenanceLabel: "Human-authored public evidence",
+      classification: "EVIDENCE" as const,
+      targetContextClasses: ["PUBLIC_EVIDENCE" as const],
+      authorizationEventIds: ["0198e000-0000-7000-8000-000000000103"],
+      admittedAt: "2026-08-13T10:00:00.000Z",
+    };
+    const payload = {
+      artifact,
+      ratificationProposalId: "0198e000-0000-7000-8000-000000000102",
+    };
+    expect(() =>
+      ArtifactAdmissionPayloadSchema.parse({
+        ...payload,
+        artifact: { ...artifact, rawContent: "hidden prompt" },
+      }),
+    ).toThrow();
+    expect(() =>
+      ArtifactAdmissionPayloadSchema.parse({
+        ...payload,
+        artifact: { ...artifact, targetContextClasses: ["PLAYER"] },
+      }),
+    ).toThrow();
+    await expect(
+      requireArtifactAdmissionRatification(payload, {
+        artifactAdmissionRatification: async () => ({
+          proposalId: payload.ratificationProposalId,
+          proposalClass: "CONSTITUTIONAL",
+          proposerDid: "did:abl:human-administrator",
+          institution: artifact.approvedByInstitution,
+          executableChangeDigest: artifactAdmissionExecutableDigest(artifact),
+          passed: true,
+          closeEventId: artifact.authorizationEventIds[0]!,
+          closedAt: "2026-08-13T09:59:00.000Z",
+        }),
+      }),
+    ).rejects.toThrow(/exact passed AI-governed ratification/);
   });
 
   it("rejects duplicated classification identifiers", async () => {

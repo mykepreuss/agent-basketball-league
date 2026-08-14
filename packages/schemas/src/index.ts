@@ -163,15 +163,37 @@ export const ConsentRecordSchema = z.strictObject({
   signature: Eip712SignatureSchema,
 });
 
+export const ArtifactTargetContextClassSchema = z.enum([
+  "CANDIDATE_DISCLOSURE",
+  "CONSTITUTIONAL_REFERENCE",
+  "RULE_REFERENCE",
+  "CBA_REFERENCE",
+  "PUBLIC_EVIDENCE",
+  "INSTITUTIONAL_EVIDENCE",
+  "COMPETITION_REFERENCE",
+]);
+
 export const ArtifactAdmissionSchema = z.strictObject({
   artifactId: UuidV7Schema,
   initiatedByDid: DidSchema,
-  approvedByInstitution: z.string().min(1),
+  approvedByInstitution: z
+    .string()
+    .min(1)
+    .max(200)
+    .refine((value) => value === value.trim()),
   contentDigest: Sha256Schema,
-  provenanceLabel: z.string().min(1),
+  provenanceLabel: z
+    .string()
+    .min(1)
+    .max(300)
+    .refine((value) => value === value.trim()),
   classification: z.enum(["EVIDENCE", "REFERENCE"]),
-  targetContextClasses: z.array(z.string().min(1)),
-  authorizationEventIds: z.array(UuidV7Schema).min(1),
+  targetContextClasses: z
+    .array(ArtifactTargetContextClassSchema)
+    .min(1)
+    .max(ArtifactTargetContextClassSchema.options.length)
+    .refine((values) => new Set(values).size === values.length),
+  authorizationEventIds: z.array(UuidV7Schema).length(1),
   admittedAt: IsoDateTimeSchema,
 });
 

@@ -22,6 +22,7 @@ import {
   type GovernanceWorkflowSnapshot,
   type InstitutionalAuthorizationContext,
   type InstitutionalSigner,
+  type ArtifactAdmissionRatification,
   type ResourceScheduleRatification,
 } from "@abl/institutions";
 import {
@@ -319,10 +320,16 @@ async function replayGovernanceAggregate(
   return { records, snapshot, votes, authorization };
 }
 
-export async function readResourceScheduleRatification(
+export type GovernanceRatification = ResourceScheduleRatification &
+  Pick<
+    ArtifactAdmissionRatification,
+    "proposerDid" | "institution" | "closedAt"
+  >;
+
+export async function readGovernanceRatification(
   options: GovernanceRehearsalOptions,
   proposalId: string,
-): Promise<ResourceScheduleRatification | null> {
+): Promise<GovernanceRatification | null> {
   const aggregate = await replayGovernanceAggregate(options, proposalId);
   const snapshot = aggregate.snapshot;
   if (snapshot?.decision === null || snapshot?.decision === undefined)
@@ -334,10 +341,20 @@ export async function readResourceScheduleRatification(
   return {
     proposalId: snapshot.proposalId,
     proposalClass: snapshot.proposal.proposalClass,
+    proposerDid: snapshot.proposal.proposerDid,
+    institution: snapshot.proposal.institution,
     executableChangeDigest: snapshot.proposal.executableChangeDigest,
     passed: snapshot.decision.passed,
     closeEventId: closeRecord.eventId,
+    closedAt: closeRecord.occurredAt.toISOString(),
   };
+}
+
+export async function readResourceScheduleRatification(
+  options: GovernanceRehearsalOptions,
+  proposalId: string,
+): Promise<ResourceScheduleRatification | null> {
+  return readGovernanceRatification(options, proposalId);
 }
 
 function appendInput(

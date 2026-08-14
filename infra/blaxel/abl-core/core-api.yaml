@@ -85,6 +85,9 @@ spec:
       - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON
         value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}
         secret: false
+      - name: ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON
+        value: ${ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON}
+        secret: false
       - name: ABL_CASE_TRIBUNAL_DIDS_JSON
         value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
         secret: false
@@ -292,6 +295,16 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/governance/proposals/inspect
+    - id: artifact-admit
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/artifacts/admit
+    - id: artifact-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/communication/artifacts/inspect
     - id: resource-schedule-publish
       type: http
       configuration:

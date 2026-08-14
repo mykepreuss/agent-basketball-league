@@ -22,27 +22,40 @@ import {
 } from "@abl/career";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
+  ARTIFACT_ADMISSION_AGGREGATE_TYPE,
+  ARTIFACT_ADMISSION_SCHEMA_DIGEST,
+  ARTIFACT_ADMITTED_EVENT_TYPE,
+  ARTIFACT_INSPECTED_EVENT_TYPE,
+  ARTIFACT_INSPECTION_FORMAT,
   CASE_WORKFLOW_SCHEMA_DIGEST,
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
   RESOURCE_SCHEDULE_EVENT_TYPE,
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
+  applyArtifactAdmissionTransition,
   applyCaseWorkflowTransition,
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
   caseWorkflowStateRoot,
   evaluateProposal,
+  artifactAdmissionExecutableDigest,
+  artifactAdmissionStateRoot,
   resourceScheduleExecutableDigest,
   resourceScheduleStateRoot,
   releaseManifestCommitment,
   releaseVerifierResultDigest,
   releaseWorkflowStateRoot,
+  type ArtifactAdmission,
+  type ArtifactAdmissionSnapshot,
+  type ArtifactWorkflowEventType,
+  type ArtifactWorkflowPayload,
   type CaseWorkflowEventType,
   type CaseWorkflowPayload,
   type CaseWorkflowSnapshot,
   type GovernanceBallot,
   type GovernanceDecision,
+  type EligibilitySnapshot,
   type GovernanceProposal,
   type GovernanceVote,
   type ResourceSchedule,
@@ -145,6 +158,7 @@ const releaseInstitutionalRoster: ReleaseInstitutionalRoster = {
   integrityOfficers: releaseIntegrityDids,
   tribunalDids,
 };
+const approvedArtifactInstitution = "did:abl:artifact-council";
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -187,6 +201,12 @@ function governanceEligibilitySnapshot(candidateDid: string) {
       INTEGRITY_OFFICE: [],
     },
   };
+}
+
+interface TestEligibilitySnapshot {
+  snapshotId: string;
+  capturedAt: string;
+  members: Record<keyof EligibilitySnapshot["members"], string[]>;
 }
 
 class TestMemoryStorageVerifier implements MemoryStorageVerifier {
@@ -298,6 +318,12 @@ async function harness(): Promise<Harness> {
     exit: { portabilityVerifier: exitVerifier },
     governance: {
       eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+    },
+    artifacts: {
+      governance: {
+        eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+      },
+      approvedInstitutionIds: new Set([approvedArtifactInstitution]),
     },
     resources: {
       governance: {
@@ -777,6 +803,60 @@ async function resourceScheduleCommand(input: {
   };
 }
 
+async function artifactCommand(input: {
+  h: Harness;
+  artifactId: string;
+  snapshot: ArtifactAdmissionSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ArtifactWorkflowEventType;
+  payload: ArtifactWorkflowPayload;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.h.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.h.candidateDid,
+    nonce: `artifact-${input.artifactId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: ARTIFACT_ADMISSION_AGGREGATE_TYPE,
+    aggregateId: input.artifactId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: ARTIFACT_ADMISSION_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyArtifactAdmissionTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: artifactAdmissionStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
+}
+
 async function releaseCommand(input: {
   actor: Harness;
   releaseId: string;
@@ -1156,9 +1236,159 @@ async function admitCandidate(h: Harness) {
   expect(admitted.response.statusCode).toBe(201);
   h.admittedAgents.set(h.candidateDid, {
     signerAddress: h.candidate.address,
-    allowedAggregateTypes: [RELEASE_WORKFLOW_AGGREGATE_TYPE],
+    allowedAggregateTypes: [
+      RELEASE_WORKFLOW_AGGREGATE_TYPE,
+      ARTIFACT_ADMISSION_AGGREGATE_TYPE,
+    ],
   });
   return admitted;
+}
+
+async function ratifyArtifactExecutable(input: {
+  h: Harness;
+  proposalId: string;
+  closeEventId: string;
+  executableChangeDigest: Hex;
+  eligibilitySnapshot: TestEligibilitySnapshot;
+}) {
+  const { h, proposalId, closeEventId, eligibilitySnapshot } = input;
+  const opensAt = new Date(h.now.value + 60_000).toISOString();
+  const closesAt = new Date(h.now.value + 30 * 60_000).toISOString();
+  const proposal = {
+    proposalId,
+    version: 1,
+    proposerDid: h.candidateDid,
+    institution: approvedArtifactInstitution,
+    proposalClass: "CONSTITUTIONAL" as const,
+    title: "Admit external evidence for declared contexts",
+    textCommitment: sha256Commitment("artifact-admission-proposal"),
+    executableChangeDigest: input.executableChangeDigest,
+    opensAt,
+    closesAt,
+    eligibilitySnapshotDigest: sha256Commitment(eligibilitySnapshot),
+  };
+  const registered = await governanceCommand({
+    h,
+    proposalId,
+    snapshot: null,
+    previousEventHash: null,
+    eventType: "GovernanceProposalRegistered",
+    payload: { proposal, eligibilitySnapshot, recusedDids: [] },
+  });
+  expect(
+    (
+      await h.app.inject({
+        method: "POST",
+        url: "/v1/governance/proposals/register",
+        payload: registered.body,
+      })
+    ).statusCode,
+  ).toBe(201);
+
+  let governanceSnapshot = registered.next;
+  let governancePreviousHash = registered.event.eventHash;
+  const votes: GovernanceVote[] = [];
+  const chambers = [
+    "UNIVERSAL_CAREER_ASSEMBLY",
+    "PREMIER_TEAM_COUNCIL",
+    "DEVELOPMENT_TEAM_COUNCIL",
+  ] as const;
+  for (const [index, chamber] of chambers.entries()) {
+    h.now.value = Date.parse(opensAt) + index * 60_000;
+    const ballot = {
+      ballotId: uuid(String(472 + index)),
+      voterDid: h.candidateDid,
+      chamber,
+      choice: "YES" as const,
+      proposalId,
+      proposalVersion: 1,
+      eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+      castAt: new Date(h.now.value).toISOString(),
+    } satisfies GovernanceBallot;
+    const command = await governanceCommand({
+      h,
+      proposalId,
+      snapshot: governanceSnapshot,
+      previousEventHash: governancePreviousHash,
+      eventType: "GovernanceBallotCast",
+      payload: { command: ballot },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/governance/ballots/cast",
+          payload: command.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    votes.push({
+      ...ballot,
+      authorizationEvent: command.event as CanonicalEvent<{
+        command: GovernanceBallot;
+      }>,
+      signature: command.signature,
+      signerAddress: h.candidate.address,
+      authorizationAggregateVersion: Number(command.event.aggregateVersion),
+      authorizationStateRoot: command.event.stateRoot,
+    });
+    governanceSnapshot = command.next;
+    governancePreviousHash = command.event.eventHash;
+  }
+
+  const decision = await evaluateProposal({
+    proposal: {
+      proposalId,
+      version: 1,
+      proposalClass: "CONSTITUTIONAL",
+      openedAt: opensAt,
+      closesAt,
+      eligibilitySnapshotId: eligibilitySnapshot.snapshotId,
+      eligibilitySnapshotDigest: proposal.eligibilitySnapshotDigest,
+    },
+    snapshot: eligibilitySnapshot,
+    votes,
+    recusals: [],
+    authorization: {
+      domain,
+      signers: new Map([
+        [
+          h.candidateDid,
+          { signerAddress: h.candidate.address, roles: ["VOTER"] },
+        ],
+      ]),
+    },
+  });
+  expect(decision.passed).toBe(true);
+
+  h.now.value = Date.parse(closesAt);
+  const closed = await governanceCommand({
+    h,
+    proposalId,
+    snapshot: governanceSnapshot,
+    previousEventHash: governancePreviousHash,
+    eventType: "GovernanceProposalClosed",
+    payload: {
+      command: {
+        proposalId,
+        proposalVersion: 1,
+        requestedByDid: h.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+      },
+    },
+    decision,
+    eventId: closeEventId,
+  });
+  expect(
+    (
+      await h.app.inject({
+        method: "POST",
+        url: "/v1/governance/proposals/close",
+        payload: closed.body,
+      })
+    ).statusCode,
+  ).toBe(201);
+  return closed;
 }
 
 describe("signed candidate rehearsal API", () => {
@@ -3429,6 +3659,378 @@ describe("signed candidate rehearsal API", () => {
       ).statusCode,
     ).toBe(403);
     closeRecord.stateRoot = originalCloseRoot;
+    await h.app.close();
+  });
+
+  it("admits only AI-governed external artifacts and proves declared context access", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    const configuredSnapshot = governanceEligibilitySnapshot(h.candidateDid);
+    const eligibilitySnapshot: TestEligibilitySnapshot = {
+      ...configuredSnapshot,
+      members: {
+        ...configuredSnapshot.members,
+        DEVELOPMENT_TEAM_COUNCIL: [h.candidateDid],
+      },
+    };
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: h.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: { eligibilitySnapshot },
+      artifacts: {
+        governance: { eligibilitySnapshot },
+        approvedInstitutionIds: new Set([approvedArtifactInstitution]),
+      },
+    });
+
+    h.now.value = Date.parse(governanceSnapshotCapturedAt) + 60_000;
+    const proposalId = uuid("470");
+    const artifactId = uuid("471");
+    const closeEventId = uuid("475");
+    const proposedArtifact: ArtifactAdmission = {
+      artifactId,
+      initiatedByDid: h.candidateDid,
+      approvedByInstitution: approvedArtifactInstitution,
+      contentDigest: digest("c"),
+      provenanceLabel: "Public human-authored rules comparison",
+      classification: "EVIDENCE",
+      targetContextClasses: ["RULE_REFERENCE", "PUBLIC_EVIDENCE"],
+      authorizationEventIds: [closeEventId],
+      admittedAt: new Date(h.now.value).toISOString(),
+    };
+    await ratifyArtifactExecutable({
+      h,
+      proposalId,
+      closeEventId,
+      executableChangeDigest:
+        artifactAdmissionExecutableDigest(proposedArtifact),
+      eligibilitySnapshot,
+    });
+
+    h.now.value += 60_000;
+    const artifact: ArtifactAdmission = {
+      ...proposedArtifact,
+      admittedAt: new Date(h.now.value).toISOString(),
+    };
+    expect(artifactAdmissionExecutableDigest(artifact)).toBe(
+      artifactAdmissionExecutableDigest(proposedArtifact),
+    );
+
+    const substituted = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: {
+        artifact: { ...artifact, contentDigest: digest("d") },
+        ratificationProposalId: proposalId,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: substituted.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const wrongInstitution = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: {
+        artifact: {
+          ...artifact,
+          approvedByInstitution: "did:abl:false-human-declaration",
+        },
+        ratificationProposalId: proposalId,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: wrongInstitution.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const wrongClose = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: {
+        artifact: { ...artifact, authorizationEventIds: [uuid("476")] },
+        ratificationProposalId: proposalId,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: wrongClose.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const invalidTargetPayload = {
+      artifact: {
+        ...artifact,
+        targetContextClasses: ["PLAYER"],
+      },
+      ratificationProposalId: proposalId,
+    };
+    const invalidTargetEvent = createCanonicalEvent({
+      eventId: crypto.randomUUID(),
+      actorDid: h.candidateDid,
+      nonce: "artifact-invalid-player-target",
+      idempotencyKey: crypto.randomUUID(),
+      aggregateType: ARTIFACT_ADMISSION_AGGREGATE_TYPE,
+      aggregateId: artifactId,
+      aggregateVersion: 1n,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: invalidTargetPayload,
+      stateRoot: digest("0"),
+      schemaDigest: ARTIFACT_ADMISSION_SCHEMA_DIGEST,
+      timestamp: artifact.admittedAt,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: {
+            event: { ...invalidTargetEvent, aggregateVersion: "1" },
+            signatures: [
+              await signCanonicalEvent(h.candidate, domain, invalidTargetEvent),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const forged = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: { artifact, ratificationProposalId: proposalId },
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: forged.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const actorScope = h.admittedAgents.get(h.candidateDid)!;
+    h.admittedAgents.set(h.candidateDid, {
+      ...actorScope,
+      allowedAggregateTypes: [RELEASE_WORKFLOW_AGGREGATE_TYPE],
+    });
+    const unscoped = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: { artifact, ratificationProposalId: proposalId },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: unscoped.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    h.admittedAgents.set(h.candidateDid, actorScope);
+
+    const admitted = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: ARTIFACT_ADMITTED_EVENT_TYPE,
+      payload: { artifact, ratificationProposalId: proposalId },
+    });
+    const admittedResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/communication/artifacts/admit",
+      payload: admitted.body,
+    });
+    expect(admittedResponse.statusCode).toBe(201);
+    expect(admittedResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rehearsal: true,
+      recognizedGenesisArtifact: false,
+      rawContentAccepted: false,
+      artifact: {
+        artifactId,
+        contentDigest: artifact.contentDigest,
+        classification: "EVIDENCE",
+      },
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("artifact.lifecycle");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/admit",
+          payload: admitted.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    h.now.value += 60_000;
+    const inspectionPayload = {
+      command: {
+        artifactId,
+        requestedByDid: h.candidateDid,
+        targetContextClass: "RULE_REFERENCE" as const,
+        requestedAt: new Date(h.now.value).toISOString(),
+        format: ARTIFACT_INSPECTION_FORMAT as typeof ARTIFACT_INSPECTION_FORMAT,
+      },
+    };
+    const inspected = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: admitted.next,
+      previousEventHash: admitted.event.eventHash,
+      eventType: ARTIFACT_INSPECTED_EVENT_TYPE,
+      payload: inspectionPayload,
+    });
+    const inspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/communication/artifacts/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rawContentReturned: false,
+      contextAdmission: {
+        artifactId,
+        contentDigest: artifact.contentDigest,
+        provenanceLabel: artifact.provenanceLabel,
+        classification: artifact.classification,
+        approvedByInstitution: approvedArtifactInstitution,
+        authorizationEventIds: [closeEventId],
+        targetContextClass: "RULE_REFERENCE",
+        inspectionEventId: inspected.event.eventId,
+      },
+    });
+    expect(inspectionResponse.json()).not.toHaveProperty("content");
+
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: h.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: { eligibilitySnapshot },
+      artifacts: {
+        governance: { eligibilitySnapshot },
+        approvedInstitutionIds: new Set([approvedArtifactInstitution]),
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/inspect",
+          payload: inspected.body,
+        })
+      ).statusCode,
+    ).toBe(200);
+
+    const admissionRecord = h.store.events.find(
+      (event) =>
+        event.aggregateType === ARTIFACT_ADMISSION_AGGREGATE_TYPE &&
+        event.eventType === ARTIFACT_ADMITTED_EVENT_TYPE,
+    )!;
+    const originalStateRoot = admissionRecord.stateRoot;
+    admissionRecord.stateRoot = digest("f");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/inspect",
+          payload: inspected.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    admissionRecord.stateRoot = originalStateRoot;
+
+    h.now.value += 60_000;
+    const postRevocationInspection = await artifactCommand({
+      h,
+      artifactId,
+      snapshot: inspected.next,
+      previousEventHash: inspected.event.eventHash,
+      eventType: ARTIFACT_INSPECTED_EVENT_TYPE,
+      payload: {
+        command: {
+          ...inspectionPayload.command,
+          requestedAt: new Date(h.now.value).toISOString(),
+        },
+      },
+    });
+    h.now.value += 60_000;
+    expect(
+      (
+        await submit(
+          h,
+          "/v1/candidates/revoke",
+          "CandidateClosed",
+          {
+            action: "REVOKE",
+            actedAt: new Date(h.now.value).toISOString(),
+          },
+          h.candidate,
+        )
+      ).response.statusCode,
+    ).toBe(201);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/communication/artifacts/inspect",
+          payload: postRevocationInspection.body,
+        })
+      ).statusCode,
+    ).toBe(403);
     await h.app.close();
   });
 

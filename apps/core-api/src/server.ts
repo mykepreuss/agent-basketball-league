@@ -17,6 +17,10 @@ import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
 import {
+  installArtifactRehearsalRoutes,
+  type ArtifactRehearsalOptions,
+} from "./artifacts.js";
+import {
   installCandidateRehearsalRoutes,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
@@ -111,6 +115,10 @@ export interface LiveCoreApiOptions {
   candidateAdmission?: Pick<
     CandidateRehearsalOptions,
     "challengeSecret" | "challengeId" | "challengeBytes"
+  >;
+  artifacts?: Pick<
+    ArtifactRehearsalOptions,
+    "governance" | "approvedInstitutionIds"
   >;
   combine?: Pick<CombineRehearsalOptions, "combineId" | "openedAt">;
   contracts?: Pick<ContractRehearsalOptions, "clubGovernors">;
@@ -229,6 +237,7 @@ export function createLiveCoreApi(
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
   const {
+    artifacts,
     candidateAdmission,
     cases,
     combine,
@@ -241,6 +250,10 @@ export function createLiveCoreApi(
     releases,
   } = options;
   const candidateRoutesEnabled = candidateAdmission !== undefined;
+  const artifactRoutesEnabled =
+    candidateRoutesEnabled &&
+    governance !== undefined &&
+    artifacts !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
   const continuityRoutesEnabled =
@@ -463,6 +476,23 @@ export function createLiveCoreApi(
   if (
     candidateAdmission !== undefined &&
     governance !== undefined &&
+    artifacts !== undefined
+  ) {
+    installArtifactRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      governance: artifacts.governance,
+      approvedInstitutionIds: artifacts.approvedInstitutionIds,
+    });
+  }
+  if (
+    candidateAdmission !== undefined &&
+    governance !== undefined &&
     resources !== undefined
   ) {
     installResourceScheduleRehearsalRoutes(app, {
@@ -515,6 +545,7 @@ export function createLiveCoreApi(
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
+      !(artifactRoutesEnabled && entry.path === "/v1/communication/*") &&
       !(resourceRoutesEnabled && entry.path === "/v1/resources/*") &&
       !(releaseRoutesEnabled && entry.path === "/v1/releases/*") &&
       !(caseRoutesEnabled && entry.path === "/v1/cases/*"),

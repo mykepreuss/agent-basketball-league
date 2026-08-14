@@ -50,10 +50,11 @@ const AdmittedAgentsSchema = z.record(
           "due-process-case",
           "resource-schedule",
           "software-release",
+          "artifact-admission",
         ]),
       )
       .min(1)
-      .max(6)
+      .max(7)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -66,6 +67,16 @@ function caseAdjudicatorRoster(size: number) {
 const RecognizedBodyImagesSchema = z
   .array(z.string().regex(/^0x[0-9a-f]{64}$/))
   .min(1);
+const ApprovedArtifactInstitutionIdsSchema = z
+  .array(
+    z
+      .string()
+      .min(1)
+      .max(200)
+      .refine((value) => value === value.trim()),
+  )
+  .min(1)
+  .refine((ids) => new Set(ids).size === ids.length);
 const ReleaseInstitutionalRosterSchema = z
   .strictObject({
     commissioners: caseAdjudicatorRoster(3),
@@ -133,6 +144,10 @@ const app = rehearsal
       const governanceEligibilitySnapshot =
         GovernanceEligibilitySnapshotSchema.parse(
           JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
+        );
+      const approvedArtifactInstitutionIds =
+        ApprovedArtifactInstitutionIdsSchema.parse(
+          JSON.parse(required("ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON")),
         );
       const caseTribunalDids = caseAdjudicatorRoster(5).parse(
         JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
@@ -251,6 +266,12 @@ const app = rehearsal
         },
         governance: {
           eligibilitySnapshot: governanceEligibilitySnapshot,
+        },
+        artifacts: {
+          governance: {
+            eligibilitySnapshot: governanceEligibilitySnapshot,
+          },
+          approvedInstitutionIds: new Set(approvedArtifactInstitutionIds),
         },
         resources: {
           governance: {

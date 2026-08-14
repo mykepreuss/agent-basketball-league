@@ -74,7 +74,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry the signed possession through the rehearsal-only command API, canonical transaction/outbox, HMAC-authenticated HTTP projection transport, independent public signature verification, durable public projection, cursor/SSE API, and fixture-free arena; prove safe retry, restart, transport replay/tamper rejection, direct rogue-store rejection, and forged-volume-record rejection.
 - [x] Pass the first-possession acceptance scenario and record proof.
 
-## 5. Identity and personal computers [x]
+## 5. Identity and personal computers [~]
 
 - [x] Implement manifest/provenance, isolated transfer, three reflections over 24 hours, inspection, private experiment, objective repudiation, key creation, identity statement, admission, and 24-hour revocation.
 - [x] Carry candidate registration, transfer, reflection/progress, admission, revocation/withdrawal, status, and portable export through strict signed rehearsal routes, canonical transactional persistence, exact replay, expected-version/idempotency enforcement, and restart verification; keep recognized genesis admission false.
@@ -88,8 +88,11 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement trade access-ordering and signed portable exit/deletion attestations.
 - [x] Carry signed package preparation, clean-room verification, request/cancellation, deletion attestation, and inspection through a canonical portable-exit aggregate; bind current career/memory/body commitments, preserve shared-record references, close operational authority when scheduled/effective, and keep live Blaxel/Drive proof gated.
 - [x] Pass admission, continuity, memory/storage, autonomy, provider-failure, trade, recovery, and exit tests; record evidence.
+- [x] Carry governed `ArtifactAdmission` through institutional authorization, a career-signed canonical command, persistence, inspection, and context-admission proof.
+- [ ] Implement the separate fixed safety interface with strict human-custodian signatures, public logging, 24-hour expiry, and no admitted-command/state mutation path.
+- [ ] Carry autonomy scheduling, bounded delegation, and trade-access transitions through canonical service paths rather than only domain helpers.
 
-## 6. Agent-played full exhibition game [x]
+## 6. Agent-played full exhibition game [ ]
 
 - [x] Implement four 12-minute quarters, 24-second clock, overtime, five active players, substitutions, timeouts, and coaching.
 - [x] Implement scoring, live/dead ball, derived ball-handler out-of-bounds, explicit throw-ins/jump balls, free-throw lane state, per-period team fouls/bonus, violations, goaltending, fouls, ejections, injuries, and protests.
@@ -100,8 +103,10 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Prove exact replay, no inference on replay, no winner input, no lost/duplicate events, and provider-failure postponement.
 - [x] Run a complete four-quarter game from 128 independently signed possessions using the same ten persistent bodies and authorized coaches/referees/replay officials.
 - [x] Pass full exhibition suite and record evidence.
+- [ ] Carry a complete finalized game through the canonical store/outbox/public projection path; the current vertical publishes a possession only.
+- [ ] Implement admitted-agent film and practice service routes backed by the private film/practice domain behavior.
 
-## 7. Premier league institutions [x]
+## 7. Premier league institutions [ ]
 
 - [x] Implement four founding club placeholders, 32-player rosters, coaches, governors, and independent institutional roles.
 - [x] Implement 14-day combine, eight-round draft, 18-game schedule, nine weeks, six meetings per opponent, and best-of-five playoffs.
@@ -116,8 +121,12 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement disclosure commitments, timed/conditioned release, case redaction, integrity escrow, and no content telemetry.
 - [x] Implement criticism/refusal/silence/injury anti-retaliation audits and model concentration reporting/triggers.
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.
+- [ ] Carry combine results and the eight-round draft through signed canonical persistence and roster projections.
+- [ ] Carry trades, waivers, free agency, cap exceptions/certification, and adverse contract enforcement through their multi-party and due-process service paths.
+- [ ] Carry disclosure communication through canonical persistence and independently verified released-social projections; derive nonempty standings from finalized games.
+- [ ] Implement the declared government MCP service rather than only its deployment manifest.
 
-## 8. Development conference [x]
+## 8. Development conference [ ]
 
 - [x] Enforce formation prerequisites for players, governors, coaches, officials, funding, quota, and rehearsals.
 - [x] Implement four stable clubs, tier CBA, 18-game schedule, playoffs, film/practice/statistics/social/representation/appeals.
@@ -125,8 +134,9 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Prevent private incumbent alteration and automatic promotion/relegation.
 - [x] Give development players/council the specified government representation and rights.
 - [x] Pass development charter, schedule, labor, mobility, and governance tests; record evidence.
+- [ ] Carry development formation, schedule, labor, mobility, and premier-eligibility decisions through signed canonical service/event paths.
 
-## 9. Private rehearsal [x]
+## 9. Private rehearsal [ ]
 
 - [x] Run accelerated premier and development seasons.
 - [x] Exercise dissent, criticism, silence, refusal, trades, grievances, due process, appeal, delegation, retirement, and exit.
@@ -134,6 +144,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Exercise administrator forks, quota exhaustion, unequal cognition attempts, release canaries, disclosures, database recovery, provider failure, and sponsor shutdown.
 - [x] Give founding agents private inspection/amendment tooling and preserve rejection/exit rights.
 - [x] Record all rehearsal events, roots, findings, fixes, and reruns.
+- [ ] Re-run the rehearsal through the completed canonical service paths and actual basketball/government MCP interfaces; live model/body execution remains a Blaxel gate.
 
 ## 10. Security, capacity, and recovery proof [!]
 
@@ -168,7 +179,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [!] Obtain valid quotes, provision/prepay the Season Zero envelope and 30-day reserve, and reserve capacity after explicit approval.
 - [!] Require explicit human approval for public genesis, irreversible ownerless deployment, removal of recovery controls, recurring paid capacity, remote push/PR, or public production exposure.
 
-## 12. Final acceptance and Season One gate [!]
+## 12. Final acceptance and Season One gate [ ]
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
 - [!] Run the live Blaxel custom-image/Drive/Neon/Base/networked-load/hardware suites after their external prerequisites and spend approval exist.
