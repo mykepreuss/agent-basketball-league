@@ -7,7 +7,9 @@ import {
   finalizedGameStateRoot,
   replayFinalizedGamePayload,
   requireFinalizedGameEvidence,
+  requireFinalizedGameScheduleEvidence,
   type FinalizedGameEvidenceReader,
+  type FinalizedGameScheduleEvidenceReader,
 } from "@abl/basketball";
 import {
   CanonicalConflictError,
@@ -173,6 +175,7 @@ export interface LiveCoreApiOptions {
   finalizedGames?: {
     finalizerDids: ReadonlySet<string>;
     evidence: FinalizedGameEvidenceReader;
+    scheduleEvidence?: FinalizedGameScheduleEvidenceReader;
   };
   filmPractice?: Pick<
     FilmPracticeRehearsalOptions,
@@ -312,6 +315,7 @@ export function createLiveCoreApi(
       : {
           finalizerDids: new Set(options.finalizedGames.finalizerDids),
           evidence: options.finalizedGames.evidence,
+          scheduleEvidence: options.finalizedGames.scheduleEvidence,
         };
   const candidateRoutesEnabled = candidateAdmission !== undefined;
   const artifactRoutesEnabled =
@@ -441,6 +445,10 @@ export function createLiveCoreApi(
           await requireFinalizedGameEvidence(
             replayed.payload,
             finalizedGames.evidence,
+          );
+          await requireFinalizedGameScheduleEvidence(
+            replayed.payload,
+            finalizedGames.scheduleEvidence,
           );
           if (
             event.aggregateVersion !== 1n ||

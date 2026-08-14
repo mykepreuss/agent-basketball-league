@@ -46,7 +46,10 @@ import {
   type PublicSocialProjectionReader,
   type PublicSocialProjectionWriter,
 } from "@abl/projections";
-import type { FinalizedGameEvidenceReader } from "@abl/basketball";
+import type {
+  FinalizedGameEvidenceReader,
+  FinalizedGameScheduleEvidenceReader,
+} from "@abl/basketball";
 import {
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   type CompetitionReleaseEvidenceReader,
@@ -220,6 +223,7 @@ export interface PublicApiOptions {
     competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
     finalizedGameAuthorityDids?: ReadonlySet<string>;
     finalizedGameEvidence?: FinalizedGameEvidenceReader["finalizedGameEvidence"];
+    finalizedGameScheduleEvidence?: FinalizedGameScheduleEvidenceReader;
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -543,6 +547,12 @@ export function createPublicApi(
             ...projectionIngress,
             finalizerDids: projectionIngress.finalizedGameAuthorityDids,
             finalizedGameEvidence: projectionIngress.finalizedGameEvidence,
+            ...(projectionIngress.finalizedGameScheduleEvidence === undefined
+              ? {}
+              : {
+                  scheduleEvidence:
+                    projectionIngress.finalizedGameScheduleEvidence,
+                }),
           });
           if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
             throw new ProjectionVersionConflictError(
@@ -896,6 +906,8 @@ export function createPublicApi(
             : (options.contractProjections?.rosters() ?? [])),
           ...(options.draftProjections?.rosters() ?? []),
         ];
+      } else if (path === "/v1/public/standings") {
+        items = options.finalGameProjections?.standings() ?? [];
       } else if (path === "/v1/public/resources") {
         items = options.resourceProjections?.resources() ?? [];
       } else if (path === "/v1/public/models/concentration") {

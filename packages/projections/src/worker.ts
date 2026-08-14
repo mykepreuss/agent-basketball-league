@@ -9,7 +9,10 @@ import type {
   ReleaseRatificationReader,
   ResourceScheduleRatificationReader,
 } from "@abl/institutions";
-import type { FinalizedGameEvidenceReader } from "@abl/basketball";
+import type {
+  FinalizedGameEvidenceReader,
+  FinalizedGameScheduleEvidenceReader,
+} from "@abl/basketball";
 
 import {
   caseProjectionEnvelopeFromOutbox,
@@ -144,6 +147,9 @@ export class PublicProjectionWorker {
   readonly #finalizedGameEvidence:
     | FinalizedGameEvidenceReader["finalizedGameEvidence"]
     | undefined;
+  readonly #finalizedGameScheduleEvidence:
+    | FinalizedGameScheduleEvidenceReader
+    | undefined;
   readonly #draftAuthorityDid: string | undefined;
   readonly #draftClubGovernors: Readonly<Record<string, string>> | undefined;
   readonly #premierDraftEvidence:
@@ -174,6 +180,7 @@ export class PublicProjectionWorker {
       competitionReleaseEvidence?: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
       finalizedGameAuthorityDids?: ReadonlySet<string>;
       finalizedGameEvidence?: FinalizedGameEvidenceReader["finalizedGameEvidence"];
+      finalizedGameScheduleEvidence?: FinalizedGameScheduleEvidenceReader;
       draftAuthorityDid?: string;
       draftClubGovernors?: Readonly<Record<string, string>>;
       premierDraftEvidence?: PremierDraftEvidenceReader["premierDraftEvidence"];
@@ -264,6 +271,7 @@ export class PublicProjectionWorker {
         ? undefined
         : new Set(input.finalizedGameAuthorityDids);
     this.#finalizedGameEvidence = input.finalizedGameEvidence;
+    this.#finalizedGameScheduleEvidence = input.finalizedGameScheduleEvidence;
     this.#draftAuthorityDid = input.draftAuthorityDid;
     this.#draftClubGovernors = input.draftClubGovernors;
     this.#premierDraftEvidence = input.premierDraftEvidence;
@@ -497,6 +505,9 @@ export class PublicProjectionWorker {
       ...this.#authority,
       finalizerDids: this.#finalizedGameAuthorityDids,
       finalizedGameEvidence: this.#finalizedGameEvidence,
+      ...(this.#finalizedGameScheduleEvidence === undefined
+        ? {}
+        : { scheduleEvidence: this.#finalizedGameScheduleEvidence }),
     });
     if (this.#destination.sink === undefined) {
       if (this.#destination.finalGameWriter === undefined)

@@ -127,6 +127,9 @@ spec:
       - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
         value: ${ABL_FINALIZED_GAME_EVIDENCE_JSON}
         secret: false
+      - name: ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON}
+        secret: false
       - name: ABL_FILM_DELIVERY_EVIDENCE_JSON
         value: ${ABL_FILM_DELIVERY_EVIDENCE_JSON}
         secret: false

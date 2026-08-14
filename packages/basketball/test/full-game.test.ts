@@ -13,6 +13,9 @@ import {
   PreparationComputeLedger,
   PrivatePracticeLab,
   assertCalibrationCeiling,
+  createAgentPlayedGameEvidence,
+  createFinalizedGameScheduleEvidence,
+  createFinalizedGameScheduleEvidenceReader,
   createFilmDeliveryEvidenceReader,
   crewRuling,
   developAvatar,
@@ -22,6 +25,7 @@ import {
   mirroredCalibration,
   replayFullGame,
   replayFinalizedGamePayload,
+  requireFinalizedGameScheduleEvidence,
   resolveChallenge,
   rotateOfficialCrew,
   runAgentPlayedExhibition,
@@ -138,6 +142,123 @@ describe("complete deterministic exhibition rules", () => {
     expect(
       replayFullGame(exhibition.input, exhibition.commands, exhibition.proof),
     ).toMatchObject({ exact: true, inferenceInvocations: 0 });
+  });
+
+  it("requires independently registered schedule evidence for league standings", async () => {
+    const gameId = "0198f100-0000-7000-8000-000000000001";
+    const exhibition = runDeterministicExhibition(gameId);
+    const agentEvidence = createAgentPlayedGameEvidence({
+      gameId,
+      gameInput: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      possessionProofs: [
+        {
+          possessionId: "schedule-evidence-possession",
+          playerDecisionHashes: Array.from({ length: 20 }, (_, index) =>
+            digest({ role: "player", index }),
+          ),
+          coachDecisionHashes: Array.from({ length: 4 }, (_, index) =>
+            digest({ role: "coach", index }),
+          ),
+          refereeDecisionHashes: Array.from({ length: 3 }, (_, index) =>
+            digest({ role: "referee", index }),
+          ),
+          replayDecisionHashes: Array.from({ length: 2 }, (_, index) =>
+            digest({ role: "replay", index }),
+          ),
+          eventMerkleRoot: digest("schedule-possession-events"),
+          finalStateRoot: digest("schedule-possession-state"),
+        },
+      ],
+    });
+    const scheduleEvidence = createFinalizedGameScheduleEvidence({
+      gameId,
+      competitionId: "abl-rehearsal",
+      seasonId: "season-zero",
+      tier: "DEVELOPMENT",
+      scheduleId: "abl-rehearsal:season-zero:development",
+      scheduleVersion: 1,
+      clubIds: ["club-a", "club-b", "club-c", "club-d"],
+      homeClubId: "club-c",
+      awayClubId: "club-d",
+      scheduledAt: iso(-60_000),
+      scheduleEventHash: digest("schedule-event"),
+      scheduleStateRoot: digest("schedule-state"),
+    });
+    const payload = FinalizedGamePayloadSchema.parse({
+      gameId,
+      finalizedAt: iso(0),
+      competition: scheduleEvidence,
+      input: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      agentEvidence,
+      filmCommitment: digest(exhibition.events),
+      broadcastStartedAt: iso(0),
+      broadcastIntervalMs: 1,
+    });
+    const reader = createFinalizedGameScheduleEvidenceReader([
+      scheduleEvidence,
+    ]);
+    await expect(
+      requireFinalizedGameScheduleEvidence(payload, reader),
+    ).resolves.toBeUndefined();
+    await expect(
+      requireFinalizedGameScheduleEvidence(payload, undefined),
+    ).rejects.toThrow("lacks independently registered schedule evidence");
+    const { evidenceCommitment: _evidenceCommitment, ...scheduleBody } =
+      scheduleEvidence;
+    const substitutedMatchup = createFinalizedGameScheduleEvidence({
+      ...scheduleBody,
+      homeClubId: "club-a",
+      awayClubId: "club-b",
+    });
+    await expect(
+      requireFinalizedGameScheduleEvidence(
+        payload,
+        createFinalizedGameScheduleEvidenceReader([substitutedMatchup]),
+      ),
+    ).rejects.toThrow("lacks independently registered schedule evidence");
+    expect(() =>
+      createFinalizedGameScheduleEvidenceReader([
+        {
+          ...scheduleEvidence,
+          scheduleStateRoot: digest("substituted-schedule-state"),
+        },
+      ]),
+    ).toThrow("schedule evidence is invalid");
+    const secondGameSchedule = createFinalizedGameScheduleEvidence({
+      ...scheduleBody,
+      gameId: "0198f100-0000-7000-8000-000000000002",
+      homeClubId: "club-a",
+      awayClubId: "club-b",
+    });
+    expect(() =>
+      createFinalizedGameScheduleEvidenceReader([
+        scheduleEvidence,
+        secondGameSchedule,
+      ]),
+    ).not.toThrow();
+    const substitutedSchedule = createFinalizedGameScheduleEvidence({
+      ...scheduleBody,
+      gameId: "0198f100-0000-7000-8000-000000000003",
+      scheduleStateRoot: digest("substituted-schedule-state"),
+    });
+    expect(() =>
+      createFinalizedGameScheduleEvidenceReader([
+        scheduleEvidence,
+        substitutedSchedule,
+      ]),
+    ).toThrow("schedule evidence is invalid");
+
+    const exhibitionPayload = FinalizedGamePayloadSchema.parse({
+      ...payload,
+      competition: null,
+    });
+    await expect(
+      requireFinalizedGameScheduleEvidence(exhibitionPayload, undefined),
+    ).resolves.toBeUndefined();
   });
 
   it("keeps the public exhibition proof fixture byte-for-field aligned", async () => {

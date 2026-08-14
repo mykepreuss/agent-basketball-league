@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import type {
   AgentPlayedGameEvidence,
   BroadcastSegmentRecord,
+  FinalizedGameScheduleEvidence,
   FullGameEvent,
 } from "@abl/basketball";
 import { sha256Commitment } from "@abl/recognition";
@@ -22,6 +23,7 @@ export interface PublicFinalizedGameProjection {
   recognizedGenesisGame: false;
   projectionKind: "FINALIZED_GAME";
   gameId: string;
+  competition: FinalizedGameScheduleEvidence | null;
   aggregateVersion: "1";
   canonicalEventHash: `0x${string}`;
   phase: "FINAL";
@@ -42,6 +44,42 @@ export interface PublicFinalizedGameProjection {
   projectedAt: string;
 }
 
+export interface PublicSeasonStanding {
+  rank: number;
+  clubId: string;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDifferential: number;
+}
+
+export interface PublicSeasonStandingsProjection {
+  format: "ABL-PUBLIC-SEASON-STANDINGS-V1";
+  recordType: "SEASON_STANDINGS";
+  state: "REHEARSAL";
+  canonical: true;
+  verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL";
+  recognizedGenesisStandings: false;
+  competitionId: string;
+  seasonId: string;
+  tier: "PREMIER" | "DEVELOPMENT";
+  scheduleId: string;
+  scheduleVersion: number;
+  scheduleEventHash: `0x${string}`;
+  scheduleStateRoot: `0x${string}`;
+  completedGameCount: number;
+  sourceGames: readonly {
+    gameId: string;
+    canonicalEventHash: `0x${string}`;
+    scheduleEvidenceCommitment: `0x${string}`;
+  }[];
+  standings: readonly PublicSeasonStanding[];
+  standingsCommitment: `0x${string}`;
+  projectedAt: string;
+}
+
 export interface FinalGameProjectionRecord {
   cursor: number;
   previousRecordHash: `0x${string}` | null;
@@ -53,6 +91,7 @@ export interface FinalGameProjectionRecord {
 export interface PublicFinalGameProjectionReader {
   refresh(): Promise<void>;
   games(): readonly PublicFinalizedGameProjection[];
+  standings(): readonly PublicSeasonStandingsProjection[];
   game(gameId: string): PublicFinalizedGameProjection | undefined;
   cursor(
     gameId: string,
@@ -72,6 +111,56 @@ function recordHash(
   value: Omit<FinalGameProjectionRecord, "recordHash">,
 ): `0x${string}` {
   return sha256Commitment(value);
+}
+
+function seasonKey(context: FinalizedGameScheduleEvidence): string {
+  return [context.competitionId, context.seasonId, context.tier].join("\u0000");
+}
+
+type LeagueGameProjection = PublicFinalizedGameProjection & {
+  competition: FinalizedGameScheduleEvidence;
+};
+
+type StandingAccumulator = Omit<PublicSeasonStanding, "rank">;
+
+function isLeagueGame(
+  projection: PublicFinalizedGameProjection,
+): projection is LeagueGameProjection {
+  return projection.competition !== null;
+}
+
+function scheduleAuthorityCommitment(
+  context: FinalizedGameScheduleEvidence,
+): `0x${string}` {
+  return sha256Commitment({
+    scheduleId: context.scheduleId,
+    scheduleVersion: context.scheduleVersion,
+    clubIds: context.clubIds,
+    scheduleEventHash: context.scheduleEventHash,
+    scheduleStateRoot: context.scheduleStateRoot,
+  });
+}
+
+function requireStanding(
+  records: ReadonlyMap<string, StandingAccumulator>,
+  clubId: string,
+): StandingAccumulator {
+  const standing = records.get(clubId);
+  if (standing === undefined)
+    throw new Error("Finalized game references a club outside its schedule");
+  return standing;
+}
+
+function standingOrder(
+  left: Omit<PublicSeasonStanding, "rank">,
+  right: Omit<PublicSeasonStanding, "rank">,
+): number {
+  return (
+    right.wins - left.wins ||
+    right.pointDifferential - left.pointDifferential ||
+    right.pointsFor - left.pointsFor ||
+    left.clubId.localeCompare(right.clubId)
+  );
 }
 
 export class FilePublicFinalGameProjectionRepository
@@ -230,6 +319,122 @@ export class FilePublicFinalGameProjectionRepository
 
   public games(): readonly PublicFinalizedGameProjection[] {
     return structuredClone(this.#records.map(({ projection }) => projection));
+  }
+
+  public standings(): readonly PublicSeasonStandingsProjection[] {
+    const seasons = new Map<string, LeagueGameProjection[]>();
+    for (const { projection } of this.#records) {
+      if (!isLeagueGame(projection)) continue;
+      const key = seasonKey(projection.competition);
+      const games = seasons.get(key) ?? [];
+      games.push(projection);
+      seasons.set(key, games);
+    }
+    const projections = [...seasons.values()].map((unsortedGames) => {
+      const games = [...unsortedGames].sort(
+        (left, right) =>
+          left.competition.scheduledAt.localeCompare(
+            right.competition.scheduledAt,
+          ) || left.gameId.localeCompare(right.gameId),
+      );
+      const firstGame = games[0];
+      if (firstGame === undefined)
+        throw new Error("Season standings require at least one finalized game");
+      const context = firstGame.competition;
+      const scheduleIdentity = scheduleAuthorityCommitment(context);
+      if (
+        games.some(
+          (game) =>
+            scheduleAuthorityCommitment(game.competition) !== scheduleIdentity,
+        )
+      ) {
+        throw new Error(
+          "Finalized games substitute the season schedule authority",
+        );
+      }
+      const records = new Map<string, StandingAccumulator>(
+        context.clubIds.map((clubId) => [
+          clubId,
+          {
+            clubId,
+            gamesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            pointsFor: 0,
+            pointsAgainst: 0,
+            pointDifferential: 0,
+          },
+        ]),
+      );
+      for (const game of games) {
+        const gameContext = game.competition;
+        const home = requireStanding(records, gameContext.homeClubId);
+        const away = requireStanding(records, gameContext.awayClubId);
+        home.gamesPlayed += 1;
+        away.gamesPlayed += 1;
+        home.pointsFor += game.score.home;
+        home.pointsAgainst += game.score.away;
+        away.pointsFor += game.score.away;
+        away.pointsAgainst += game.score.home;
+        if (game.winner === "HOME") {
+          home.wins += 1;
+          away.losses += 1;
+        } else {
+          away.wins += 1;
+          home.losses += 1;
+        }
+      }
+      const standings = [...records.values()]
+        .map((record) => ({
+          ...record,
+          pointDifferential: record.pointsFor - record.pointsAgainst,
+        }))
+        .sort(standingOrder)
+        .map((record, index) => ({ rank: index + 1, ...record }));
+      const sourceGames: PublicSeasonStandingsProjection["sourceGames"] =
+        games.map((game) => ({
+          gameId: game.gameId,
+          canonicalEventHash: game.canonicalEventHash,
+          scheduleEvidenceCommitment: game.competition
+            .evidenceCommitment as `0x${string}`,
+        }));
+      const body = {
+        format: "ABL-PUBLIC-SEASON-STANDINGS-V1" as const,
+        competitionId: context.competitionId,
+        seasonId: context.seasonId,
+        tier: context.tier,
+        scheduleId: context.scheduleId,
+        scheduleVersion: context.scheduleVersion,
+        scheduleEventHash: context.scheduleEventHash as `0x${string}`,
+        scheduleStateRoot: context.scheduleStateRoot as `0x${string}`,
+        completedGameCount: games.length,
+        sourceGames,
+        standings,
+      };
+      const projection: PublicSeasonStandingsProjection = {
+        recordType: "SEASON_STANDINGS",
+        state: "REHEARSAL",
+        canonical: true,
+        verification: "DERIVED_FROM_CANONICAL_LOCAL_REHEARSAL",
+        recognizedGenesisStandings: false,
+        ...body,
+        standingsCommitment: sha256Commitment(body),
+        projectedAt: games.reduce(
+          (latest, game) =>
+            game.projectedAt > latest ? game.projectedAt : latest,
+          firstGame.projectedAt,
+        ),
+      };
+      return projection;
+    });
+    return structuredClone(
+      projections.sort(
+        (left, right) =>
+          left.competitionId.localeCompare(right.competitionId) ||
+          left.seasonId.localeCompare(right.seasonId) ||
+          left.tier.localeCompare(right.tier),
+      ),
+    );
   }
 
   public game(gameId: string): PublicFinalizedGameProjection | undefined {

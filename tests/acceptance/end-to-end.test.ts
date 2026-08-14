@@ -26,6 +26,7 @@ import {
   GAME_FINALIZED_EVENT_TYPE,
   FinalizedGamePayloadSchema,
   REHEARSAL_RECOGNITION_DOMAIN,
+  createFinalizedGameScheduleEvidence,
   finalizedGameStateRoot,
   runAgentPlayedExhibition,
   runFirstPossessionRehearsal,
@@ -695,9 +696,24 @@ describe("complete local acceptance", () => {
     const gameId = "0198f500-0000-7000-8000-000000000001";
     const finalizedAt = "2026-08-13T10:15:00.000Z";
     const exhibition = await runAgentPlayedExhibition(gameId);
+    const scheduleEvidence = createFinalizedGameScheduleEvidence({
+      gameId,
+      competitionId: "abl-rehearsal",
+      seasonId: "season-zero",
+      tier: "PREMIER",
+      scheduleId: "abl-rehearsal:season-zero:premier",
+      scheduleVersion: 1,
+      clubIds: ["club-a", "club-b", "club-c", "club-d"],
+      homeClubId: "club-a",
+      awayClubId: "club-b",
+      scheduledAt: "2026-08-13T10:00:00.000Z",
+      scheduleEventHash: sha256Commitment("acceptance-schedule-event"),
+      scheduleStateRoot: sha256Commitment("acceptance-schedule-state"),
+    });
     const payload = FinalizedGamePayloadSchema.parse({
       gameId,
       finalizedAt,
+      competition: scheduleEvidence,
       input: exhibition.input,
       commands: exhibition.commands,
       proof: exhibition.proof,
@@ -744,6 +760,10 @@ describe("complete local acceptance", () => {
         candidateGameId === gameId
           ? structuredClone(exhibition.agentEvidence)
           : null,
+      scheduleEvidence: {
+        finalizedGameScheduleEvidence: async (candidateGameId: string) =>
+          candidateGameId === gameId ? structuredClone(scheduleEvidence) : null,
+      },
     };
     expect(
       (
@@ -784,12 +804,37 @@ describe("complete local acceptance", () => {
         evidence: {
           finalizedGameEvidence: authority.finalizedGameEvidence,
         },
+        scheduleEvidence: authority.scheduleEvidence,
       },
     });
     const command = {
       event: { ...event, aggregateVersion: "1" },
       signatures: [signature],
     };
+    const unregisteredScheduleApi = createLiveCoreApi({
+      store: new InMemoryCanonicalStore(),
+      domain: authority.domain,
+      admittedAgents: authority.admittedAgents,
+      competitionId: "season-zero-rehearsal",
+      seasonId: "season-zero",
+      now: () => Date.parse(finalizedAt),
+      finalizedGames: {
+        finalizerDids: authority.finalizerDids,
+        evidence: {
+          finalizedGameEvidence: authority.finalizedGameEvidence,
+        },
+      },
+    });
+    const unregisteredScheduleResponse = await unregisteredScheduleApi.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: command,
+    });
+    expect(unregisteredScheduleResponse.statusCode).toBe(400);
+    expect(unregisteredScheduleResponse.json()).toEqual({
+      error: "invalid_command",
+    });
+    await unregisteredScheduleApi.close();
     expect(
       (
         await coreApi.inject({
@@ -860,6 +905,7 @@ describe("complete local acceptance", () => {
         admittedAgents: authority.admittedAgents,
         finalizedGameAuthorityDids: authority.finalizerDids,
         finalizedGameEvidence: authority.finalizedGameEvidence,
+        finalizedGameScheduleEvidence: authority.scheduleEvidence,
       },
     });
     const publicAddress = await publicApi.listen({
@@ -881,6 +927,7 @@ describe("complete local acceptance", () => {
         admittedAgents: authority.admittedAgents,
         finalizedGameAuthorityDids: authority.finalizerDids,
         finalizedGameEvidence: authority.finalizedGameEvidence,
+        finalizedGameScheduleEvidence: authority.scheduleEvidence,
       });
       expect(await worker.drain()).toBe(1);
       expect(await worker.drain()).toBe(0);
@@ -912,6 +959,31 @@ describe("complete local acceptance", () => {
       });
       expect(stream.body).toContain('"projectionKind":"FINALIZED_GAME"');
       expect(stream.body).toContain(event.eventHash);
+      const standingsResponse = (
+        await publicApi.inject({
+          method: "GET",
+          url: "/v1/public/standings",
+        })
+      ).json();
+      expect(standingsResponse).toMatchObject({
+        canonical: true,
+        items: [
+          {
+            recordType: "SEASON_STANDINGS",
+            competitionId: "abl-rehearsal",
+            seasonId: "season-zero",
+            tier: "PREMIER",
+            completedGameCount: 1,
+          },
+        ],
+      });
+      expect(standingsResponse.items[0].standings).toHaveLength(4);
+      expect(standingsResponse.items[0].standings[0]).toMatchObject({
+        rank: 1,
+        clubId: exhibition.finalState.winner === "HOME" ? "club-a" : "club-b",
+        gamesPlayed: 1,
+        wins: 1,
+      });
     } finally {
       await Promise.all([publicApi.close(), coreApi.close()]);
     }
@@ -929,6 +1001,18 @@ describe("complete local acceptance", () => {
       agentEvidence: exhibition.agentEvidence,
       replayInferenceInvocations: 0,
     });
+    expect(restarted.standings()).toMatchObject([
+      {
+        completedGameCount: 1,
+        sourceGames: [
+          {
+            gameId,
+            canonicalEventHash: event.eventHash,
+            scheduleEvidenceCommitment: scheduleEvidence.evidenceCommitment,
+          },
+        ],
+      },
+    ]);
   });
 
   it("publishes agent-signed model dependencies through authenticated durable concentration", async () => {

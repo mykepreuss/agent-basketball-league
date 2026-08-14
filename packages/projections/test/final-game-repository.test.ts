@@ -8,9 +8,11 @@ import {
   FINALIZED_GAME_SCHEMA_DIGEST,
   GAME_FINALIZED_EVENT_TYPE,
   createAgentPlayedGameEvidence,
+  createFinalizedGameScheduleEvidence,
   finalizedGameStateRoot,
   runDeterministicExhibition,
   type FinalizedGamePayload,
+  type FinalizedGameScheduleEvidence,
 } from "@abl/basketball";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
@@ -47,6 +49,20 @@ const gameId = "0198f200-0000-7000-8000-000000000001";
 const finalizedAt = "2026-08-13T10:00:00.000Z";
 const uuid = (sequence: number) =>
   `0198f200-0000-7000-8000-${String(sequence).padStart(12, "0")}`;
+const scheduleEvidence = createFinalizedGameScheduleEvidence({
+  gameId,
+  competitionId: "abl-rehearsal",
+  seasonId: "season-zero",
+  tier: "PREMIER",
+  scheduleId: "abl-rehearsal:season-zero:premier",
+  scheduleVersion: 1,
+  clubIds: ["club-a", "club-b", "club-c", "club-d"],
+  homeClubId: "club-a",
+  awayClubId: "club-b",
+  scheduledAt: "2026-08-13T09:00:00.000Z",
+  scheduleEventHash: sha256Commitment("projection-schedule-event"),
+  scheduleStateRoot: sha256Commitment("projection-schedule-state"),
+});
 
 function decisionHashes(role: string, count: number): Hex[] {
   return Array.from({ length: count }, (_, index) =>
@@ -76,6 +92,7 @@ async function finalizedGame(signer = finalizer) {
   const payload = FinalizedGamePayloadSchema.parse({
     gameId,
     finalizedAt,
+    competition: scheduleEvidence,
     input: exhibition.input,
     commands: exhibition.commands,
     proof: exhibition.proof,
@@ -117,6 +134,7 @@ async function finalizedGame(signer = finalizer) {
 
 function authority(
   evidence: FinalizedGamePayload["agentEvidence"] | null,
+  schedule: FinalizedGameScheduleEvidence | null = scheduleEvidence,
 ): FinalGameProjectionVerificationAuthority {
   return {
     domain,
@@ -132,6 +150,10 @@ function authority(
     finalizerDids: new Set([finalizerDid]),
     finalizedGameEvidence: async (candidateGameId) =>
       candidateGameId === gameId ? structuredClone(evidence) : null,
+    scheduleEvidence: {
+      finalizedGameScheduleEvidence: async (candidateGameId) =>
+        candidateGameId === gameId ? structuredClone(schedule) : null,
+    },
   };
 }
 
@@ -204,6 +226,12 @@ describe("durable finalized game projections", () => {
     await expect(
       verifyFinalGameProjectionEvent(
         finalized.envelope,
+        authority(finalized.payload.agentEvidence, null),
+      ),
+    ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
+    await expect(
+      verifyFinalGameProjectionEvent(
+        finalized.envelope,
         authority(finalized.payload.agentEvidence),
         finalizedAt,
       ),
@@ -231,10 +259,42 @@ describe("durable finalized game projections", () => {
       commandCount: finalized.payload.commands.length,
       possessionCount: 1,
     });
+    expect(first.standings()).toMatchObject([
+      {
+        recordType: "SEASON_STANDINGS",
+        competitionId: "abl-rehearsal",
+        seasonId: "season-zero",
+        tier: "PREMIER",
+        completedGameCount: 1,
+        standings: [
+          {
+            rank: 1,
+            clubId: "club-a",
+            gamesPlayed: 1,
+            wins: 1,
+            losses: 0,
+            pointsFor: 5,
+            pointsAgainst: 2,
+            pointDifferential: 3,
+          },
+          { rank: 2, clubId: "club-c", gamesPlayed: 0 },
+          { rank: 3, clubId: "club-d", gamesPlayed: 0 },
+          {
+            rank: 4,
+            clubId: "club-b",
+            gamesPlayed: 1,
+            wins: 0,
+            losses: 1,
+            pointDifferential: -3,
+          },
+        ],
+      },
+    ]);
 
     const restarted = repository(root, finalized.payload.agentEvidence);
     await restarted.initialize();
     expect(restarted.games()).toEqual(first.games());
+    expect(restarted.standings()).toEqual(first.standings());
 
     const path = join(root, "final-game-records", "000000000000.json");
     const tampered = JSON.parse(
@@ -271,6 +331,7 @@ describe("durable finalized game projections", () => {
       admittedAgents: verificationAuthority.admittedAgents,
       finalizedGameAuthorityDids: verificationAuthority.finalizerDids,
       finalizedGameEvidence: verificationAuthority.finalizedGameEvidence,
+      finalizedGameScheduleEvidence: verificationAuthority.scheduleEvidence!,
     });
     expect(await worker.drain()).toBe(1);
     expect(finalGames.game(gameId)).toMatchObject({ phase: "FINAL" });

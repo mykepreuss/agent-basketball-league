@@ -3,7 +3,9 @@ import {
   FinalizedGameAuthorityDidsSchema,
   assertFinalizedGameAuthorityConfiguration,
   createFinalizedGameEvidenceReader,
+  createFinalizedGameScheduleEvidenceReader,
   type FinalizedGameEvidenceReader,
+  type FinalizedGameScheduleEvidenceReader,
 } from "@abl/basketball";
 import {
   CompetitiveDisclosureAuthorDidsSchema,
@@ -151,6 +153,7 @@ function projectionAuthority(): {
   competitionReleaseEvidence: CompetitionReleaseEvidenceReader["competitionReleaseEvidence"];
   finalizedGameAuthorityDids: ReadonlySet<string>;
   finalizedGameEvidence: FinalizedGameEvidenceReader["finalizedGameEvidence"];
+  finalizedGameScheduleEvidence: FinalizedGameScheduleEvidenceReader;
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -217,6 +220,10 @@ function projectionAuthority(): {
   const finalizedGameEvidence = createFinalizedGameEvidenceReader(
     JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
   );
+  const finalizedGameScheduleEvidence =
+    createFinalizedGameScheduleEvidenceReader(
+      JSON.parse(required("ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON")),
+    );
   if (
     Object.keys(contractClubGovernors).length === 0 ||
     new Set(Object.values(contractClubGovernors)).size !==
@@ -284,6 +291,7 @@ function projectionAuthority(): {
     competitionReleaseEvidence: competitionEvidence.competitionReleaseEvidence,
     finalizedGameAuthorityDids,
     finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
+    finalizedGameScheduleEvidence,
   };
 }
 
@@ -396,6 +404,7 @@ if (projectionRoot !== undefined) {
           {
             ...runtimeAuthority,
             finalizerDids: runtimeAuthority.finalizedGameAuthorityDids,
+            scheduleEvidence: runtimeAuthority.finalizedGameScheduleEvidence,
           },
           projectedAt,
         ),

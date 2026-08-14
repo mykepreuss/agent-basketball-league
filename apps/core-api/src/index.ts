@@ -4,6 +4,7 @@ import {
   assertFinalizedGameAuthorityConfiguration,
   createFilmDeliveryEvidenceReader,
   createFinalizedGameEvidenceReader,
+  createFinalizedGameScheduleEvidenceReader,
 } from "@abl/basketball";
 import {
   CompetitiveDisclosureAuthorDidsSchema,
@@ -233,6 +234,10 @@ const app = rehearsal
       const finalizedGameEvidence = createFinalizedGameEvidenceReader(
         JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
       );
+      const finalizedGameScheduleEvidence =
+        createFinalizedGameScheduleEvidenceReader(
+          JSON.parse(required("ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON")),
+        );
       const filmDeliveryEvidence = createFilmDeliveryEvidenceReader(
         JSON.parse(required("ABL_FILM_DELIVERY_EVIDENCE_JSON")),
       );
@@ -310,6 +315,7 @@ const app = rehearsal
           competitionEvidence.competitionReleaseEvidence,
         finalizedGameAuthorityDids,
         finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
+        finalizedGameScheduleEvidence,
         draftAuthorityDid,
         draftClubGovernors: contractClubGovernors,
         premierDraftEvidence: draftEvidence.premierDraftEvidence,
@@ -391,6 +397,7 @@ const app = rehearsal
         finalizedGames: {
           finalizerDids: finalizedGameAuthorityDids,
           evidence: finalizedGameEvidence,
+          scheduleEvidence: finalizedGameScheduleEvidence,
         },
         filmPractice: {
           storageVerifier: privateStorageVerifier,

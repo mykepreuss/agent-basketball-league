@@ -190,9 +190,123 @@ export const FinalizedGameProofSchema = z.strictObject({
   winner: TeamSchema,
 });
 
+export const FinalizedGameScheduleEvidenceSchema = z.strictObject({
+  gameId: UuidV7Schema,
+  competitionId: z.string().min(1).max(160),
+  seasonId: z.string().min(1).max(160),
+  tier: z.enum(["PREMIER", "DEVELOPMENT"]),
+  scheduleId: z.string().min(1).max(320),
+  scheduleVersion: z.number().int().positive(),
+  clubIds: z.array(z.string().min(1).max(160)).length(4),
+  homeClubId: z.string().min(1).max(160),
+  awayClubId: z.string().min(1).max(160),
+  scheduledAt: IsoDateTimeSchema,
+  scheduleEventHash: Sha256Schema,
+  scheduleStateRoot: Sha256Schema,
+  evidenceCommitment: Sha256Schema,
+});
+
+export type FinalizedGameScheduleEvidence = z.infer<
+  typeof FinalizedGameScheduleEvidenceSchema
+>;
+
+export interface FinalizedGameScheduleEvidenceReader {
+  finalizedGameScheduleEvidence(
+    gameId: string,
+  ): Promise<FinalizedGameScheduleEvidence | null>;
+}
+
+function scheduleEvidenceBody(evidence: FinalizedGameScheduleEvidence) {
+  const { evidenceCommitment: _evidenceCommitment, ...body } = evidence;
+  return body;
+}
+
+function hasValidScheduleClubs(
+  evidence: Pick<
+    FinalizedGameScheduleEvidence,
+    "clubIds" | "homeClubId" | "awayClubId"
+  >,
+): boolean {
+  return (
+    evidence.homeClubId !== evidence.awayClubId &&
+    new Set(evidence.clubIds).size === 4 &&
+    [...evidence.clubIds].sort().join("\u0000") ===
+      evidence.clubIds.join("\u0000") &&
+    evidence.clubIds.includes(evidence.homeClubId) &&
+    evidence.clubIds.includes(evidence.awayClubId)
+  );
+}
+
+export function finalizedGameScheduleEvidenceCommitment(
+  evidence: Omit<FinalizedGameScheduleEvidence, "evidenceCommitment">,
+): Hex {
+  return sha256Commitment({
+    format: "ABL-FINALIZED-GAME-SCHEDULE-EVIDENCE-V1",
+    ...evidence,
+  });
+}
+
+export function createFinalizedGameScheduleEvidence(
+  evidence: Omit<FinalizedGameScheduleEvidence, "evidenceCommitment">,
+): FinalizedGameScheduleEvidence {
+  if (!hasValidScheduleClubs(evidence))
+    throw new Error("Scheduled game evidence clubs are invalid");
+  return FinalizedGameScheduleEvidenceSchema.parse({
+    ...evidence,
+    evidenceCommitment: finalizedGameScheduleEvidenceCommitment(evidence),
+  });
+}
+
+export const FinalizedGameScheduleEvidenceRegistrySchema = z
+  .array(FinalizedGameScheduleEvidenceSchema)
+  .max(1_000)
+  .refine(
+    (entries) =>
+      new Set(entries.map(({ gameId }) => gameId)).size === entries.length,
+    "Finalized game schedule evidence IDs must be unique",
+  );
+
+export function createFinalizedGameScheduleEvidenceReader(
+  input: unknown,
+): FinalizedGameScheduleEvidenceReader {
+  const entries = FinalizedGameScheduleEvidenceRegistrySchema.parse(input);
+  const scheduleCommitments = new Map<string, Hex>();
+  for (const entry of entries) {
+    const scheduleKey = [entry.competitionId, entry.seasonId, entry.tier].join(
+      "\u0000",
+    );
+    const scheduleCommitment = sha256Commitment({
+      scheduleId: entry.scheduleId,
+      scheduleVersion: entry.scheduleVersion,
+      clubIds: entry.clubIds,
+      scheduleEventHash: entry.scheduleEventHash,
+      scheduleStateRoot: entry.scheduleStateRoot,
+    });
+    const priorScheduleCommitment = scheduleCommitments.get(scheduleKey);
+    if (
+      !hasValidScheduleClubs(entry) ||
+      (priorScheduleCommitment !== undefined &&
+        priorScheduleCommitment !== scheduleCommitment) ||
+      finalizedGameScheduleEvidenceCommitment(scheduleEvidenceBody(entry)) !==
+        entry.evidenceCommitment
+    ) {
+      throw new Error("Finalized game schedule evidence is invalid");
+    }
+    scheduleCommitments.set(scheduleKey, scheduleCommitment);
+  }
+  const evidenceByGame = new Map(
+    entries.map((entry) => [entry.gameId, structuredClone(entry)]),
+  );
+  return {
+    finalizedGameScheduleEvidence: async (gameId) =>
+      structuredClone(evidenceByGame.get(gameId) ?? null),
+  };
+}
+
 export const FinalizedGamePayloadSchema = z.strictObject({
   gameId: UuidV7Schema,
   finalizedAt: IsoDateTimeSchema,
+  competition: FinalizedGameScheduleEvidenceSchema.nullable().default(null),
   input: FullGameInputSchema,
   commands: z.array(GameCommandSchema).min(1).max(10_000),
   proof: FinalizedGameProofSchema,
@@ -332,6 +446,14 @@ export function replayFinalizedGamePayload(input: unknown): {
   if (
     payload.gameId !== payload.input.gameId ||
     payload.gameId !== payload.agentEvidence.gameId ||
+    (payload.competition !== null &&
+      (payload.competition.gameId !== payload.gameId ||
+        !hasValidScheduleClubs(payload.competition) ||
+        finalizedGameScheduleEvidenceCommitment(
+          scheduleEvidenceBody(payload.competition),
+        ) !== payload.competition.evidenceCommitment ||
+        Date.parse(payload.competition.scheduledAt) >
+          Date.parse(payload.finalizedAt))) ||
     payload.agentEvidence.decisionCounts.players !==
       payload.agentEvidence.possessionCount * 20 ||
     payload.agentEvidence.decisionCounts.coaches !==
@@ -378,20 +500,41 @@ export async function requireFinalizedGameEvidence(
   }
 }
 
+export async function requireFinalizedGameScheduleEvidence(
+  payload: FinalizedGamePayload,
+  reader: FinalizedGameScheduleEvidenceReader | undefined,
+): Promise<void> {
+  if (payload.competition === null) return;
+  const registered =
+    reader === undefined
+      ? null
+      : await reader.finalizedGameScheduleEvidence(payload.gameId);
+  if (
+    registered === null ||
+    sha256Commitment(registered) !== sha256Commitment(payload.competition)
+  ) {
+    throw new Error(
+      "Finalized league game lacks independently registered schedule evidence",
+    );
+  }
+}
+
 export const FINALIZED_GAME_SCHEMA_DIGEST = sha256Commitment({
   protocol: "abl-finalized-agent-game",
-  version: 1,
+  version: 2,
   aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
   eventType: GAME_FINALIZED_EVENT_TYPE,
   exactReplayRequired: true,
   modelInferenceOnReplay: false,
+  standingsAuthority: "INDEPENDENT_SCHEDULE_EVIDENCE",
 });
 
 export function finalizedGameStateRoot(payload: FinalizedGamePayload): Hex {
   return sha256Commitment({
-    format: "ABL-FINALIZED-GAME-STATE-V1",
+    format: "ABL-FINALIZED-GAME-STATE-V2",
     gameId: payload.gameId,
     finalizedAt: payload.finalizedAt,
+    competition: payload.competition,
     proof: payload.proof,
     agentEvidence: payload.agentEvidence,
     filmCommitment: payload.filmCommitment,

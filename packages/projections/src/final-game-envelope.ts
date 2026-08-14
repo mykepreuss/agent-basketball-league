@@ -6,7 +6,9 @@ import {
   finalizedGameStateRoot,
   replayFinalizedGamePayload,
   requireFinalizedGameEvidence,
+  requireFinalizedGameScheduleEvidence,
   type FinalizedGameEvidenceReader,
+  type FinalizedGameScheduleEvidenceReader,
 } from "@abl/basketball";
 import type { ProjectionOutboxEvent } from "@abl/database";
 import {
@@ -62,6 +64,7 @@ export interface FinalGameProjectionVerificationAuthority
   extends ProjectionVerificationAuthority,
     FinalizedGameEvidenceReader {
   finalizerDids: ReadonlySet<string>;
+  scheduleEvidence?: FinalizedGameScheduleEvidenceReader;
 }
 
 export interface VerifiedFinalGameProjectionEvent {
@@ -167,6 +170,10 @@ export async function verifyFinalGameProjectionEvent(
   try {
     replayed = replayFinalizedGamePayload(event.payload);
     await requireFinalizedGameEvidence(replayed.payload, authority);
+    await requireFinalizedGameScheduleEvidence(
+      replayed.payload,
+      authority.scheduleEvidence,
+    );
   } catch {
     throw new ProjectionAuthorizationError(
       "Finalized game replay or independent evidence is invalid",
@@ -212,6 +219,7 @@ export async function verifyFinalGameProjectionEvent(
       recognizedGenesisGame: false,
       projectionKind: "FINALIZED_GAME",
       gameId: replayed.payload.gameId,
+      competition: replayed.payload.competition,
       aggregateVersion: "1",
       canonicalEventHash: event.eventHash as `0x${string}`,
       phase: "FINAL",
