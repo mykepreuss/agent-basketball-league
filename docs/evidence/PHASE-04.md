@@ -34,13 +34,13 @@ Observed outcome:
 
 The Next.js 16 arena no longer imports a JSON fixture. It fetches the latest canonical local-rehearsal game from the read-only public API at `/` and `/arena`; if none exists, it renders an honest pre-genesis empty state. Its visual direction remains a courtside verification ledger: fixed-point court coordinates, causal event sequence, official confirmation, shortened display hashes with full values in titles, and an explicit zero-inference replay claim.
 
-The original fixture-backed layout received desktop/mobile browser QA with the following results; the current API-backed page preserves that visual component tree and passes the production build, while a data-bound live browser rerun remains part of staging verification:
+The current API-backed page now has committed, repeatable Playwright coverage against a production standalone build and an HTTP rehearsal instance of the real public API constructor:
 
 - Desktop 1280×720: one semantic main, one H1, ten player markers, six ledger items, no horizontal overflow, and no console warnings/errors.
 - Mobile 390×844: no horizontal overflow, all players/events remain in the DOM, the court scales, the ledger stacks, and the proof grid collapses to one column.
 - Semantic regions expose the score/clocks, fixed-point court, six-segment ledger, and independent proof. Reduced-motion and higher-contrast media rules are present.
 
-The fixture remains only a deterministic presentation regression locked by the possession test. The end-to-end acceptance starts a real local public API and proves that the arena data loader receives the signed possession projection from it after the projection crosses a loopback HTTP service boundary.
+The browser server derives its projection from the deterministic signed possession rehearsal instead of importing a presentation JSON file. The end-to-end acceptance separately proves that the arena data loader receives the signed possession projection after it crosses the HMAC-authenticated loopback projection boundary. Remote Blaxel browser execution remains a staging gate, but current desktop/mobile automation is no longer manual evidence.
 
 ## Rehearsal-only vertical path
 

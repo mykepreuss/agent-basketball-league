@@ -1,0 +1,50 @@
+{
+  "resultVersion": "1.0.0",
+  "recordedAt": "2026-08-14T09:41:36.825Z",
+  "mode": "LOCAL_LOOPBACK_HTTP",
+  "workloads": [
+    {
+      "name": "spectator-cursors",
+      "requested": 20000,
+      "completed": 20000,
+      "failures": 0,
+      "errorRate": 0,
+      "responseP95Milliseconds": 19.997249999999894,
+      "responseMaximumMilliseconds": 120.7394589999999
+    },
+    {
+      "name": "candidate-challenges",
+      "requested": 2000,
+      "completed": 2000,
+      "failures": 0,
+      "errorRate": 0,
+      "responseP95Milliseconds": 11.88758400000006,
+      "responseMaximumMilliseconds": 90.30516700000044
+    }
+  ],
+  "observed": {
+    "requested": 22000,
+    "completed": 22000,
+    "failures": 0,
+    "errorRate": 0,
+    "responseP95Milliseconds": 19.997249999999894
+  },
+  "passed": true,
+  "remoteCapacity": {
+    "state": "NOT_EXECUTED_BLAXEL_CAPACITY_GATE",
+    "liveConcurrencyVerified": false,
+    "headroomReserved": false
+  },
+  "scope": {
+    "spectatorRequests": 20000,
+    "candidateChallenges": 2000,
+    "gameCursorLanes": 20,
+    "transport": "LOOPBACK_TCP_HTTP",
+    "dockerRequired": false
+  },
+  "limitations": [
+    "Loopback concurrency is bounded to 200 workers and does not prove 10,000 remote simultaneous clients.",
+    "Blaxel capacity, provider latency, autoscaling, and two-times reservations remain external gates.",
+    "Candidate challenges prove the unauthenticated proof-of-possession entry path, not admission throughput."
+  ]
+}

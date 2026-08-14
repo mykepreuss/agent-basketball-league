@@ -346,17 +346,15 @@ export function createPublicApi(
     options.finalGameProjections !== undefined ||
     options.checkpointProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
-  app.addHook("onSend", async (_request, reply, payload) => {
-    reply.header("cache-control", "no-store");
-    reply.header("x-abl-genesis-state", state);
-    return payload;
-  });
-  app.addHook("onRequest", async (request) => {
-    if (request.url.startsWith("/v1/public/")) {
+  let refreshInFlight: Promise<void> | null = null;
+  async function refreshPublicProjections(): Promise<void> {
+    if (refreshInFlight !== null) return refreshInFlight;
+    const refresh = (async () => {
       await Promise.all([
         options.projections?.refresh(),
         options.contractProjections?.refresh(),
         options.draftProjections?.refresh(),
+        options.developmentProjections?.refresh(),
         options.governanceProjections?.refresh(),
         options.electionProjections?.refresh(),
         options.caseProjections?.refresh(),
@@ -368,7 +366,21 @@ export function createPublicApi(
         options.checkpointProjections?.refresh(),
       ]);
       await options.economyProjections?.refresh();
+    })();
+    refreshInFlight = refresh;
+    try {
+      await refresh;
+    } finally {
+      if (refreshInFlight === refresh) refreshInFlight = null;
     }
+  }
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("cache-control", "no-store");
+    reply.header("x-abl-genesis-state", state);
+    return payload;
+  });
+  app.addHook("onRequest", async (request) => {
+    if (request.url.startsWith("/v1/public/")) await refreshPublicProjections();
   });
   app.get("/", async () => ({
     service: "Agent Basketball League public API",

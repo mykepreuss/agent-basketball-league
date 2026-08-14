@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   CAPACITY_TARGETS,
+  NETWORK_LOAD_SLO,
   OVERLOAD_PRIORITY,
   allocateOverload,
   analyzeSandboxBoundary,
   exerciseThirtyDayWindDown,
   provePublicCompromiseContainment,
   runLocalCapacityProof,
+  runHttpLoadProof,
   runLocalRecoveryProof,
   type WorkspaceTopologyShape,
 } from "../src/index.js";
@@ -92,6 +94,51 @@ describe("local two-times capacity and SLO harness", () => {
     expect(result.observed.publicErrorRate).toBeLessThan(0.01);
     expect(result.observed.cursorSegmentP95Milliseconds).toBeLessThan(750);
     expect(result.observed.broadcastLagMaximumMilliseconds).toBeLessThan(2_000);
+  });
+
+  it("measures bounded HTTP concurrency and treats status mismatches as failures", async () => {
+    const result = await runHttpLoadProof([
+      {
+        name: "healthy-loopback",
+        requestCount: 12,
+        concurrency: 4,
+        expectedStatus: 200,
+        request: async () => new Response("ok", { status: 200 }),
+      },
+      {
+        name: "status-mismatch",
+        requestCount: 2,
+        concurrency: 1,
+        expectedStatus: 201,
+        request: async () => new Response("wrong", { status: 200 }),
+      },
+    ]);
+    expect(result).toMatchObject({
+      mode: "LOCAL_LOOPBACK_HTTP",
+      passed: false,
+      observed: { requested: 14, completed: 14, failures: 2 },
+      remoteCapacity: {
+        state: "NOT_EXECUTED_BLAXEL_CAPACITY_GATE",
+        liveConcurrencyVerified: false,
+        headroomReserved: false,
+      },
+    });
+    expect(result.workloads[0]?.responseP95Milliseconds).toBeLessThan(
+      NETWORK_LOAD_SLO.responseP95MillisecondsMaximum,
+    );
+  });
+
+  it("locks the external k6 profile to the approved counts and SLOs", async () => {
+    const source = await readFile(
+      new URL("tests/load/public-api.k6.js", root),
+      "utf8",
+    );
+    expect(source).toMatch(
+      /spectator_cursors: \{[\s\S]*?executor: "per-vu-iterations"[\s\S]*?vus: 10_000[\s\S]*?iterations: 2,/,
+    );
+    expect(source).toContain("iterations: 2_000");
+    expect(source).toContain('http_req_failed: ["rate<0.01"]');
+    expect(source).toContain('http_req_duration: ["p(95)<750"]');
   });
 
   it("locks the capacity/security plan fixture to executable constants", async () => {

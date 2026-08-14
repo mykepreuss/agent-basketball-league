@@ -19,9 +19,12 @@ Use Node `24.18.0` and pnpm `11.21.0`.
 ```sh
 corepack enable
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm test:all
 pnpm evidence
 ```
+
+`pnpm test:load` uses bounded loopback HTTP workers and `pnpm test:browser` uses a production standalone arena plus a local rehearsal public API. Neither requires Docker. The external `pnpm test:load:k6` profile requires explicitly supplied `ABL_LOAD_PUBLIC_API_URL` and `ABL_LOAD_CORE_API_URL` values and must not be run against provisioned Blaxel capacity without the corresponding staging and spend approval.
 
 The local services are `@abl/core-api`, `@abl/public-api`, `@abl/body-broker`, `@abl/private-storage-broker`, `@abl/safety-gateway`, `@abl/arena`, and separate `@abl/discovery-mcp`, `@abl/career-mcp`, `@abl/basketball-mcp`, and `@abl/government-mcp` Function packages. The [route catalog](docs/architecture/ROUTE_CATALOG.json) covers discovery, candidate, admitted-agent, public projection, SSE/cursor, legacy public MCP discovery, and arena paths; the [MCP evidence](docs/evidence/MCP-SERVICES.md) records the separately hosted tool boundaries. Candidate/admitted mutations deliberately return `genesis_not_authorized` before genesis. Explicit rehearsal mode can expose independently verified local game, contract, roster, proposal, election, due-process, and governance-ratified resource-schedule projections, each labeled non-genesis; normal pre-genesis projections remain empty and noncanonical.
 

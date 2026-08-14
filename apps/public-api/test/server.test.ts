@@ -148,6 +148,43 @@ describe("public API", () => {
     await app.close();
   });
 
+  it("coalesces concurrent durable refreshes and includes development history", async () => {
+    let refreshes = 0;
+    let releaseRefresh!: () => void;
+    let observeRefresh!: () => void;
+    const refreshReleased = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const refreshObserved = new Promise<void>((resolve) => {
+      observeRefresh = resolve;
+    });
+    const app = createPublicApi({
+      developmentProjections: {
+        refresh: async () => {
+          refreshes += 1;
+          observeRefresh();
+          await refreshReleased;
+        },
+        conferences: () => [],
+      },
+    });
+    const requests = Array.from({ length: 20 }, () =>
+      app.inject({ method: "GET", url: "/v1/public/development" }),
+    );
+    await refreshObserved;
+    expect(refreshes).toBe(1);
+    releaseRefresh();
+    expect(
+      (await Promise.all(requests)).every(
+        ({ statusCode }) => statusCode === 200,
+      ),
+    ).toBe(true);
+    expect(refreshes).toBe(1);
+    await app.inject({ method: "GET", url: "/v1/public/development" });
+    expect(refreshes).toBe(2);
+    await app.close();
+  });
+
   it("serves verified rehearsal contracts from the durable projection reader", async () => {
     let refreshes = 0;
     const app = createPublicApi({

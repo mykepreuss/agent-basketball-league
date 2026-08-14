@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { platform, release, arch } from "node:os";
 import { fileURLToPath } from "node:url";
+import { format } from "prettier";
 
 import { CORE_ROUTE_CATALOG } from "../apps/core-api/src/server.js";
 import { PUBLIC_ROUTE_CATALOG } from "../apps/public-api/src/server.js";
@@ -39,6 +40,11 @@ function parseCount(output: string, pattern: RegExp): number {
   );
 }
 
+async function writeJson(path: string, value: unknown): Promise<void> {
+  const json = await format(JSON.stringify(value), { parser: "json" });
+  await writeFile(path, json, { mode: 0o600 });
+}
+
 async function runSuite(
   name: string,
   commandArguments: readonly string[],
@@ -67,13 +73,24 @@ async function runSuite(
   );
   const clean = output.text.replace(ansiPattern, "");
   const taskMatch = clean.match(/Tasks:\s+(\d+) successful, (\d+) total/);
+  const vitestAssertions = parseCount(clean, /Tests\s+(\d+) passed/g);
+  const vitestFiles = parseCount(
+    clean,
+    /^(?!ABL Test Files).*Test Files\s+(\d+) passed/gm,
+  );
   return {
     name,
     command: `pnpm ${commandArguments.join(" ")}`,
     status: output.code === 0 ? "PASS" : "FAIL",
     exitCode: output.code,
-    assertions: parseCount(clean, /Tests\s+(\d+) passed/g),
-    testFiles: parseCount(clean, /Test Files\s+(\d+) passed/g),
+    assertions:
+      vitestAssertions +
+      parseCount(clean, /^\s*(\d+) passed \([^)]+\)\s*$/gm) +
+      parseCount(clean, /ABL Assertions (\d+) passed/g),
+    testFiles:
+      vitestFiles +
+      (name === "browser" && output.code === 0 ? 1 : 0) +
+      parseCount(clean, /ABL Test Files (\d+) passed/g),
     successfulTasks:
       taskMatch === null ? null : Number.parseInt(taskMatch[1] ?? "0", 10),
     totalTasks:
@@ -112,14 +129,14 @@ async function main(): Promise<void> {
       ),
     ),
   };
-  await writeFile(
+  await writeJson(
     join(repositoryRoot, "docs/architecture/ROUTE_CATALOG.json"),
-    `${JSON.stringify(routeCatalog, null, 2)}\n`,
-    { mode: 0o600 },
+    routeCatalog,
   );
 
   const suiteSpecs = [
     ["format", ["format:check"]],
+    ["tooling-typecheck", ["check:tools"]],
     ["typecheck", ["turbo", "run", "check", "--force"]],
     [
       "unit-integration-property-contract-migration-api",
@@ -127,6 +144,8 @@ async function main(): Promise<void> {
     ],
     ["acceptance-replay-load-recovery", ["test:acceptance"]],
     ["adversarial-security", ["test:adversarial"]],
+    ["loopback-network-load", ["test:load"]],
+    ["browser", ["test:browser"]],
     ["production-build", ["turbo", "run", "build", "--force"]],
   ] as const;
   const suites: SuiteResult[] = [];
@@ -178,10 +197,9 @@ async function main(): Promise<void> {
       "Hardware-backed non-exportable signing is not supported by the local fixture.",
     ],
   };
-  await writeFile(
+  await writeJson(
     join(repositoryRoot, "docs/evidence/final-local-results.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
-    { mode: 0o600 },
+    report,
   );
   if (!allPassed) throw new Error("One or more final local suites failed");
   process.stdout.write(`stable result digest: ${stableResultDigest}\n`);
