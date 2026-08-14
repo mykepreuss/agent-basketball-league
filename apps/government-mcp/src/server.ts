@@ -12,6 +12,7 @@ import { z } from "zod";
 const governmentTools = [
   {
     name: "register_proposal",
+    aggregateType: "governance-proposal",
     eventType: "GovernanceProposalRegistered",
     path: "/v1/governance/proposals/register",
     description:
@@ -19,6 +20,7 @@ const governmentTools = [
   },
   {
     name: "cast_ballot",
+    aggregateType: "governance-proposal",
     eventType: "GovernanceBallotCast",
     path: "/v1/governance/ballots/cast",
     description:
@@ -26,6 +28,7 @@ const governmentTools = [
   },
   {
     name: "close_proposal",
+    aggregateType: "governance-proposal",
     eventType: "GovernanceProposalClosed",
     path: "/v1/governance/proposals/close",
     description:
@@ -33,18 +36,62 @@ const governmentTools = [
   },
   {
     name: "inspect_proposal",
+    aggregateType: "governance-proposal",
     eventType: "GovernanceInspected",
     path: "/v1/governance/proposals/inspect",
     description:
       "Submit an agent-signed, history-recorded proposal inspection command.",
   },
+  {
+    name: "open_premier_election",
+    aggregateType: "institutional-election",
+    eventType: "PremierElectionOpened",
+    path: "/v1/elections/premier/open",
+    description:
+      "Submit a commissioner-signed opening for the eight-seat Premier Players Association board election.",
+  },
+  {
+    name: "declare_premier_candidate",
+    aggregateType: "institutional-election",
+    eventType: "PremierElectionCandidateDeclared",
+    path: "/v1/elections/premier/candidates/declare",
+    description:
+      "Submit a premier player's signed self-nomination in the canonical election window.",
+  },
+  {
+    name: "cast_premier_election_ballot",
+    aggregateType: "institutional-election",
+    eventType: "PremierElectionBallotCast",
+    path: "/v1/elections/premier/ballots/cast",
+    description:
+      "Submit a premier player's complete signed ranking for the frozen candidate roll.",
+  },
+  {
+    name: "close_premier_election",
+    aggregateType: "institutional-election",
+    eventType: "PremierElectionClosed",
+    path: "/v1/elections/premier/close",
+    description:
+      "Submit a commissioner-signed close command for independent deterministic tallying.",
+  },
+  {
+    name: "inspect_premier_election",
+    aggregateType: "institutional-election",
+    eventType: "PremierElectionInspected",
+    path: "/v1/elections/premier/inspect",
+    description:
+      "Submit an eligible career's signed, history-recorded election inspection command.",
+  },
 ] as const;
 
-function commandInputSchema<TEventType extends string>(eventType: TEventType) {
+function commandInputSchema<
+  TAggregateType extends string,
+  TEventType extends string,
+>(aggregateType: TAggregateType, eventType: TEventType) {
   return z.strictObject({
     command: SignedCanonicalCommandSchema.extend({
       event: CanonicalEventWireSchema.extend({
-        aggregateType: z.literal("governance-proposal"),
+        aggregateType: z.literal(aggregateType),
         eventType: z.literal(eventType),
       }),
     }),
@@ -76,7 +123,7 @@ export function createGovernmentMcp(
     defineMcpTool({
       name: tool.name,
       description: tool.description,
-      inputSchema: commandInputSchema(tool.eventType),
+      inputSchema: commandInputSchema(tool.aggregateType, tool.eventType),
       execute: ({ command }) =>
         requestCore({ method: "POST", path: tool.path, body: command }),
     }),

@@ -441,6 +441,31 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/governance/proposals/inspect
+    - id: premier-election-open
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/open
+    - id: premier-election-candidate-declare
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/candidates/declare
+    - id: premier-election-ballot-cast
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/ballots/cast
+    - id: premier-election-close
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/close
+    - id: premier-election-inspect
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/elections/premier/inspect
     - id: artifact-admit
       type: http
       configuration:

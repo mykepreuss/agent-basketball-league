@@ -25,6 +25,11 @@ import {
 } from "./contract-envelope.js";
 import type { PublicContractProjectionWriter } from "./contract-repository.js";
 import {
+  electionProjectionEnvelopeFromOutbox,
+  verifyElectionProjectionEvent,
+} from "./election-envelope.js";
+import type { PublicElectionProjectionWriter } from "./election-repository.js";
+import {
   projectionEnvelopeFromOutbox,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
@@ -65,7 +70,10 @@ import {
   verifyDraftProjectionEvent,
 } from "./draft-envelope.js";
 import type { PublicDraftProjectionWriter } from "./draft-repository.js";
-import { ECONOMY_WORKFLOW_AGGREGATE_TYPE } from "@abl/institutions";
+import {
+  ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+  ELECTION_WORKFLOW_AGGREGATE_TYPE,
+} from "@abl/institutions";
 import {
   economyProjectionEnvelopeFromOutbox,
   verifyEconomyProjectionEvent,
@@ -85,6 +93,7 @@ type WorkerDestination =
       writer: PublicProjectionWriter;
       contractWriter?: PublicContractProjectionWriter;
       governanceWriter?: PublicGovernanceProjectionWriter;
+      electionWriter?: PublicElectionProjectionWriter;
       caseWriter?: PublicCaseProjectionWriter;
       resourceWriter?: PublicResourceProjectionWriter;
       modelWriter?: PublicModelProjectionWriter;
@@ -101,6 +110,7 @@ type WorkerDestination =
       writer?: never;
       contractWriter?: never;
       governanceWriter?: never;
+      electionWriter?: never;
       caseWriter?: never;
       resourceWriter?: never;
       modelWriter?: never;
@@ -217,6 +227,7 @@ export class PublicProjectionWorker {
     } else if (
       input.contractWriter === undefined &&
       input.governanceWriter === undefined &&
+      input.electionWriter === undefined &&
       input.caseWriter === undefined &&
       input.resourceWriter === undefined &&
       input.modelWriter === undefined &&
@@ -233,6 +244,7 @@ export class PublicProjectionWorker {
         writer: PublicProjectionWriter;
         contractWriter?: PublicContractProjectionWriter;
         governanceWriter?: PublicGovernanceProjectionWriter;
+        electionWriter?: PublicElectionProjectionWriter;
         caseWriter?: PublicCaseProjectionWriter;
         resourceWriter?: PublicResourceProjectionWriter;
         modelWriter?: PublicModelProjectionWriter;
@@ -249,6 +261,8 @@ export class PublicProjectionWorker {
         destination.contractWriter = input.contractWriter;
       if (input.governanceWriter !== undefined)
         destination.governanceWriter = input.governanceWriter;
+      if (input.electionWriter !== undefined)
+        destination.electionWriter = input.electionWriter;
       if (input.caseWriter !== undefined)
         destination.caseWriter = input.caseWriter;
       if (input.resourceWriter !== undefined)
@@ -370,6 +384,29 @@ export class PublicProjectionWorker {
   }
 
   async #publishGovernance(event: ProjectionOutboxEvent): Promise<void> {
+    if (event.aggregateType === ELECTION_WORKFLOW_AGGREGATE_TYPE) {
+      const envelope = electionProjectionEnvelopeFromOutbox(event);
+      if (this.#governanceEligibilitySnapshotDigest === undefined)
+        throw new Error("Election projection authority is not configured");
+      const verified = await verifyElectionProjectionEvent(envelope, {
+        ...this.#authority,
+        governanceEligibilitySnapshotDigest:
+          this.#governanceEligibilitySnapshotDigest,
+      });
+      if (this.#destination.sink === undefined) {
+        if (this.#destination.electionWriter === undefined)
+          throw new Error("Election projection writer is not configured");
+        await this.#destination.electionWriter.publish(
+          envelope,
+          verified.expectedVersion,
+          this.#now().toISOString(),
+        );
+      } else {
+        await this.#destination.sink.publish(envelope);
+      }
+      await this.#store.markProjected(event.outboxId, this.#now());
+      return;
+    }
     const envelope = governanceProjectionEnvelopeFromOutbox(event);
     if (this.#governanceEligibilitySnapshotDigest === undefined)
       throw new Error("Governance projection authority is not configured");

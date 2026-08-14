@@ -624,13 +624,22 @@ export function recognizeAppeal(appeal: AppealRecord): void {
   }
 }
 
-export function runElection(input: {
+export interface RankedElectionStanding {
+  candidateDid: string;
+  score: number;
+}
+
+export function tallyRankedElection(input: {
   seats: number;
   eligibleCandidates: readonly string[];
   rankedBallots: readonly string[][];
-}): readonly string[] {
+}): readonly RankedElectionStanding[] {
   if (input.seats < 1 || input.seats > input.eligibleCandidates.length)
     throw new Error("Election seat count is invalid");
+  if (
+    new Set(input.eligibleCandidates).size !== input.eligibleCandidates.length
+  )
+    throw new Error("Election candidate roll contains duplicates");
   const eligible = new Set(input.eligibleCandidates);
   const scores = new Map(
     input.eligibleCandidates.map((candidate) => [candidate, 0]),
@@ -652,8 +661,19 @@ export function runElection(input: {
   }
   return [...scores]
     .sort(
-      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+      (left, right) =>
+        right[1] - left[1] ||
+        (left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0),
     )
+    .map(([candidateDid, score]) => ({ candidateDid, score }));
+}
+
+export function runElection(input: {
+  seats: number;
+  eligibleCandidates: readonly string[];
+  rankedBallots: readonly string[][];
+}): readonly string[] {
+  return tallyRankedElection(input)
     .slice(0, input.seats)
-    .map(([candidate]) => candidate);
+    .map(({ candidateDid }) => candidateDid);
 }

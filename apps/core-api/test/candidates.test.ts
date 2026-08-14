@@ -63,6 +63,8 @@ import {
   COMBINE_RESULT_SCHEMA_DIGEST,
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   ECONOMY_WORKFLOW_SCHEMA_DIGEST,
+  ELECTION_WORKFLOW_AGGREGATE_TYPE,
+  ELECTION_WORKFLOW_SCHEMA_DIGEST,
   FOUNDING_CLUBS,
   PREMIER_DRAFT_AGGREGATE_TYPE,
   PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
@@ -75,6 +77,7 @@ import {
   applyArtifactAdmissionTransition,
   applyCaseWorkflowTransition,
   applyDisclosureWorkflowTransition,
+  applyElectionWorkflowTransition,
   applyEconomyWorkflowTransition,
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
@@ -85,6 +88,8 @@ import {
   disclosureWorkflowStateRoot,
   economyTransactionTermsCommitment,
   economyWorkflowStateRoot,
+  electionWorkflowStateRoot,
+  evaluatePremierElection,
   evaluateProposal,
   freeAgencyWindowCommitment,
   artifactAdmissionExecutableDigest,
@@ -112,6 +117,9 @@ import {
   type EconomyWorkflowEventType,
   type EconomyWorkflowPayload,
   type EconomyWorkflowSnapshot,
+  type ElectionWorkflowEventType,
+  type ElectionWorkflowPayload,
+  type ElectionWorkflowSnapshot,
   type GovernanceProposal,
   type GovernanceVote,
   type PremierDraftEvidence,
@@ -397,7 +405,9 @@ class TestExitPortabilityVerifier implements ExitPackagePortabilityVerifier {
   }
 }
 
-async function harness(): Promise<Harness> {
+async function harness(
+  configuredGovernanceSnapshot?: TestEligibilitySnapshot,
+): Promise<Harness> {
   const store = new InMemoryCanonicalStore();
   const now = { value: start };
   const formerOperator = createSigningIdentity(digest("1"));
@@ -470,7 +480,9 @@ async function harness(): Promise<Harness> {
     },
     exit: { portabilityVerifier: exitVerifier },
     governance: {
-      eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+      eligibilitySnapshot:
+        configuredGovernanceSnapshot ??
+        governanceEligibilitySnapshot(candidateDid),
     },
     artifacts: {
       governance: {
@@ -901,6 +913,62 @@ async function governanceCommand(input: {
     body: {
       event: { ...event, aggregateVersion: aggregateVersion.toString() },
       signatures: [signature],
+    },
+  };
+}
+
+async function electionCommand(input: {
+  actor: Harness;
+  electionId: string;
+  snapshot: ElectionWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ElectionWorkflowEventType;
+  payload: ElectionWorkflowPayload;
+  result?: ReturnType<typeof evaluatePremierElection>;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `election-${input.electionId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: ELECTION_WORKFLOW_AGGREGATE_TYPE,
+    aggregateId: input.electionId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: ELECTION_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyElectionWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+    input.result,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: electionWorkflowStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.actor.candidate,
+          domain,
+          event,
+        ),
+      ],
     },
   };
 }
@@ -4531,6 +4599,283 @@ describe("signed candidate rehearsal API", () => {
         })
       ).statusCode,
     ).toBe(403);
+    await h.app.close();
+  });
+
+  it("persists the direct premier board election and replays its ranked result", async () => {
+    const electionSnapshotCapturedAt = iso(20 * day);
+    const premierDids = [
+      "did:abl:candidate-http-1",
+      ...Array.from(
+        { length: 8 },
+        (_, index) => `did:abl:election-player-${index + 2}`,
+      ),
+    ];
+    const commissionerDids = Array.from(
+      { length: 3 },
+      (_, index) => `did:abl:election-commissioner-${index + 1}`,
+    );
+    const eligibilitySnapshot: TestEligibilitySnapshot = {
+      snapshotId: uuid("460"),
+      capturedAt: electionSnapshotCapturedAt,
+      members: {
+        UNIVERSAL_CAREER_ASSEMBLY: [...premierDids],
+        PREMIER_PLAYERS: [...premierDids],
+        DEVELOPMENT_PLAYERS: [],
+        PREMIER_TEAM_COUNCIL: [],
+        DEVELOPMENT_TEAM_COUNCIL: [],
+        EXECUTIVE_COMMISSION: [...commissionerDids],
+        TRIBUNAL: [],
+        INTEGRITY_OFFICE: [],
+      },
+    };
+    const h = await harness(eligibilitySnapshot);
+    await admitCandidate(h);
+    const participants = new Map<string, Harness>([[h.candidateDid, h]]);
+    const additionalDids = [...premierDids.slice(1), ...commissionerDids];
+    const keys = ["3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d"];
+    for (const [index, did] of additionalDids.entries()) {
+      const participant = await additionalCareer(h, did!, keys[index]!);
+      await admitCandidate(participant);
+      participants.set(did!, participant);
+    }
+
+    h.now.value = Date.parse(electionSnapshotCapturedAt) + 60_000;
+    const electionId = uuid("461");
+    const election = {
+      electionId,
+      termId: "season-zero-premier-board",
+      institution: "PREMIER_PLAYERS_ASSOCIATION_BOARD" as const,
+      seatCount: 8 as const,
+      eligibilitySnapshotId: eligibilitySnapshot.snapshotId,
+      eligibilitySnapshotDigest: sha256Commitment(eligibilitySnapshot),
+      nominationOpensAt: new Date(h.now.value).toISOString(),
+      nominationClosesAt: new Date(h.now.value + 2 * hour).toISOString(),
+      votingOpensAt: new Date(h.now.value + 2 * hour).toISOString(),
+      votingClosesAt: new Date(h.now.value + 3 * hour).toISOString(),
+    };
+    const commissioner = participants.get(commissionerDids[0]!)!;
+    const opened = await electionCommand({
+      actor: commissioner,
+      electionId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "PremierElectionOpened",
+      payload: { command: election, eligibilitySnapshot },
+    });
+    const openResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/elections/premier/open",
+      payload: opened.body,
+    });
+    expect(openResponse.statusCode).toBe(201);
+    expect(openResponse.json()).toMatchObject({
+      accepted: true,
+      recognizedGenesisElection: false,
+      directBallotsOnly: true,
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.governance");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/elections/premier/open",
+          payload: opened.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    let electionSnapshot = opened.next;
+    let previousEventHash = opened.event.eventHash;
+    for (const candidateDid of premierDids.slice(0, 8)) {
+      h.now.value += 60_000;
+      const candidate = participants.get(candidateDid)!;
+      const declared = await electionCommand({
+        actor: candidate,
+        electionId,
+        snapshot: electionSnapshot,
+        previousEventHash,
+        eventType: "PremierElectionCandidateDeclared",
+        payload: {
+          command: {
+            electionId,
+            candidateDid,
+            eligibilitySnapshotDigest: election.eligibilitySnapshotDigest,
+            declaredAt: new Date(h.now.value).toISOString(),
+          },
+        },
+      });
+      expect(
+        (
+          await h.app.inject({
+            method: "POST",
+            url: "/v1/elections/premier/candidates/declare",
+            payload: declared.body,
+          })
+        ).statusCode,
+      ).toBe(201);
+      electionSnapshot = declared.next;
+      previousEventHash = declared.event.eventHash;
+    }
+
+    h.now.value = Date.parse(election.votingOpensAt) + 60_000;
+    const voter = participants.get(premierDids[8]!)!;
+    const ballotPayload = {
+      command: {
+        ballotId: uuid("462"),
+        electionId,
+        voterDid: voter.candidateDid,
+        eligibilitySnapshotDigest: election.eligibilitySnapshotDigest,
+        rankedCandidateDids: [...electionSnapshot.candidateDids].reverse(),
+        castAt: new Date(h.now.value).toISOString(),
+      },
+    };
+    const formerOperatorBallot = await electionCommand({
+      actor: voter,
+      electionId,
+      snapshot: electionSnapshot,
+      previousEventHash,
+      eventType: "PremierElectionBallotCast",
+      payload: ballotPayload,
+      signer: voter.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/elections/premier/ballots/cast",
+          payload: formerOperatorBallot.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const ballot = await electionCommand({
+      actor: voter,
+      electionId,
+      snapshot: electionSnapshot,
+      previousEventHash,
+      eventType: "PremierElectionBallotCast",
+      payload: ballotPayload,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/elections/premier/ballots/cast",
+          payload: ballot.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+    electionSnapshot = ballot.next;
+    previousEventHash = ballot.event.eventHash;
+
+    h.now.value = Date.parse(election.votingClosesAt);
+    const result = evaluatePremierElection(electionSnapshot);
+    const closer = participants.get(commissionerDids[1]!)!;
+    const closed = await electionCommand({
+      actor: closer,
+      electionId,
+      snapshot: electionSnapshot,
+      previousEventHash,
+      eventType: "PremierElectionClosed",
+      payload: {
+        command: {
+          electionId,
+          requestedByDid: closer.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+        },
+      },
+      result,
+    });
+    const closeResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/elections/premier/close",
+      payload: closed.body,
+    });
+    expect(closeResponse.statusCode).toBe(201);
+    expect(closeResponse.json()).toMatchObject({
+      result: {
+        electedDids: [...premierDids.slice(0, 8)].reverse(),
+        ballotCount: 1,
+        resultCommitment: result.resultCommitment,
+      },
+    });
+    electionSnapshot = closed.next;
+    previousEventHash = closed.event.eventHash;
+
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: { challengeSecret: new Uint8Array(32).fill(9) },
+      governance: { eligibilitySnapshot },
+    });
+    h.now.value += 60_000;
+    const inspected = await electionCommand({
+      actor: commissioner,
+      electionId,
+      snapshot: electionSnapshot,
+      previousEventHash,
+      eventType: "PremierElectionInspected",
+      payload: {
+        command: {
+          electionId,
+          requestedByDid: commissioner.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+          format: "ABL-PREMIER-ELECTION-INSPECTION-V1",
+        },
+      },
+    });
+    const inspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/elections/premier/inspect",
+      payload: inspected.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      election: {
+        electionId,
+        version: 12,
+        result: { resultCommitment: result.resultCommitment },
+      },
+    });
+
+    const ballotRecord = h.store.events.find(
+      ({ aggregateType, eventType }) =>
+        aggregateType === ELECTION_WORKFLOW_AGGREGATE_TYPE &&
+        eventType === "PremierElectionBallotCast",
+    )!;
+    const originalRoot = ballotRecord.stateRoot;
+    ballotRecord.stateRoot = digest("f");
+    h.now.value += 60_000;
+    const tamperProbe = await electionCommand({
+      actor: commissioner,
+      electionId,
+      snapshot: inspected.next,
+      previousEventHash: inspected.event.eventHash,
+      eventType: "PremierElectionInspected",
+      payload: {
+        command: {
+          electionId,
+          requestedByDid: commissioner.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+          format: "ABL-PREMIER-ELECTION-INSPECTION-V1",
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/elections/premier/inspect",
+          payload: tamperProbe.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    ballotRecord.stateRoot = originalRoot;
     await h.app.close();
   });
 

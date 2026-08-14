@@ -13,6 +13,7 @@ import {
   verifyDraftProjectionEvent,
   verifyDevelopmentProjectionEvent,
   verifyEconomyProjectionEvent,
+  verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -32,6 +33,8 @@ import {
   type PublicDevelopmentProjectionWriter,
   type PublicEconomyProjectionReader,
   type PublicEconomyProjectionWriter,
+  type PublicElectionProjectionReader,
+  type PublicElectionProjectionWriter,
   type PublicFinalGameProjectionReader,
   type PublicFinalGameProjectionWriter,
   type PublicFinalizedGameProjection,
@@ -56,6 +59,7 @@ import type {
 } from "@abl/basketball";
 import {
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
+  ELECTION_WORKFLOW_AGGREGATE_TYPE,
   type CompetitionReleaseEvidenceReader,
   type PremierDraftEvidenceReader,
   type ReleaseInstitutionalRoster,
@@ -193,6 +197,7 @@ export interface PublicApiOptions {
   developmentProjections?: PublicDevelopmentProjectionReader;
   economyProjections?: PublicEconomyProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
+  electionProjections?: PublicElectionProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
@@ -207,6 +212,7 @@ export interface PublicApiOptions {
     developmentWriter?: PublicDevelopmentProjectionWriter;
     economyWriter?: PublicEconomyProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
+    electionWriter?: PublicElectionProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
     modelWriter?: PublicModelProjectionWriter;
@@ -331,6 +337,7 @@ export function createPublicApi(
     options.developmentProjections !== undefined ||
     options.economyProjections !== undefined ||
     options.governanceProjections !== undefined ||
+    options.electionProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
     options.modelProjections !== undefined ||
@@ -351,6 +358,7 @@ export function createPublicApi(
         options.contractProjections?.refresh(),
         options.draftProjections?.refresh(),
         options.governanceProjections?.refresh(),
+        options.electionProjections?.refresh(),
         options.caseProjections?.refresh(),
         options.socialProjections?.refresh(),
         options.finalGameProjections?.refresh(),
@@ -707,6 +715,42 @@ export function createPublicApi(
         }
         if (topic === "public.governance") {
           if (
+            projectionAggregateType(request.body) ===
+            ELECTION_WORKFLOW_AGGREGATE_TYPE
+          ) {
+            if (
+              projectionIngress.governanceEligibilitySnapshotDigest ===
+                undefined ||
+              projectionIngress.electionWriter === undefined
+            ) {
+              throw new ServiceAuthenticationError(
+                "Election projection authority is not configured",
+              );
+            }
+            const verified = await verifyElectionProjectionEvent(request.body, {
+              ...projectionIngress,
+              governanceEligibilitySnapshotDigest:
+                projectionIngress.governanceEligibilitySnapshotDigest,
+            });
+            if (
+              headers["x-abl-expected-version"] !== verified.expectedVersion
+            ) {
+              throw new ProjectionVersionConflictError(
+                "Signed expected version does not precede the election event",
+              );
+            }
+            const record = await projectionIngress.electionWriter.publish(
+              verified.envelope,
+              verified.expectedVersion,
+              projectionIngress.now?.().toISOString(),
+            );
+            return reply.code(201).send({
+              accepted: true,
+              canonicalEventHash: verified.event.eventHash,
+              cursor: record.cursor,
+            });
+          }
+          if (
             projectionIngress.governanceEligibilitySnapshotDigest === undefined
           ) {
             throw new ServiceAuthenticationError(
@@ -979,6 +1023,7 @@ export function createPublicApi(
               recordType: "GOVERNANCE_PROPOSAL" as const,
             }),
           ),
+          ...(options.electionProjections?.elections() ?? []),
           ...(options.caseProjections?.cases() ?? []),
         ];
       }

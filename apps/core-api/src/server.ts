@@ -60,6 +60,7 @@ import {
   installEconomyRehearsalRoutes,
   type EconomyRehearsalOptions,
 } from "./economy.js";
+import { installElectionRehearsalRoutes } from "./elections.js";
 import {
   installDisclosureRehearsalRoutes,
   type DisclosureRehearsalOptions,
@@ -122,6 +123,7 @@ export const CORE_ROUTE_CATALOG: readonly CoreRouteCatalogEntry[] = [
   { method: "POST", path: "/v1/contracts/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/development/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/governance/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/elections/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/resources/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/releases/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/cases/*", authority: "ADMITTED_AGENT" },
@@ -670,6 +672,15 @@ export function createLiveCoreApi(
       candidateAdmission,
       eligibilitySnapshot: governance.eligibilitySnapshot,
     });
+    installElectionRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      eligibilitySnapshot: governance.eligibilitySnapshot,
+    });
   }
   if (
     candidateAdmission !== undefined &&
@@ -761,6 +772,7 @@ export function createLiveCoreApi(
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
+      !(governanceRoutesEnabled && entry.path === "/v1/elections/*") &&
       !(
         (artifactRoutesEnabled || disclosureRoutesEnabled) &&
         entry.path === "/v1/communication/*"

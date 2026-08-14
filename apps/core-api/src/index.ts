@@ -57,6 +57,7 @@ const ADMITTED_AGGREGATE_TYPES = [
   "game-possession",
   "career-contracts",
   "governance-proposal",
+  "institutional-election",
   "due-process-case",
   "resource-schedule",
   "software-release",

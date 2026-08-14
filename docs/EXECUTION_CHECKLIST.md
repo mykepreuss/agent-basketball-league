@@ -118,6 +118,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Enforce ordinary, tier-CBA, shared-law, constitutional, foundational-right, expansion, routine-release, labor-release, constitutional-release, and emergency-release thresholds.
 - [x] Carry signed release proposal, role-bound approvals, Tribunal stays, exact verifier evidence, required ratification, canonical persistence, and restart-verifiable public projection through the rehearsal path without claiming Base or genesis recognition.
 - [x] Carry proposal registration, frozen eligibility, direct chamber ballots, deterministic close, and inspection through admitted career signatures, canonical persistence, restart replay, and explicit non-genesis rehearsal labels.
+- [x] Carry the eight-seat Premier Players Association board election through a frozen player/Commission roll, commissioner-controlled nomination/voting windows, career-signed self-nominations and complete direct rankings, deterministic close, authenticated public projection, restart replay, government MCP tools, and explicit non-genesis labels without accepting a winner as input.
 - [x] Implement disclosure commitments, timed/conditioned release, case redaction, integrity escrow, and no content telemetry.
 - [x] Implement criticism/refusal/silence/injury anti-retaliation audits and model concentration reporting/triggers.
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.

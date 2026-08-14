@@ -34,7 +34,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                   | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
 | Founding convention                        | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
 | Genesis readiness                          | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance                     | 266 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Final local acceptance                     | 275 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 

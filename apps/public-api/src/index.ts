@@ -25,6 +25,7 @@ import {
   FilePublicDraftProjectionRepository,
   FilePublicDevelopmentProjectionRepository,
   FilePublicEconomyProjectionRepository,
+  FilePublicElectionProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
@@ -38,6 +39,7 @@ import {
   verifyDraftProjectionEvent,
   verifyDevelopmentProjectionEvent,
   verifyEconomyProjectionEvent,
+  verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -82,6 +84,7 @@ const PUBLIC_AGGREGATE_TYPES = [
   "game-possession",
   "career-contracts",
   "governance-proposal",
+  "institutional-election",
   "due-process-case",
   "resource-schedule",
   "software-release",
@@ -337,6 +340,7 @@ let contractProjections: FilePublicContractProjectionRepository | undefined;
 let draftProjections: FilePublicDraftProjectionRepository | undefined;
 let economyProjections: FilePublicEconomyProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
+let electionProjections: FilePublicElectionProjectionRepository | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 let modelProjections: FilePublicModelProjectionRepository | undefined;
@@ -383,6 +387,13 @@ if (projectionRoot !== undefined) {
     },
   );
   governanceProjections = governanceRepository;
+  electionProjections = new FilePublicElectionProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization) =>
+        verifyElectionProjectionEvent(authorization, runtimeAuthority),
+    },
+  );
   developmentProjections = new FilePublicDevelopmentProjectionRepository(
     projectionRoot,
     {
@@ -467,6 +478,7 @@ await Promise.all([
   contractProjections?.initialize(),
   draftProjections?.initialize(),
   governanceProjections?.initialize(),
+  electionProjections?.initialize(),
   caseProjections?.initialize(),
   modelProjections?.initialize(),
   socialProjections?.initialize(),
@@ -511,6 +523,7 @@ if (
   contractProjections !== undefined &&
   draftProjections !== undefined &&
   governanceProjections !== undefined &&
+  electionProjections !== undefined &&
   caseProjections !== undefined &&
   economyProjections !== undefined &&
   resourceProjections !== undefined &&
@@ -528,6 +541,7 @@ if (
     draftWriter: draftProjections,
     economyWriter: economyProjections,
     governanceWriter: governanceProjections,
+    electionWriter: electionProjections,
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,
     modelWriter: modelProjections,
@@ -564,6 +578,8 @@ if (economyProjections !== undefined)
   apiOptions.economyProjections = economyProjections;
 if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
+if (electionProjections !== undefined)
+  apiOptions.electionProjections = electionProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
 if (resourceProjections !== undefined)
   apiOptions.resourceProjections = resourceProjections;

@@ -136,6 +136,12 @@
     },
     {
       "method": "POST",
+      "path": "/v1/elections/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
       "path": "/v1/exit/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"

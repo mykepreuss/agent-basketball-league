@@ -9,6 +9,8 @@ export * from "./development-envelope.js";
 export * from "./development-repository.js";
 export * from "./economy-envelope.js";
 export * from "./economy-repository.js";
+export * from "./election-envelope.js";
+export * from "./election-repository.js";
 export * from "./envelope.js";
 export * from "./final-game-envelope.js";
 export * from "./final-game-repository.js";

@@ -15,22 +15,27 @@ import {
 import {
   CASE_WORKFLOW_AGGREGATE_TYPE,
   CASE_WORKFLOW_SCHEMA_DIGEST,
+  ELECTION_WORKFLOW_AGGREGATE_TYPE,
+  ELECTION_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
   GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
   RESOURCE_SCHEDULE_EVENT_TYPE,
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyGovernanceWorkflowTransition,
+  applyElectionWorkflowTransition,
   applyResourceScheduleTransition,
   applyCaseWorkflowTransition,
   caseWorkflowStateRoot,
   governanceWorkflowStateRoot,
+  electionWorkflowStateRoot,
   resourceScheduleExecutableDigest,
   resourceScheduleStateRoot,
 } from "@abl/institutions";
 import {
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
+  FilePublicElectionProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
@@ -38,11 +43,13 @@ import {
   PROJECTION_APPEND_PATH,
   projectionEnvelopeBytes,
   verifyGovernanceProjectionEvent,
+  verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyResourceProjectionEvent,
   type CaseProjectionEventEnvelope,
   type GovernanceProjectionEventEnvelope,
+  type ElectionProjectionEventEnvelope,
   type FinalGameProjectionEventEnvelope,
   type ResourceProjectionEventEnvelope,
 } from "@abl/projections";
@@ -725,6 +732,169 @@ describe("public API", () => {
       ).json(),
     ).toMatchObject({
       items: [{ proposalId, aggregateVersion: "1", canonical: true }],
+    });
+    await app.close();
+  });
+
+  it("authenticates election ingress and serves it in public governance history", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-public-election-"));
+    const domain = {
+      name: "ABL Recognition",
+      version: "1",
+      chainId: 84532,
+      verifyingContract: "0x1111111111111111111111111111111111111111" as const,
+    };
+    const playerDids = Array.from(
+      { length: 8 },
+      (_, index) => `did:abl:public-election-player-${index + 1}`,
+    );
+    const commissionerDids = Array.from(
+      { length: 3 },
+      (_, index) => `did:abl:public-election-commissioner-${index + 1}`,
+    );
+    const dids = [...playerDids, ...commissionerDids];
+    const identities = dids.map((_, index) =>
+      createSigningIdentity(
+        `0x${(index + 21).toString(16).padStart(64, "0")}` as `0x${string}`,
+      ),
+    );
+    const eligibilitySnapshot = {
+      snapshotId: "0198a000-0000-7000-8000-000000000751",
+      capturedAt: "2026-08-13T08:00:00.000Z",
+      members: {
+        UNIVERSAL_CAREER_ASSEMBLY: [...playerDids],
+        PREMIER_PLAYERS: [...playerDids],
+        DEVELOPMENT_PLAYERS: [],
+        PREMIER_TEAM_COUNCIL: [],
+        DEVELOPMENT_TEAM_COUNCIL: [],
+        EXECUTIVE_COMMISSION: [...commissionerDids],
+        TRIBUNAL: [],
+        INTEGRITY_OFFICE: [],
+      },
+    };
+    const eligibilitySnapshotDigest = sha256Commitment(eligibilitySnapshot);
+    const electionId = "0198a000-0000-7000-8000-000000000752";
+    const payload = {
+      command: {
+        electionId,
+        termId: "season-zero-premier-board",
+        institution: "PREMIER_PLAYERS_ASSOCIATION_BOARD" as const,
+        seatCount: 8 as const,
+        eligibilitySnapshotId: eligibilitySnapshot.snapshotId,
+        eligibilitySnapshotDigest,
+        nominationOpensAt: "2026-08-13T08:01:00.000Z",
+        nominationClosesAt: "2026-08-13T09:00:00.000Z",
+        votingOpensAt: "2026-08-13T09:00:00.000Z",
+        votingClosesAt: "2026-08-13T10:00:00.000Z",
+      },
+      eligibilitySnapshot,
+    };
+    const eventInput = {
+      eventId: "0198a000-0000-7000-8000-000000000753",
+      actorDid: commissionerDids[0]!,
+      nonce: "public-election-ingress",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000754",
+      aggregateType: ELECTION_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: electionId,
+      aggregateVersion: 1n,
+      eventType: "PremierElectionOpened" as const,
+      previousEventHash: null,
+      payload,
+      stateRoot: sha256Commitment("provisional-election-ingress"),
+      schemaDigest: ELECTION_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: payload.command.nominationOpensAt,
+    };
+    const electionSnapshot = applyElectionWorkflowTransition(
+      null,
+      createCanonicalEvent(eventInput),
+      payload,
+    );
+    const event = createCanonicalEvent({
+      ...eventInput,
+      stateRoot: electionWorkflowStateRoot(electionSnapshot),
+    });
+    const envelope: ElectionProjectionEventEnvelope = {
+      version: "1.0.0",
+      topic: "public.governance",
+      event: {
+        ...event,
+        aggregateType: ELECTION_WORKFLOW_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: "PremierElectionOpened",
+      },
+      signature: await signCanonicalEvent(identities[8]!, domain, event),
+    };
+    const authority = {
+      domain,
+      admittedAgents: new Map(
+        dids.map((did, index) => [
+          did,
+          {
+            signerAddress: identities[index]!.address,
+            allowedAggregateTypes: [ELECTION_WORKFLOW_AGGREGATE_TYPE],
+          },
+        ]),
+      ),
+      governanceEligibilitySnapshotDigest: eligibilitySnapshotDigest,
+    };
+    const games = new FilePublicProjectionRepository(root);
+    const elections = new FilePublicElectionProjectionRepository(root, {
+      verifyAuthorization: async (authorization) =>
+        verifyElectionProjectionEvent(authorization, authority),
+    });
+    await Promise.all([games.initialize(), elections.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T08:01:05.000Z");
+    const serviceIdentity = {
+      serviceId: "election-ingress-test",
+      secret: new TextEncoder().encode("e".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const app = createPublicApi({
+      projections: games,
+      electionProjections: elections,
+      projectionIngress: {
+        writer: games,
+        electionWriter: elections,
+        verifier: new ServiceRequestVerifier([serviceIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const body = projectionEnvelopeBytes(envelope);
+    const headers = signServiceRequest(serviceIdentity, {
+      method: "POST",
+      path: PROJECTION_APPEND_PATH,
+      body,
+      nonce: "election-ingress-service-request",
+      timestamp: new Date(serviceNow).toISOString(),
+      expectedVersion: "0",
+      capability: PROJECTION_APPEND_CAPABILITY,
+    });
+    const accepted = await app.inject({
+      method: "POST",
+      url: PROJECTION_APPEND_PATH,
+      headers: { ...headers, "content-type": "application/json" },
+      payload: Buffer.from(body),
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/public/governance",
+        })
+      ).json(),
+    ).toMatchObject({
+      items: [
+        {
+          recordType: "PREMIER_PLAYERS_ASSOCIATION_BOARD_ELECTION",
+          electionId,
+          aggregateVersion: "1",
+          canonical: true,
+        },
+      ],
     });
     await app.close();
   });
