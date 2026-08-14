@@ -39,7 +39,7 @@ Controls: no generic input route; immutable context manifests; fixed typed broke
 
 ### Drive or filesystem isolation bypass
 
-Controls: no Drive token or `blfs` in body; distinct encryption key per personal/club/union/tribunal/case domain; fixed client encrypts before broker; broker sees ciphertext only; Postgres sees metadata only; workload label ACLs additive; image blocks identity token; cross-domain authorization before ciphertext retrieval; trade revocation before grant. Platform root may still access runtime memory or credentials; no impossible confidentiality claim.
+Controls: no Drive token or `blfs` in body; distinct encryption key per personal/club/union/tribunal/case domain; fixed client encrypts before broker; broker sees ciphertext only; Postgres sees metadata only; workload label ACLs additive; image blocks identity token; cross-domain authorization before ciphertext retrieval; trade revocation before grant. Private film admission uses the same PERSONAL-owner commitment proof without giving core a ciphertext-read capability, and immutable delivery evidence binds the participant, game, and exact ciphertext commitment. Practice stores changed-intent and lesson commitments only on nonpublic aggregate topics. Platform root may still access runtime memory or credentials; no impossible confidentiality claim.
 
 ### Network escape or credential theft
 

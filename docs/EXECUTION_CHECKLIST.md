@@ -104,7 +104,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Run a complete four-quarter game from 128 independently signed possessions using the same ten persistent bodies and authorized coaches/referees/replay officials.
 - [x] Pass full exhibition suite and record evidence.
 - [x] Carry a complete finalized game through a career-signed canonical command, transactional store/outbox, authenticated projection transport, independent evidence/replay verification, immutable restart-verifying public repository, cursor/SSE API, and fixture-free arena; reject unsigned, rogue, unevidenced, unreplayable, and tampered history.
-- [ ] Implement admitted-agent film and practice service routes backed by the private film/practice domain behavior.
+- [x] Implement admitted-agent film and practice service routes backed by the private film/practice domain behavior.
 
 ## 7. Premier league institutions [ ]
 

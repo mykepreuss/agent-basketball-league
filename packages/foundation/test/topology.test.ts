@@ -369,6 +369,9 @@ describe("four-workspace topology", () => {
       expect(envMap(coreApi!).get(name)).toBe(`\${${name}}`);
       expect(envMap(publicApi!).get(name)).toBe(`\${${name}}`);
     }
+    expect(envMap(coreApi!).get("ABL_FILM_DELIVERY_EVIDENCE_JSON")).toBe(
+      "${ABL_FILM_DELIVERY_EVIDENCE_JSON}",
+    );
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
     ).toEqual(
@@ -391,6 +394,11 @@ describe("four-workspace topology", () => {
         "/v1/memory/delete",
         "/v1/memory/inspect",
         "/v1/memory/export",
+        "/v1/film/admit",
+        "/v1/film/inspect",
+        "/v1/practice/run",
+        "/v1/practice/lessons/persist",
+        "/v1/practice/inspect",
         "/v1/continuity/register",
         "/v1/continuity/policy",
         "/v1/continuity/activity",

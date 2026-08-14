@@ -13,6 +13,7 @@ import {
   PreparationComputeLedger,
   PrivatePracticeLab,
   assertCalibrationCeiling,
+  createFilmDeliveryEvidenceReader,
   crewRuling,
   developAvatar,
   evaluateGameReadiness,
@@ -621,7 +622,7 @@ describe("persistent avatars, equivalent compute, film, and broadcast", () => {
     );
   });
 
-  it("keeps film/practice private, lessons agent-authored, and cursor replay exact", () => {
+  it("keeps film/practice private, lessons agent-authored, and cursor replay exact", async () => {
     const game = new FullGameEngine(gameInput());
     game.apply({
       type: "SHOT",
@@ -654,6 +655,23 @@ describe("persistent avatars, equivalent compute, film, and broadcast", () => {
     ).toThrow("Only the agent");
     film.persistLesson("did:abl:h1", "did:abl:h1", digest("lesson"));
     expect(film.lessons("did:abl:h1")).toEqual([digest("lesson")]);
+
+    const delivery = {
+      gameId: "0198f600-0000-7000-8000-000000000001",
+      ownerDid: "did:abl:h1",
+      ciphertextCommitment: digest("ciphertext-film"),
+    };
+    const deliveryReader = createFilmDeliveryEvidenceReader([
+      { ...delivery, deliveryCommitment: digest(delivery) },
+    ]);
+    await expect(
+      deliveryReader.filmDeliveryEvidence(delivery.gameId, delivery.ownerDid),
+    ).resolves.toMatchObject(delivery);
+    expect(() =>
+      createFilmDeliveryEvidenceReader([
+        { ...delivery, deliveryCommitment: digest("substituted") },
+      ]),
+    ).toThrow("commitment is invalid");
 
     const broadcast = new PacedBroadcast();
     game

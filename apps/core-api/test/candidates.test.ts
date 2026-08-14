@@ -20,6 +20,30 @@ import {
   type UnsignedDeletionAttestation,
   type UnsignedExitPackage,
 } from "@abl/career";
+import {
+  FILM_ADMITTED_EVENT_TYPE,
+  FILM_INSPECTED_EVENT_TYPE,
+  FINALIZED_GAME_AGGREGATE_TYPE,
+  FINALIZED_GAME_SCHEMA_DIGEST,
+  FinalizedGamePayloadSchema,
+  GAME_FINALIZED_EVENT_TYPE,
+  PRACTICE_INSPECTED_EVENT_TYPE,
+  PRACTICE_LESSON_EVENT_TYPE,
+  PRACTICE_RUN_EVENT_TYPE,
+  PRIVATE_FILM_AGGREGATE_TYPE,
+  PRIVATE_FILM_SCHEMA_DIGEST,
+  PRIVATE_PRACTICE_AGGREGATE_TYPE,
+  PRIVATE_PRACTICE_SCHEMA_DIGEST,
+  createAgentPlayedGameEvidence,
+  deriveCounterfactualPracticeRun,
+  finalizedGameStateRoot,
+  privateFilmCatalogStateRoot,
+  privatePracticeLedgerStateRoot,
+  runDeterministicExhibition,
+  type CanonicalPrivateFilmRecord,
+  type CounterfactualPracticeRun,
+  type DurablePracticeLesson,
+} from "@abl/basketball";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
   ARTIFACT_ADMISSION_AGGREGATE_TYPE,
@@ -177,6 +201,56 @@ const domain: TypedDataDomain = {
   chainId: 84532,
   verifyingContract: "0x1111111111111111111111111111111111111111",
 };
+const filmFinalizerDid = "did:abl:film-finalizer";
+const filmFinalizer = createSigningIdentity(
+  `0x${"ab".repeat(32)}` as `0x${string}`,
+);
+const filmGameId = uuid("901");
+const filmGame = runDeterministicExhibition(filmGameId);
+
+function filmDecisionHashes(role: string, count: number): Hex[] {
+  return Array.from({ length: count }, (_, index) =>
+    sha256Commitment({ role: `film-${role}`, index }),
+  );
+}
+
+const filmGameEvidence = createAgentPlayedGameEvidence({
+  gameId: filmGameId,
+  gameInput: filmGame.input,
+  commands: filmGame.commands,
+  proof: filmGame.proof,
+  possessionProofs: [
+    {
+      possessionId: "film-practice-source-possession",
+      playerDecisionHashes: filmDecisionHashes("player", 20),
+      coachDecisionHashes: filmDecisionHashes("coach", 4),
+      refereeDecisionHashes: filmDecisionHashes("referee", 3),
+      replayDecisionHashes: filmDecisionHashes("replay", 2),
+      eventMerkleRoot: sha256Commitment("film-possession-events"),
+      finalStateRoot: sha256Commitment("film-possession-state"),
+    },
+  ],
+});
+const filmGamePayload = FinalizedGamePayloadSchema.parse({
+  gameId: filmGameId,
+  finalizedAt: iso(0),
+  input: filmGame.input,
+  commands: filmGame.commands,
+  proof: filmGame.proof,
+  agentEvidence: filmGameEvidence,
+  filmCommitment: sha256Commitment(filmGame.events),
+  broadcastStartedAt: iso(0),
+  broadcastIntervalMs: 1,
+});
+
+function filmDeliveryEvidence(ownerDid: string) {
+  const body = {
+    gameId: filmGameId,
+    ownerDid,
+    ciphertextCommitment: digest("a"),
+  };
+  return { ...body, deliveryCommitment: sha256Commitment(body) };
+}
 
 interface Harness {
   app: FastifyInstance;
@@ -195,6 +269,7 @@ interface Harness {
   memoryStorage: TestMemoryStorageVerifier;
   exitVerifier: TestExitPortabilityVerifier;
   releaseVerifierResults: Map<string, ReleaseVerifierResult>;
+  filmDeliveryOwners: Set<string>;
 }
 
 function governanceEligibilitySnapshot(candidateDid: string) {
@@ -302,7 +377,16 @@ async function harness(): Promise<Harness> {
   const admittedAgents = new Map<
     string,
     { signerAddress: `0x${string}`; allowedAggregateTypes: string[] }
-  >();
+  >([
+    [
+      filmFinalizerDid,
+      {
+        signerAddress: filmFinalizer.address,
+        allowedAggregateTypes: [FINALIZED_GAME_AGGREGATE_TYPE],
+      },
+    ],
+  ]);
+  const filmDeliveryOwners = new Set([candidateDid]);
   const app = createLiveCoreApi({
     store,
     domain,
@@ -323,6 +407,22 @@ async function harness(): Promise<Harness> {
       clubGovernors: { [rehearsalClubId]: governorDid },
     },
     memory: { storageVerifier: memoryStorage },
+    finalizedGames: {
+      finalizerDids: new Set([filmFinalizerDid]),
+      evidence: {
+        finalizedGameEvidence: async (gameId) =>
+          gameId === filmGameId ? structuredClone(filmGameEvidence) : null,
+      },
+    },
+    filmPractice: {
+      storageVerifier: memoryStorage,
+      filmDeliveryEvidence: {
+        filmDeliveryEvidence: async (gameId, ownerDid) =>
+          gameId === filmGameId && filmDeliveryOwners.has(ownerDid)
+            ? filmDeliveryEvidence(ownerDid)
+            : null,
+      },
+    },
     continuity: {
       recognizedImageDigests: new Set([recognizedBodyImageDigest]),
     },
@@ -373,6 +473,7 @@ async function harness(): Promise<Harness> {
     memoryStorage,
     exitVerifier,
     releaseVerifierResults,
+    filmDeliveryOwners,
   };
 }
 
@@ -1309,9 +1410,97 @@ async function admitCandidate(h: Harness) {
       RELEASE_WORKFLOW_AGGREGATE_TYPE,
       ARTIFACT_ADMISSION_AGGREGATE_TYPE,
       DISCLOSURE_AGGREGATE_TYPE,
+      PRIVATE_FILM_AGGREGATE_TYPE,
+      PRIVATE_PRACTICE_AGGREGATE_TYPE,
     ],
   });
   return admitted;
+}
+
+async function persistFilmSourceGame(h: Harness): Promise<CanonicalEvent> {
+  const event = createCanonicalEvent({
+    eventId: uuid("902"),
+    actorDid: filmFinalizerDid,
+    nonce: "film-practice-finalized-game",
+    idempotencyKey: uuid("903"),
+    aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+    aggregateId: filmGameId,
+    aggregateVersion: 1n,
+    eventType: GAME_FINALIZED_EVENT_TYPE,
+    previousEventHash: null,
+    payload: filmGamePayload,
+    stateRoot: finalizedGameStateRoot(filmGamePayload),
+    schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+    timestamp: filmGamePayload.finalizedAt,
+  });
+  const signatures = [await signCanonicalEvent(filmFinalizer, domain, event)];
+  await h.store.append({
+    eventId: event.eventId,
+    actorDid: event.actorDid,
+    nonce: event.nonce,
+    idempotencyKey: event.idempotencyKey,
+    requestHash: sha256Commitment({ eventHash: event.eventHash, signatures }),
+    aggregateType: event.aggregateType,
+    aggregateId: event.aggregateId,
+    expectedVersion: 0n,
+    competitionId: "admission-rehearsal",
+    seasonId: "pre-genesis",
+    eventType: event.eventType,
+    previousEventHash: event.previousEventHash,
+    eventHash: event.eventHash,
+    payloadSchemaDigest: event.schemaDigest,
+    payloadCommitment: event.payloadCommitment,
+    payload: event.payload,
+    stateRoot: event.stateRoot,
+    signatures,
+    occurredAt: new Date(event.timestamp),
+    outboxTopic: "public.finalized-game",
+  });
+  return event;
+}
+
+async function privateBasketballCommand(input: {
+  h: Harness;
+  eventSuffix: string;
+  aggregateType:
+    | typeof PRIVATE_FILM_AGGREGATE_TYPE
+    | typeof PRIVATE_PRACTICE_AGGREGATE_TYPE;
+  aggregateVersion: number;
+  eventType: string;
+  previousEventHash: Hex | null;
+  payload: unknown;
+  stateRoot: Hex;
+  schemaDigest: Hex;
+  signer?: SigningIdentity;
+}) {
+  const event = createCanonicalEvent({
+    eventId: uuid(input.eventSuffix),
+    actorDid: input.h.candidateDid,
+    nonce: `${input.aggregateType}-${input.aggregateVersion}`,
+    idempotencyKey: uuid(String(Number(input.eventSuffix) + 1)),
+    aggregateType: input.aggregateType,
+    aggregateId: input.h.candidateDid,
+    aggregateVersion: BigInt(input.aggregateVersion),
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    stateRoot: input.stateRoot,
+    schemaDigest: input.schemaDigest,
+    timestamp: new Date(input.h.now.value).toISOString(),
+  });
+  return {
+    event,
+    body: {
+      event: { ...event, aggregateVersion: event.aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
 }
 
 async function ratifyArtifactExecutable(input: {
@@ -2521,6 +2710,420 @@ describe("signed candidate rehearsal API", () => {
     expect(tamperedCombine.json()).toEqual({
       error: "combine_authorization_denied",
     });
+    await h.app.close();
+  });
+
+  it("persists private film, counterfactual practice, and owner-authored lessons", async () => {
+    const h = await harness();
+    const finalizedEvent = await persistFilmSourceGame(h);
+    await admitCandidate(h);
+    const finalizedRecord = h.store.events.find(
+      (event) => event.eventId === finalizedEvent.eventId,
+    )!;
+    const finalizedStateRoot = finalizedRecord.stateRoot;
+
+    h.now.value += 60_000;
+    const filmId = uuid("910");
+    const storage: MemoryStorageReference = {
+      domainId: `personal:${h.candidateDid}`,
+      objectId: filmId,
+      version: 1,
+      ciphertextCommitment: digest("a"),
+    };
+    h.memoryStorage.store(storage);
+    const film: CanonicalPrivateFilmRecord = {
+      filmId,
+      gameId: filmGameId,
+      ownerDid: h.candidateDid,
+      sourceFilmCommitment: filmGamePayload.filmCommitment,
+      eventRoot: filmGamePayload.proof.eventMerkleRoot,
+      finalStateRoot: filmGamePayload.proof.finalStateRoot,
+      storage,
+      admittedAt: new Date(h.now.value).toISOString(),
+    };
+    const films = new Map([[filmId, film]]);
+    const filmPayload = { film };
+    const deniedFilm = await privateBasketballCommand({
+      h,
+      eventSuffix: "911",
+      aggregateType: PRIVATE_FILM_AGGREGATE_TYPE,
+      aggregateVersion: 1,
+      eventType: FILM_ADMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: filmPayload,
+      stateRoot: privateFilmCatalogStateRoot(h.candidateDid, 1, films),
+      schemaDigest: PRIVATE_FILM_SCHEMA_DIGEST,
+    });
+    h.filmDeliveryOwners.delete(h.candidateDid);
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/film/admit",
+          payload: deniedFilm.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    h.filmDeliveryOwners.add(h.candidateDid);
+
+    const substitutedFilmId = uuid("909");
+    const substitutedFilm = {
+      ...film,
+      filmId: substitutedFilmId,
+      storage: {
+        ...storage,
+        objectId: substitutedFilmId,
+        ciphertextCommitment: digest("e"),
+      },
+    };
+    const substitutedFilms = new Map([[substitutedFilmId, substitutedFilm]]);
+    const substitutedDelivery = await privateBasketballCommand({
+      h,
+      eventSuffix: "931",
+      aggregateType: PRIVATE_FILM_AGGREGATE_TYPE,
+      aggregateVersion: 1,
+      eventType: FILM_ADMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: { film: substitutedFilm },
+      stateRoot: privateFilmCatalogStateRoot(
+        h.candidateDid,
+        1,
+        substitutedFilms,
+      ),
+      schemaDigest: PRIVATE_FILM_SCHEMA_DIGEST,
+    });
+    const substitutedDeliveryResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/film/admit",
+      payload: substitutedDelivery.body,
+    });
+    expect(substitutedDeliveryResponse.statusCode).toBe(409);
+    expect(substitutedDeliveryResponse.json()).toEqual({
+      error: "finalized_game_source_unverified",
+    });
+
+    const admittedFilm = await privateBasketballCommand({
+      h,
+      eventSuffix: "913",
+      aggregateType: PRIVATE_FILM_AGGREGATE_TYPE,
+      aggregateVersion: 1,
+      eventType: FILM_ADMITTED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: filmPayload,
+      stateRoot: privateFilmCatalogStateRoot(h.candidateDid, 1, films),
+      schemaDigest: PRIVATE_FILM_SCHEMA_DIGEST,
+    });
+    const filmResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/film/admit",
+      payload: admittedFilm.body,
+    });
+    expect(filmResponse.statusCode).toBe(201);
+    expect(filmResponse.json()).toMatchObject({
+      canonical: true,
+      recognizedGenesisFilm: false,
+      privateContentAccepted: false,
+      recognizedGameMutation: false,
+      film: {
+        filmId,
+        sourceFilmCommitment: filmGamePayload.filmCommitment,
+      },
+    });
+    const filmRetry = await h.app.inject({
+      method: "POST",
+      url: "/v1/film/admit",
+      payload: admittedFilm.body,
+    });
+    expect(filmRetry.statusCode).toBe(200);
+    expect(filmRetry.json()).toMatchObject({ duplicate: true });
+
+    h.now.value += 60_000;
+    const filmInspectionPayload = {
+      ownerDid: h.candidateDid,
+      requestedAt: new Date(h.now.value).toISOString(),
+      format: "ABL-PRIVATE-FILM-CATALOG-INSPECTION-V1",
+    };
+    const filmInspection = await privateBasketballCommand({
+      h,
+      eventSuffix: "915",
+      aggregateType: PRIVATE_FILM_AGGREGATE_TYPE,
+      aggregateVersion: 2,
+      eventType: FILM_INSPECTED_EVENT_TYPE,
+      previousEventHash: admittedFilm.event.eventHash,
+      payload: filmInspectionPayload,
+      stateRoot: privateFilmCatalogStateRoot(h.candidateDid, 2, films),
+      schemaDigest: PRIVATE_FILM_SCHEMA_DIGEST,
+    });
+    const filmInspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/film/inspect",
+      payload: filmInspection.body,
+    });
+    expect(filmInspectionResponse.statusCode).toBe(201);
+    expect(filmInspectionResponse.json()).toMatchObject({
+      films: [{ filmId }],
+      ciphertextReturned: false,
+    });
+
+    h.now.value += 60_000;
+    const requestedAt = new Date(h.now.value).toISOString();
+    const run = deriveCounterfactualPracticeRun({
+      film,
+      baseStateRoot: film.finalStateRoot as Hex,
+      changedIntentCommitments: [digest("b"), digest("c")],
+      requestedAt,
+    });
+    const runs = new Map<string, CounterfactualPracticeRun>([
+      [run.practiceId, run],
+    ]);
+    const lessons = new Map<string, DurablePracticeLesson>();
+    const practiceRun = await privateBasketballCommand({
+      h,
+      eventSuffix: "917",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 1,
+      eventType: PRACTICE_RUN_EVENT_TYPE,
+      previousEventHash: null,
+      payload: { run },
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        1,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+    });
+    const practiceResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/practice/run",
+      payload: practiceRun.body,
+    });
+    expect(practiceResponse.statusCode).toBe(201);
+    expect(practiceResponse.json()).toMatchObject({
+      canonical: true,
+      recognizedGenesisPractice: false,
+      recognizedGameMutation: false,
+      privateContentAccepted: false,
+      run: {
+        practiceId: run.practiceId,
+        counterfactualCommitment: run.counterfactualCommitment,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/practice/run",
+          payload: practiceRun.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    h.now.value += 60_000;
+    const lesson: DurablePracticeLesson = {
+      lessonId: uuid("920"),
+      ownerDid: h.candidateDid,
+      sourcePracticeId: run.practiceId,
+      lessonCommitment: digest("d"),
+      authoredAt: new Date(h.now.value).toISOString(),
+    };
+    lessons.set(lesson.lessonId, lesson);
+    const rogueLesson = await privateBasketballCommand({
+      h,
+      eventSuffix: "921",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 2,
+      eventType: PRACTICE_LESSON_EVENT_TYPE,
+      previousEventHash: practiceRun.event.eventHash,
+      payload: { lesson },
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        2,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+      signer: filmFinalizer,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/practice/lessons/persist",
+          payload: rogueLesson.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    const persistedLesson = await privateBasketballCommand({
+      h,
+      eventSuffix: "923",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 2,
+      eventType: PRACTICE_LESSON_EVENT_TYPE,
+      previousEventHash: practiceRun.event.eventHash,
+      payload: { lesson },
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        2,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+    });
+    const lessonResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/practice/lessons/persist",
+      payload: persistedLesson.body,
+    });
+    expect(lessonResponse.statusCode).toBe(201);
+    expect(lessonResponse.json()).toMatchObject({
+      lesson: { lessonId: lesson.lessonId, ownerDid: h.candidateDid },
+      recognizedGameMutation: false,
+    });
+
+    h.now.value += 60_000;
+    const inspectionPayload = {
+      ownerDid: h.candidateDid,
+      requestedAt: new Date(h.now.value).toISOString(),
+      format: "ABL-PRIVATE-PRACTICE-LEDGER-INSPECTION-V1",
+    };
+    const inspection = await privateBasketballCommand({
+      h,
+      eventSuffix: "925",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 3,
+      eventType: PRACTICE_INSPECTED_EVENT_TYPE,
+      previousEventHash: persistedLesson.event.eventHash,
+      payload: inspectionPayload,
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        3,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+    });
+    const inspectionResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/practice/inspect",
+      payload: inspection.body,
+    });
+    expect(inspectionResponse.statusCode).toBe(201);
+    expect(inspectionResponse.json()).toMatchObject({
+      runs: [{ practiceId: run.practiceId }],
+      lessons: [{ lessonId: lesson.lessonId }],
+      privateContentReturned: false,
+    });
+    expect(finalizedRecord.stateRoot).toBe(finalizedStateRoot);
+    expect(
+      h.store.events.filter((event) => event.outboxTopic === "career.film"),
+    ).toHaveLength(2);
+    expect(
+      h.store.events.filter((event) => event.outboxTopic === "career.practice"),
+    ).toHaveLength(3);
+    expect(
+      h.store.events.some(
+        (event) =>
+          event.outboxTopic.startsWith("public.") &&
+          (event.aggregateType === PRIVATE_FILM_AGGREGATE_TYPE ||
+            event.aggregateType === PRIVATE_PRACTICE_AGGREGATE_TYPE),
+      ),
+    ).toBe(false);
+
+    const restarted = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: h.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      finalizedGames: {
+        finalizerDids: new Set([filmFinalizerDid]),
+        evidence: {
+          finalizedGameEvidence: async (gameId) =>
+            gameId === filmGameId ? structuredClone(filmGameEvidence) : null,
+        },
+      },
+      filmPractice: {
+        storageVerifier: h.memoryStorage,
+        filmDeliveryEvidence: {
+          filmDeliveryEvidence: async (gameId, ownerDid) =>
+            gameId === filmGameId && h.filmDeliveryOwners.has(ownerDid)
+              ? filmDeliveryEvidence(ownerDid)
+              : null,
+        },
+      },
+    });
+    h.now.value += 60_000;
+    const restartedInspectionPayload = {
+      ...inspectionPayload,
+      requestedAt: new Date(h.now.value).toISOString(),
+    };
+    const restartedInspection = await privateBasketballCommand({
+      h,
+      eventSuffix: "927",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 4,
+      eventType: PRACTICE_INSPECTED_EVENT_TYPE,
+      previousEventHash: inspection.event.eventHash,
+      payload: restartedInspectionPayload,
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        4,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+    });
+    expect(
+      (
+        await restarted.inject({
+          method: "POST",
+          url: "/v1/practice/inspect",
+          payload: restartedInspection.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    const storedFilm = h.store.events.find(
+      (event) => event.outboxTopic === "career.film",
+    )!;
+    const filmStateRoot = storedFilm.stateRoot;
+    storedFilm.stateRoot = digest("0");
+    h.now.value += 60_000;
+    const tamperInspection = await privateBasketballCommand({
+      h,
+      eventSuffix: "929",
+      aggregateType: PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      aggregateVersion: 5,
+      eventType: PRACTICE_INSPECTED_EVENT_TYPE,
+      previousEventHash: restartedInspection.event.eventHash,
+      payload: {
+        ...inspectionPayload,
+        requestedAt: new Date(h.now.value).toISOString(),
+      },
+      stateRoot: privatePracticeLedgerStateRoot(
+        h.candidateDid,
+        5,
+        runs,
+        lessons,
+      ),
+      schemaDigest: PRIVATE_PRACTICE_SCHEMA_DIGEST,
+    });
+    expect(
+      (
+        await restarted.inject({
+          method: "POST",
+          url: "/v1/practice/inspect",
+          payload: tamperInspection.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    storedFilm.stateRoot = filmStateRoot;
+    await restarted.close();
     await h.app.close();
   });
 

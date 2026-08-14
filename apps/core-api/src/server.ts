@@ -64,6 +64,10 @@ import {
 } from "./exit.js";
 import { requireCareerOperational } from "./exit-status.js";
 import {
+  installFilmPracticeRehearsalRoutes,
+  type FilmPracticeRehearsalOptions,
+} from "./film-practice.js";
+import {
   installMemoryRehearsalRoutes,
   type MemoryRehearsalOptions,
 } from "./memory.js";
@@ -154,6 +158,10 @@ export interface LiveCoreApiOptions {
     finalizerDids: ReadonlySet<string>;
     evidence: FinalizedGameEvidenceReader;
   };
+  filmPractice?: Pick<
+    FilmPracticeRehearsalOptions,
+    "storageVerifier" | "filmDeliveryEvidence"
+  >;
 }
 
 export interface CoreApiOptions {
@@ -267,6 +275,7 @@ export function createLiveCoreApi(
     contracts,
     disclosures,
     exit,
+    filmPractice,
     governance,
     memory,
     resources,
@@ -286,6 +295,10 @@ export function createLiveCoreApi(
     artifacts !== undefined;
   const combineRoutesEnabled = candidateRoutesEnabled && combine !== undefined;
   const memoryRoutesEnabled = candidateRoutesEnabled && memory !== undefined;
+  const filmPracticeRoutesEnabled =
+    candidateRoutesEnabled &&
+    finalizedGames !== undefined &&
+    filmPractice !== undefined;
   const continuityRoutesEnabled =
     candidateRoutesEnabled && continuity !== undefined;
   const contractRoutesEnabled =
@@ -506,6 +519,25 @@ export function createLiveCoreApi(
       storageVerifier: memory.storageVerifier,
     });
   }
+  if (
+    candidateAdmission !== undefined &&
+    finalizedGames !== undefined &&
+    filmPractice !== undefined
+  ) {
+    installFilmPracticeRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      storageVerifier: filmPractice.storageVerifier,
+      filmDeliveryEvidence: filmPractice.filmDeliveryEvidence,
+      finalizerDids: finalizedGames.finalizerDids,
+      finalizedGameEvidence: finalizedGames.evidence,
+    });
+  }
   if (candidateAdmission !== undefined && continuity !== undefined) {
     installContinuityRehearsalRoutes(app, {
       store: options.store,
@@ -631,6 +663,10 @@ export function createLiveCoreApi(
       !(combineRoutesEnabled && entry.path === "/v1/combine/*") &&
       !(contractRoutesEnabled && entry.path === "/v1/contracts/*") &&
       !(memoryRoutesEnabled && entry.path === "/v1/memory/*") &&
+      !(
+        filmPracticeRoutesEnabled &&
+        (entry.path === "/v1/film/*" || entry.path === "/v1/practice/*")
+      ) &&
       !(continuityRoutesEnabled && entry.path === "/v1/continuity/*") &&
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&

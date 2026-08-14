@@ -2,6 +2,7 @@ import { PostgresCanonicalStore } from "@abl/database";
 import {
   FinalizedGameAuthorityDidsSchema,
   assertFinalizedGameAuthorityConfiguration,
+  createFilmDeliveryEvidenceReader,
   createFinalizedGameEvidenceReader,
 } from "@abl/basketball";
 import {
@@ -64,10 +65,12 @@ const AdmittedAgentsSchema = z.record(
           "artifact-admission",
           "disclosure-envelope",
           "finalized-game",
+          "private-film-catalog",
+          "private-practice-ledger",
         ]),
       )
       .min(1)
-      .max(9)
+      .max(11)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -195,6 +198,9 @@ const app = rehearsal
       const finalizedGameEvidence = createFinalizedGameEvidenceReader(
         JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
       );
+      const filmDeliveryEvidence = createFilmDeliveryEvidenceReader(
+        JSON.parse(required("ABL_FILM_DELIVERY_EVIDENCE_JSON")),
+      );
       assertDisclosureAuthorityConfiguration(authority.admittedAgents, {
         releaseAuthorityDids: disclosureReleaseAuthorityDids,
         competitiveAuthorDids: competitiveDisclosureAuthorDids,
@@ -207,6 +213,14 @@ const app = rehearsal
         throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
       closeStore = async () => store.close();
+      const privateStorageVerifier = new HttpMemoryStorageVerifier({
+        origin: required("ABL_PRIVATE_STORAGE_URL"),
+        identity: {
+          serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
+          secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
+          capabilities: new Set(["private:commitment:verify"]),
+        },
+      });
       const candidateAdmission = {
         challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
       };
@@ -286,14 +300,7 @@ const app = rehearsal
           clubGovernors: contractClubGovernors,
         },
         memory: {
-          storageVerifier: new HttpMemoryStorageVerifier({
-            origin: required("ABL_PRIVATE_STORAGE_URL"),
-            identity: {
-              serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
-              secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
-              capabilities: new Set(["private:commitment:verify"]),
-            },
-          }),
+          storageVerifier: privateStorageVerifier,
         },
         continuity: {
           recognizedImageDigests: new Set(
@@ -329,6 +336,10 @@ const app = rehearsal
         finalizedGames: {
           finalizerDids: finalizedGameAuthorityDids,
           evidence: finalizedGameEvidence,
+        },
+        filmPractice: {
+          storageVerifier: privateStorageVerifier,
+          filmDeliveryEvidence,
         },
         resources: {
           governance: {
