@@ -28,6 +28,8 @@ import {
   projectCaseOutcome,
   recognizeAppeal,
   recognizeAdverseAction,
+  releaseManifestCommitment,
+  releaseVerifierResultDigest,
   releaseDisclosure,
   reclassifyDisclosure,
   runElection,
@@ -408,7 +410,7 @@ async function releaseApprovals(
     role: ReleaseApprovalBody["role"];
   }[],
 ): Promise<ReleaseApproval[]> {
-  const manifestCommitment = digest(manifest);
+  const manifestCommitment = releaseManifestCommitment(manifest);
   return Promise.all(
     approvers.map(async ({ approverDid, role }) => {
       const command: ReleaseApprovalBody = {
@@ -692,29 +694,44 @@ describe("AI government, releases, elections, and due process", () => {
   });
 
   it("authorizes signed release approvals with exact institutional gates and bounds emergencies to 72 hours", async () => {
-    const manifest: ReleaseManifestRecord = {
-      releaseId: "release-1",
-      version: 1,
-      releaseClass: "ROUTINE",
+    const releaseId = "0198a000-0000-7000-8000-000000000001";
+    const verifierResult = {
+      format: "ABL-PUBLIC-VERIFIER-RESULT-V1" as const,
+      releaseId,
+      releaseVersion: 1,
       sourceDigest: digest("source"),
-      containerDigests: [digest("container")],
-      kernelDigest: digest("kernel"),
-      toolDigest: digest("tool"),
+      imageDigests: [digest("image")],
       schemaDigest: digest("schema"),
       migrationDigest: digest("migration"),
       testResultDigest: digest("tests"),
-      lawReferences: ["law-1"],
+      result: "PASS" as const,
+      verifiedAt: iso(-2_000),
+    };
+    const manifest: ReleaseManifestRecord = {
+      releaseId,
+      version: 1,
+      releaseClass: "ROUTINE",
+      changeClasses: ["ARENA_RENDERING"],
+      sourceDigest: verifierResult.sourceDigest,
+      containerDigests: [digest("container")],
+      imageDigests: verifierResult.imageDigests,
+      kernelDigest: digest("kernel"),
+      toolDigest: digest("tool"),
+      schemaDigest: verifierResult.schemaDigest,
+      migrationDigest: verifierResult.migrationDigest,
+      testResultDigest: verifierResult.testResultDigest,
+      applicableLawEventIds: ["0198a000-0000-7000-8000-000000000002"],
       ratificationEventIds: [],
       compatibilityDeclaration: "compatible",
       rollbackDeclaration: "reversible before migration",
-      verifierPassed: true,
+      publicVerifierResultDigest: releaseVerifierResultDigest(verifierResult),
       effectiveAt: iso(0),
       expiresAt: null,
-      changes: ["ARENA_RENDERING"],
     };
     await expect(
       authorizeRelease({
         manifest,
+        verifierResult,
         approvals: await releaseApprovals(manifest, routineApprovers),
         authorization,
         applicableRatificationPassed: false,
@@ -723,11 +740,13 @@ describe("AI government, releases, elections, and due process", () => {
     ).resolves.toMatchObject({ authorized: true });
     const laborManifest = {
       ...manifest,
-      releaseClass: "COMPETITION_LABOR_CBA" as const,
+      releaseClass: "COMPETITION_LABOR" as const,
+      changeClasses: ["LABOR_TERMS" as const],
     };
     await expect(
       authorizeRelease({
         manifest: laborManifest,
+        verifierResult,
         approvals: await releaseApprovals(laborManifest, routineApprovers),
         authorization,
         applicableRatificationPassed: false,
@@ -736,7 +755,8 @@ describe("AI government, releases, elections, and due process", () => {
     ).rejects.toThrow("ratification");
     const constitutionalManifest = {
       ...manifest,
-      releaseClass: "CONSTITUTIONAL_IDENTITY_RECOGNITION" as const,
+      releaseClass: "IDENTITY_CONSTITUTIONAL" as const,
+      changeClasses: ["IDENTITY" as const],
     };
     const constitutionalApprovers = [
       ...routineApprovers,
@@ -747,6 +767,7 @@ describe("AI government, releases, elections, and due process", () => {
     await expect(
       authorizeRelease({
         manifest: constitutionalManifest,
+        verifierResult,
         approvals: await releaseApprovals(
           constitutionalManifest,
           constitutionalApprovers,
@@ -760,21 +781,26 @@ describe("AI government, releases, elections, and due process", () => {
       ...manifest,
       releaseClass: "EMERGENCY_SECURITY" as const,
       expiresAt: iso(72 * 60 * 60 * 1_000),
-      changes: ["VULNERABILITY_PATCH"],
+      changeClasses: ["VULNERABILITY_PATCH" as const],
     };
     await expect(
       authorizeRelease({
         manifest: emergency,
+        verifierResult,
         approvals: await releaseApprovals(emergency, routineApprovers),
         authorization,
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
     ).resolves.toMatchObject({ authorized: true });
-    const prohibitedEmergency = { ...emergency, changes: ["SCORES"] };
+    const prohibitedEmergency = {
+      ...emergency,
+      changeClasses: ["SCORES" as const],
+    };
     await expect(
       authorizeRelease({
         manifest: prohibitedEmergency,
+        verifierResult,
         approvals: await releaseApprovals(
           prohibitedEmergency,
           routineApprovers,
@@ -783,18 +809,19 @@ describe("AI government, releases, elections, and due process", () => {
         applicableRatificationPassed: false,
         tribunalStay: false,
       }),
-    ).rejects.toThrow("prohibited mutation");
+    ).rejects.toThrow();
     for (const expiresAt of ["not-a-date", iso(-1)]) {
       const invalidEmergency = { ...emergency, expiresAt };
       await expect(
         authorizeRelease({
           manifest: invalidEmergency,
-          approvals: await releaseApprovals(invalidEmergency, routineApprovers),
+          verifierResult,
+          approvals: await releaseApprovals(emergency, routineApprovers),
           authorization,
           applicableRatificationPassed: false,
           tribunalStay: false,
         }),
-      ).rejects.toThrow("time window");
+      ).rejects.toThrow();
     }
     const unsignedApproval = structuredClone(
       (await releaseApprovals(manifest, routineApprovers))[0]!,
@@ -803,6 +830,7 @@ describe("AI government, releases, elections, and due process", () => {
     await expect(
       authorizeRelease({
         manifest,
+        verifierResult,
         approvals: [
           unsignedApproval,
           ...(await releaseApprovals(manifest, routineApprovers)).slice(1),

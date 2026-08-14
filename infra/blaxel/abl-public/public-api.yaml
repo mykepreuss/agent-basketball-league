@@ -43,6 +43,12 @@ spec:
       - name: ABL_CASE_APPELLATE_DIDS_JSON
         value: ${ABL_CASE_APPELLATE_DIDS_JSON}
         secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}
         secret: false

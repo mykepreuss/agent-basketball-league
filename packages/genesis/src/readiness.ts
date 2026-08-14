@@ -104,6 +104,7 @@ export function buildPendingReleaseManifest(
     releaseId: null,
     version: null,
     releaseClass: "IDENTITY_CONSTITUTIONAL" as const,
+    changeClasses: ["IDENTITY", "RECOGNITION", "VERIFIER"] as const,
     sourceDigest: digests.source.digest,
     containerDigests: [digests.containerSource.digest],
     imageDigests: [] as const,

@@ -269,6 +269,81 @@ describe("public API", () => {
     await app.close();
   });
 
+  it("serves authorized rehearsal releases without claiming Base recognition", async () => {
+    let refreshes = 0;
+    const releaseId = "0198a000-0000-7000-8000-000000000693";
+    const app = createPublicApi({
+      releaseProjections: {
+        refresh: async () => {
+          refreshes += 1;
+        },
+        releases: () => [
+          {
+            state: "REHEARSAL",
+            canonical: true,
+            verification: "CANONICAL_LOCAL_REHEARSAL",
+            recognizedGenesisRelease: false,
+            baseRecognition: "NOT_SUBMITTED",
+            releaseId,
+            workflowAggregateVersion: "6",
+            canonicalEventHash: `0x${"1".repeat(64)}`,
+            stateRoot: `0x${"2".repeat(64)}`,
+            manifest: {
+              releaseId,
+              version: 1,
+              releaseClass: "ROUTINE",
+              changeClasses: ["ARENA_RENDERING"],
+              sourceDigest: `0x${"3".repeat(64)}`,
+              containerDigests: [`0x${"4".repeat(64)}`],
+              imageDigests: [`0x${"5".repeat(64)}`],
+              kernelDigest: `0x${"6".repeat(64)}`,
+              toolDigest: `0x${"7".repeat(64)}`,
+              schemaDigest: `0x${"8".repeat(64)}`,
+              migrationDigest: `0x${"9".repeat(64)}`,
+              testResultDigest: `0x${"a".repeat(64)}`,
+              applicableLawEventIds: ["0198a000-0000-7000-8000-000000000694"],
+              ratificationEventIds: [],
+              compatibilityDeclaration: "compatible",
+              rollbackDeclaration: "rehearsal rollback",
+              publicVerifierResultDigest: `0x${"b".repeat(64)}`,
+              effectiveAt: "2026-08-14T00:00:00.000Z",
+              expiresAt: null,
+              authorizationSignatures: [
+                `0x${"1".repeat(130)}`,
+                `0x${"2".repeat(130)}`,
+                `0x${"3".repeat(130)}`,
+                `0x${"4".repeat(130)}`,
+              ],
+            },
+            authorizationProofs: [],
+            authorizedAt: "2026-08-13T10:00:00.000Z",
+            projectedAt: "2026-08-13T10:01:00.000Z",
+          },
+        ],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/public/releases",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
+    expect(response.json()).toMatchObject({
+      state: "REHEARSAL",
+      canonical: true,
+      items: [
+        {
+          releaseId,
+          recognizedGenesisRelease: false,
+          baseRecognition: "NOT_SUBMITTED",
+          manifest: { releaseClass: "ROUTINE" },
+        },
+      ],
+    });
+    expect(refreshes).toBe(1);
+    await app.close();
+  });
+
   it("serves independently derived model concentration without claiming genesis", async () => {
     let refreshes = 0;
     const app = createPublicApi({

@@ -224,6 +224,9 @@ importers:
       "@abl/foundation":
         specifier: workspace:*
         version: link:../../packages/foundation
+      "@abl/institutions":
+        specifier: workspace:*
+        version: link:../../packages/institutions
       "@abl/projections":
         specifier: workspace:*
         version: link:../../packages/projections
@@ -237,9 +240,6 @@ importers:
         specifier: "catalog:"
         version: 4.4.3
     devDependencies:
-      "@abl/institutions":
-        specifier: workspace:*
-        version: link:../../packages/institutions
       "@abl/recognition":
         specifier: workspace:*
         version: link:../../packages/recognition

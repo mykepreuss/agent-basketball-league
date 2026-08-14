@@ -2,7 +2,11 @@ import type {
   ProjectionOutboxEvent,
   ProjectionOutboxStore,
 } from "@abl/database";
-import type { ResourceScheduleRatificationReader } from "@abl/institutions";
+import type {
+  ReleaseInstitutionalRoster,
+  ReleaseRatificationReader,
+  ResourceScheduleRatificationReader,
+} from "@abl/institutions";
 
 import {
   caseProjectionEnvelopeFromOutbox,
@@ -35,6 +39,11 @@ import {
   verifyResourceProjectionEvent,
 } from "./resource-envelope.js";
 import type { PublicResourceProjectionWriter } from "./resource-repository.js";
+import {
+  releaseProjectionEnvelopeFromOutbox,
+  verifyReleaseProjectionEvent,
+} from "./release-envelope.js";
+import type { PublicReleaseProjectionWriter } from "./release-repository.js";
 import type { ProjectionEventSink } from "./transport.js";
 
 type WorkerDestination =
@@ -45,6 +54,7 @@ type WorkerDestination =
       caseWriter?: PublicCaseProjectionWriter;
       resourceWriter?: PublicResourceProjectionWriter;
       modelWriter?: PublicModelProjectionWriter;
+      releaseWriter?: PublicReleaseProjectionWriter;
       sink?: never;
     }
   | {
@@ -55,6 +65,7 @@ type WorkerDestination =
       caseWriter?: never;
       resourceWriter?: never;
       modelWriter?: never;
+      releaseWriter?: never;
     };
 
 const projectionTopics = [
@@ -64,10 +75,12 @@ const projectionTopics = [
   "public.cases",
   "public.resources",
   "public.models",
+  "public.releases",
 ] as const;
 type ProjectionTopic = (typeof projectionTopics)[number];
 const governanceTopicIndex = projectionTopics.indexOf("public.governance");
 const resourceTopicIndex = projectionTopics.indexOf("public.resources");
+const releaseTopicIndex = projectionTopics.indexOf("public.releases");
 
 export class PublicProjectionWorker {
   readonly #store: ProjectionOutboxStore;
@@ -80,6 +93,10 @@ export class PublicProjectionWorker {
   readonly #resourceScheduleRatification:
     | ResourceScheduleRatificationReader["resourceScheduleRatification"]
     | undefined;
+  readonly #releaseRatification:
+    | ReleaseRatificationReader["releaseRatification"]
+    | undefined;
+  readonly #releaseInstitutionalRoster: ReleaseInstitutionalRoster | undefined;
   readonly #now: () => Date;
   #nextTopic = 0;
 
@@ -92,6 +109,8 @@ export class PublicProjectionWorker {
       caseTribunalDids?: readonly string[];
       caseAppellateDids?: readonly string[];
       resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
+      releaseRatification?: ReleaseRatificationReader["releaseRatification"];
+      releaseInstitutionalRoster?: ReleaseInstitutionalRoster;
     } & ProjectionVerificationAuthority &
       WorkerDestination,
   ) {
@@ -103,7 +122,8 @@ export class PublicProjectionWorker {
       input.governanceWriter === undefined &&
       input.caseWriter === undefined &&
       input.resourceWriter === undefined &&
-      input.modelWriter === undefined
+      input.modelWriter === undefined &&
+      input.releaseWriter === undefined
     ) {
       this.#destination = { writer: input.writer };
     } else {
@@ -114,6 +134,7 @@ export class PublicProjectionWorker {
         caseWriter?: PublicCaseProjectionWriter;
         resourceWriter?: PublicResourceProjectionWriter;
         modelWriter?: PublicModelProjectionWriter;
+        releaseWriter?: PublicReleaseProjectionWriter;
       } = {
         writer: input.writer,
       };
@@ -127,6 +148,8 @@ export class PublicProjectionWorker {
         destination.resourceWriter = input.resourceWriter;
       if (input.modelWriter !== undefined)
         destination.modelWriter = input.modelWriter;
+      if (input.releaseWriter !== undefined)
+        destination.releaseWriter = input.releaseWriter;
       this.#destination = destination;
     }
     this.#authority = {
@@ -139,6 +162,8 @@ export class PublicProjectionWorker {
     this.#caseTribunalDids = input.caseTribunalDids;
     this.#caseAppellateDids = input.caseAppellateDids;
     this.#resourceScheduleRatification = input.resourceScheduleRatification;
+    this.#releaseRatification = input.releaseRatification;
+    this.#releaseInstitutionalRoster = input.releaseInstitutionalRoster;
     this.#now = input.now ?? (() => new Date());
   }
 
@@ -277,6 +302,32 @@ export class PublicProjectionWorker {
     await this.#store.markProjected(event.outboxId, this.#now());
   }
 
+  async #publishRelease(event: ProjectionOutboxEvent): Promise<void> {
+    const envelope = releaseProjectionEnvelopeFromOutbox(event);
+    if (
+      this.#releaseRatification === undefined ||
+      this.#releaseInstitutionalRoster === undefined
+    ) {
+      throw new Error("Release projection authority is not configured");
+    }
+    const verified = await verifyReleaseProjectionEvent(envelope, {
+      ...this.#authority,
+      releaseInstitutionalRoster: this.#releaseInstitutionalRoster,
+    });
+    if (this.#destination.sink === undefined) {
+      if (this.#destination.releaseWriter === undefined)
+        throw new Error("Release projection writer is not configured");
+      await this.#destination.releaseWriter.publish(
+        envelope,
+        verified.expectedVersion,
+        this.#now().toISOString(),
+      );
+    } else {
+      await this.#destination.sink.publish(envelope);
+    }
+    await this.#store.markProjected(event.outboxId, this.#now());
+  }
+
   async #publish(
     topic: ProjectionTopic,
     event: ProjectionOutboxEvent,
@@ -294,6 +345,8 @@ export class PublicProjectionWorker {
         return this.#publishResource(event);
       case "public.models":
         return this.#publishModel(event);
+      case "public.releases":
+        return this.#publishRelease(event);
     }
   }
 
@@ -309,8 +362,12 @@ export class PublicProjectionWorker {
     let published = 0;
     while (published < limit) {
       let selected = -1;
+      const ratificationDependentPending = [
+        resourceTopicIndex,
+        releaseTopicIndex,
+      ].some((index) => positions[index]! < queues[index]!.length);
       if (
-        positions[resourceTopicIndex]! < queues[resourceTopicIndex]!.length &&
+        ratificationDependentPending &&
         positions[governanceTopicIndex]! < queues[governanceTopicIndex]!.length
       ) {
         selected = governanceTopicIndex;

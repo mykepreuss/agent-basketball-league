@@ -11,5 +11,7 @@ export * from "./payload.js";
 export * from "./repository.js";
 export * from "./resource-envelope.js";
 export * from "./resource-repository.js";
+export * from "./release-envelope.js";
+export * from "./release-repository.js";
 export * from "./transport.js";
 export * from "./worker.js";

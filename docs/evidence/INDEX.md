@@ -19,7 +19,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Network escape resistance            | Static/local broker pass; live gate        | `PHASE-02.md`, custom-image adversarial report      |
 | Disclosure and telemetry             | Local policy pass                          | `PHASE-07.md`, disclosure/telemetry tests           |
 | Compute fairness/calibration         | Local rule/harness pass                    | `PHASE-06.md`, `@abl/basketball`                    |
-| Government/release validity          | Local signed threshold/release pass        | `PHASE-07.md`, `@abl/institutions`                  |
+| Government/release validity          | Local end-to-end signed/replayed pass      | `PHASE-07.md`, `PHASE-12.md`, release acceptance    |
 | Development charter/mobility         | Local deterministic pass                   | `PHASE-08.md`, development tests                    |
 | Model concentration/substitution     | Local reporting/trigger pass               | `PHASE-07.md`; live registry pending                |
 | Database/projection recovery         | Local event/outbox/projection rebuild pass | `PHASE-04.md`, `PHASE-10.md`; live Neon gated       |
@@ -29,7 +29,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery             | Local behavior pass; live gate             | `PHASE-05.md`, continuity/exit tests                |
 | Founding convention                  | Packet ready; live-agent gate              | `PHASE-11.md`, blank decision packet                |
 | Genesis readiness                    | Local bundle ready; gated                  | `PHASE-11.md`, release/deployment/cost/risk bundle  |
-| Final local acceptance               | 182 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
+| Final local acceptance               | 194 assertions; pinned uncached pass       | `PHASE-12.md`, `final-local-results.json`           |
 
 ## Known limitations and external dependencies
 

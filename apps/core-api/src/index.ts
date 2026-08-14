@@ -1,4 +1,5 @@
 import { PostgresCanonicalStore } from "@abl/database";
+import { ReleaseVerifierResultRegistrySchema } from "@abl/institutions";
 import {
   HttpProjectionEventSink,
   PublicProjectionWorker,
@@ -48,10 +49,11 @@ const AdmittedAgentsSchema = z.record(
           "governance-proposal",
           "due-process-case",
           "resource-schedule",
+          "software-release",
         ]),
       )
       .min(1)
-      .max(5)
+      .max(6)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -64,6 +66,21 @@ function caseAdjudicatorRoster(size: number) {
 const RecognizedBodyImagesSchema = z
   .array(z.string().regex(/^0x[0-9a-f]{64}$/))
   .min(1);
+const ReleaseInstitutionalRosterSchema = z
+  .strictObject({
+    commissioners: caseAdjudicatorRoster(3),
+    integrityOfficers: caseAdjudicatorRoster(3),
+    tribunalDids: caseAdjudicatorRoster(5),
+  })
+  .refine(
+    (roster) =>
+      new Set([
+        ...roster.commissioners,
+        ...roster.integrityOfficers,
+        ...roster.tribunalDids,
+      ]).size === 11,
+    "Release institutional offices must be disjoint",
+  );
 
 function rehearsalAuthority(): {
   domain: TypedDataDomain;
@@ -123,6 +140,12 @@ const app = rehearsal
       const caseAppellateDids = caseAdjudicatorRoster(3).parse(
         JSON.parse(required("ABL_CASE_APPELLATE_DIDS_JSON")),
       );
+      const releaseInstitutionalRoster = ReleaseInstitutionalRosterSchema.parse(
+        JSON.parse(required("ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON")),
+      );
+      const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
+        JSON.parse(required("ABL_RELEASE_VERIFIER_RESULTS_JSON")),
+      );
       if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
         throw new Error("Case merits and appellate rosters must be disjoint");
       const store = new PostgresCanonicalStore(required("DATABASE_URL"));
@@ -161,6 +184,19 @@ const app = rehearsal
             },
             proposalId,
           ),
+        releaseRatification: (proposalId) =>
+          readResourceScheduleRatification(
+            {
+              store,
+              domain: authority.domain,
+              competitionId,
+              seasonId,
+              candidateAdmission,
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+            proposalId,
+          ),
+        releaseInstitutionalRoster,
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -219,6 +255,16 @@ const app = rehearsal
         resources: {
           governance: {
             eligibilitySnapshot: governanceEligibilitySnapshot,
+          },
+        },
+        releases: {
+          governance: {
+            eligibilitySnapshot: governanceEligibilitySnapshot,
+          },
+          institutionalRoster: releaseInstitutionalRoster,
+          verifierResults: {
+            releaseVerifierResult: async (resultDigest) =>
+              releaseVerifierResults[resultDigest] ?? null,
           },
         },
         cases: {

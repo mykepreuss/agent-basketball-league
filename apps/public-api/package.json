@@ -18,13 +18,13 @@
   },
   "dependencies": {
     "@abl/foundation": "workspace:*",
+    "@abl/institutions": "workspace:*",
     "@abl/projections": "workspace:*",
     "fastify": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@abl/institutions": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "6.0.3",

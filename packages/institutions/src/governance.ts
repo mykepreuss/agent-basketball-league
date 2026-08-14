@@ -6,6 +6,14 @@ import {
 } from "@abl/recognition";
 import type { Hex, TypedDataDomain } from "viem";
 
+import {
+  releaseManifestCommitment,
+  validateReleaseManifestPolicy,
+  validateReleaseVerifierResult,
+  type ReleaseManifestBody,
+  type ReleaseVerifierResult,
+} from "./release-workflow.js";
+
 export const INSTITUTION_SIZES = {
   premierPlayersAssociationBoard: 8,
   developmentPlayersAssociationBoard: 8,
@@ -31,11 +39,7 @@ export type ProposalClass =
   | "CONSTITUTIONAL"
   | "FOUNDATIONAL_RIGHT"
   | "PREMIER_EXPANSION";
-export type ReleaseClass =
-  | "ROUTINE"
-  | "COMPETITION_LABOR_CBA"
-  | "CONSTITUTIONAL_IDENTITY_RECOGNITION"
-  | "EMERGENCY_SECURITY";
+export type ReleaseClass = ReleaseManifestBody["releaseClass"];
 
 export interface EligibilitySnapshot {
   snapshotId: string;
@@ -411,26 +415,7 @@ export async function evaluateProposal(input: {
   };
 }
 
-export interface ReleaseManifestRecord {
-  releaseId: string;
-  version: number;
-  releaseClass: ReleaseClass;
-  sourceDigest: `0x${string}`;
-  containerDigests: readonly `0x${string}`[];
-  kernelDigest: `0x${string}`;
-  toolDigest: `0x${string}`;
-  schemaDigest: `0x${string}`;
-  migrationDigest: `0x${string}`;
-  testResultDigest: `0x${string}`;
-  lawReferences: readonly string[];
-  ratificationEventIds: readonly string[];
-  compatibilityDeclaration: string;
-  rollbackDeclaration: string;
-  verifierPassed: boolean;
-  effectiveAt: string;
-  expiresAt: string | null;
-  changes: readonly string[];
-}
+export type ReleaseManifestRecord = ReleaseManifestBody;
 
 export interface ReleaseApprovalBody {
   approverDid: string;
@@ -456,12 +441,15 @@ const emergencyForbiddenChanges = [
 
 export async function authorizeRelease(input: {
   manifest: ReleaseManifestRecord;
+  verifierResult: ReleaseVerifierResult;
   approvals: readonly ReleaseApproval[];
   authorization: InstitutionalAuthorizationContext;
   applicableRatificationPassed: boolean;
   tribunalStay: boolean;
 }): Promise<{ authorized: true; manifestCommitment: `0x${string}` }> {
   const { manifest } = input;
+  validateReleaseManifestPolicy(manifest);
+  validateReleaseVerifierResult(manifest, input.verifierResult);
   const effective = Date.parse(manifest.effectiveAt);
   const expiry =
     manifest.expiresAt === null ? null : Date.parse(manifest.expiresAt);
@@ -474,12 +462,12 @@ export async function authorizeRelease(input: {
   if (!Number.isInteger(manifest.version) || manifest.version < 1)
     throw new Error("Release version is invalid");
   if (
-    !manifest.verifierPassed ||
     manifest.containerDigests.length === 0 ||
-    manifest.lawReferences.length === 0
+    manifest.imageDigests.length === 0 ||
+    manifest.applicableLawEventIds.length === 0
   )
     throw new Error("Release manifest is incomplete or verifier-invalid");
-  const manifestCommitment = sha256Commitment(manifest);
+  const manifestCommitment = releaseManifestCommitment(manifest);
   const usedAuthorizations = new Set<string>();
   if (
     new Set(input.approvals.map(({ approverDid }) => approverDid)).size !==
@@ -541,11 +529,11 @@ export async function authorizeRelease(input: {
       "Routine Commission/Integrity authorization or no-stay requirement failed",
     );
   if (
-    manifest.releaseClass === "COMPETITION_LABOR_CBA" &&
+    manifest.releaseClass === "COMPETITION_LABOR" &&
     !input.applicableRatificationPassed
   )
     throw new Error("Competition/labor release lacks applicable ratification");
-  if (manifest.releaseClass === "CONSTITUTIONAL_IDENTITY_RECOGNITION") {
+  if (manifest.releaseClass === "IDENTITY_CONSTITUTIONAL") {
     if (
       !input.applicableRatificationPassed ||
       new Set(tribunalApprovals.map(({ approverDid }) => approverDid)).size < 4
@@ -556,7 +544,7 @@ export async function authorizeRelease(input: {
   }
   if (manifest.releaseClass === "EMERGENCY_SECURITY") {
     if (
-      manifest.changes.some((change) =>
+      manifest.changeClasses.some((change) =>
         emergencyForbiddenChanges.includes(change),
       )
     )

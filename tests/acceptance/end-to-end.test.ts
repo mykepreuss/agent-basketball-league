@@ -34,9 +34,12 @@ import {
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
   RESOURCE_SCHEDULE_EVENT_TYPE,
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
+  RELEASE_WORKFLOW_AGGREGATE_TYPE,
+  RELEASE_WORKFLOW_SCHEMA_DIGEST,
   applyContractWorkflowTransition,
   applyGovernanceWorkflowTransition,
   applyResourceScheduleTransition,
+  applyReleaseWorkflowTransition,
   contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
@@ -45,12 +48,21 @@ import {
   governanceWorkflowStateRoot,
   resourceScheduleExecutableDigest,
   resourceScheduleStateRoot,
+  releaseManifestCommitment,
+  releaseVerifierResultDigest,
+  releaseWorkflowStateRoot,
   type GovernanceDecision,
   type GovernanceWorkflowEventType,
   type GovernanceWorkflowPayload,
   type GovernanceWorkflowSnapshot,
   type GovernanceVote,
   type ResourceSchedule,
+  type ReleaseInstitutionalRoster,
+  type ReleaseManifestBody,
+  type ReleaseVerifierResult,
+  type ReleaseWorkflowEventType,
+  type ReleaseWorkflowPayload,
+  type ReleaseWorkflowSnapshot,
 } from "../../packages/institutions/src/index.js";
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
@@ -59,6 +71,7 @@ import {
   FilePublicModelProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
+  FilePublicReleaseProjectionRepository,
   HttpProjectionEventSink,
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
@@ -70,6 +83,7 @@ import {
   verifyModelProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
+  verifyReleaseProjectionEvent,
   type ContractProjectionEventEnvelope,
   type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
@@ -1479,6 +1493,300 @@ describe("complete local acceptance", () => {
     ]);
   });
 
+  it("carries multi-agent release authorization to a restart-verifiable public rehearsal manifest", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-release-acceptance-"),
+    );
+    const releaseId = "0198d000-0000-7000-8000-000000000901";
+    const start = Date.parse("2026-08-13T10:00:00.000Z");
+    const office = (name: string) => ({
+      did: `did:abl:${name}`,
+      identity: createSigningIdentity(sha256Commitment({ name })),
+    });
+    const proposer = office("release-acceptance-proposer");
+    const commissioners = [
+      office("release-c1"),
+      office("release-c2"),
+      office("release-c3"),
+    ];
+    const integrity = [
+      office("release-i1"),
+      office("release-i2"),
+      office("release-i3"),
+    ];
+    const tribunal = [
+      office("release-t1"),
+      office("release-t2"),
+      office("release-t3"),
+      office("release-t4"),
+      office("release-t5"),
+    ];
+    const roster: ReleaseInstitutionalRoster = {
+      commissioners: commissioners.map(({ did }) => did),
+      integrityOfficers: integrity.map(({ did }) => did),
+      tribunalDids: tribunal.map(({ did }) => did),
+    };
+    const verifierResult: ReleaseVerifierResult = {
+      format: "ABL-PUBLIC-VERIFIER-RESULT-V1",
+      releaseId,
+      releaseVersion: 1,
+      sourceDigest: sha256Commitment("release-acceptance-source"),
+      imageDigests: [sha256Commitment("release-acceptance-image")],
+      schemaDigest: sha256Commitment("release-acceptance-schema"),
+      migrationDigest: sha256Commitment("release-acceptance-migration"),
+      testResultDigest: sha256Commitment("release-acceptance-tests"),
+      result: "PASS",
+      verifiedAt: new Date(start).toISOString(),
+    };
+    const manifest: ReleaseManifestBody = {
+      releaseId,
+      version: 1,
+      releaseClass: "ROUTINE",
+      changeClasses: ["ARENA_RENDERING"],
+      sourceDigest: verifierResult.sourceDigest,
+      containerDigests: [sha256Commitment("release-acceptance-container")],
+      imageDigests: verifierResult.imageDigests,
+      kernelDigest: sha256Commitment("release-acceptance-kernel"),
+      toolDigest: sha256Commitment("release-acceptance-tools"),
+      schemaDigest: verifierResult.schemaDigest,
+      migrationDigest: verifierResult.migrationDigest,
+      testResultDigest: verifierResult.testResultDigest,
+      applicableLawEventIds: ["0198d000-0000-7000-8000-000000000902"],
+      ratificationEventIds: [],
+      compatibilityDeclaration: "Rehearsal projection data stays compatible.",
+      rollbackDeclaration:
+        "Stop before effective time and retain the prior image.",
+      publicVerifierResultDigest: releaseVerifierResultDigest(verifierResult),
+      effectiveAt: new Date(start + 24 * 60 * 60 * 1_000).toISOString(),
+      expiresAt: null,
+    };
+    const store = new InMemoryCanonicalStore();
+    let snapshot: ReleaseWorkflowSnapshot | null = null;
+    let previousEventHash: `0x${string}` | null = null;
+    let sequence = 0;
+    const releaseEvent = async (input: {
+      eventType: ReleaseWorkflowEventType;
+      payload: ReleaseWorkflowPayload;
+      actor: typeof proposer;
+    }) => {
+      sequence += 1;
+      const timestamp = new Date(start + sequence * 60_000).toISOString();
+      const common = {
+        eventId: `0198d000-0000-7000-8000-${String(910 + sequence).padStart(12, "0")}`,
+        actorDid: input.actor.did,
+        nonce: `release-acceptance-${sequence}`,
+        idempotencyKey: `0198d000-0000-7000-8000-${String(920 + sequence).padStart(12, "0")}`,
+        aggregateType: RELEASE_WORKFLOW_AGGREGATE_TYPE,
+        aggregateId: releaseId,
+        aggregateVersion: BigInt(sequence),
+        eventType: input.eventType,
+        previousEventHash,
+        payload: input.payload,
+        schemaDigest: RELEASE_WORKFLOW_SCHEMA_DIGEST,
+        timestamp,
+      } as const;
+      const provisional = createCanonicalEvent({
+        ...common,
+        stateRoot: sha256Commitment("release-acceptance-provisional"),
+      });
+      const next = applyReleaseWorkflowTransition(
+        snapshot,
+        provisional,
+        input.payload,
+      );
+      const event = createCanonicalEvent({
+        ...common,
+        stateRoot: releaseWorkflowStateRoot(next),
+      });
+      const signature = await signCanonicalEvent(
+        input.actor.identity,
+        REHEARSAL_RECOGNITION_DOMAIN,
+        event,
+      );
+      await store.append({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        requestHash: sha256Commitment({
+          eventHash: event.eventHash,
+          signatures: [signature],
+        }),
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        expectedVersion: event.aggregateVersion - 1n,
+        competitionId: "release-acceptance",
+        seasonId: "pre-genesis",
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.schemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: event.payload,
+        stateRoot: event.stateRoot,
+        signatures: [signature],
+        occurredAt: new Date(event.timestamp),
+        outboxTopic: "public.releases",
+      });
+      snapshot = next;
+      previousEventHash = event.eventHash;
+    };
+
+    await releaseEvent({
+      eventType: "ReleaseProposed",
+      payload: { manifest, verifierResult, ratificationProposalIds: [] },
+      actor: proposer,
+    });
+    for (const [agent, role] of [
+      [commissioners[0]!, "COMMISSIONER"],
+      [commissioners[1]!, "COMMISSIONER"],
+      [integrity[0]!, "INTEGRITY"],
+      [integrity[1]!, "INTEGRITY"],
+    ] as const) {
+      const approvedAt = new Date(
+        start + (sequence + 1) * 60_000,
+      ).toISOString();
+      await releaseEvent({
+        eventType: "ReleaseApproved",
+        payload: {
+          command: {
+            approverDid: agent.did,
+            role,
+            releaseId,
+            releaseVersion: 1,
+            manifestCommitment: releaseManifestCommitment(manifest),
+            approvedAt,
+          },
+        },
+        actor: agent,
+      });
+    }
+    await releaseEvent({
+      eventType: "ReleaseAuthorized",
+      payload: {
+        command: {
+          releaseId,
+          releaseVersion: 1,
+          manifestCommitment: releaseManifestCommitment(manifest),
+          authorizedAt: new Date(start + (sequence + 1) * 60_000).toISOString(),
+        },
+      },
+      actor: commissioners[0]!,
+    });
+
+    const allAgents = [proposer, ...commissioners, ...integrity, ...tribunal];
+    const admittedAgents = new Map(
+      allAgents.map((agent) => [
+        agent.did,
+        {
+          signerAddress: agent.identity.address,
+          allowedAggregateTypes: [RELEASE_WORKFLOW_AGGREGATE_TYPE],
+        },
+      ]),
+    );
+    const releaseAuthority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents,
+      releaseInstitutionalRoster: roster,
+    };
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const releases = new FilePublicReleaseProjectionRepository(projectionRoot, {
+      verifyAuthorization: (authorization) =>
+        verifyReleaseProjectionEvent(authorization, releaseAuthority),
+      releaseRatification: async () => null,
+      releaseVerifierResult: async (resultDigest) =>
+        resultDigest === manifest.publicVerifierResultDigest
+          ? verifierResult
+          : null,
+    });
+    await Promise.all([games.initialize(), releases.initialize()]);
+    const serviceNow = start + 10 * 60_000;
+    const projectionIdentity = {
+      serviceId: "core-release-projection-publisher",
+      secret: new TextEncoder().encode("z".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const publicApi = createPublicApi({
+      projections: games,
+      releaseProjections: releases,
+      projectionIngress: {
+        writer: games,
+        releaseWriter: releases,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        releaseRatification: async () => null,
+        ...releaseAuthority,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    let transportNonce = 0;
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => `release-transport-${++transportNonce}`,
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        releaseRatification: async () => null,
+        ...releaseAuthority,
+      });
+      expect(await worker.drain()).toBe(6);
+      expect(
+        (
+          await publicApi.inject({
+            method: "GET",
+            url: "/v1/public/releases",
+          })
+        ).json(),
+      ).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            releaseId,
+            workflowAggregateVersion: "6",
+            recognizedGenesisRelease: false,
+            baseRecognition: "NOT_SUBMITTED",
+            manifest: { authorizationSignatures: expect.any(Array) },
+          },
+        ],
+      });
+    } finally {
+      await publicApi.close();
+    }
+
+    const restarted = new FilePublicReleaseProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization) =>
+          verifyReleaseProjectionEvent(authorization, releaseAuthority),
+        releaseRatification: async () => null,
+        releaseVerifierResult: async (resultDigest) =>
+          resultDigest === manifest.publicVerifierResultDigest
+            ? verifierResult
+            : null,
+      },
+    );
+    await restarted.initialize();
+    expect(restarted.releases()).toMatchObject([
+      {
+        releaseId,
+        workflowAggregateVersion: "6",
+        recognizedGenesisRelease: false,
+        baseRecognition: "NOT_SUBMITTED",
+      },
+    ]);
+  });
+
   it("replays both accelerated seasons and every cross-domain rehearsal scenario exactly", async () => {
     const report = await runPrivateRehearsal();
     expect(report.passed).toBe(true);
@@ -1597,6 +1905,7 @@ describe("complete local acceptance", () => {
       "POST /v1/contracts/*",
       "POST /v1/governance/*",
       "POST /v1/resources/*",
+      "POST /v1/releases/*",
       "POST /v1/cases/*",
       "POST /v1/continuity/*",
       "POST /v1/exit/*",

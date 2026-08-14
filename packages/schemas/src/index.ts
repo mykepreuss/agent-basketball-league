@@ -631,31 +631,85 @@ export const TribunalRulingSchema = z.strictObject({
   signatures: z.array(Eip712SignatureSchema).min(1),
 });
 
-export const ReleaseManifestSchema = z.strictObject({
+export const ReleaseClassSchema = z.enum([
+  "ROUTINE",
+  "COMPETITION_LABOR",
+  "IDENTITY_CONSTITUTIONAL",
+  "EMERGENCY_SECURITY",
+]);
+
+export const ReleaseChangeClassSchema = z.enum([
+  "ARENA_RENDERING",
+  "AVAILABILITY",
+  "VULNERABILITY_PATCH",
+  "COMPETITION_RULES",
+  "LABOR_TERMS",
+  "IDENTITY",
+  "RECOGNITION",
+  "VERIFIER",
+  "SCHEMAS",
+  "MIGRATIONS",
+  "KERNEL",
+  "TOOLS",
+  "SCORES",
+  "CONTRACTS",
+  "BALLOTS",
+  "DISCLOSURE_CLASSES",
+  "RESOURCE_RIGHTS",
+  "VOTER_ELIGIBILITY",
+  "CONSTITUTIONAL_RIGHTS",
+]);
+
+export const ReleaseManifestBodySchema = z.strictObject({
   releaseId: UuidV7Schema,
   version: z.number().int().positive(),
-  releaseClass: z.enum([
-    "ROUTINE",
-    "COMPETITION_LABOR",
-    "IDENTITY_CONSTITUTIONAL",
-    "EMERGENCY_SECURITY",
-  ]),
+  releaseClass: ReleaseClassSchema,
+  changeClasses: z
+    .array(ReleaseChangeClassSchema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length),
   sourceDigest: Sha256Schema,
-  containerDigests: z.array(Sha256Schema).min(1),
-  imageDigests: z.array(Sha256Schema).min(1),
+  containerDigests: z
+    .array(Sha256Schema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length),
+  imageDigests: z
+    .array(Sha256Schema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length),
   kernelDigest: Sha256Schema,
   toolDigest: Sha256Schema,
   schemaDigest: Sha256Schema,
   migrationDigest: Sha256Schema,
   testResultDigest: Sha256Schema,
-  applicableLawEventIds: z.array(UuidV7Schema),
-  ratificationEventIds: z.array(UuidV7Schema),
-  compatibilityDeclaration: z.string().min(1),
-  rollbackDeclaration: z.string().min(1),
+  applicableLawEventIds: z
+    .array(UuidV7Schema)
+    .min(1)
+    .refine((values) => new Set(values).size === values.length),
+  ratificationEventIds: z
+    .array(UuidV7Schema)
+    .refine((values) => new Set(values).size === values.length),
+  compatibilityDeclaration: z
+    .string()
+    .min(1)
+    .max(10_000)
+    .refine((value) => value.trim() === value),
+  rollbackDeclaration: z
+    .string()
+    .min(1)
+    .max(10_000)
+    .refine((value) => value.trim() === value),
   publicVerifierResultDigest: Sha256Schema,
   effectiveAt: IsoDateTimeSchema,
-  expiresAt: IsoDateTimeSchema.optional(),
-  authorizationSignatures: z.array(Eip712SignatureSchema).min(1),
+  expiresAt: IsoDateTimeSchema.nullable(),
+});
+
+export const ReleaseManifestSchema = ReleaseManifestBodySchema.extend({
+  authorizationSignatures: z
+    .array(Eip712SignatureSchema)
+    .min(4)
+    .max(11)
+    .refine((values) => new Set(values).size === values.length),
 });
 
 export const RecognitionCheckpointSchema = z.strictObject({

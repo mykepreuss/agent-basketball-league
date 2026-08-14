@@ -95,22 +95,30 @@ describe("adversarial acceptance", () => {
 
   it("keeps every core mutation unavailable before genesis regardless of payload", async () => {
     const coreApi = createCoreApi();
-    for (const payload of [
-      {},
-      { humanOverride: true },
-      { signature: `0x${"0".repeat(130)}` },
-      { __proto__: { genesis: true } },
+    for (const url of [
+      "/v1/commands",
+      "/v1/releases/propose",
+      "/v1/releases/approve",
+      "/v1/releases/stay",
+      "/v1/releases/authorize",
     ]) {
-      const response = await coreApi.inject({
-        method: "POST",
-        url: "/v1/commands",
-        payload,
-      });
-      expect(response.statusCode).toBe(503);
-      expect(response.json()).toMatchObject({
-        error: "genesis_not_authorized",
-        canonicalWriteAccepted: false,
-      });
+      for (const payload of [
+        {},
+        { humanOverride: true },
+        { signature: `0x${"0".repeat(130)}` },
+        { __proto__: { genesis: true } },
+      ]) {
+        const response = await coreApi.inject({
+          method: "POST",
+          url,
+          payload,
+        });
+        expect(response.statusCode, url).toBe(503);
+        expect(response.json()).toMatchObject({
+          error: "genesis_not_authorized",
+          canonicalWriteAccepted: false,
+        });
+      }
     }
     await coreApi.close();
   });

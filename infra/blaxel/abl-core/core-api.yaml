@@ -91,6 +91,12 @@ spec:
       - name: ABL_CASE_APPELLATE_DIDS_JSON
         value: ${ABL_CASE_APPELLATE_DIDS_JSON}
         secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
@@ -291,6 +297,26 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/resources/schedules/publish
+    - id: release-propose
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/propose
+    - id: release-approve
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/approve
+    - id: release-stay
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/stay
+    - id: release-authorize
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/releases/authorize
     - id: case-file
       type: http
       configuration:

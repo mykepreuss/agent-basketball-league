@@ -23,15 +23,21 @@ import {
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
   CASE_WORKFLOW_SCHEMA_DIGEST,
+  RELEASE_WORKFLOW_AGGREGATE_TYPE,
+  RELEASE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
   RESOURCE_SCHEDULE_EVENT_TYPE,
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   applyCaseWorkflowTransition,
   applyResourceScheduleTransition,
+  applyReleaseWorkflowTransition,
   caseWorkflowStateRoot,
   evaluateProposal,
   resourceScheduleExecutableDigest,
   resourceScheduleStateRoot,
+  releaseManifestCommitment,
+  releaseVerifierResultDigest,
+  releaseWorkflowStateRoot,
   type CaseWorkflowEventType,
   type CaseWorkflowPayload,
   type CaseWorkflowSnapshot,
@@ -41,6 +47,12 @@ import {
   type GovernanceVote,
   type ResourceSchedule,
   type ResourceScheduleSnapshot,
+  type ReleaseInstitutionalRoster,
+  type ReleaseManifestBody,
+  type ReleaseVerifierResult,
+  type ReleaseWorkflowEventType,
+  type ReleaseWorkflowPayload,
+  type ReleaseWorkflowSnapshot,
 } from "@abl/institutions";
 import {
   createCanonicalEvent,
@@ -120,6 +132,19 @@ const appellateDids = Array.from(
   { length: 3 },
   (_, index) => `did:abl:case-appellate-${index + 1}`,
 );
+const releaseCommissionerDids = Array.from(
+  { length: 3 },
+  (_, index) => `did:abl:release-commissioner-${index + 1}`,
+);
+const releaseIntegrityDids = Array.from(
+  { length: 3 },
+  (_, index) => `did:abl:release-integrity-${index + 1}`,
+);
+const releaseInstitutionalRoster: ReleaseInstitutionalRoster = {
+  commissioners: releaseCommissionerDids,
+  integrityOfficers: releaseIntegrityDids,
+  tribunalDids,
+};
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -131,6 +156,10 @@ const domain: TypedDataDomain = {
 interface Harness {
   app: FastifyInstance;
   store: InMemoryCanonicalStore;
+  admittedAgents: Map<
+    string,
+    { signerAddress: `0x${string}`; allowedAggregateTypes: string[] }
+  >;
   now: { value: number };
   formerOperator: SigningIdentity;
   candidate: SigningIdentity;
@@ -140,6 +169,7 @@ interface Harness {
   challengeToken: string;
   memoryStorage: TestMemoryStorageVerifier;
   exitVerifier: TestExitPortabilityVerifier;
+  releaseVerifierResults: Map<string, ReleaseVerifierResult>;
 }
 
 function governanceEligibilitySnapshot(candidateDid: string) {
@@ -237,10 +267,15 @@ async function harness(): Promise<Harness> {
   const candidateDid = "did:abl:candidate-http-1";
   const memoryStorage = new TestMemoryStorageVerifier();
   const exitVerifier = new TestExitPortabilityVerifier();
+  const releaseVerifierResults = new Map<string, ReleaseVerifierResult>();
+  const admittedAgents = new Map<
+    string,
+    { signerAddress: `0x${string}`; allowedAggregateTypes: string[] }
+  >();
   const app = createLiveCoreApi({
     store,
     domain,
-    admittedAgents: new Map(),
+    admittedAgents,
     competitionId: "admission-rehearsal",
     seasonId: "pre-genesis",
     now: () => now.value,
@@ -269,6 +304,16 @@ async function harness(): Promise<Harness> {
         eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
       },
     },
+    releases: {
+      governance: {
+        eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
+      },
+      institutionalRoster: releaseInstitutionalRoster,
+      verifierResults: {
+        releaseVerifierResult: async (resultDigest) =>
+          releaseVerifierResults.get(resultDigest) ?? null,
+      },
+    },
     cases: { tribunalDids, appellateDids },
   });
   const challenge = await app.inject({
@@ -280,6 +325,7 @@ async function harness(): Promise<Harness> {
   return {
     app,
     store,
+    admittedAgents,
     now,
     formerOperator,
     candidate,
@@ -289,6 +335,7 @@ async function harness(): Promise<Harness> {
     challengeToken: challenge.json().challengeToken as string,
     memoryStorage,
     exitVerifier,
+    releaseVerifierResults,
   };
 }
 
@@ -730,6 +777,58 @@ async function resourceScheduleCommand(input: {
   };
 }
 
+async function releaseCommand(input: {
+  actor: Harness;
+  releaseId: string;
+  snapshot: ReleaseWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: ReleaseWorkflowEventType;
+  payload: ReleaseWorkflowPayload;
+  signers?: readonly SigningIdentity[];
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `release-${input.releaseId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: RELEASE_WORKFLOW_AGGREGATE_TYPE,
+    aggregateId: input.releaseId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: RELEASE_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyReleaseWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: releaseWorkflowStateRoot(next),
+  });
+  return {
+    next,
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: await Promise.all(
+        (input.signers ?? [input.actor.candidate]).map((signer) =>
+          signCanonicalEvent(signer, domain, event),
+        ),
+      ),
+    },
+  };
+}
+
 async function contractCommand(input: {
   actor: Harness;
   playerDid: string;
@@ -1055,6 +1154,10 @@ async function admitCandidate(h: Harness) {
     h.candidate,
   );
   expect(admitted.response.statusCode).toBe(201);
+  h.admittedAgents.set(h.candidateDid, {
+    signerAddress: h.candidate.address,
+    allowedAggregateTypes: [RELEASE_WORKFLOW_AGGREGATE_TYPE],
+  });
   return admitted;
 }
 
@@ -3327,6 +3430,261 @@ describe("signed candidate rehearsal API", () => {
     ).toBe(403);
     closeRecord.stateRoot = originalCloseRoot;
     await h.app.close();
+  });
+
+  it("persists role-bound release authorization and fails closed across restart", async () => {
+    const proposer = await harness();
+    await admitCandidate(proposer);
+    const officeDids = [
+      ...releaseCommissionerDids,
+      ...releaseIntegrityDids,
+      ...tribunalDids,
+    ];
+    const officeKeys = ["3", "4", "5", "6", "7", "8", "a", "b", "c", "d", "e"];
+    const offices = new Map<string, Harness>();
+    for (const [index, did] of officeDids.entries()) {
+      const office = await additionalCareer(proposer, did!, officeKeys[index]!);
+      await admitCandidate(office);
+      offices.set(did!, office);
+    }
+
+    const releaseId = uuid("480");
+    const verifierResult: ReleaseVerifierResult = {
+      format: "ABL-PUBLIC-VERIFIER-RESULT-V1",
+      releaseId,
+      releaseVersion: 1,
+      sourceDigest: digest("1"),
+      imageDigests: [digest("2")],
+      schemaDigest: digest("3"),
+      migrationDigest: digest("4"),
+      testResultDigest: digest("5"),
+      result: "PASS",
+      verifiedAt: new Date(proposer.now.value - 60_000).toISOString(),
+    };
+    const manifest: ReleaseManifestBody = {
+      releaseId,
+      version: 1,
+      releaseClass: "ROUTINE",
+      changeClasses: ["ARENA_RENDERING"],
+      sourceDigest: verifierResult.sourceDigest,
+      containerDigests: [digest("6")],
+      imageDigests: verifierResult.imageDigests,
+      kernelDigest: digest("7"),
+      toolDigest: digest("8"),
+      schemaDigest: verifierResult.schemaDigest,
+      migrationDigest: verifierResult.migrationDigest,
+      testResultDigest: verifierResult.testResultDigest,
+      applicableLawEventIds: [uuid("481")],
+      ratificationEventIds: [],
+      compatibilityDeclaration: "Rehearsal state remains compatible.",
+      rollbackDeclaration: "Stop and restore the prior rehearsal image.",
+      publicVerifierResultDigest: releaseVerifierResultDigest(verifierResult),
+      effectiveAt: new Date(proposer.now.value + day).toISOString(),
+      expiresAt: null,
+    };
+    let snapshot: ReleaseWorkflowSnapshot | null = null;
+    let previousEventHash: Hex | null = null;
+    const proposed = await releaseCommand({
+      actor: proposer,
+      releaseId,
+      snapshot,
+      previousEventHash,
+      eventType: "ReleaseProposed",
+      payload: { manifest, verifierResult, ratificationProposalIds: [] },
+    });
+    const proposerScope = proposer.admittedAgents.get(proposer.candidateDid)!;
+    proposer.admittedAgents.delete(proposer.candidateDid);
+    expect(
+      (
+        await proposer.app.inject({
+          method: "POST",
+          url: "/v1/releases/propose",
+          payload: proposed.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    proposer.admittedAgents.set(proposer.candidateDid, proposerScope);
+    expect(
+      (
+        await proposer.app.inject({
+          method: "POST",
+          url: "/v1/releases/propose",
+          payload: proposed.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    proposer.releaseVerifierResults.set(
+      manifest.publicVerifierResultDigest,
+      verifierResult,
+    );
+    const proposalResponse = await proposer.app.inject({
+      method: "POST",
+      url: "/v1/releases/propose",
+      payload: proposed.body,
+    });
+    expect(proposalResponse.statusCode).toBe(201);
+    expect(proposalResponse.json()).toMatchObject({
+      status: "PENDING_AUTHORIZATION",
+      recognizedGenesisRelease: false,
+      manifest: null,
+    });
+    snapshot = proposed.next;
+    previousEventHash = proposed.event.eventHash;
+
+    const approvals = [
+      [releaseCommissionerDids[0]!, "COMMISSIONER"],
+      [releaseCommissionerDids[1]!, "COMMISSIONER"],
+      [releaseIntegrityDids[0]!, "INTEGRITY"],
+      [releaseIntegrityDids[1]!, "INTEGRITY"],
+    ] as const;
+    const firstCommissioner = offices.get(releaseCommissionerDids[0]!)!;
+    proposer.now.value += 60_000;
+    const forged = await releaseCommand({
+      actor: firstCommissioner,
+      releaseId,
+      snapshot,
+      previousEventHash,
+      eventType: "ReleaseApproved",
+      payload: {
+        command: {
+          approverDid: firstCommissioner.candidateDid,
+          role: "COMMISSIONER",
+          releaseId,
+          releaseVersion: 1,
+          manifestCommitment: releaseManifestCommitment(manifest),
+          approvedAt: new Date(proposer.now.value).toISOString(),
+        },
+      },
+      signers: [proposer.formerOperator],
+    });
+    expect(
+      (
+        await proposer.app.inject({
+          method: "POST",
+          url: "/v1/releases/approve",
+          payload: forged.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    for (const [did, role] of approvals) {
+      const actor = offices.get(did)!;
+      const approvedAt = new Date(proposer.now.value).toISOString();
+      const approved = await releaseCommand({
+        actor,
+        releaseId,
+        snapshot,
+        previousEventHash,
+        eventType: "ReleaseApproved",
+        payload: {
+          command: {
+            approverDid: did,
+            role,
+            releaseId,
+            releaseVersion: 1,
+            manifestCommitment: releaseManifestCommitment(manifest),
+            approvedAt,
+          },
+        },
+      });
+      const response = await proposer.app.inject({
+        method: "POST",
+        url: "/v1/releases/approve",
+        payload: approved.body,
+      });
+      expect(response.statusCode).toBe(201);
+      snapshot = approved.next;
+      previousEventHash = approved.event.eventHash;
+      proposer.now.value += 60_000;
+    }
+
+    const authorized = await releaseCommand({
+      actor: firstCommissioner,
+      releaseId,
+      snapshot,
+      previousEventHash,
+      eventType: "ReleaseAuthorized",
+      payload: {
+        command: {
+          releaseId,
+          releaseVersion: 1,
+          manifestCommitment: releaseManifestCommitment(manifest),
+          authorizedAt: new Date(proposer.now.value).toISOString(),
+        },
+      },
+    });
+    const authorizationResponse = await proposer.app.inject({
+      method: "POST",
+      url: "/v1/releases/authorize",
+      payload: authorized.body,
+    });
+    expect(authorizationResponse.statusCode).toBe(201);
+    expect(authorizationResponse.json()).toMatchObject({
+      status: "AUTHORIZED_LOCAL_REHEARSAL",
+      recognizedGenesisRelease: false,
+      manifest: {
+        releaseId,
+        authorizationSignatures: expect.any(Array),
+      },
+    });
+    expect(
+      authorizationResponse.json().manifest.authorizationSignatures,
+    ).toHaveLength(4);
+    expect(proposer.store.events.at(-1)?.outboxTopic).toBe("public.releases");
+
+    await proposer.app.close();
+    proposer.app = createLiveCoreApi({
+      store: proposer.store,
+      domain,
+      admittedAgents: proposer.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => proposer.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      governance: {
+        eligibilitySnapshot: governanceEligibilitySnapshot(
+          proposer.candidateDid,
+        ),
+      },
+      releases: {
+        governance: {
+          eligibilitySnapshot: governanceEligibilitySnapshot(
+            proposer.candidateDid,
+          ),
+        },
+        institutionalRoster: releaseInstitutionalRoster,
+        verifierResults: {
+          releaseVerifierResult: async (resultDigest) =>
+            proposer.releaseVerifierResults.get(resultDigest) ?? null,
+        },
+      },
+    });
+    expect(
+      (
+        await proposer.app.inject({
+          method: "POST",
+          url: "/v1/releases/authorize",
+          payload: authorized.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true, status: "AUTHORIZED_LOCAL_REHEARSAL" });
+
+    const approvalRecord = proposer.store.events.find(
+      (event) => event.eventType === "ReleaseApproved",
+    )!;
+    (approvalRecord.signatures as unknown[])[0] = `0x${"0".repeat(130)}`;
+    expect(
+      (
+        await proposer.app.inject({
+          method: "POST",
+          url: "/v1/releases/authorize",
+          payload: authorized.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    await proposer.app.close();
   });
 
   it("persists commitment-only due process with independent merits and appeal panels", async () => {

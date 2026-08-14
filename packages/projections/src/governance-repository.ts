@@ -18,6 +18,7 @@ import {
   type InstitutionalSigner,
   type ResourceScheduleRatification,
   type ResourceScheduleRatificationReader,
+  type ReleaseRatificationReader,
 } from "@abl/institutions";
 import { sha256Commitment } from "@abl/recognition";
 import type { TypedDataDomain } from "viem";
@@ -68,7 +69,8 @@ export interface PublicGovernanceProjectionWriter {
 }
 
 export interface PublicGovernanceRatificationReader
-  extends ResourceScheduleRatificationReader {}
+  extends ResourceScheduleRatificationReader,
+    ReleaseRatificationReader {}
 
 export interface PublicGovernanceProjectionRepositoryOptions {
   domain: TypedDataDomain;
@@ -423,5 +425,11 @@ export class FilePublicGovernanceProjectionRepository
       passed: state.decision.passed,
       closeEventId: closeRecord.authorization.event.eventId,
     };
+  }
+
+  public async releaseRatification(
+    proposalId: string,
+  ): Promise<ResourceScheduleRatification | null> {
+    return this.resourceScheduleRatification(proposalId);
   }
 }

@@ -14,6 +14,7 @@ import {
   verifyModelProjectionEvent,
   verifyProjectionEvent,
   verifyResourceProjectionEvent,
+  verifyReleaseProjectionEvent,
   type ProjectionVerificationAuthority,
   type PublicCaseProjectionReader,
   type PublicCaseProjectionWriter,
@@ -27,8 +28,14 @@ import {
   type PublicProjectionWriter,
   type PublicResourceProjectionReader,
   type PublicResourceProjectionWriter,
+  type PublicReleaseProjectionReader,
+  type PublicReleaseProjectionWriter,
 } from "@abl/projections";
-import type { ResourceScheduleRatificationReader } from "@abl/institutions";
+import type {
+  ReleaseInstitutionalRoster,
+  ReleaseRatificationReader,
+  ResourceScheduleRatificationReader,
+} from "@abl/institutions";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 
 export interface RouteCatalogEntry {
@@ -147,6 +154,7 @@ export interface PublicApiOptions {
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
+  releaseProjections?: PublicReleaseProjectionReader;
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
@@ -154,11 +162,14 @@ export interface PublicApiOptions {
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
     modelWriter?: PublicModelProjectionWriter;
+    releaseWriter?: PublicReleaseProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
     resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
+    releaseRatification?: ReleaseRatificationReader["releaseRatification"];
+    releaseInstitutionalRoster?: ReleaseInstitutionalRoster;
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -200,7 +211,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ContractWorkflowAuthorizationError" ||
     name === "GovernanceWorkflowAuthorizationError" ||
     name === "CaseWorkflowAuthorizationError" ||
-    name === "ResourceScheduleAuthorizationError"
+    name === "ResourceScheduleAuthorizationError" ||
+    name === "ReleaseWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
@@ -209,7 +221,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ContractWorkflowValidationError" ||
     name === "GovernanceWorkflowValidationError" ||
     name === "CaseWorkflowValidationError" ||
-    name === "ResourceScheduleValidationError"
+    name === "ResourceScheduleValidationError" ||
+    name === "ReleaseWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -227,7 +240,8 @@ export function createPublicApi(
     options.governanceProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
-    options.modelProjections !== undefined;
+    options.modelProjections !== undefined ||
+    options.releaseProjections !== undefined;
   const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -243,6 +257,7 @@ export function createPublicApi(
         options.caseProjections?.refresh(),
         options.resourceProjections?.refresh(),
         options.modelProjections?.refresh(),
+        options.releaseProjections?.refresh(),
       ]);
     }
   });
@@ -518,6 +533,38 @@ export function createPublicApi(
             cursor: record.cursor,
           });
         }
+        if (topic === "public.releases") {
+          if (
+            projectionIngress.releaseInstitutionalRoster === undefined ||
+            projectionIngress.releaseRatification === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Release projection authority is not configured",
+            );
+          }
+          const verified = await verifyReleaseProjectionEvent(request.body, {
+            ...projectionIngress,
+            releaseInstitutionalRoster:
+              projectionIngress.releaseInstitutionalRoster,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the release event",
+            );
+          }
+          if (projectionIngress.releaseWriter === undefined)
+            throw new Error("Release projection writer is not configured");
+          const record = await projectionIngress.releaseWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         const verified = await verifyProjectionEvent(
           request.body,
           projectionIngress,
@@ -567,6 +614,8 @@ export function createPublicApi(
         items = options.resourceProjections?.resources() ?? [];
       } else if (path === "/v1/public/models/concentration") {
         items = options.modelProjections?.models() ?? [];
+      } else if (path === "/v1/public/releases") {
+        items = options.releaseProjections?.releases() ?? [];
       } else if (path === "/v1/public/governance") {
         items = [
           ...(options.governanceProjections?.governance() ?? []).map(
