@@ -3,6 +3,8 @@ export * from "./case-repository.js";
 export * from "./checkpoint-repository.js";
 export * from "./contract-envelope.js";
 export * from "./contract-repository.js";
+export * from "./draft-envelope.js";
+export * from "./draft-repository.js";
 export * from "./envelope.js";
 export * from "./final-game-envelope.js";
 export * from "./final-game-repository.js";

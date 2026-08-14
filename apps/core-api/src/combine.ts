@@ -33,7 +33,7 @@ import { CareerExitedError, requireCareerOperational } from "./exit-status.js";
 const aggregateType = "premier-combine";
 const eventType = "CombineRegistrationAccepted";
 
-const CombineRegistrationSchema = z.strictObject({
+export const CombineRegistrationSchema = z.strictObject({
   combineId: z.string().min(1).max(200),
   playerDid: z.string().regex(/^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/),
   consented: z.literal(true),
@@ -302,6 +302,44 @@ function windowState(combine: PremierCombine, now: number) {
   if (now < Date.parse(combine.openedAt)) return "SCHEDULED" as const;
   if (now >= Date.parse(combine.closesAt)) return "CLOSED" as const;
   return "OPEN" as const;
+}
+
+export interface CombineRehearsalState {
+  combineId: string;
+  openedAt: string;
+  closesAt: string;
+  registrations: readonly z.infer<typeof CombineRegistrationSchema>[];
+  eligiblePlayers: readonly string[];
+  aggregateVersion: number;
+  headEventHash: Hex | null;
+  registrationEventHashes: Readonly<Record<string, Hex>>;
+}
+
+export async function readCombineRehearsalState(
+  options: CombineRehearsalOptions,
+  at: string,
+): Promise<CombineRehearsalState> {
+  const aggregate = await replayCombine(options);
+  return {
+    combineId: options.combineId,
+    openedAt: aggregate.combine.openedAt,
+    closesAt: aggregate.combine.closesAt,
+    registrations: structuredClone(aggregate.registrations),
+    eligiblePlayers: await currentEligiblePlayers(
+      options,
+      aggregate.registrations,
+      at,
+    ),
+    aggregateVersion: aggregate.records.length,
+    headEventHash:
+      (aggregate.records.at(-1)?.eventHash as Hex | undefined) ?? null,
+    registrationEventHashes: Object.fromEntries(
+      aggregate.registrations.map((registration, index) => [
+        registration.playerDid,
+        aggregate.records[index]!.eventHash as Hex,
+      ]),
+    ),
+  };
 }
 
 export function installCombineRehearsalRoutes(

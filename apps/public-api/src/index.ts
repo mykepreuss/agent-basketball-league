@@ -11,10 +11,13 @@ import {
   ReleaseVerifierResultRegistrySchema,
   assertDisclosureAuthorityConfiguration,
   createCompetitionReleaseEvidenceReader,
+  createPremierDraftEvidenceReader,
   type CompetitionReleaseEvidenceReader,
+  type PremierDraftEvidenceReader,
 } from "@abl/institutions";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicDraftProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
@@ -25,6 +28,7 @@ import {
   FilePublicResourceProjectionRepository,
   FilePublicSocialProjectionRepository,
   verifyContractProjectionEvent,
+  verifyDraftProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -80,10 +84,12 @@ const AgentRegistrySchema = z.record(
           "software-release",
           "disclosure-envelope",
           "finalized-game",
+          "combine-result",
+          "premier-draft",
         ]),
       )
       .min(1)
-      .max(8)
+      .max(10)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -120,6 +126,9 @@ function projectionAuthority(): {
     { signerAddress: `0x${string}`; allowedAggregateTypes: string[] }
   >;
   contractClubGovernors: Readonly<Record<string, string>>;
+  draftAuthorityDid: string;
+  draftClubGovernors: Readonly<Record<string, string>>;
+  premierDraftEvidence: PremierDraftEvidenceReader["premierDraftEvidence"];
   governanceEligibilitySnapshotDigest: string;
   caseTribunalDids: readonly string[];
   caseAppellateDids: readonly string[];
@@ -140,6 +149,13 @@ function projectionAuthority(): {
     .string()
     .regex(/^0x[0-9a-f]{64}$/)
     .parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST"));
+  const draftAuthorityDid = z
+    .string()
+    .startsWith("did:")
+    .parse(required("ABL_DRAFT_AUTHORITY_DID"));
+  const draftEvidence = createPremierDraftEvidenceReader(
+    JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
+  );
   const caseTribunalDids = caseAdjudicatorRoster(5).parse(
     JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
   );
@@ -215,6 +231,9 @@ function projectionAuthority(): {
     },
     admittedAgents,
     contractClubGovernors,
+    draftAuthorityDid,
+    draftClubGovernors: contractClubGovernors,
+    premierDraftEvidence: draftEvidence.premierDraftEvidence,
     governanceEligibilitySnapshotDigest,
     caseTribunalDids,
     caseAppellateDids,
@@ -231,6 +250,7 @@ const projectionRoot = process.env.ABL_PUBLIC_PROJECTION_ROOT;
 let authority: ReturnType<typeof projectionAuthority> | undefined;
 let projections: FilePublicProjectionRepository | undefined;
 let contractProjections: FilePublicContractProjectionRepository | undefined;
+let draftProjections: FilePublicDraftProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
@@ -262,6 +282,10 @@ if (projectionRoot !== undefined) {
         verifyContractProjectionEvent(authorization, runtimeAuthority),
     },
   );
+  draftProjections = new FilePublicDraftProjectionRepository(projectionRoot, {
+    verifyAuthorization: async (authorization) =>
+      verifyDraftProjectionEvent(authorization, runtimeAuthority),
+  });
   const governanceRepository = new FilePublicGovernanceProjectionRepository(
     projectionRoot,
     {
@@ -327,6 +351,7 @@ if (projectionRoot !== undefined) {
 await Promise.all([
   projections?.initialize(),
   contractProjections?.initialize(),
+  draftProjections?.initialize(),
   governanceProjections?.initialize(),
   caseProjections?.initialize(),
   modelProjections?.initialize(),
@@ -368,6 +393,7 @@ let projectionIngress: PublicApiOptions["projectionIngress"];
 if (
   projections !== undefined &&
   contractProjections !== undefined &&
+  draftProjections !== undefined &&
   governanceProjections !== undefined &&
   caseProjections !== undefined &&
   resourceProjections !== undefined &&
@@ -381,6 +407,7 @@ if (
   projectionIngress = {
     writer: projections,
     contractWriter: contractProjections,
+    draftWriter: draftProjections,
     governanceWriter: governanceProjections,
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,
@@ -407,6 +434,8 @@ const apiOptions: PublicApiOptions = {};
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;
+if (draftProjections !== undefined)
+  apiOptions.draftProjections = draftProjections;
 if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;

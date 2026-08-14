@@ -11,6 +11,7 @@ import {
   ReleaseVerifierResultRegistrySchema,
   assertDisclosureAuthorityConfiguration,
   createCompetitionReleaseEvidenceReader,
+  createPremierDraftEvidenceReader,
 } from "@abl/institutions";
 import {
   HttpProjectionEventSink,
@@ -67,10 +68,12 @@ const AdmittedAgentsSchema = z.record(
           "finalized-game",
           "private-film-catalog",
           "private-practice-ledger",
+          "combine-result",
+          "premier-draft",
         ]),
       )
       .min(1)
-      .max(11)
+      .max(13)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -156,6 +159,17 @@ const app = rehearsal
       const authority = rehearsalAuthority();
       const contractClubGovernors = ContractClubGovernorsSchema.parse(
         JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
+      );
+      const combineOfficialDid = z
+        .string()
+        .startsWith("did:")
+        .parse(required("ABL_COMBINE_OFFICIAL_DID"));
+      const draftAuthorityDid = z
+        .string()
+        .startsWith("did:")
+        .parse(required("ABL_DRAFT_AUTHORITY_DID"));
+      const draftEvidence = createPremierDraftEvidenceReader(
+        JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
       );
       const governanceEligibilitySnapshot =
         GovernanceEligibilitySnapshotSchema.parse(
@@ -274,6 +288,9 @@ const app = rehearsal
           competitionEvidence.competitionReleaseEvidence,
         finalizedGameAuthorityDids,
         finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
+        draftAuthorityDid,
+        draftClubGovernors: contractClubGovernors,
+        premierDraftEvidence: draftEvidence.premierDraftEvidence,
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -295,6 +312,12 @@ const app = rehearsal
         combine: {
           combineId: required("ABL_COMBINE_ID"),
           openedAt: required("ABL_COMBINE_OPENED_AT"),
+        },
+        draft: {
+          combineOfficialDid,
+          draftAuthorityDid,
+          clubGovernors: contractClubGovernors,
+          draftEvidence,
         },
         contracts: {
           clubGovernors: contractClubGovernors,

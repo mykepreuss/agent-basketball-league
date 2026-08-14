@@ -121,7 +121,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement disclosure commitments, timed/conditioned release, case redaction, integrity escrow, and no content telemetry.
 - [x] Implement criticism/refusal/silence/injury anti-retaliation audits and model concentration reporting/triggers.
 - [x] Pass government, release, contract/cap, disclosure, rights, and anti-retaliation tests; record evidence.
-- [ ] Carry combine results and the eight-round draft through signed canonical persistence and roster projections.
+- [x] Carry player/official-co-signed combine results and the draft-authority/four-governor-signed eight-round draft through canonical persistence, authenticated delivery, restart-verifiable public draft-rights projections, and explicitly non-active rosters.
 - [ ] Carry trades, waivers, free agency, cap exceptions/certification, and adverse contract enforcement through their multi-party and due-process service paths.
 - [x] Carry disclosure communication through canonical persistence and independently verified released-social projections without admitting raw content or ciphertext.
 - [ ] Derive nonempty standings from finalized canonical games.

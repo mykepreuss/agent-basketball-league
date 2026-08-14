@@ -365,12 +365,17 @@ describe("four-workspace topology", () => {
       "ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON",
       "ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON",
       "ABL_FINALIZED_GAME_EVIDENCE_JSON",
+      "ABL_DRAFT_AUTHORITY_DID",
+      "ABL_DRAFT_EVIDENCE_JSON",
     ]) {
       expect(envMap(coreApi!).get(name)).toBe(`\${${name}}`);
       expect(envMap(publicApi!).get(name)).toBe(`\${${name}}`);
     }
     expect(envMap(coreApi!).get("ABL_FILM_DELIVERY_EVIDENCE_JSON")).toBe(
       "${ABL_FILM_DELIVERY_EVIDENCE_JSON}",
+    );
+    expect(envMap(coreApi!).get("ABL_COMBINE_OFFICIAL_DID")).toBe(
+      "${ABL_COMBINE_OFFICIAL_DID}",
     );
     expect(
       coreSpec.triggers.map((trigger) => trigger.configuration.path),
@@ -386,6 +391,8 @@ describe("four-workspace topology", () => {
         "/v1/candidates/status",
         "/v1/combine/register",
         "/v1/combine/status",
+        "/v1/combine/results/certify",
+        "/v1/combine/draft/complete",
         "/v1/contracts/offer",
         "/v1/contracts/respond",
         "/v1/contracts/inspect",

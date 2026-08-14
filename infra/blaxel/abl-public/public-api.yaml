@@ -34,6 +34,12 @@ spec:
       - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
         value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
         secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_DRAFT_EVIDENCE_JSON}
+        secret: false
       - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST
         value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST}
         secret: false

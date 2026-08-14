@@ -18,6 +18,7 @@ import {
   auditRetaliation,
   authorizeRelease,
   conductEightRoundDraft,
+  premierDraftStateRoot,
   createPremierPlayoffs,
   createPremierSchedule,
   evaluateCapSheet,
@@ -35,6 +36,7 @@ import {
   runElection,
   tradeContract,
   validateDisclosureEnvelope,
+  validatePremierDraftCompletion,
   validatePremierClubs,
   type Chamber,
   type DisclosureEnvelopeRecord,
@@ -182,12 +184,57 @@ describe("premier league structure", () => {
       }),
     ).toThrow("DID is invalid");
 
-    const draft = conductEightRoundDraft(clubIds, combine.eligiblePlayers());
+    const playerOrder = combine.eligiblePlayers();
+    const draft = conductEightRoundDraft(clubIds, playerOrder);
     expect(draft).toHaveLength(32);
     expect(new Set(draft.map((pick) => pick.playerDid))).toHaveLength(32);
     expect(draft.filter((pick) => pick.clubId === clubIds[0])).toHaveLength(8);
     expect(draft[0]?.clubId).toBe(clubIds[0]);
     expect(draft[4]?.clubId).toBe(clubIds[3]);
+
+    const combineResults = [...players].sort().map((playerDid, index) => ({
+      playerDid,
+      eventHash: digest({ playerDid, type: "result" }),
+      stateRoot: digest({ playerDid, type: "state" }),
+      scoreBps: 6_000 + index,
+    }));
+    const draftId = "0198f700-0000-7000-8000-000000000001";
+    const combineId = "season-zero-premier-combine";
+    const combineHeadEventHash = digest("combine-head");
+    const draftEvidence = {
+      draftId,
+      combineId,
+      combineHeadEventHash,
+      eligiblePlayerDids: [...playerOrder].sort(),
+      combineResults,
+    };
+    const completed = validatePremierDraftCompletion({
+      draftId,
+      combineId,
+      combineHeadEventHash,
+      clubOrder: clubIds,
+      playerOrder,
+      combineResults,
+      draftEvidenceCommitment: digest(draftEvidence),
+      picks: draft,
+      completedAt: iso(15 * day),
+    });
+    expect(premierDraftStateRoot(completed)).toBe(
+      digest({
+        format: "ABL-PREMIER-DRAFT-STATE-V1",
+        draft: completed,
+      }),
+    );
+    expect(() =>
+      validatePremierDraftCompletion({
+        ...completed,
+        picks: [
+          completed.picks[1],
+          completed.picks[0],
+          ...completed.picks.slice(2),
+        ],
+      }),
+    ).toThrow("serpentine player order");
   });
 
   it("builds exactly 18 games per club over nine weeks, six meetings per opponent, and best-of-five playoffs", () => {

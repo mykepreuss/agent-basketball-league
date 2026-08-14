@@ -58,6 +58,13 @@ import {
   DISCLOSURE_RELEASED_EVENT_TYPE,
   DISCLOSURE_SUBMITTED_EVENT_TYPE,
   DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
+  COMBINE_RESULT_AGGREGATE_TYPE,
+  COMBINE_RESULT_CERTIFIED_EVENT_TYPE,
+  COMBINE_RESULT_SCHEMA_DIGEST,
+  FOUNDING_CLUBS,
+  PREMIER_DRAFT_AGGREGATE_TYPE,
+  PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
+  PREMIER_DRAFT_SCHEMA_DIGEST,
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
@@ -69,6 +76,8 @@ import {
   applyResourceScheduleTransition,
   applyReleaseWorkflowTransition,
   caseWorkflowStateRoot,
+  combineResultStateRoot,
+  conductEightRoundDraft,
   disclosureWorkflowStateRoot,
   evaluateProposal,
   artifactAdmissionExecutableDigest,
@@ -78,6 +87,7 @@ import {
   releaseManifestCommitment,
   releaseVerifierResultDigest,
   releaseWorkflowStateRoot,
+  premierDraftStateRoot,
   type ArtifactAdmission,
   type ArtifactAdmissionSnapshot,
   type ArtifactWorkflowEventType,
@@ -93,6 +103,7 @@ import {
   type DisclosureWorkflowSnapshot,
   type GovernanceProposal,
   type GovernanceVote,
+  type PremierDraftEvidence,
   type ResourceSchedule,
   type ResourceScheduleSnapshot,
   type ReleaseInstitutionalRoster,
@@ -194,6 +205,14 @@ const releaseInstitutionalRoster: ReleaseInstitutionalRoster = {
   tribunalDids,
 };
 const approvedArtifactInstitution = "did:abl:artifact-council";
+const combineOfficialDid = "did:abl:combine-official";
+const draftAuthorityDid = "did:abl:draft-authority";
+const draftClubGovernors = Object.fromEntries(
+  FOUNDING_CLUBS.map((club, index) => [
+    club.clubId,
+    `did:abl:draft-governor-${index + 1}`,
+  ]),
+);
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -270,6 +289,7 @@ interface Harness {
   exitVerifier: TestExitPortabilityVerifier;
   releaseVerifierResults: Map<string, ReleaseVerifierResult>;
   filmDeliveryOwners: Set<string>;
+  draftEvidence: Map<string, PremierDraftEvidence>;
 }
 
 function governanceEligibilitySnapshot(candidateDid: string) {
@@ -387,6 +407,7 @@ async function harness(): Promise<Harness> {
     ],
   ]);
   const filmDeliveryOwners = new Set([candidateDid]);
+  const draftEvidence = new Map<string, PremierDraftEvidence>();
   const app = createLiveCoreApi({
     store,
     domain,
@@ -402,6 +423,15 @@ async function harness(): Promise<Harness> {
     combine: {
       combineId: "season-zero-premier-combine",
       openedAt: iso(0),
+    },
+    draft: {
+      combineOfficialDid,
+      draftAuthorityDid,
+      clubGovernors: draftClubGovernors,
+      draftEvidence: {
+        premierDraftEvidence: async (draftId) =>
+          structuredClone(draftEvidence.get(draftId) ?? null),
+      },
     },
     contracts: {
       clubGovernors: { [rehearsalClubId]: governorDid },
@@ -474,6 +504,7 @@ async function harness(): Promise<Harness> {
     exitVerifier,
     releaseVerifierResults,
     filmDeliveryOwners,
+    draftEvidence,
   };
 }
 
@@ -491,7 +522,11 @@ async function additionalCareer(
   return {
     ...h,
     candidateDid,
-    candidate: createSigningIdentity(digest(candidateKey)),
+    candidate: createSigningIdentity(
+      candidateKey.length === 1
+        ? digest(candidateKey)
+        : (`0x${candidateKey.padStart(64, "0")}` as Hex),
+    ),
     snapshot: null,
     previousEventHash: null,
     challengeToken: challenge.json().challengeToken as string,
@@ -1412,6 +1447,8 @@ async function admitCandidate(h: Harness) {
       DISCLOSURE_AGGREGATE_TYPE,
       PRIVATE_FILM_AGGREGATE_TYPE,
       PRIVATE_PRACTICE_AGGREGATE_TYPE,
+      COMBINE_RESULT_AGGREGATE_TYPE,
+      "premier-draft",
     ],
   });
   return admitted;
@@ -2712,6 +2749,456 @@ describe("signed candidate rehearsal API", () => {
     });
     await h.app.close();
   });
+
+  it("requires player and independent official signatures for combine results", async () => {
+    const h = await harness();
+    const playerAdmission = await admitCandidate(h);
+    const official = await additionalCareer(h, combineOfficialDid, "7");
+    await admitCandidate(official);
+
+    h.now.value += 60_000;
+    const registration = {
+      combineId: "season-zero-premier-combine",
+      playerDid: h.candidateDid,
+      consented: true,
+      registeredAt: new Date(h.now.value).toISOString(),
+      candidateAdmissionEventHash: playerAdmission.event.eventHash,
+    };
+    const registrationEvent = createCanonicalEvent({
+      eventId: uuid("935"),
+      actorDid: h.candidateDid,
+      nonce: "combine-result-registration",
+      idempotencyKey: uuid("936"),
+      aggregateType: "premier-combine",
+      aggregateId: registration.combineId,
+      aggregateVersion: 1n,
+      eventType: "CombineRegistrationAccepted",
+      previousEventHash: null,
+      payload: registration,
+      stateRoot: sha256Commitment({
+        combineId: registration.combineId,
+        openedAt: iso(0),
+        closesAt: iso(14 * day),
+        version: 1,
+        registrations: [registration],
+      }),
+      schemaDigest: COMBINE_REGISTRATION_SCHEMA_DIGEST,
+      timestamp: registration.registeredAt,
+    });
+    const registrationResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/register",
+      payload: {
+        event: { ...registrationEvent, aggregateVersion: "1" },
+        signatures: [
+          await signCanonicalEvent(h.candidate, domain, registrationEvent),
+        ],
+      },
+    });
+    expect(registrationResponse.statusCode).toBe(201);
+
+    h.now.value += 60_000;
+    const resultPayload = {
+      combineId: registration.combineId,
+      playerDid: h.candidateDid,
+      registrationEventHash: registrationEvent.eventHash,
+      scoreBps: 7_125,
+      drillCommitment: digest("4"),
+      cognitionReceiptRoot: digest("5"),
+      certifiedByDid: combineOfficialDid,
+      completedAt: new Date(h.now.value).toISOString(),
+    };
+    const resultEvent = createCanonicalEvent({
+      eventId: uuid("937"),
+      actorDid: h.candidateDid,
+      nonce: "combine-result-1",
+      idempotencyKey: uuid("938"),
+      aggregateType: COMBINE_RESULT_AGGREGATE_TYPE,
+      aggregateId: `${registration.combineId}:${h.candidateDid}`,
+      aggregateVersion: 1n,
+      eventType: COMBINE_RESULT_CERTIFIED_EVENT_TYPE,
+      previousEventHash: null,
+      payload: resultPayload,
+      stateRoot: combineResultStateRoot(resultPayload),
+      schemaDigest: COMBINE_RESULT_SCHEMA_DIGEST,
+      timestamp: resultPayload.completedAt,
+    });
+    const playerSignature = await signCanonicalEvent(
+      h.candidate,
+      domain,
+      resultEvent,
+    );
+    const officialSignature = await signCanonicalEvent(
+      official.candidate,
+      domain,
+      resultEvent,
+    );
+    const reversed = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/results/certify",
+      payload: {
+        event: { ...resultEvent, aggregateVersion: "1" },
+        signatures: [officialSignature, playerSignature],
+      },
+    });
+    expect(reversed.statusCode).toBe(403);
+
+    const resultBody = {
+      event: { ...resultEvent, aggregateVersion: "1" },
+      signatures: [playerSignature, officialSignature],
+    };
+    const resultResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/results/certify",
+      payload: resultBody,
+    });
+    expect(resultResponse.statusCode).toBe(201);
+    expect(resultResponse.json()).toMatchObject({
+      canonical: true,
+      recognizedGenesisDraft: false,
+      result: {
+        playerDid: h.candidateDid,
+        scoreBps: 7_125,
+        certifiedByDid: combineOfficialDid,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/combine/results/certify",
+          payload: resultBody,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("combine.results");
+    await h.app.close();
+  });
+
+  it("completes a restart-safe eight-round draft from 32 co-signed combine results", async () => {
+    const h = await harness();
+    const playerCareers: Array<{
+      actor: Harness;
+      admissionEventHash: Hex;
+    }> = [];
+    const firstAdmission = await admitCandidate(h);
+    playerCareers.push({
+      actor: h,
+      admissionEventHash: firstAdmission.event.eventHash,
+    });
+    for (let index = 1; index < 32; index += 1) {
+      h.now.value = start;
+      const actor = await additionalCareer(
+        h,
+        `did:abl:draft-player-${String(index + 1).padStart(2, "0")}`,
+        (0x100 + index).toString(16),
+      );
+      const admission = await admitCandidate(actor);
+      playerCareers.push({
+        actor,
+        admissionEventHash: admission.event.eventHash,
+      });
+    }
+
+    const authorityDids = [
+      combineOfficialDid,
+      draftAuthorityDid,
+      ...Object.values(draftClubGovernors),
+    ];
+    const authorityCareers = new Map<string, Harness>();
+    for (const [index, did] of authorityDids.entries()) {
+      h.now.value = start;
+      const actor = await additionalCareer(
+        h,
+        did,
+        (0x200 + index).toString(16),
+      );
+      await admitCandidate(actor);
+      authorityCareers.set(did, actor);
+    }
+
+    const combineId = "season-zero-premier-combine";
+    const registrations: Array<{
+      combineId: string;
+      playerDid: string;
+      consented: true;
+      registeredAt: string;
+      candidateAdmissionEventHash: Hex;
+    }> = [];
+    let combineHeadEventHash: Hex | null = null;
+    const registrationStartedAt = start + 2 * day;
+    for (const [index, player] of playerCareers.entries()) {
+      h.now.value = registrationStartedAt + index * 1_000;
+      const registration = {
+        combineId,
+        playerDid: player.actor.candidateDid,
+        consented: true as const,
+        registeredAt: new Date(h.now.value).toISOString(),
+        candidateAdmissionEventHash: player.admissionEventHash,
+      };
+      registrations.push(registration);
+      const event: CanonicalEvent = createCanonicalEvent({
+        eventId: uuid(String(1_000 + index * 2)),
+        actorDid: player.actor.candidateDid,
+        nonce: `draft-registration-${index + 1}`,
+        idempotencyKey: uuid(String(1_001 + index * 2)),
+        aggregateType: "premier-combine",
+        aggregateId: combineId,
+        aggregateVersion: BigInt(index + 1),
+        eventType: "CombineRegistrationAccepted",
+        previousEventHash: combineHeadEventHash,
+        payload: registration,
+        stateRoot: sha256Commitment({
+          combineId,
+          openedAt: iso(0),
+          closesAt: iso(14 * day),
+          version: index + 1,
+          registrations,
+        }),
+        schemaDigest: COMBINE_REGISTRATION_SCHEMA_DIGEST,
+        timestamp: registration.registeredAt,
+      });
+      const response = await h.app.inject({
+        method: "POST",
+        url: "/v1/combine/register",
+        payload: {
+          event: {
+            ...event,
+            aggregateVersion: event.aggregateVersion.toString(),
+          },
+          signatures: [
+            await signCanonicalEvent(player.actor.candidate, domain, event),
+          ],
+        },
+      });
+      expect(
+        response.statusCode,
+        `${player.actor.candidateDid}: ${response.body}`,
+      ).toBe(201);
+      combineHeadEventHash = event.eventHash;
+    }
+    expect(combineHeadEventHash).not.toBeNull();
+
+    const official = authorityCareers.get(combineOfficialDid)!;
+    const resultProofs: Array<{
+      playerDid: string;
+      eventHash: Hex;
+      stateRoot: Hex;
+      scoreBps: number;
+    }> = [];
+    const resultStartedAt = start + 3 * day;
+    for (const [index, player] of playerCareers.entries()) {
+      h.now.value = resultStartedAt + index * 1_000;
+      const registrationRecord = h.store.events.find(
+        (record) =>
+          record.aggregateType === "premier-combine" &&
+          record.actorDid === player.actor.candidateDid,
+      )!;
+      const resultPayload = {
+        combineId,
+        playerDid: player.actor.candidateDid,
+        registrationEventHash: registrationRecord.eventHash,
+        scoreBps: 9_000 - index,
+        drillCommitment: sha256Commitment({
+          playerDid: player.actor.candidateDid,
+          kind: "draft-drills",
+        }),
+        cognitionReceiptRoot: sha256Commitment({
+          playerDid: player.actor.candidateDid,
+          kind: "draft-cognition",
+        }),
+        certifiedByDid: combineOfficialDid,
+        completedAt: new Date(h.now.value).toISOString(),
+      };
+      const event = createCanonicalEvent({
+        eventId: uuid(String(1_200 + index * 2)),
+        actorDid: player.actor.candidateDid,
+        nonce: `draft-combine-result-${index + 1}`,
+        idempotencyKey: uuid(String(1_201 + index * 2)),
+        aggregateType: COMBINE_RESULT_AGGREGATE_TYPE,
+        aggregateId: `${combineId}:${player.actor.candidateDid}`,
+        aggregateVersion: 1n,
+        eventType: COMBINE_RESULT_CERTIFIED_EVENT_TYPE,
+        previousEventHash: null,
+        payload: resultPayload,
+        stateRoot: combineResultStateRoot(resultPayload),
+        schemaDigest: COMBINE_RESULT_SCHEMA_DIGEST,
+        timestamp: resultPayload.completedAt,
+      });
+      const signatures = await Promise.all([
+        signCanonicalEvent(player.actor.candidate, domain, event),
+        signCanonicalEvent(official.candidate, domain, event),
+      ]);
+      await h.store.append({
+        eventId: event.eventId,
+        actorDid: event.actorDid,
+        nonce: event.nonce,
+        idempotencyKey: event.idempotencyKey,
+        requestHash: sha256Commitment({
+          eventHash: event.eventHash,
+          signatures,
+        }),
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        expectedVersion: 0n,
+        competitionId: "admission-rehearsal",
+        seasonId: "pre-genesis",
+        eventType: event.eventType,
+        previousEventHash: event.previousEventHash,
+        eventHash: event.eventHash,
+        payloadSchemaDigest: event.schemaDigest,
+        payloadCommitment: event.payloadCommitment,
+        payload: event.payload,
+        stateRoot: event.stateRoot,
+        signatures,
+        occurredAt: new Date(event.timestamp),
+        outboxTopic: "combine.results",
+      });
+      resultProofs.push({
+        playerDid: player.actor.candidateDid,
+        eventHash: event.eventHash,
+        stateRoot: event.stateRoot,
+        scoreBps: resultPayload.scoreBps,
+      });
+    }
+
+    const draftId = uuid("950");
+    const playerOrder = playerCareers.map(({ actor }) => actor.candidateDid);
+    const combineResults = resultProofs.sort((left, right) =>
+      left.playerDid.localeCompare(right.playerDid),
+    );
+    const evidenceBody = {
+      draftId,
+      combineId,
+      combineHeadEventHash: combineHeadEventHash!,
+      eligiblePlayerDids: [...playerOrder].sort(),
+      combineResults,
+    };
+    const evidence: PremierDraftEvidence = {
+      ...evidenceBody,
+      evidenceCommitment: sha256Commitment(evidenceBody),
+    };
+    h.now.value = start + 14 * day;
+    const payload = {
+      draftId,
+      combineId,
+      combineHeadEventHash: combineHeadEventHash!,
+      clubOrder: FOUNDING_CLUBS.map(({ clubId }) => clubId),
+      playerOrder,
+      combineResults,
+      draftEvidenceCommitment: evidence.evidenceCommitment,
+      picks: [
+        ...conductEightRoundDraft(
+          FOUNDING_CLUBS.map(({ clubId }) => clubId),
+          playerOrder,
+        ),
+      ],
+      completedAt: new Date(h.now.value).toISOString(),
+    };
+    const event = createCanonicalEvent({
+      eventId: uuid("951"),
+      actorDid: draftAuthorityDid,
+      nonce: "premier-draft-completed",
+      idempotencyKey: uuid("952"),
+      aggregateType: PREMIER_DRAFT_AGGREGATE_TYPE,
+      aggregateId: draftId,
+      aggregateVersion: 1n,
+      eventType: PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: premierDraftStateRoot(payload),
+      schemaDigest: PREMIER_DRAFT_SCHEMA_DIGEST,
+      timestamp: payload.completedAt,
+    });
+    const signers = [
+      authorityCareers.get(draftAuthorityDid)!.candidate,
+      ...payload.clubOrder.map(
+        (clubId) =>
+          authorityCareers.get(draftClubGovernors[clubId]!)!.candidate,
+      ),
+    ];
+    const signatures = await Promise.all(
+      signers.map((signer) => signCanonicalEvent(signer, domain, event)),
+    );
+    const body = {
+      event: { ...event, aggregateVersion: "1" },
+      signatures,
+    };
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/combine/draft/complete",
+          payload: body,
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    h.draftEvidence.set(draftId, evidence);
+    const reversed = structuredClone(body);
+    [reversed.signatures[1], reversed.signatures[2]] = [
+      reversed.signatures[2]!,
+      reversed.signatures[1]!,
+    ];
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/combine/draft/complete",
+          payload: reversed,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const accepted = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/draft/complete",
+      payload: body,
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(accepted.json()).toMatchObject({
+      canonical: true,
+      recognizedGenesisDraft: false,
+      draft: {
+        draftId,
+        picks: Array.from({ length: 32 }, (_, index) => ({
+          overall: index + 1,
+        })),
+      },
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.draft");
+
+    await h.app.close();
+    h.app = createLiveCoreApi({
+      store: h.store,
+      domain,
+      admittedAgents: h.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => h.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+      },
+      combine: { combineId, openedAt: iso(0) },
+      draft: {
+        combineOfficialDid,
+        draftAuthorityDid,
+        clubGovernors: draftClubGovernors,
+        draftEvidence: {
+          premierDraftEvidence: async (candidateDraftId) =>
+            structuredClone(h.draftEvidence.get(candidateDraftId) ?? null),
+        },
+      },
+    });
+    const retry = await h.app.inject({
+      method: "POST",
+      url: "/v1/combine/draft/complete",
+      payload: body,
+    });
+    expect(retry.statusCode).toBe(200);
+    expect(retry.json()).toMatchObject({ duplicate: true, canonical: true });
+    await h.app.close();
+  }, 60_000);
 
   it("persists private film, counterfactual practice, and owner-authored lessons", async () => {
     const h = await harness();

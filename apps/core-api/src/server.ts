@@ -59,6 +59,10 @@ import {
   type DisclosureRehearsalOptions,
 } from "./disclosures.js";
 import {
+  installDraftRehearsalRoutes,
+  type DraftRehearsalOptions,
+} from "./draft.js";
+import {
   installExitRehearsalRoutes,
   type ExitRehearsalOptions,
 } from "./exit.js";
@@ -161,6 +165,13 @@ export interface LiveCoreApiOptions {
   filmPractice?: Pick<
     FilmPracticeRehearsalOptions,
     "storageVerifier" | "filmDeliveryEvidence"
+  >;
+  draft?: Pick<
+    DraftRehearsalOptions,
+    | "combineOfficialDid"
+    | "draftAuthorityDid"
+    | "clubGovernors"
+    | "draftEvidence"
   >;
 }
 
@@ -274,6 +285,7 @@ export function createLiveCoreApi(
     continuity,
     contracts,
     disclosures,
+    draft,
     exit,
     filmPractice,
     governance,
@@ -495,6 +507,26 @@ export function createLiveCoreApi(
       now,
       candidateAdmission,
       ...combine,
+    });
+  }
+  if (
+    candidateAdmission !== undefined &&
+    combine !== undefined &&
+    draft !== undefined
+  ) {
+    installDraftRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      combine,
+      combineOfficialDid: draft.combineOfficialDid,
+      draftAuthorityDid: draft.draftAuthorityDid,
+      clubGovernors: draft.clubGovernors,
+      draftEvidence: draft.draftEvidence,
     });
   }
   if (candidateAdmission !== undefined && contracts !== undefined) {

@@ -44,6 +44,9 @@ import {
   DISCLOSURE_WORKFLOW_SCHEMA_DIGEST,
   GOVERNANCE_WORKFLOW_AGGREGATE_TYPE,
   GOVERNANCE_WORKFLOW_SCHEMA_DIGEST,
+  PREMIER_DRAFT_AGGREGATE_TYPE,
+  PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
+  PREMIER_DRAFT_SCHEMA_DIGEST,
   RESOURCE_SCHEDULE_AGGREGATE_TYPE,
   RESOURCE_SCHEDULE_EVENT_TYPE,
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
@@ -57,10 +60,12 @@ import {
   contractClubAuthoritySnapshotDigest,
   contractOfferCommitment,
   contractWorkflowStateRoot,
+  conductEightRoundDraft,
   disclosureWorkflowStateRoot,
   evaluateGovernanceWorkflowDecision,
   governanceVoteFromAuthorization,
   governanceWorkflowStateRoot,
+  premierDraftStateRoot,
   resourceScheduleExecutableDigest,
   resourceScheduleStateRoot,
   releaseManifestCommitment,
@@ -71,6 +76,8 @@ import {
   type GovernanceWorkflowPayload,
   type GovernanceWorkflowSnapshot,
   type GovernanceVote,
+  type PremierDraftCompletedPayload,
+  type PremierDraftEvidence,
   type ResourceSchedule,
   type ReleaseInstitutionalRoster,
   type ReleaseManifestBody,
@@ -82,6 +89,7 @@ import {
 import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
+  FilePublicDraftProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
@@ -96,6 +104,7 @@ import {
   projectionEnvelopeBytes,
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
+  verifyDraftProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -2316,6 +2325,207 @@ describe("complete local acceptance", () => {
     ]);
   });
 
+  it("carries the five-career premier draft over authenticated HTTP into non-active roster rights", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-draft-acceptance-"),
+    );
+    const store = new InMemoryCanonicalStore();
+    const draftId = "0198f600-0000-7000-8000-000000000001";
+    const combineId = "acceptance-premier-combine";
+    const completedAt = "2026-08-13T14:00:00.000Z";
+    const combineHeadEventHash = sha256Commitment("acceptance-combine-head");
+    const clubOrder = ["club-a", "club-b", "club-c", "club-d"];
+    const draftAuthorityDid = "did:abl:acceptance-draft-authority";
+    const governorDids = clubOrder.map(
+      (clubId) => `did:abl:acceptance-governor:${clubId}`,
+    );
+    const draftClubGovernors = Object.fromEntries(
+      clubOrder.map((clubId, index) => [clubId, governorDids[index]!] as const),
+    );
+    const signers = ["1", "2", "3", "4", "5"].map((key) =>
+      createSigningIdentity(`0x${key.repeat(64)}`),
+    );
+    const playerOrder = Array.from(
+      { length: 32 },
+      (_, index) =>
+        `did:abl:acceptance-draft-player-${String(index + 1).padStart(2, "0")}`,
+    );
+    const combineResults = [...playerOrder].sort().map((playerDid, index) => ({
+      playerDid,
+      eventHash: sha256Commitment({ playerDid, kind: "combine-result" }),
+      stateRoot: sha256Commitment({ playerDid, kind: "result-state" }),
+      scoreBps: 8_000 - index,
+    }));
+    const evidenceBody = {
+      draftId,
+      combineId,
+      combineHeadEventHash,
+      eligiblePlayerDids: [...playerOrder].sort(),
+      combineResults,
+    };
+    const evidence: PremierDraftEvidence = {
+      ...evidenceBody,
+      evidenceCommitment: sha256Commitment(evidenceBody),
+    };
+    const payload: PremierDraftCompletedPayload = {
+      draftId,
+      combineId,
+      combineHeadEventHash,
+      clubOrder,
+      playerOrder,
+      combineResults,
+      draftEvidenceCommitment: evidence.evidenceCommitment,
+      picks: [...conductEightRoundDraft(clubOrder, playerOrder)],
+      completedAt,
+    };
+    const event = createCanonicalEvent({
+      eventId: "0198f600-0000-7000-8000-000000000002",
+      actorDid: draftAuthorityDid,
+      nonce: "draft-acceptance",
+      idempotencyKey: "0198f600-0000-7000-8000-000000000003",
+      aggregateType: PREMIER_DRAFT_AGGREGATE_TYPE,
+      aggregateId: draftId,
+      aggregateVersion: 1n,
+      eventType: PREMIER_DRAFT_COMPLETED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: premierDraftStateRoot(payload),
+      schemaDigest: PREMIER_DRAFT_SCHEMA_DIGEST,
+      timestamp: completedAt,
+    });
+    const signatures = await Promise.all(
+      signers.map((signer) =>
+        signCanonicalEvent(signer, REHEARSAL_RECOGNITION_DOMAIN, event),
+      ),
+    );
+    await store.append({
+      eventId: event.eventId,
+      actorDid: event.actorDid,
+      nonce: event.nonce,
+      idempotencyKey: event.idempotencyKey,
+      requestHash: sha256Commitment({ eventHash: event.eventHash, signatures }),
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      expectedVersion: 0n,
+      competitionId: "draft-acceptance",
+      seasonId: "pre-genesis",
+      eventType: event.eventType,
+      previousEventHash: event.previousEventHash,
+      eventHash: event.eventHash,
+      payloadSchemaDigest: event.schemaDigest,
+      payloadCommitment: event.payloadCommitment,
+      payload: event.payload,
+      stateRoot: event.stateRoot,
+      signatures,
+      occurredAt: new Date(event.timestamp),
+      outboxTopic: "public.draft",
+    });
+
+    const authority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents: new Map(
+        [draftAuthorityDid, ...governorDids].map((did, index) => [
+          did,
+          {
+            signerAddress: signers[index]!.address,
+            allowedAggregateTypes: [PREMIER_DRAFT_AGGREGATE_TYPE],
+          },
+        ]),
+      ),
+      draftAuthorityDid,
+      draftClubGovernors,
+      premierDraftEvidence: async (candidateDraftId: string) =>
+        candidateDraftId === draftId ? structuredClone(evidence) : null,
+    };
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const draftRepositoryOptions = {
+      verifyAuthorization: (authorization: unknown) =>
+        verifyDraftProjectionEvent(authorization, authority),
+    };
+    const drafts = new FilePublicDraftProjectionRepository(
+      projectionRoot,
+      draftRepositoryOptions,
+    );
+    await Promise.all([games.initialize(), drafts.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T14:00:05.000Z");
+    const projectionIdentity = {
+      serviceId: "core-draft-projection-publisher",
+      secret: new TextEncoder().encode("d".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const publicApi = createPublicApi({
+      projections: games,
+      draftProjections: drafts,
+      projectionIngress: {
+        writer: games,
+        draftWriter: drafts,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      },
+    });
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "draft-acceptance-transport",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        ...authority,
+      });
+      expect(await worker.drain()).toBe(1);
+      const draftResponse = await fetch(
+        new URL("/v1/public/drafts", publicAddress),
+      );
+      expect(await draftResponse.json()).toMatchObject({
+        canonical: true,
+        items: [
+          {
+            draftId,
+            projectionKind: "PREMIER_DRAFT",
+            recognizedGenesisDraft: false,
+          },
+        ],
+      });
+      const rosterResponse = await fetch(
+        new URL("/v1/public/rosters", publicAddress),
+      );
+      expect(await rosterResponse.json()).toMatchObject({
+        canonical: true,
+        items: clubOrder.map((clubId) => ({
+          clubId,
+          rosterKind: "DRAFT_SELECTIONS",
+          rosterStatus: "DRAFT_SELECTIONS_NOT_ACTIVE",
+          selections: Array.from({ length: 8 }, () => ({
+            selectionStatus: "DRAFTED_NO_PLAYING_RIGHTS",
+            requiresPlayerContractConsent: true,
+          })),
+        })),
+      });
+    } finally {
+      await publicApi.close();
+    }
+
+    const restarted = new FilePublicDraftProjectionRepository(
+      projectionRoot,
+      draftRepositoryOptions,
+    );
+    await restarted.initialize();
+    expect(restarted.drafts()).toMatchObject([
+      { draftId, canonicalEventHash: event.eventHash },
+    ]);
+  });
+
   it("exports all 43 primary schemas as fail-closed strict JSON Schema", () => {
     expect(Object.keys(schemaRegistry)).toHaveLength(43);
     const jsonSchemas = exportJsonSchemas();
@@ -2397,6 +2607,7 @@ describe("complete local acceptance", () => {
       "GET /v1/public/standings",
       "GET /v1/public/rosters",
       "GET /v1/public/contracts",
+      "GET /v1/public/drafts",
       "GET /v1/public/governance",
       "GET /v1/public/resources",
       "GET /v1/public/social",

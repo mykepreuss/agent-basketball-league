@@ -58,6 +58,15 @@ spec:
       - name: ABL_COMBINE_OPENED_AT
         value: ${ABL_COMBINE_OPENED_AT}
         secret: false
+      - name: ABL_COMBINE_OFFICIAL_DID
+        value: ${ABL_COMBINE_OFFICIAL_DID}
+        secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_DRAFT_EVIDENCE_JSON}
+        secret: false
       - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
         value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
         secret: false
@@ -183,6 +192,16 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/combine/status
+    - id: combine-result-certify
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/results/certify
+    - id: premier-draft-complete
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/combine/draft/complete
     - id: contract-offer
       type: http
       configuration:

@@ -172,6 +172,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/public/drafts",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
       "path": "/v1/public/events",
       "exposure": "PUBLIC_READ_ONLY",
       "service": "abl-public-api"

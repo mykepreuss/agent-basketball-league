@@ -10,6 +10,7 @@ import {
   projectionEnvelopeBytes,
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
+  verifyDraftProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -23,6 +24,8 @@ import {
   type PublicCaseProjectionWriter,
   type PublicContractProjectionReader,
   type PublicContractProjectionWriter,
+  type PublicDraftProjectionReader,
+  type PublicDraftProjectionWriter,
   type PublicFinalGameProjectionReader,
   type PublicFinalGameProjectionWriter,
   type PublicFinalizedGameProjection,
@@ -43,6 +46,7 @@ import {
 import type { FinalizedGameEvidenceReader } from "@abl/basketball";
 import type {
   CompetitionReleaseEvidenceReader,
+  PremierDraftEvidenceReader,
   ReleaseInstitutionalRoster,
   ReleaseRatificationReader,
   ResourceScheduleRatificationReader,
@@ -81,6 +85,11 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   {
     method: "GET",
     path: "/v1/public/contracts",
+    exposure: "PUBLIC_READ_ONLY",
+  },
+  {
+    method: "GET",
+    path: "/v1/public/drafts",
     exposure: "PUBLIC_READ_ONLY",
   },
   {
@@ -132,6 +141,7 @@ const collectionPaths = [
   "/v1/public/standings",
   "/v1/public/rosters",
   "/v1/public/contracts",
+  "/v1/public/drafts",
   "/v1/public/governance",
   "/v1/public/resources",
   "/v1/public/social",
@@ -161,6 +171,7 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
 export interface PublicApiOptions {
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
+  draftProjections?: PublicDraftProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
@@ -172,6 +183,7 @@ export interface PublicApiOptions {
   projectionIngress?: ProjectionVerificationAuthority & {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
+    draftWriter?: PublicDraftProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
@@ -180,6 +192,9 @@ export interface PublicApiOptions {
     socialWriter?: PublicSocialProjectionWriter;
     finalGameWriter?: PublicFinalGameProjectionWriter;
     contractClubGovernors?: Readonly<Record<string, string>>;
+    draftAuthorityDid?: string;
+    draftClubGovernors?: Readonly<Record<string, string>>;
+    premierDraftEvidence?: PremierDraftEvidenceReader["premierDraftEvidence"];
     governanceEligibilitySnapshotDigest?: string;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
@@ -260,6 +275,7 @@ export function createPublicApi(
   const rehearsal =
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
+    options.draftProjections !== undefined ||
     options.governanceProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
@@ -279,6 +295,7 @@ export function createPublicApi(
       await Promise.all([
         options.projections?.refresh(),
         options.contractProjections?.refresh(),
+        options.draftProjections?.refresh(),
         options.governanceProjections?.refresh(),
         options.caseProjections?.refresh(),
         options.socialProjections?.refresh(),
@@ -447,6 +464,40 @@ export function createPublicApi(
           body: projectionEnvelopeBytes(request.body),
         });
         const topic = projectionTopic(request.body);
+        if (topic === "public.draft") {
+          if (
+            projectionIngress.draftAuthorityDid === undefined ||
+            projectionIngress.draftClubGovernors === undefined ||
+            projectionIngress.premierDraftEvidence === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Draft projection authority is not configured",
+            );
+          }
+          const verified = await verifyDraftProjectionEvent(request.body, {
+            ...projectionIngress,
+            draftAuthorityDid: projectionIngress.draftAuthorityDid,
+            draftClubGovernors: projectionIngress.draftClubGovernors,
+            premierDraftEvidence: projectionIngress.premierDraftEvidence,
+          });
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the draft event",
+            );
+          }
+          if (projectionIngress.draftWriter === undefined)
+            throw new Error("Draft projection writer is not configured");
+          const record = await projectionIngress.draftWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         if (topic === "public.finalized-game") {
           if (
             projectionIngress.finalizedGameAuthorityDids === undefined ||
@@ -747,8 +798,13 @@ export function createPublicApi(
         items = [...games.values()];
       } else if (path === "/v1/public/contracts") {
         items = options.contractProjections?.contracts() ?? [];
+      } else if (path === "/v1/public/drafts") {
+        items = options.draftProjections?.drafts() ?? [];
       } else if (path === "/v1/public/rosters") {
-        items = options.contractProjections?.rosters() ?? [];
+        items = [
+          ...(options.contractProjections?.rosters() ?? []),
+          ...(options.draftProjections?.rosters() ?? []),
+        ];
       } else if (path === "/v1/public/resources") {
         items = options.resourceProjections?.resources() ?? [];
       } else if (path === "/v1/public/models/concentration") {
