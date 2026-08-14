@@ -70,7 +70,7 @@ describe("public API", () => {
     });
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const paths = openApi.json().paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(19);
+    expect(Object.keys(paths)).toHaveLength(20);
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     const mcp = await app.inject({
       method: "POST",

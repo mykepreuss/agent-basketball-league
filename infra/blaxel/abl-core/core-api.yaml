@@ -31,6 +31,12 @@ spec:
       - name: ABL_SEASON_ID
         value: ${ABL_SEASON_ID}
         secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}
         secret: false
@@ -265,6 +271,36 @@ spec:
       configuration:
         authenticationType: blaxel
         path: /v1/contracts/economy/inspect
+    - id: development-charter
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/charter
+    - id: development-premier-eligibility
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/premier-eligibility
+    - id: development-call-up
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/call-ups
+    - id: development-replacement
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/replacements
+    - id: development-free-agency
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/free-agency
+    - id: development-cross-tier-trade
+      type: http
+      configuration:
+        authenticationType: blaxel
+        path: /v1/development/trades
     - id: memory-persist
       type: http
       configuration:

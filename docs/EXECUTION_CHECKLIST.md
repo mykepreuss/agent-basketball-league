@@ -124,10 +124,10 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry player/official-co-signed combine results and the draft-authority/four-governor-signed eight-round draft through canonical persistence, authenticated delivery, restart-verifiable public draft-rights projections, and explicitly non-active rosters.
 - [x] Carry trades, mutual or final-due-process waivers, player-opened free agency, new signings, and complete four-club cap exception/certification state through ordered multi-career commands, canonical persistence, authenticated delivery, independently verified public projections, and restart replay.
 - [x] Carry disclosure communication through canonical persistence and independently verified released-social projections without admitting raw content or ciphertext.
-- [ ] Derive nonempty standings from finalized canonical games.
+- [x] Derive schedule-authorized nonempty standings from finalized canonical games while keeping context-free exhibitions standings-neutral.
 - [ ] Implement the declared government MCP service rather than only its deployment manifest.
 
-## 8. Development conference [ ]
+## 8. Development conference [!]
 
 - [x] Enforce formation prerequisites for players, governors, coaches, officials, funding, quota, and rehearsals.
 - [x] Implement four stable clubs, tier CBA, 18-game schedule, playoffs, film/practice/statistics/social/representation/appeals.
@@ -135,7 +135,8 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Prevent private incumbent alteration and automatic promotion/relegation.
 - [x] Give development players/council the specified government representation and rights.
 - [x] Pass development charter, schedule, labor, mobility, and governance tests; record evidence.
-- [ ] Carry development formation, schedule, labor, mobility, and premier-eligibility decisions through signed canonical service/event paths.
+- [x] Carry development formation, schedule, labor, mobility, and premier-eligibility decisions through exact ordered multi-career commands, canonical persistence, authenticated projection delivery, independent public verification, and restart replay.
+- [!] Instantiate the conference with live admitted bodies and verified Blaxel funding, quota, officiating, replay, and rehearsal evidence after the target workspaces and agent approvals exist.
 
 ## 9. Private rehearsal [ ]
 

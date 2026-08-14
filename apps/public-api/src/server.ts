@@ -11,6 +11,7 @@ import {
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyDevelopmentProjectionEvent,
   verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -27,6 +28,8 @@ import {
   type PublicContractProjectionWriter,
   type PublicDraftProjectionReader,
   type PublicDraftProjectionWriter,
+  type PublicDevelopmentProjectionReader,
+  type PublicDevelopmentProjectionWriter,
   type PublicEconomyProjectionReader,
   type PublicEconomyProjectionWriter,
   type PublicFinalGameProjectionReader,
@@ -45,6 +48,7 @@ import {
   type PublicReleaseProjectionWriter,
   type PublicSocialProjectionReader,
   type PublicSocialProjectionWriter,
+  type DevelopmentProjectionVerificationAuthority,
 } from "@abl/projections";
 import type {
   FinalizedGameEvidenceReader,
@@ -102,6 +106,11 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   },
   {
     method: "GET",
+    path: "/v1/public/development",
+    exposure: "PUBLIC_READ_ONLY",
+  },
+  {
+    method: "GET",
     path: "/v1/public/governance",
     exposure: "PUBLIC_READ_ONLY",
   },
@@ -150,6 +159,7 @@ const collectionPaths = [
   "/v1/public/rosters",
   "/v1/public/contracts",
   "/v1/public/drafts",
+  "/v1/public/development",
   "/v1/public/governance",
   "/v1/public/resources",
   "/v1/public/social",
@@ -180,6 +190,7 @@ export interface PublicApiOptions {
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   draftProjections?: PublicDraftProjectionReader;
+  developmentProjections?: PublicDevelopmentProjectionReader;
   economyProjections?: PublicEconomyProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
@@ -193,6 +204,7 @@ export interface PublicApiOptions {
     writer: PublicProjectionWriter;
     contractWriter?: PublicContractProjectionWriter;
     draftWriter?: PublicDraftProjectionWriter;
+    developmentWriter?: PublicDevelopmentProjectionWriter;
     economyWriter?: PublicEconomyProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
@@ -224,6 +236,10 @@ export interface PublicApiOptions {
     finalizedGameAuthorityDids?: ReadonlySet<string>;
     finalizedGameEvidence?: FinalizedGameEvidenceReader["finalizedGameEvidence"];
     finalizedGameScheduleEvidence?: FinalizedGameScheduleEvidenceReader;
+    developmentAuthority?: Omit<
+      DevelopmentProjectionVerificationAuthority,
+      keyof ProjectionVerificationAuthority
+    >;
     verifier: ServiceRequestVerifier;
     now?: () => Date;
   };
@@ -282,7 +298,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ResourceScheduleAuthorizationError" ||
     name === "ReleaseWorkflowAuthorizationError" ||
     name === "DisclosureWorkflowAuthorizationError" ||
-    name === "EconomyWorkflowAuthorizationError"
+    name === "EconomyWorkflowAuthorizationError" ||
+    name === "DevelopmentWorkflowAuthorizationError"
   ) {
     return { status: 403, code: "authorization_denied" };
   }
@@ -294,7 +311,8 @@ function projectionError(error: unknown): { status: number; code: string } {
     name === "ResourceScheduleValidationError" ||
     name === "ReleaseWorkflowValidationError" ||
     name === "DisclosureWorkflowValidationError" ||
-    name === "EconomyWorkflowValidationError"
+    name === "EconomyWorkflowValidationError" ||
+    name === "DevelopmentWorkflowValidationError"
   )
     return { status: 400, code: "invalid_projection" };
   if (name === "ProjectionVersionConflictError")
@@ -310,6 +328,7 @@ export function createPublicApi(
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
     options.draftProjections !== undefined ||
+    options.developmentProjections !== undefined ||
     options.economyProjections !== undefined ||
     options.governanceProjections !== undefined ||
     options.caseProjections !== undefined ||
@@ -500,6 +519,38 @@ export function createPublicApi(
           body: projectionEnvelopeBytes(request.body),
         });
         const topic = projectionTopic(request.body);
+        if (topic === "public.development") {
+          if (
+            projectionIngress.developmentAuthority === undefined ||
+            projectionIngress.developmentWriter === undefined
+          ) {
+            throw new ServiceAuthenticationError(
+              "Development projection authority is not configured",
+            );
+          }
+          const verified = await verifyDevelopmentProjectionEvent(
+            request.body,
+            {
+              ...projectionIngress,
+              ...projectionIngress.developmentAuthority,
+            },
+          );
+          if (headers["x-abl-expected-version"] !== verified.expectedVersion) {
+            throw new ProjectionVersionConflictError(
+              "Signed expected version does not precede the development event",
+            );
+          }
+          const record = await projectionIngress.developmentWriter.publish(
+            verified.envelope,
+            verified.expectedVersion,
+            projectionIngress.now?.().toISOString(),
+          );
+          return reply.code(201).send({
+            accepted: true,
+            canonicalEventHash: verified.event.eventHash,
+            cursor: record.cursor,
+          });
+        }
         if (topic === "public.draft") {
           if (
             projectionIngress.draftAuthorityDid === undefined ||
@@ -898,6 +949,8 @@ export function createPublicApi(
         ];
       } else if (path === "/v1/public/drafts") {
         items = options.draftProjections?.drafts() ?? [];
+      } else if (path === "/v1/public/development") {
+        items = options.developmentProjections?.conferences() ?? [];
       } else if (path === "/v1/public/rosters") {
         const economyRosters = options.economyProjections?.rosters() ?? [];
         items = [

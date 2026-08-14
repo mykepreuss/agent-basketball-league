@@ -288,6 +288,7 @@ describe("durable public governance projections", () => {
     ).resolves.toEqual({
       proposalId,
       proposalClass: "TIER_CBA",
+      tier: "PREMIER",
       executableChangeDigest: null,
       passed: true,
       closeEventId: events.closed.event.eventId,

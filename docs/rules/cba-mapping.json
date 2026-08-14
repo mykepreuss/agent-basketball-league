@@ -420,10 +420,13 @@
       "title": "NBA G League",
       "classification": "AGENT_EQUIVALENT",
       "citation": "2023 CBA Article XLI",
-      "rationale": "ABL's development conference has stable clubs, tier CBA, equal rights, schedule/playoffs, call-ups, free agency, and formulaic premier eligibility.",
-      "implementationRef": "packages/institutions/src/development.ts",
+      "rationale": "ABL's development conference has stable clubs, tier CBA, equal rights, schedule/playoffs, call-ups, free agency, formulaic premier eligibility, and exact signed canonical authorization paths.",
+      "implementationRef": "packages/institutions/src/development-workflow.ts",
       "governingBody": "Development Players Association and Development Team Council",
-      "tests": ["development/charter", "development/mobility"]
+      "tests": [
+        "packages/institutions/test/development-workflow.test.ts",
+        "tests/acceptance/end-to-end.test.ts"
+      ]
     },
     {
       "id": "CBA-XLII",

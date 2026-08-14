@@ -23,6 +23,7 @@ import {
 import {
   FilePublicContractProjectionRepository,
   FilePublicDraftProjectionRepository,
+  FilePublicDevelopmentProjectionRepository,
   FilePublicEconomyProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicCaseProjectionRepository,
@@ -35,6 +36,7 @@ import {
   FilePublicSocialProjectionRepository,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyDevelopmentProjectionEvent,
   verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyCaseProjectionEvent,
@@ -76,28 +78,29 @@ function secret(name: string): Uint8Array {
   return decoded;
 }
 
+const PUBLIC_AGGREGATE_TYPES = [
+  "game-possession",
+  "career-contracts",
+  "governance-proposal",
+  "due-process-case",
+  "resource-schedule",
+  "software-release",
+  "disclosure-envelope",
+  "finalized-game",
+  "combine-result",
+  "premier-draft",
+  "season-economy",
+  "development-conference",
+] as const;
+
 const AgentRegistrySchema = z.record(
   z.string().startsWith("did:"),
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
-      .array(
-        z.enum([
-          "game-possession",
-          "career-contracts",
-          "governance-proposal",
-          "due-process-case",
-          "resource-schedule",
-          "software-release",
-          "disclosure-envelope",
-          "finalized-game",
-          "combine-result",
-          "premier-draft",
-          "season-economy",
-        ]),
-      )
+      .array(z.enum(PUBLIC_AGGREGATE_TYPES))
       .min(1)
-      .max(11)
+      .max(PUBLIC_AGGREGATE_TYPES.length)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -154,6 +157,8 @@ function projectionAuthority(): {
   finalizedGameAuthorityDids: ReadonlySet<string>;
   finalizedGameEvidence: FinalizedGameEvidenceReader["finalizedGameEvidence"];
   finalizedGameScheduleEvidence: FinalizedGameScheduleEvidenceReader;
+  developmentConferenceId: string;
+  developmentCharterAuthorityDid: string;
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -187,6 +192,14 @@ function projectionAuthority(): {
     .string()
     .startsWith("did:")
     .parse(required("ABL_CAP_AUTHORITY_DID"));
+  const developmentConferenceId = z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
+    .parse(required("ABL_DEVELOPMENT_CONFERENCE_ID"));
+  const developmentCharterAuthorityDid = z
+    .string()
+    .startsWith("did:")
+    .parse(required("ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID"));
   const tradeAccessEvidence = createTradeAccessEvidenceReader(
     JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
   );
@@ -292,6 +305,28 @@ function projectionAuthority(): {
     finalizedGameAuthorityDids,
     finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
     finalizedGameScheduleEvidence,
+    developmentConferenceId,
+    developmentCharterAuthorityDid,
+  };
+}
+
+function developmentProjectionAuthority(
+  authority: ReturnType<typeof projectionAuthority>,
+  governance: Pick<
+    FilePublicGovernanceProjectionRepository,
+    "resourceScheduleRatification"
+  >,
+) {
+  return {
+    conferenceId: authority.developmentConferenceId,
+    competitionId: authority.competitionId,
+    seasonId: authority.seasonId,
+    charterAuthorityDid: authority.developmentCharterAuthorityDid,
+    premierClubGovernors: authority.contractClubGovernors,
+    tierCbaRatification: {
+      resourceScheduleRatification: (proposalId: string) =>
+        governance.resourceScheduleRatification(proposalId),
+    },
   };
 }
 
@@ -309,6 +344,9 @@ let releaseProjections: FilePublicReleaseProjectionRepository | undefined;
 let socialProjections: FilePublicSocialProjectionRepository | undefined;
 let checkpointProjections: PublicCheckpointProjectionRepository | undefined;
 let finalGameProjections: FilePublicFinalGameProjectionRepository | undefined;
+let developmentProjections:
+  | FilePublicDevelopmentProjectionRepository
+  | undefined;
 if (projectionRoot !== undefined) {
   const runtimeAuthority = projectionAuthority();
   const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
@@ -345,6 +383,19 @@ if (projectionRoot !== undefined) {
     },
   );
   governanceProjections = governanceRepository;
+  developmentProjections = new FilePublicDevelopmentProjectionRepository(
+    projectionRoot,
+    {
+      verifyAuthorization: async (authorization) =>
+        verifyDevelopmentProjectionEvent(authorization, {
+          ...runtimeAuthority,
+          ...developmentProjectionAuthority(
+            runtimeAuthority,
+            governanceRepository,
+          ),
+        }),
+    },
+  );
   caseProjections = new FilePublicCaseProjectionRepository(projectionRoot, {
     verifyAuthorization: async (authorization) =>
       verifyCaseProjectionEvent(authorization, runtimeAuthority),
@@ -423,6 +474,7 @@ await Promise.all([
 ]);
 await economyProjections?.initialize();
 await Promise.all([
+  developmentProjections?.initialize(),
   resourceProjections?.initialize(),
   releaseProjections?.initialize(),
 ]);
@@ -466,6 +518,7 @@ if (
   releaseProjections !== undefined &&
   socialProjections !== undefined &&
   finalGameProjections !== undefined &&
+  developmentProjections !== undefined &&
   authority !== undefined
 ) {
   const governanceRepository = governanceProjections;
@@ -481,10 +534,15 @@ if (
     releaseWriter: releaseProjections,
     socialWriter: socialProjections,
     finalGameWriter: finalGameProjections,
+    developmentWriter: developmentProjections,
     resourceScheduleRatification: (proposalId) =>
       governanceRepository.resourceScheduleRatification(proposalId),
     releaseRatification: (proposalId) =>
       governanceRepository.releaseRatification(proposalId),
+    developmentAuthority: developmentProjectionAuthority(
+      authority,
+      governanceRepository,
+    ),
     verifier: new ServiceRequestVerifier([
       {
         serviceId: required("ABL_PROJECTION_INGEST_SERVICE_ID"),
@@ -519,6 +577,8 @@ if (checkpointProjections !== undefined)
   apiOptions.checkpointProjections = checkpointProjections;
 if (finalGameProjections !== undefined)
   apiOptions.finalGameProjections = finalGameProjections;
+if (developmentProjections !== undefined)
+  apiOptions.developmentProjections = developmentProjections;
 if (projectionIngress !== undefined)
   apiOptions.projectionIngress = projectionIngress;
 

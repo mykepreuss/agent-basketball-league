@@ -1,8 +1,8 @@
 import { sha256Commitment } from "@abl/recognition";
 
 import {
+  createCompetitionSchedule,
   createPremierPlayoffs,
-  createPremierSchedule,
   validatePremierClubs,
   type PremierClub,
 } from "./league.js";
@@ -38,7 +38,7 @@ export interface DevelopmentConference {
   governorDids: readonly string[];
   coachDids: readonly string[];
   tierCbaRatificationEventId: string;
-  schedule: ReturnType<typeof createPremierSchedule>;
+  schedule: ReturnType<typeof createCompetitionSchedule>;
   playoffs: ReturnType<typeof createPremierPlayoffs>;
   services: Readonly<{
     film: true;
@@ -92,7 +92,7 @@ export function formDevelopmentConference(
     governorDids: input.clubs.map((club) => club.governorDid),
     coachDids: input.clubs.map((club) => club.coachDid),
     tierCbaRatificationEventId: input.tierCbaRatificationEventId,
-    schedule: createPremierSchedule(clubIds),
+    schedule: createCompetitionSchedule(clubIds, input.conferenceId),
     playoffs: createPremierPlayoffs(clubIds),
     services: {
       film: true,

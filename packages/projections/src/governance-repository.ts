@@ -421,6 +421,9 @@ export class FilePublicGovernanceProjectionRepository
     return {
       proposalId,
       proposalClass: state.proposal.proposalClass,
+      ...(state.proposal.tier === undefined
+        ? {}
+        : { tier: state.proposal.tier }),
       executableChangeDigest: state.proposal.executableChangeDigest,
       passed: state.decision.passed,
       closeEventId: closeRecord.authorization.event.eventId,

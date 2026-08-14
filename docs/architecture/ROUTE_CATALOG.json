@@ -130,6 +130,12 @@
     },
     {
       "method": "POST",
+      "path": "/v1/development/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
       "path": "/v1/exit/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"
@@ -167,6 +173,12 @@
     {
       "method": "GET",
       "path": "/v1/public/contracts",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/development",
       "exposure": "PUBLIC_READ_ONLY",
       "service": "abl-public-api"
     },

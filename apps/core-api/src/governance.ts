@@ -341,6 +341,9 @@ export async function readGovernanceRatification(
   return {
     proposalId: snapshot.proposalId,
     proposalClass: snapshot.proposal.proposalClass,
+    ...(snapshot.proposal.tier === undefined
+      ? {}
+      : { tier: snapshot.proposal.tier }),
     proposerDid: snapshot.proposal.proposerDid,
     institution: snapshot.proposal.institution,
     executableChangeDigest: snapshot.proposal.executableChangeDigest,

@@ -40,6 +40,8 @@ import {
 import {
   CONTRACT_WORKFLOW_AGGREGATE_TYPE,
   CONTRACT_WORKFLOW_SCHEMA_DIGEST,
+  DEVELOPMENT_WORKFLOW_AGGREGATE_TYPE,
+  DEVELOPMENT_WORKFLOW_SCHEMA_DIGEST,
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   ECONOMY_WORKFLOW_SCHEMA_DIGEST,
   DISCLOSURE_AGGREGATE_TYPE,
@@ -55,7 +57,9 @@ import {
   RESOURCE_SCHEDULE_SCHEMA_DIGEST,
   RELEASE_WORKFLOW_AGGREGATE_TYPE,
   RELEASE_WORKFLOW_SCHEMA_DIGEST,
+  SEASON_ZERO_MOBILITY_POLICY,
   applyContractWorkflowTransition,
+  applyDevelopmentWorkflowTransition,
   applyEconomyWorkflowTransition,
   applyDisclosureWorkflowTransition,
   applyGovernanceWorkflowTransition,
@@ -65,11 +69,15 @@ import {
   contractOfferCommitment,
   contractWorkflowStateRoot,
   conductEightRoundDraft,
+  createDevelopmentFormationEvidence,
   createEconomyCapCertification,
   disclosureWorkflowStateRoot,
+  developmentTierCbaExecutableDigest,
+  developmentWorkflowStateRoot,
   economyTransactionTermsCommitment,
   economyWorkflowStateRoot,
   evaluateGovernanceWorkflowDecision,
+  expectedDevelopmentSignerDids,
   governanceVoteFromAuthorization,
   governanceWorkflowStateRoot,
   premierDraftStateRoot,
@@ -84,6 +92,7 @@ import {
   type GovernanceWorkflowPayload,
   type GovernanceWorkflowSnapshot,
   type GovernanceVote,
+  type DevelopmentCharterCommand,
   type PremierDraftCompletedPayload,
   type PremierDraftEvidence,
   type ResourceSchedule,
@@ -99,6 +108,7 @@ import { constitutionalInvariants } from "../../packages/policy/src/index.js";
 import {
   FilePublicContractProjectionRepository,
   FilePublicDraftProjectionRepository,
+  FilePublicDevelopmentProjectionRepository,
   FilePublicEconomyProjectionRepository,
   FilePublicFinalGameProjectionRepository,
   FilePublicGovernanceProjectionRepository,
@@ -115,6 +125,7 @@ import {
   projectionEnvelopeFromOutbox,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
+  verifyDevelopmentProjectionEvent,
   verifyEconomyProjectionEvent,
   verifyFinalGameProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -124,6 +135,7 @@ import {
   verifyReleaseProjectionEvent,
   verifySocialProjectionEvent,
   type ContractProjectionEventEnvelope,
+  type DevelopmentProjectionEventEnvelope,
   type EconomyProjectionEventEnvelope,
   type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
@@ -142,6 +154,7 @@ import {
   signCanonicalEvent,
   verifyCheckpointClaim,
   type CanonicalEvent,
+  type SigningIdentity,
 } from "../../packages/recognition/src/index.js";
 import { runPrivateRehearsal } from "../../packages/rehearsal/src/index.js";
 import {
@@ -2965,6 +2978,321 @@ describe("complete local acceptance", () => {
     ]);
   });
 
+  it("carries a 45-career development charter through authenticated durable public history", async () => {
+    const projectionRoot = await mkdtemp(
+      join(tmpdir(), "abl-development-acceptance-"),
+    );
+    const store = new InMemoryCanonicalStore();
+    const conferenceId = "development-conference-acceptance";
+    const competitionId = "development-acceptance";
+    const seasonId = "season-zero";
+    const charterAuthorityDid = "did:abl:development-charter-acceptance";
+    const premierClubGovernors = {
+      "premier-club-acceptance": "did:abl:premier-governor-acceptance",
+    };
+    const clubs = Array.from({ length: 4 }, (_, clubIndex) => ({
+      clubId: `development-acceptance-club-${clubIndex + 1}`,
+      placeholder: `Development Acceptance ${clubIndex + 1}`,
+      playerDids: Array.from(
+        { length: 8 },
+        (_, playerIndex) =>
+          `did:abl:development-acceptance-player-${String(clubIndex * 8 + playerIndex + 1).padStart(2, "0")}`,
+      ),
+      coachDid: `did:abl:development-acceptance-coach-${clubIndex + 1}`,
+      governorDid: `did:abl:development-acceptance-governor-${clubIndex + 1}`,
+    }));
+    const playerDids = clubs
+      .flatMap(({ playerDids: roster }) => [...roster])
+      .sort();
+    const formationEvidence = createDevelopmentFormationEvidence({
+      evidenceId: "0198f900-0000-7000-8000-000000000001",
+      conferenceId,
+      evidenceClass: "LOCAL_REHEARSAL",
+      refereeCapacityCommitment: sha256Commitment(
+        "development-acceptance-referee-capacity",
+      ),
+      replayCapacityCommitment: sha256Commitment(
+        "development-acceptance-replay-capacity",
+      ),
+      refereeAuthorityDid: "did:abl:development-acceptance-referee-capacity",
+      replayAuthorityDid: "did:abl:development-acceptance-replay-capacity",
+      prepaidCompetitionEnvelopeCommitment: sha256Commitment(
+        "development-acceptance-prepaid-envelope",
+      ),
+      blaxelQuotaReservationCommitment: sha256Commitment(
+        "development-acceptance-blaxel-quota",
+      ),
+      resourceAuthorityDid: "did:abl:development-acceptance-resource-capacity",
+      rehearsalCommitments: {
+        game: sha256Commitment("development-acceptance-game-rehearsal"),
+        memory: sha256Commitment("development-acceptance-memory-rehearsal"),
+        government: sha256Commitment(
+          "development-acceptance-government-rehearsal",
+        ),
+        safety: sha256Commitment("development-acceptance-safety-rehearsal"),
+      },
+      rehearsalAuthorityDid: "did:abl:development-acceptance-rehearsal-office",
+      livePlatformEvidenceVerified: false,
+    });
+    const tierCba = {
+      proposalId: "0198f900-0000-7000-8000-000000000002",
+      closeEventId: "0198f900-0000-7000-8000-000000000003",
+      executableChangeDigest: developmentTierCbaExecutableDigest({
+        conferenceId,
+        mobilityPolicyCommitment: SEASON_ZERO_MOBILITY_POLICY.policyCommitment,
+      }),
+    };
+    const charter: DevelopmentCharterCommand = {
+      conferenceId,
+      competitionId,
+      seasonId,
+      clubs,
+      consentingEligiblePlayerDids: playerDids,
+      tierCba,
+      mobilityPolicy: SEASON_ZERO_MOBILITY_POLICY,
+      formationEvidence,
+      authorizedByDids: [
+        charterAuthorityDid,
+        ...playerDids,
+        ...clubs.map(({ governorDid }) => governorDid),
+        ...clubs.map(({ coachDid }) => coachDid),
+        formationEvidence.refereeAuthorityDid,
+        formationEvidence.replayAuthorityDid,
+        formationEvidence.resourceAuthorityDid,
+        formationEvidence.rehearsalAuthorityDid,
+      ],
+      charteredAt: "2026-08-13T15:00:00.000Z",
+    };
+    const payload = { command: charter };
+    const signerDids = expectedDevelopmentSignerDids(
+      "DevelopmentConferenceChartered",
+      payload,
+      { charterAuthorityDid, premierClubGovernors },
+    );
+    expect(signerDids).toHaveLength(45);
+    const signers = new Map<string, SigningIdentity>(
+      signerDids.map((did, index) => [
+        did,
+        createSigningIdentity(
+          `0x${(index + 201).toString(16).padStart(64, "0")}` as `0x${string}`,
+        ),
+      ]),
+    );
+    const admittedAgents = new Map(
+      [...signers].map(([did, identity]) => [
+        did,
+        {
+          signerAddress: identity.address,
+          allowedAggregateTypes: [DEVELOPMENT_WORKFLOW_AGGREGATE_TYPE],
+        },
+      ]),
+    );
+    const transitionEvent = {
+      actorDid: charterAuthorityDid,
+      aggregateId: conferenceId,
+      aggregateVersion: 1n,
+      eventType: "DevelopmentConferenceChartered" as const,
+      timestamp: charter.charteredAt,
+    };
+    const snapshot = applyDevelopmentWorkflowTransition(
+      null,
+      transitionEvent,
+      payload,
+    );
+    const event = createCanonicalEvent({
+      eventId: "0198f900-0000-7000-8000-000000000004",
+      actorDid: charterAuthorityDid,
+      nonce: "development-acceptance-charter",
+      idempotencyKey: "0198f900-0000-7000-8000-000000000005",
+      aggregateType: DEVELOPMENT_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: conferenceId,
+      aggregateVersion: 1n,
+      eventType: "DevelopmentConferenceChartered",
+      previousEventHash: null,
+      payload,
+      stateRoot: developmentWorkflowStateRoot(snapshot),
+      schemaDigest: DEVELOPMENT_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: charter.charteredAt,
+    });
+    const signatures = await Promise.all(
+      signerDids.map((did) =>
+        signCanonicalEvent(
+          signers.get(did)!,
+          REHEARSAL_RECOGNITION_DOMAIN,
+          event,
+        ),
+      ),
+    );
+    const envelope: DevelopmentProjectionEventEnvelope = {
+      version: "1.0.0",
+      topic: "public.development",
+      event: {
+        ...event,
+        aggregateType: DEVELOPMENT_WORKFLOW_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: "DevelopmentConferenceChartered",
+        schemaDigest: DEVELOPMENT_WORKFLOW_SCHEMA_DIGEST,
+      },
+      signatures,
+    };
+    const tierCbaRatification = {
+      resourceScheduleRatification: async (proposalId: string) =>
+        proposalId === tierCba.proposalId
+          ? {
+              proposalId,
+              proposalClass: "TIER_CBA" as const,
+              tier: "DEVELOPMENT" as const,
+              executableChangeDigest: tierCba.executableChangeDigest,
+              passed: true,
+              closeEventId: tierCba.closeEventId,
+            }
+          : null,
+    };
+    const developmentAuthority = {
+      conferenceId,
+      competitionId,
+      seasonId,
+      charterAuthorityDid,
+      premierClubGovernors,
+      tierCbaRatification,
+    };
+    const coreApi = createLiveCoreApi({
+      store,
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents,
+      competitionId,
+      seasonId,
+      development: developmentAuthority,
+    });
+    const accepted = await coreApi.inject({
+      method: "POST",
+      url: "/v1/development/charter",
+      payload: {
+        event: { ...event, aggregateVersion: "1" },
+        signatures,
+      },
+    });
+    expect(accepted.statusCode).toBe(201);
+    expect(
+      await store.pendingProjectionEvents(10, "public.development"),
+    ).toHaveLength(1);
+
+    const projectionAuthority = {
+      domain: REHEARSAL_RECOGNITION_DOMAIN,
+      admittedAgents,
+      ...developmentAuthority,
+    };
+    const games = new FilePublicProjectionRepository(projectionRoot);
+    const developments = new FilePublicDevelopmentProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization) =>
+          verifyDevelopmentProjectionEvent(authorization, projectionAuthority),
+      },
+    );
+    await Promise.all([games.initialize(), developments.initialize()]);
+    const serviceNow = Date.parse("2026-08-13T15:00:05.000Z");
+    const projectionIdentity = {
+      serviceId: "core-development-projection-publisher",
+      secret: new TextEncoder().encode("v".repeat(32)),
+      capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
+    };
+    const publicApi = createPublicApi({
+      projections: games,
+      developmentProjections: developments,
+      projectionIngress: {
+        writer: games,
+        developmentWriter: developments,
+        developmentAuthority,
+        verifier: new ServiceRequestVerifier([projectionIdentity], {
+          now: () => serviceNow,
+        }),
+        now: () => new Date(serviceNow),
+        domain: REHEARSAL_RECOGNITION_DOMAIN,
+        admittedAgents,
+      },
+    });
+    const unsignedIngress = await publicApi.inject({
+      method: "POST",
+      url: PROJECTION_APPEND_PATH,
+      headers: { "x-abl-expected-version": "0" },
+      payload: envelope,
+    });
+    expect(unsignedIngress.statusCode).toBe(403);
+    expect(developments.conferences()).toEqual([]);
+
+    const publicAddress = await publicApi.listen({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const worker = new PublicProjectionWorker({
+        store,
+        sink: new HttpProjectionEventSink({
+          origin: publicAddress,
+          identity: projectionIdentity,
+          now: () => serviceNow,
+          createNonce: () => "development-acceptance-transport",
+          allowHttpForTest: true,
+        }),
+        now: () => new Date(serviceNow),
+        domain: REHEARSAL_RECOGNITION_DOMAIN,
+        admittedAgents,
+        developmentAuthority,
+      });
+      expect(await worker.drain()).toBe(1);
+      const developmentResponse = (await (
+        await fetch(new URL("/v1/public/development", publicAddress))
+      ).json()) as {
+        items: Array<{
+          clubs: unknown[];
+          conference: {
+            schedule: unknown[];
+            playoffs: unknown[];
+          };
+        }>;
+      };
+      expect(developmentResponse).toMatchObject({
+        state: "REHEARSAL",
+        canonical: true,
+        items: [
+          {
+            conferenceId,
+            aggregateVersion: "1",
+            recognizedGenesisConference: false,
+            formationEvidence: {
+              evidenceClass: "LOCAL_REHEARSAL",
+              livePlatformEvidenceVerified: false,
+            },
+          },
+        ],
+      });
+      expect(developmentResponse.items[0]!.clubs).toHaveLength(4);
+      expect(developmentResponse.items[0]!.conference.schedule).toHaveLength(
+        36,
+      );
+      expect(developmentResponse.items[0]!.conference.playoffs).toHaveLength(3);
+    } finally {
+      await Promise.all([publicApi.close(), coreApi.close()]);
+    }
+
+    const restarted = new FilePublicDevelopmentProjectionRepository(
+      projectionRoot,
+      {
+        verifyAuthorization: (authorization) =>
+          verifyDevelopmentProjectionEvent(authorization, projectionAuthority),
+      },
+    );
+    await restarted.initialize();
+    expect(restarted.conferences()).toMatchObject([
+      {
+        conferenceId,
+        canonicalEventHash: event.eventHash,
+        recognizedGenesisConference: false,
+      },
+    ]);
+  });
+
   it("exports all 43 primary schemas as fail-closed strict JSON Schema", () => {
     expect(Object.keys(schemaRegistry)).toHaveLength(43);
     const jsonSchemas = exportJsonSchemas();
@@ -3035,6 +3363,7 @@ describe("complete local acceptance", () => {
       "POST /v1/film/*",
       "POST /v1/practice/*",
       "POST /v1/contracts/*",
+      "POST /v1/development/*",
       "POST /v1/governance/*",
       "POST /v1/resources/*",
       "POST /v1/releases/*",
@@ -3047,6 +3376,7 @@ describe("complete local acceptance", () => {
       "GET /v1/public/rosters",
       "GET /v1/public/contracts",
       "GET /v1/public/drafts",
+      "GET /v1/public/development",
       "GET /v1/public/governance",
       "GET /v1/public/resources",
       "GET /v1/public/social",

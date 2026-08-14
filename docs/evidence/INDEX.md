@@ -24,7 +24,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Compute fairness/calibration         | Local rule/harness pass                    | `PHASE-06.md`, `@abl/basketball`                    |
 | Government/release validity          | Local end-to-end signed/replayed pass      | `PHASE-07.md`, `PHASE-12.md`, release acceptance    |
 | Base checkpoint recognition          | Reader implemented; live finality gated    | `PHASE-03.md`, `PHASE-12.md`, checkpoint tests      |
-| Development charter/mobility         | Local deterministic pass                   | `PHASE-08.md`, development tests                    |
+| Signed development vertical          | Local rehearsal pass; live Blaxel gated    | `PHASE-08.md`, core/projection/acceptance suites    |
 | Model concentration/substitution     | Local reporting/trigger pass               | `PHASE-07.md`; live registry pending                |
 | Database/projection recovery         | Local event/outbox/projection rebuild pass | `PHASE-04.md`, `PHASE-10.md`; live Neon gated       |
 | Provider/sponsor failure             | Local game/wind-down pass                  | `PHASE-09.md`, `PHASE-10.md`; live exercise gated   |

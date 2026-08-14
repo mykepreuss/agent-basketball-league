@@ -34,6 +34,11 @@ export const SignedCanonicalMultiCommandSchema = z.strictObject({
   signatures: z.array(CanonicalSignatureSchema).min(1).max(5),
 });
 
+export const SignedCanonicalAssemblyCommandSchema = z.strictObject({
+  event: CanonicalEventSchema,
+  signatures: z.array(CanonicalSignatureSchema).min(1).max(45),
+});
+
 export function materializeCanonicalEvent(
   event: z.infer<typeof CanonicalEventSchema>,
 ): CanonicalEvent {

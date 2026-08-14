@@ -41,6 +41,7 @@ export interface ResourceScheduleSnapshot {
 export interface ResourceScheduleRatification {
   proposalId: string;
   proposalClass: string;
+  tier?: "PREMIER" | "DEVELOPMENT";
   executableChangeDigest: string | null;
   passed: boolean;
   closeEventId: string;

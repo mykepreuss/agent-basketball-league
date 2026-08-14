@@ -49,6 +49,12 @@ spec:
       - name: ABL_SEASON_ID
         value: ${ABL_SEASON_ID}
         secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
       - name: ABL_CAP_AUTHORITY_DID
         value: ${ABL_CAP_AUTHORITY_DID}
         secret: false

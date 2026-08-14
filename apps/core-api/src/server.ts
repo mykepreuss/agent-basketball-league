@@ -65,6 +65,10 @@ import {
   type DisclosureRehearsalOptions,
 } from "./disclosures.js";
 import {
+  installDevelopmentRehearsalRoutes,
+  type DevelopmentRehearsalOptions,
+} from "./development.js";
+import {
   installDraftRehearsalRoutes,
   type DraftRehearsalOptions,
 } from "./draft.js";
@@ -116,6 +120,7 @@ export const CORE_ROUTE_CATALOG: readonly CoreRouteCatalogEntry[] = [
   { method: "POST", path: "/v1/film/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/practice/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/contracts/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/development/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/governance/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/resources/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/releases/*", authority: "ADMITTED_AGENT" },
@@ -157,6 +162,13 @@ export interface LiveCoreApiOptions {
     | "playerDids"
     | "freeAgencyWindow"
     | "tradeAccessEvidence"
+  >;
+  development?: Pick<
+    DevelopmentRehearsalOptions,
+    | "conferenceId"
+    | "charterAuthorityDid"
+    | "premierClubGovernors"
+    | "tierCbaRatification"
   >;
   disclosures?: Pick<
     DisclosureRehearsalOptions,
@@ -300,6 +312,7 @@ export function createLiveCoreApi(
     continuity,
     contracts,
     disclosures,
+    development,
     draft,
     economy,
     exit,
@@ -573,6 +586,17 @@ export function createLiveCoreApi(
       now,
       candidateAdmission,
       clubGovernors: contracts.clubGovernors,
+    });
+  }
+  if (development !== undefined) {
+    installDevelopmentRehearsalRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      ...development,
     });
   }
   if (candidateAdmission !== undefined && memory !== undefined) {

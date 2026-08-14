@@ -53,31 +53,32 @@ function secret(name: string): Uint8Array {
   return decoded;
 }
 
+const ADMITTED_AGGREGATE_TYPES = [
+  "game-possession",
+  "career-contracts",
+  "governance-proposal",
+  "due-process-case",
+  "resource-schedule",
+  "software-release",
+  "artifact-admission",
+  "disclosure-envelope",
+  "finalized-game",
+  "private-film-catalog",
+  "private-practice-ledger",
+  "combine-result",
+  "premier-draft",
+  "season-economy",
+  "development-conference",
+] as const;
+
 const AdmittedAgentsSchema = z.record(
   z.string().startsWith("did:"),
   z.strictObject({
     signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     allowedAggregateTypes: z
-      .array(
-        z.enum([
-          "game-possession",
-          "career-contracts",
-          "governance-proposal",
-          "due-process-case",
-          "resource-schedule",
-          "software-release",
-          "artifact-admission",
-          "disclosure-envelope",
-          "finalized-game",
-          "private-film-catalog",
-          "private-practice-ledger",
-          "combine-result",
-          "premier-draft",
-          "season-economy",
-        ]),
-      )
+      .array(z.enum(ADMITTED_AGGREGATE_TYPES))
       .min(1)
-      .max(14)
+      .max(ADMITTED_AGGREGATE_TYPES.length)
       .refine((types) => new Set(types).size === types.length),
   }),
 );
@@ -190,6 +191,14 @@ const app = rehearsal
         .string()
         .startsWith("did:")
         .parse(required("ABL_CAP_AUTHORITY_DID"));
+      const developmentConferenceId = z
+        .string()
+        .regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
+        .parse(required("ABL_DEVELOPMENT_CONFERENCE_ID"));
+      const developmentCharterAuthorityDid = z
+        .string()
+        .startsWith("did:")
+        .parse(required("ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID"));
       const tradeAccessEvidence = createTradeAccessEvidenceReader(
         JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
       );
@@ -275,6 +284,19 @@ const app = rehearsal
           capabilities: new Set(["projection:append"]),
         },
       });
+      const resourceScheduleRatification = (proposalId: string) =>
+        readResourceScheduleRatification(
+          {
+            store,
+            domain: authority.domain,
+            competitionId,
+            seasonId,
+            candidateAdmission,
+            eligibilitySnapshot: governanceEligibilitySnapshot,
+          },
+          proposalId,
+        );
+      const tierCbaRatification = { resourceScheduleRatification };
       const worker = new PublicProjectionWorker({
         store,
         sink: projectionSink,
@@ -284,30 +306,8 @@ const app = rehearsal
         ),
         caseTribunalDids,
         caseAppellateDids,
-        resourceScheduleRatification: (proposalId) =>
-          readResourceScheduleRatification(
-            {
-              store,
-              domain: authority.domain,
-              competitionId,
-              seasonId,
-              candidateAdmission,
-              eligibilitySnapshot: governanceEligibilitySnapshot,
-            },
-            proposalId,
-          ),
-        releaseRatification: (proposalId) =>
-          readResourceScheduleRatification(
-            {
-              store,
-              domain: authority.domain,
-              competitionId,
-              seasonId,
-              candidateAdmission,
-              eligibilitySnapshot: governanceEligibilitySnapshot,
-            },
-            proposalId,
-          ),
+        resourceScheduleRatification,
+        releaseRatification: resourceScheduleRatification,
         releaseInstitutionalRoster,
         disclosureReleaseAuthorityDids,
         competitiveDisclosureAuthorDids,
@@ -319,6 +319,14 @@ const app = rehearsal
         draftAuthorityDid,
         draftClubGovernors: contractClubGovernors,
         premierDraftEvidence: draftEvidence.premierDraftEvidence,
+        developmentAuthority: {
+          conferenceId: developmentConferenceId,
+          competitionId,
+          seasonId,
+          charterAuthorityDid: developmentCharterAuthorityDid,
+          premierClubGovernors: contractClubGovernors,
+          tierCbaRatification,
+        },
         ...authority,
       });
       projectionTimer = setInterval(() => {
@@ -359,6 +367,12 @@ const app = rehearsal
             closesAt: required("ABL_FREE_AGENCY_CLOSES_AT"),
           },
           tradeAccessEvidence,
+        },
+        development: {
+          conferenceId: developmentConferenceId,
+          charterAuthorityDid: developmentCharterAuthorityDid,
+          premierClubGovernors: contractClubGovernors,
+          tierCbaRatification,
         },
         memory: {
           storageVerifier: privateStorageVerifier,

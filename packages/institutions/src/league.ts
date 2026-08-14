@@ -119,11 +119,14 @@ export interface ScheduledGame {
   meeting: number;
 }
 
-export function createPremierSchedule(
+export function createCompetitionSchedule(
   clubIds: readonly string[],
+  gameIdPrefix: string,
 ): readonly ScheduledGame[] {
   if (clubIds.length !== 4 || new Set(clubIds).size !== 4)
     throw new Error("Schedule requires four distinct clubs");
+  if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(gameIdPrefix))
+    throw new Error("Schedule game ID prefix is invalid");
   const rounds = [
     [
       [0, 3],
@@ -154,7 +157,7 @@ export function createPremierSchedule(
         ? [clubIds[right]!, clubIds[left]!]
         : [clubIds[left]!, clubIds[right]!];
       games.push({
-        gameId: `premier-w${Math.floor(roundIndex / 2) + 1}-r${roundIndex + 1}-g${pairIndex + 1}`,
+        gameId: `${gameIdPrefix}-w${Math.floor(roundIndex / 2) + 1}-r${roundIndex + 1}-g${pairIndex + 1}`,
         week: Math.floor(roundIndex / 2) + 1,
         round: roundIndex + 1,
         homeClubId,
@@ -164,6 +167,12 @@ export function createPremierSchedule(
     }
   }
   return games;
+}
+
+export function createPremierSchedule(
+  clubIds: readonly string[],
+): readonly ScheduledGame[] {
+  return createCompetitionSchedule(clubIds, "premier");
 }
 
 export interface PlayoffSeries {
@@ -224,16 +233,10 @@ export function validatePremierClubs(clubs: readonly PremierClub[]): void {
     throw new Error(
       "Premier requires four eight-player rosters with 32 distinct players",
     );
-  if (
-    new Set(clubs.map((club) => club.coachDid)).size !== 4 ||
-    new Set(clubs.map((club) => club.governorDid)).size !== 4
-  )
+  const officeDids = clubs.flatMap((club) => [club.coachDid, club.governorDid]);
+  if (new Set(officeDids).size !== 8)
     throw new Error("Coaches and governors must be independent per club");
-  if (
-    players.some((did) =>
-      clubs.some((club) => club.coachDid === did || club.governorDid === did),
-    )
-  )
+  if (players.some((did) => officeDids.includes(did)))
     throw new Error(
       "Players cannot simultaneously hold founding coach/governor roles",
     );
