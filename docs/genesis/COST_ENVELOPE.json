@@ -1,0 +1,46 @@
+{
+  "state": "UNQUOTED_MATERIAL_SPEND_APPROVAL_REQUIRED",
+  "currency": "USD",
+  "providerQuotes": [
+    {
+      "provider": "BLAXEL",
+      "quoteReference": null,
+      "validUntil": null,
+      "seasonZeroCost": null,
+      "thirtyDayEssentialCost": null
+    },
+    {
+      "provider": "NEON",
+      "quoteReference": null,
+      "validUntil": null,
+      "seasonZeroCost": null,
+      "thirtyDayEssentialCost": null
+    },
+    {
+      "provider": "BASE",
+      "quoteReference": null,
+      "validUntil": null,
+      "seasonZeroCost": null,
+      "thirtyDayEssentialCost": null
+    },
+    {
+      "provider": "MODEL_PRIMARY",
+      "quoteReference": null,
+      "validUntil": null,
+      "seasonZeroCost": null,
+      "thirtyDayEssentialCost": null
+    },
+    {
+      "provider": "MODEL_ALTERNATE",
+      "quoteReference": null,
+      "validUntil": null,
+      "seasonZeroCost": null,
+      "thirtyDayEssentialCost": null
+    }
+  ],
+  "seasonZeroEnvelope": null,
+  "thirtyDayWindDownReserve": null,
+  "prepaid": false,
+  "sponsorAuthorityGranted": false,
+  "materialSpendApproved": false
+}

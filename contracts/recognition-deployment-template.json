@@ -1,0 +1,61 @@
+{
+  "mode": "PREPARE_ONLY_INCOMPLETE_NO_BROADCAST",
+  "chainId": 84532,
+  "transaction": null,
+  "exactTransactionCommand": "pnpm contract:prepare -- <ratified-genesis-config.json> <deployment-artifact.json>",
+  "compiler": {
+    "version": "0.8.36+commit.8a079791.Emscripten.clang",
+    "inputSha256": "140fbc82bdba17f3af843821ef2af1abfa3b912c519e9e3871653f5308849555"
+  },
+  "contract": {
+    "sourceSha256": "1b0bc5e15ee1864d5437ebc2c61b88744db9c04f2981c085d804a16a6d43b15b",
+    "creationBytecodeSha256": "1a7c150a90d3bb9805f382b617243ad6fea38caf752dead110f09f53677de7a0",
+    "creationBytecodeKeccak256": "0xd0fc5551c5445266e28d59cf09cfb2dba0b2747a0cb3ed6e211243eb62806889",
+    "deployedRuntimeBytecodeKeccak256": null,
+    "callableFunctions": [
+      "CHECKPOINT_TYPEHASH",
+      "KEY_REGISTRY",
+      "checkpointDigest",
+      "constitutionDigest",
+      "currentRegistryRoot",
+      "domainSeparator",
+      "getCurrentCheckpointTypes",
+      "getCurrentSigners",
+      "latestRootBySubject",
+      "policies",
+      "recognize",
+      "rotateRegistry",
+      "signerRoles",
+      "usedNonces",
+      "verifierDigest"
+    ],
+    "constructorInputs": [
+      "bytes32",
+      "bytes32",
+      "address[]",
+      "uint8[]",
+      "bytes32[]",
+      "tuple[]"
+    ],
+    "ownerAdminUpgradeSurfaceAbsent": true
+  },
+  "missingRatifiedInputs": [
+    "constitution digest",
+    "verifier digest",
+    "institutional signer addresses",
+    "role masks",
+    "checkpoint policies"
+  ],
+  "postDeploymentEvidenceRequired": [
+    "deployed contract address",
+    "successful deployment receipt and block",
+    "deployed runtime bytecode hash from eth_getCode",
+    "Base finalized-head evidence"
+  ],
+  "irreversibleConsequences": [
+    "The constructor permanently fixes constitution and verifier digests.",
+    "No owner, deployer, sponsor, proxy, pause, or upgrade authority exists.",
+    "An incorrect genesis registry cannot be repaired by a human administrator.",
+    "A replacement requires the recognized key-registry threshold or a separately labeled fork."
+  ]
+}

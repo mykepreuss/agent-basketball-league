@@ -1,0 +1,27 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Job
+metadata:
+  name: abl-private-recovery-verifier
+  labels:
+    abl-workspace-role: private
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_RECOVERY_JOB_IMAGE_DIGEST}
+    memory: 4096
+    envs:
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

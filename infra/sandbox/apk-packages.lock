@@ -1,0 +1,4 @@
+ca-certificates=20260611-r0
+libcap=2.78-r0
+nftables=1.1.6-r1
+su-exec=0.3-r0

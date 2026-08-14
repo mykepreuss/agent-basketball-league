@@ -1,0 +1,123 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: abl-public-api
+  labels:
+    abl-workspace-role: public
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: true
+  region: us-was-1
+  volumes:
+    - name: ${ABL_PUBLIC_PROJECTION_VOLUME_NAME}
+      mountPath: /mnt/abl-public-projections
+  runtime:
+    generation: mk3
+    image: ${ABL_PUBLIC_API_IMAGE_DIGEST}
+    memory: 4096
+    minScale: 1
+    maxScale: 1
+    envs:
+      - name: ABL_PUBLIC_PROJECTION_ROOT
+        value: /mnt/abl-public-projections
+        secret: false
+      - name: ABL_PROJECTION_INGEST_SERVICE_ID
+        value: core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_INGEST_HMAC_BASE64
+        value: ${ABL_CORE_PUBLIC_PROJECTION_HMAC_BASE64}
+        secret: true
+      - name: ABL_PROJECTION_VERIFY_KEY_REGISTRY
+        value: ${ABL_PROJECTION_VERIFY_KEY_REGISTRY}
+        secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_DRAFT_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_ECONOMY_DRAFT_ID}
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: ${ABL_COMPETITION_ID}
+        secret: false
+      - name: ABL_SEASON_ID
+        value: ${ABL_SEASON_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_TRADE_ACCESS_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST
+        value: ${ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST}
+        secret: false
+      - name: ABL_CASE_TRIBUNAL_DIDS_JSON
+        value: ${ABL_CASE_TRIBUNAL_DIDS_JSON}
+        secret: false
+      - name: ABL_CASE_APPELLATE_DIDS_JSON
+        value: ${ABL_CASE_APPELLATE_DIDS_JSON}
+        secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON
+        value: ${ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON
+        value: ${ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_PUBLICATIONS_JSON
+        value: ${ABL_CHECKPOINT_PUBLICATIONS_JSON}
+        secret: false
+      - name: ABL_BASE_RPC_URL
+        value: ${ABL_BASE_RPC_URL}
+        secret: true
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

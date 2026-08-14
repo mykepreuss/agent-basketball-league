@@ -1,0 +1,36 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: ${ABL_ARENA_NAME}
+  labels:
+    abl-workspace-role: competition-arena
+    abl-game-id: ${ABL_GAME_ID}
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  region: us-was-1
+  network:
+    allowedDomains:
+      - ${ABL_CORE_HOST}
+      - ${ABL_BODY_HOST}
+    proxy:
+      routing: []
+      bypass: []
+  runtime:
+    image: ${ABL_ARENA_SANDBOX_IMAGE_DIGEST}
+    memory: 8192
+    envs:
+      - name: ABL_GAME_ID
+        value: ${ABL_GAME_ID}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

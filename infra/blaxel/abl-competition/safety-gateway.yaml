@@ -1,0 +1,61 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: abl-safety-gateway
+  labels:
+    abl-workspace-role: fixed-safety-boundary
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: true
+  region: us-was-1
+  volumes:
+    - name: ${ABL_SAFETY_LEDGER_VOLUME_NAME}
+      mountPath: /mnt/abl-safety
+  runtime:
+    generation: mk3
+    image: ${ABL_SAFETY_GATEWAY_IMAGE_DIGEST}
+    memory: 1024
+    minScale: 1
+    maxScale: 1
+    envs:
+      - name: ABL_SAFETY_LEDGER_ROOT
+        value: /mnt/abl-safety
+        secret: false
+      - name: ABL_SAFETY_CUSTODIAN_PUBLIC_KEYS_JSON
+        value: ${ABL_SAFETY_CUSTODIAN_PUBLIC_KEYS_JSON}
+        secret: false
+      - name: ABL_SAFETY_DOMAIN_CHAIN_ID
+        value: ${ABL_SAFETY_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_SAFETY_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_SAFETY_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+  triggers:
+    - id: safety-action-submit
+      type: http
+      configuration:
+        authenticationType: public
+        path: /v1/safety/actions
+    - id: safety-control-read
+      type: http
+      configuration:
+        authenticationType: public
+        path: /v1/safety/controls
+    - id: safety-health
+      type: http
+      configuration:
+        authenticationType: public
+        path: /health

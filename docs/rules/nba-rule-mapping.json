@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "mappingVersion": "1.0.0-pre-genesis",
+  "source": {
+    "title": "NBA Official Rulebook",
+    "url": "https://official.nba.com/rulebook/",
+    "verifiedAt": "2026-08-12T23:00:00-07:00",
+    "copyrightNote": "Only titles and implementation classifications are recorded; protected rule prose is not redistributed."
+  },
+  "entries": [
+    {
+      "id": "NBA-RULE-1",
+      "title": "Court Dimensions - Equipment",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 1",
+      "rationale": "ABL models a fixed-point two-dimensional court, baskets, boundary, ball, and clocks rather than physical equipment; ball-handler boundary exits are derived from attempted movement.",
+      "implementationRef": "packages/basketball/src/engine.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/possession.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-2",
+      "title": "Duties of the Officials",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 2",
+      "rationale": "Three fallible referee agents and two bounded replay agents perform separated structured duties; assigned identities, evidence context, cognition receipts, and EIP-712 calls are verified before resolution.",
+      "implementationRef": "packages/basketball/src/engine.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-3",
+      "title": "Players, Substitutes and Coaches",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 3",
+      "rationale": "ABL enforces active-five lineups, legal rosters, substitutions, coaches, ejections, and participation eligibility.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-4",
+      "title": "Definitions",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 4",
+      "rationale": "Basketball terms are mapped to deterministic simulation concepts and versioned schemas.",
+      "implementationRef": "packages/basketball/src/types.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/possession.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-5",
+      "title": "Scoring and Timing",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 5",
+      "rationale": "ABL uses four 12-minute quarters, scoring, game clock, overtime, and deterministic clock transitions.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-6",
+      "title": "Putting Ball in Play - Live/Dead Ball",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 6",
+      "rationale": "The game state machine explicitly records held balls, jump-ball winners, awarded throw-ins, live/dead transitions, possession, and clocks.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-7",
+      "title": "Shot Clock",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 7",
+      "rationale": "A deterministic 24-second clock, resets, violations, and review evidence are recorded in events.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-8",
+      "title": "Out-of-Bounds and Throw-In",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 8",
+      "rationale": "Ball-handler boundary exits are derived from fixed-point movement; signed official last-touch calls award an explicit team-bound throw-in restart.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-9",
+      "title": "Free Throws and Penalties",
+      "classification": "IMPLEMENTED",
+      "citation": "NBA Official Rulebook, Rule 9",
+      "rationale": "Foul penalties, team-foul bonus thresholds, explicit free-throw lane activity, attempts, possession restarts, and deterministic shot resolution are modeled.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-10",
+      "title": "Violations and Penalties",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 10",
+      "rationale": "The engine derives clock and ball-handler boundary violations. Other enumerated violations are versioned signed officiating decisions applied deterministically; it does not claim continuous-physics derivation for every violation subtype.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-11",
+      "title": "Basket Interference - Goaltending",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 11",
+      "rationale": "Goaltending is a reviewable signed officiating fact whose points, possession, challenge, and reversal effects are deterministic. Season Zero does not claim a continuous ball-trajectory physics model.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-12",
+      "title": "Fouls and Penalties",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 12",
+      "rationale": "Signed contact/conduct calls drive personal and per-period team fouls, bonus free throws, technicals, flagrants, ejections, and deterministic penalties.",
+      "implementationRef": "packages/basketball/src/full-game.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-13",
+      "title": "Instant Replay",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 13",
+      "rationale": "Two replay agents receive enhanced committed evidence and may reverse only a versioned reviewable class.",
+      "implementationRef": "packages/basketball/src/officiating.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-RULE-14",
+      "title": "Coach's Challenge",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Rule 14",
+      "rationale": "The command state machine enforces available challenges, latest-event targeting, reviewable classes, and exact replay correction; coach identities use signed decision authority at the competition boundary.",
+      "implementationRef": "packages/basketball/src/officiating.ts",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/basketball/test/full-game.test.ts"]
+    },
+    {
+      "id": "NBA-COMMENTS",
+      "title": "Comments on the Rules",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "NBA Official Rulebook, Comments on the Rules",
+      "rationale": "Interpretive concepts are encoded as cited versioned tests and ratifiable rule guidance, not copied prose.",
+      "implementationRef": "docs/rules/nba-rule-mapping.json",
+      "governingBody": "Competition Rules Committee",
+      "tests": ["packages/policy/test/mappings.test.ts"]
+    }
+  ]
+}

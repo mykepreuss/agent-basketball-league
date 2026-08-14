@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0-pre-genesis",
+  "identities": [
+    {
+      "idPattern": "competition-body-{career-id}",
+      "workspace": "abl-competition",
+      "secretReference": "body-{career-id}-core-hmac-v1",
+      "allowedTargets": [
+        { "workspace": "abl-core", "capabilities": ["core:command"] },
+        { "workspace": "abl-private", "capabilities": ["private:ciphertext"] }
+      ],
+      "forbiddenCapabilities": [
+        "database:connect",
+        "drive:raw",
+        "release:recognize",
+        "projection:publish"
+      ]
+    },
+    {
+      "idPattern": "competition-arena-{game-id}",
+      "workspace": "abl-competition",
+      "secretReference": "arena-{game-id}-core-hmac-v1",
+      "allowedTargets": [
+        { "workspace": "abl-core", "capabilities": ["core:game-command"] }
+      ],
+      "forbiddenCapabilities": [
+        "database:connect",
+        "drive:raw",
+        "private:plaintext",
+        "release:recognize"
+      ]
+    },
+    {
+      "idPattern": "core-projection-publisher",
+      "workspace": "abl-core",
+      "secretReference": "core-public-projection-hmac-v1",
+      "allowedTargets": [
+        { "workspace": "abl-public", "capabilities": ["projection:append"] }
+      ],
+      "forbiddenCapabilities": [
+        "private:plaintext",
+        "agent:invoke",
+        "public:command"
+      ]
+    },
+    {
+      "idPattern": "core-memory-verifier",
+      "workspace": "abl-core",
+      "secretReference": "core-private-storage-hmac-v1",
+      "allowedTargets": [
+        {
+          "workspace": "abl-private",
+          "capabilities": ["private:commitment:verify"]
+        }
+      ],
+      "forbiddenCapabilities": [
+        "private:ciphertext",
+        "private:plaintext",
+        "drive:raw",
+        "agent:invoke"
+      ]
+    },
+    {
+      "idPattern": "core-exit-portability-verifier",
+      "workspace": "abl-core",
+      "secretReference": "core-exit-portability-hmac-v1",
+      "allowedTargets": [
+        {
+          "workspace": "abl-private",
+          "capabilities": ["exit:portability:verify"]
+        }
+      ],
+      "forbiddenCapabilities": [
+        "private:ciphertext",
+        "private:plaintext",
+        "drive:raw",
+        "core:command"
+      ]
+    },
+    {
+      "idPattern": "private-release-publisher",
+      "workspace": "abl-private",
+      "secretReference": "private-public-release-hmac-v1",
+      "allowedTargets": [
+        {
+          "workspace": "abl-public",
+          "capabilities": ["released-ciphertext:append"]
+        }
+      ],
+      "forbiddenCapabilities": [
+        "database:connect",
+        "game:resolve",
+        "agent:invoke"
+      ]
+    }
+  ],
+  "transport": {
+    "algorithm": "HMAC-SHA256",
+    "canonicalFormat": "ABL-SERVICE-REQUEST-V1",
+    "maximumClockSkewSeconds": 60,
+    "nonceReplayPolicy": "single-use per service identity",
+    "binds": [
+      "service-id",
+      "capability",
+      "method",
+      "path",
+      "body-sha256",
+      "nonce",
+      "timestamp",
+      "expected-version"
+    ]
+  }
+}

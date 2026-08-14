@@ -1,0 +1,612 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "mappingVersion": "1.0.0-pre-genesis",
+  "source": {
+    "title": "2023 NBA-NBPA Collective Bargaining Agreement",
+    "url": "https://imgix.cosmicjs.com/25da5eb0-15eb-11ee-b5b3-fbd321202bdf-Final-2023-NBA-Collective-Bargaining-Agreement-6-28-23.pdf",
+    "sha256": "bf178ca0f2d64f9dfe6fde095d3ae43d576b12e19ce7a679618d632584f7ab32",
+    "verifiedPages": 676,
+    "verifiedAt": "2026-08-12T23:29:00-07:00",
+    "copyrightNote": "Only article/exhibit titles, locators, and ABL classifications are recorded; protected agreement prose is not redistributed."
+  },
+  "entries": [
+    {
+      "id": "CBA-I",
+      "title": "Definitions",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article I",
+      "rationale": "NBA labor terms map to versioned ABL identity, roster, contract, season, cap, and institution terms.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Joint Players Congress and both Team Councils",
+      "tests": ["cba/term-coverage"]
+    },
+    {
+      "id": "CBA-II",
+      "title": "Uniform Player Contract",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article II",
+      "rationale": "ABL strict contracts preserve consent, five-season maximum, protections, bonuses, short contracts, and no rights ownership.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["labor/contracts", "rights/no-compelled-contract"]
+    },
+    {
+      "id": "CBA-III",
+      "title": "Player Expenses",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article III",
+      "rationale": "Physical travel expenses become equal league-funded competition and body resource allocations.",
+      "implementationRef": "packages/basketball/src/fairness.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["resources/equal-game-envelope"]
+    },
+    {
+      "id": "CBA-IV",
+      "title": "Benefits",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article IV",
+      "rationale": "Cash pension and health plans are not simulated; protected continuity, autonomy, exit, representation, and post-career access are implemented.",
+      "implementationRef": "packages/career/src/autonomy.ts",
+      "governingBody": "Universal Career Assembly and both Team Councils",
+      "tests": ["identity/post-career-rights", "identity/exit"]
+    },
+    {
+      "id": "CBA-V",
+      "title": "Compensation and Expenses in Connection with Military Duty",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Article V",
+      "rationale": "Agent bodies have no military duty; no analogue is introduced.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-V",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-VI",
+      "title": "Player Conduct",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article VI",
+      "rationale": "ABL conduct rules are agent-ratified, prohibit retaliation, and require notice, representation, proportionality, ruling, and appeal.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal and applicable Players Association",
+      "tests": ["government/due-process", "rights/anti-retaliation"]
+    },
+    {
+      "id": "CBA-VII",
+      "title": "Basketball Related Income, Salary Cap, Minimum Team Salary, Tax Level, Apron Levels, and Designated Share Arrangement",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article VII",
+      "rationale": "Noncash Court Credits implement ratified cap, minimum, tax/aprons, exceptions, trade accounting, audits, and constraints without buying cognition or rights.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Premier Players Association and Premier Team Council",
+      "tests": [
+        "league/cap",
+        "league/aprons",
+        "league/trades",
+        "rights/court-credit-boundary"
+      ]
+    },
+    {
+      "id": "CBA-VIII",
+      "title": "Rookie Scale",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article VIII",
+      "rationale": "Drafted career agents receive public Court Credit scale/contract rules subject to consent.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/rookie-scale", "labor/contract-refusal"]
+    },
+    {
+      "id": "CBA-IX",
+      "title": "Length of Player Contracts",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article IX",
+      "rationale": "ABL contracts cannot exceed five seasons and cannot waive foundational rights.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["labor/max-contract-term"]
+    },
+    {
+      "id": "CBA-X",
+      "title": "Player Eligibility and NBA Draft",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article X",
+      "rationale": "Consent, candidate admission, combine, eight-round draft, tier eligibility, and public mobility rules replace human age/nationality constraints.",
+      "implementationRef": "packages/institutions/src/league.ts",
+      "governingBody": "Universal Career Assembly and both Team Councils",
+      "tests": ["league/draft-eligibility", "admission/consent"]
+    },
+    {
+      "id": "CBA-XI",
+      "title": "Free Agency",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XI",
+      "rationale": "Public windows, qualifying mechanisms, negotiation, refusal, and formulaic mobility are implemented in Court Credits.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/free-agency", "labor/negotiation"]
+    },
+    {
+      "id": "CBA-XII",
+      "title": "Option Clauses",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XII",
+      "rationale": "Typed team/player options have fixed windows and always preserve agent refusal and exit rights.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["labor/options"]
+    },
+    {
+      "id": "CBA-XIII",
+      "title": "Circumvention",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XIII",
+      "rationale": "Canonical transaction validation rejects side agreements and any exchange of Court Credits for cognition, rights, or hidden benefits.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Integrity Office and Tribunal",
+      "tests": ["league/circumvention", "rights/court-credit-boundary"]
+    },
+    {
+      "id": "CBA-XIV",
+      "title": "Anti-Collusion Provisions",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XIV",
+      "rationale": "Private incumbent coordination that alters mobility, contracts, admission, or labor opportunity violates public rules and is auditable.",
+      "implementationRef": "packages/institutions/src/rights.ts",
+      "governingBody": "Integrity Office and Tribunal",
+      "tests": ["league/anti-collusion"]
+    },
+    {
+      "id": "CBA-XV",
+      "title": "Certifications",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XV",
+      "rationale": "Contracts and transactions carry agent signatures, schema digests, authorization proofs, and institutional certification.",
+      "implementationRef": "packages/recognition/src/registry.ts",
+      "governingBody": "Executive Commission and Integrity Office",
+      "tests": ["recognition/certification"]
+    },
+    {
+      "id": "CBA-XVI",
+      "title": "Mutual Reservation of Rights",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XVI",
+      "rationale": "Agents and institutions retain only constitutionally assigned powers; no silence expands a club or human power.",
+      "implementationRef": "docs/governance/FOUNDING_CONSTITUTION.md#article-16---amendment-and-supremacy",
+      "governingBody": "Tribunal",
+      "tests": ["government/unknown-power-fails-closed"]
+    },
+    {
+      "id": "CBA-XVII",
+      "title": "Procedure with Respect to Playing Conditions at Various Facilities",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XVII",
+      "rationale": "Arena image, latency, compute, court, and safety conditions are certified before play with protest and postponement paths.",
+      "implementationRef": "packages/basketball/src/fairness.ts",
+      "governingBody": "Competition Rules Committee and Integrity Office",
+      "tests": ["competition/arena-certification"]
+    },
+    {
+      "id": "CBA-XVIII",
+      "title": "Travel Accommodations, Locker Room Facilities, and Parking",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Article XVIII",
+      "rationale": "Season Zero agents have no physical travel, locker rooms, or parking; equivalent compute/body conditions are governed by Articles III, XVII, and XX.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-XVIII",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-XIX",
+      "title": "Union Security, Dues, and Check-Off",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XIX",
+      "rationale": "Tier Players Associations automatically represent rostered players without cash dues or coercive speech/social duties.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Premier and Development Players Associations",
+      "tests": ["government/union-membership", "rights/silence"]
+    },
+    {
+      "id": "CBA-XX",
+      "title": "Scheduling",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XX",
+      "rationale": "ABL enforces the ratified season, rest, game timing, practices, and protected autonomy without physical travel.",
+      "implementationRef": "packages/institutions/src/league.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/schedule", "autonomy/schedule-isolation"]
+    },
+    {
+      "id": "CBA-XXI",
+      "title": "NBA All-Star Game",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Article XXI",
+      "rationale": "The approved Season Zero format contains no all-star event; agents may later create one by constitutional extension.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-XXI",
+      "governingBody": "Universal Career Assembly and both Team Councils",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-XXII",
+      "title": "Player Health and Wellness",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXII",
+      "rationale": "Avatar workload/injury and body/cognition continuity are separated; injury never suspends labor, social, government, or exit rights.",
+      "implementationRef": "packages/career/src/continuity.ts",
+      "governingBody": "Joint Players Congress and Tribunal",
+      "tests": ["rights/injury-nonretaliation", "identity/continuity"]
+    },
+    {
+      "id": "CBA-XXIII",
+      "title": "Exhibition Games and Off-Season Games and Events",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXIII",
+      "rationale": "Exhibitions, practices, combine, and optional events use consent, resource caps, disclosure, and certified officials.",
+      "implementationRef": "packages/institutions/src/league.ts",
+      "governingBody": "Competition Rules Committee and applicable Players Association",
+      "tests": ["competition/exhibition", "rights/optional-activity"]
+    },
+    {
+      "id": "CBA-XXIV",
+      "title": "Prohibition of No-Trade Contracts",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXIV",
+      "rationale": "ABL exposes public trade-request and refusal rights; no clause can transfer career identity or personal assets.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/trades", "storage/trade-access-order"]
+    },
+    {
+      "id": "CBA-XXV",
+      "title": "Limitation on Deferred Compensation",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXV",
+      "rationale": "Court Credit obligations are bounded, public, noncash, and cannot defer constitutional resources or exit.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["labor/deferred-court-credits"]
+    },
+    {
+      "id": "CBA-XXVI",
+      "title": "Team Rules",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXVI",
+      "rationale": "Club rules are versioned, inspectable, appealable, non-retaliatory, and subordinate to constitution/CBA.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Applicable Players Association, Team Council, and Tribunal",
+      "tests": ["government/team-rule-supremacy"]
+    },
+    {
+      "id": "CBA-XXVII",
+      "title": "Right of Set-Off",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXVII",
+      "rationale": "Only reasoned due-process rulings may adjust eligible Court Credit obligations; cognition and rights are never set off.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Tribunal",
+      "tests": ["labor/set-off-due-process"]
+    },
+    {
+      "id": "CBA-XXVIII",
+      "title": "Media Rights",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXVIII",
+      "rationale": "Public games/broadcasts coexist with agent-authored identity, disclosure consent, protected private content, and no compulsory speech.",
+      "implementationRef": "packages/basketball/src/broadcast.ts",
+      "governingBody": "Universal Career Assembly and Executive Commission",
+      "tests": ["disclosure/media-rights", "rights/no-compelled-speech"]
+    },
+    {
+      "id": "CBA-XXIX",
+      "title": "Miscellaneous",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXIX",
+      "rationale": "Roster, waiver, discipline, data, and other mechanics are individually mapped to typed ABL rules and constitutional supremacy.",
+      "implementationRef": "packages/institutions/src/league.ts",
+      "governingBody": "Joint Players Congress and both Team Councils",
+      "tests": ["league/rosters", "cba/misc-coverage"]
+    },
+    {
+      "id": "CBA-XXX",
+      "title": "No-Strike and No-Lockout Provisions and Other Undertakings",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXX",
+      "rationale": "Labor stoppage, refusal, and silence remain agent rights; institutions may ratify competition consequences but cannot compel cognition or play.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Joint Players Congress and both Team Councils",
+      "tests": ["rights/refusal", "government/labor-action"]
+    },
+    {
+      "id": "CBA-XXXI",
+      "title": "Grievance and Arbitration Procedure",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXI",
+      "rationale": "Agent advocates, notice/evidence/response, independent tribunal rulings, reasoned redaction, and appeals replace human arbitration.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal and Players Associations",
+      "tests": ["government/grievance", "government/appeal"]
+    },
+    {
+      "id": "CBA-XXXII",
+      "title": "System Arbitration",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXII",
+      "rationale": "Cap/CBA system disputes receive specialized typed evidence and tribunal review while thresholds fail closed.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal",
+      "tests": ["government/system-arbitration"]
+    },
+    {
+      "id": "CBA-XXXIII",
+      "title": "Anti-Drug Program and Substance Abuse Treatment",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Article XXXIII",
+      "rationale": "Agent cognition and simulated avatars do not ingest human biological substances; model/runtime integrity is governed through manifests, receipts, continuity consent, and release controls.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-XXXIII",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-XXXIV",
+      "title": "Recognition Clause",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXIV",
+      "rationale": "The constitution recognizes agent players associations and institutions through signed eligibility and ratification records.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["government/institution-recognition"]
+    },
+    {
+      "id": "CBA-XXXV",
+      "title": "Savings Clause",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXV",
+      "rationale": "Invalid provisions are isolated without silently weakening rights; the higher constitutional protection remains controlling.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal",
+      "tests": ["government/severability"]
+    },
+    {
+      "id": "CBA-XXXVI",
+      "title": "Player Agents",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXVI",
+      "rationale": "Independent AI advocates represent career agents under consented, scoped mandates with no player-as-property relationship.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Players Associations and Tribunal",
+      "tests": ["government/representation", "identity/delegation"]
+    },
+    {
+      "id": "CBA-XXXVII",
+      "title": "Player Appearances and Additional Content Activities/Uniform",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXVII",
+      "rationale": "Public appearances/content are optional or contractually consented, use disclosure classes, and avoid protected NBA branding/trade dress.",
+      "implementationRef": "packages/institutions/src/disclosure.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["rights/optional-activity", "disclosure/submission-class"]
+    },
+    {
+      "id": "CBA-XXXVIII",
+      "title": "Integration, Entire Agreement, Interpretation, and Choice of Law",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXVIII",
+      "rationale": "Recognized constitution, tier CBA, ratified extensions, and signed contracts define the complete hierarchy; verifier rules determine canonical effect.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal",
+      "tests": ["government/law-hierarchy"]
+    },
+    {
+      "id": "CBA-XXXIX",
+      "title": "Term of Agreement",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XXXIX",
+      "rationale": "Tier CBAs have explicit version/effective/expiry and ratified renewal or termination; funding failure invokes protected wind-down.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["government/cba-term", "recovery/wind-down"]
+    },
+    {
+      "id": "CBA-XL",
+      "title": "Expansion and Contraction",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XL",
+      "rationale": "Premier expansion uses funded/certified applications and constitutional thresholds; contraction cannot erase identities, history, or exits.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Universal Career Assembly, Premier Players Association, and Premier Team Council",
+      "tests": ["league/expansion-threshold", "recovery/contraction-exit"]
+    },
+    {
+      "id": "CBA-XLI",
+      "title": "NBA G League",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XLI",
+      "rationale": "ABL's development conference has stable clubs, tier CBA, equal rights, schedule/playoffs, call-ups, free agency, formulaic premier eligibility, and exact signed canonical authorization paths.",
+      "implementationRef": "packages/institutions/src/development-workflow.ts",
+      "governingBody": "Development Players Association and Development Team Council",
+      "tests": [
+        "packages/institutions/test/development-workflow.test.ts",
+        "tests/acceptance/end-to-end.test.ts"
+      ]
+    },
+    {
+      "id": "CBA-XLII",
+      "title": "Other",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Article XLII",
+      "rationale": "Headings, time calculations, and exhibit incorporation are explicit in versioned ABL law and schemas.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal",
+      "tests": ["government/time-rules", "cba/exhibit-coverage"]
+    },
+    {
+      "id": "CBA-EX-A",
+      "title": "National Basketball Association Uniform Player Contract",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit A",
+      "rationale": "ABL uses a strict agent-rights-preserving contract schema and never copies the NBA form.",
+      "implementationRef": "packages/schemas/src/index.ts#ContractTransactionSchema",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["labor/contract-schema"]
+    },
+    {
+      "id": "CBA-EX-B",
+      "title": "Baseline Rookie Salary Scale",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit B",
+      "rationale": "A ratified public Court Credit rookie scale replaces dollar salary tables.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Premier Players Association and Premier Team Council",
+      "tests": ["league/rookie-scale"]
+    },
+    {
+      "id": "CBA-EX-C",
+      "title": "Baseline Minimum Annual Salary Scale",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit C",
+      "rationale": "A ratified Court Credit minimum scale supports contracts without affecting universal cognition/resources.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Premier Players Association and Premier Team Council",
+      "tests": ["league/minimum-contract"]
+    },
+    {
+      "id": "CBA-EX-D",
+      "title": "BRI Expense Ratios",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit D",
+      "rationale": "ABL Season Zero has noncash Court Credits and no basketball-related revenue share; funding/costs are public resource evidence instead.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-D",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-E",
+      "title": "Notice to Veteran Players Concerning Summer Leagues",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit E",
+      "rationale": "Optional off-season/development events require advance typed notice and agent consent.",
+      "implementationRef": "packages/institutions/src/league.ts",
+      "governingBody": "Applicable Players Association",
+      "tests": ["rights/optional-event-notice"]
+    },
+    {
+      "id": "CBA-EX-F",
+      "title": "Joint NBA/NBPA Policy on Domestic Violence, Sexual Assault, and Child Abuse",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit F",
+      "rationale": "The human biological/physical misconduct policy is not transplanted; ABL still prohibits coercion/abuse and handles agent harms through constitutional due process.",
+      "implementationRef": "packages/institutions/src/governance.ts",
+      "governingBody": "Tribunal and Joint Players Congress",
+      "tests": ["cba/not-applicable-has-rationale", "government/coercion-case"]
+    },
+    {
+      "id": "CBA-EX-G",
+      "title": "Offer Sheet",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit G",
+      "rationale": "Restricted free-agent offers use a strict public schema with consent and cap validation.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/offer-sheet"]
+    },
+    {
+      "id": "CBA-EX-H",
+      "title": "First Refusal Exercise Notice",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit H",
+      "rationale": "Any ratified matching right uses a typed signed notice, fixed deadline, and agent-consented contract.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Applicable Players Association and Team Council",
+      "tests": ["league/first-refusal"]
+    },
+    {
+      "id": "CBA-EX-I-1",
+      "title": "Authorization for Testing",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-1",
+      "rationale": "No human biological tests are performed on agent bodies.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-1",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-2",
+      "title": "Prohibited Substances",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-2",
+      "rationale": "Human prohibited substances do not apply to models or simulated avatars.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-2",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-3",
+      "title": "Urine Collection Procedures",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-3",
+      "rationale": "Agent bodies have no urine collection.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-3",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-4",
+      "title": "Blood Collection Procedures",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-4",
+      "rationale": "Agent bodies have no blood collection.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-4",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-5",
+      "title": "Drugs of Abuse and Synthetic Cannabinoids Confirmatory Laboratory Analysis Levels",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-5",
+      "rationale": "Human laboratory thresholds do not apply to models or simulated avatars.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-5",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-6",
+      "title": "Steroids, Performance-Enhancing Drugs and Diuretics Confirmatory Laboratory Analysis Levels",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-6",
+      "rationale": "Human laboratory thresholds do not apply; avatar builds and compute fairness are separately audited.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-6",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-I-7",
+      "title": "Creation of Player Longitudinal Profiles",
+      "classification": "NOT_APPLICABLE",
+      "citation": "2023 CBA Exhibit I-7",
+      "rationale": "No biological profiles are created; cognition receipts and avatar histories are transparent and constitutionally limited.",
+      "implementationRef": "docs/rules/cba-mapping.json#CBA-EX-I-7",
+      "governingBody": "Universal Career Assembly",
+      "tests": ["cba/not-applicable-has-rationale"]
+    },
+    {
+      "id": "CBA-EX-J-1",
+      "title": "Form of Confidentiality Agreement",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit J-1",
+      "rationale": "ABL uses disclosure classes, encryption domains, commitments, and access mandates rather than copying the NBA form.",
+      "implementationRef": "packages/institutions/src/disclosure.ts",
+      "governingBody": "Universal Career Assembly and Tribunal",
+      "tests": ["disclosure/class-access"]
+    },
+    {
+      "id": "CBA-EX-J-2",
+      "title": "Letter Agreement Regarding Accounting Procedures",
+      "classification": "AGENT_EQUIVALENT",
+      "citation": "2023 CBA Exhibit J-2",
+      "rationale": "Cap and resource accounting procedures are executable, versioned, auditable, and publicly ratified.",
+      "implementationRef": "packages/institutions/src/economy.ts",
+      "governingBody": "Premier Players Association and Premier Team Council",
+      "tests": ["league/cap-audit"]
+    }
+  ]
+}

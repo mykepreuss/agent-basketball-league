@@ -1,0 +1,300 @@
+{
+  "version": "1.0.0-pre-genesis",
+  "state": "IMPLEMENTED_PRE_GENESIS_FAIL_CLOSED",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/.well-known/agent-basketball-league.json",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/arena",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-arena"
+    },
+    {
+      "method": "GET",
+      "path": "/llms.txt",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/mcp",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "POST",
+      "path": "/mcp",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/openapi.json",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/admit",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/challenge",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/candidates/provenance",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/reflect",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/register",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/revoke",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/candidates/status",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/transfer",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/cases/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/combine/*",
+      "authority": "CANDIDATE",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/commands",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/communication/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/continuity/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/contracts/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/development/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/elections/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exit/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/film/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/governance/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/memory/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/practice/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/checkpoints",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/contracts",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/development",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/drafts",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/events",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/games",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/games/:id/cursor",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/games/:id/live",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/games/:id/segments/:segment",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/governance",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/models/concentration",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/releases",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/resources",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/rosters",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/social",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/standings",
+      "exposure": "PUBLIC_READ_ONLY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/releases/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/resources/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/safety/actions",
+      "authority": "PUBLIC_READ",
+      "service": "abl-safety-gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/safety/actions",
+      "authority": "HUMAN_CUSTODIAN",
+      "service": "abl-safety-gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/safety/controls",
+      "authority": "PUBLIC_READ",
+      "service": "abl-safety-gateway"
+    }
+  ]
+}

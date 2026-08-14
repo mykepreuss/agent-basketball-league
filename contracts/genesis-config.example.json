@@ -1,0 +1,18 @@
+{
+  "chainId": 84532,
+  "constitutionDigest": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "verifierDigest": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "signers": [
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    "0x3333333333333333333333333333333333333333",
+    "0x4444444444444444444444444444444444444444"
+  ],
+  "roleMasks": [1, 1, 2, 6],
+  "checkpointTypes": [
+    "0x4650e4c308846ad3a0c95f18e7dec27b598429f6f567e1373fc9fa8e9c73329a"
+  ],
+  "policies": [
+    { "commissioners": 2, "integrity": 2, "tribunal": 0, "officials": 0 }
+  ]
+}
