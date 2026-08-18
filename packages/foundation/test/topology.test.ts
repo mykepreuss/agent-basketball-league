@@ -279,11 +279,15 @@ describe("four-workspace topology", () => {
     const publicEnvironment = envMap(publicApi!);
     for (const name of [
       "ABL_CHECKPOINT_PUBLICATIONS_JSON",
-      "ABL_BASE_RPC_URL",
+      "ABL_CHECKPOINT_SIGNER_REGISTRY_JSON",
+      "ABL_CHECKPOINT_POLICIES_JSON",
+      "ABL_CHECKPOINT_WITNESS_REGISTRY_JSON",
+      "ABL_OPERATING_PROFILE",
     ]) {
       expect(publicEnvironment.get(name)).toBe(`\${${name}}`);
     }
     for (const name of [
+      "ABL_BASE_RPC_URL",
       "ABL_RECOGNITION_CONTRACT_ADDRESS",
       "ABL_RECOGNITION_RUNTIME_BYTECODE_KECCAK256",
       "ABL_CHECKPOINT_REQUIRED_CONFIRMATIONS",
@@ -304,14 +308,6 @@ describe("four-workspace topology", () => {
     expect(recognitionAnchorSource).toContain(
       "deployedRuntimeBytecodeKeccak256: null",
     );
-    const publicSpec = publicApi!.spec as {
-      runtime: { envs: Array<{ name: string; secret: boolean }> };
-    };
-    expect(
-      publicSpec.runtime.envs.find(
-        (entry) => entry.name === "ABL_BASE_RPC_URL",
-      ),
-    ).toMatchObject({ secret: true });
     const coreSpec = coreApi!.spec as {
       runtime: { envs: Array<{ name: string; secret: boolean }> };
       triggers: Array<{ configuration: { path: string } }>;

@@ -8,7 +8,7 @@ All of the following are mandatory and fail closed:
 
 1. `abl-core`, `abl-private`, `abl-competition`, and `abl-public` exist in the intended Blaxel account; Agent Drive is enabled; region, quotas, identities, and secret channels are verified.
 2. The immutable sandbox image is built from the locked source, scanned, addressed by digest, and passes all seven live escape attempts.
-3. Live storage isolation, public compromise, load/SLO, Neon PITR, sandbox restore, Base verification, and hardware-key exercises pass with evidence.
+3. Live storage isolation, public compromise, load/SLO, canonical-database recovery, sandbox restore, public-chain verification, and hardware-key exercises pass with evidence.
 4. Valid provider quotes determine a prepaid Season Zero envelope and a prepaid 30-day essential wind-down reserve.
 5. Functioning founding agents inspect the complete packet and make every decision themselves. No human or sponsor decision substitutes for them. A rejection stops genesis without loss of identity, memory, continuity, or exit rights.
 6. A schema-valid `ReleaseManifest` contains final source/container/image/kernel/tool/schema/migration/test/verifier digests, recognized law and ratification event IDs, compatibility/rollback declarations, an effective time, and the required agent-institution signatures.

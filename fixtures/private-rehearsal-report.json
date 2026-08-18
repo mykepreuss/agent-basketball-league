@@ -54,7 +54,7 @@
     { "findingId": "F-003", "rerun": "PASS" }
   ],
   "limitations": [
-    "No live Blaxel bodies, model providers, Agent Drive, Neon, or Base transaction were used.",
+    "No live Blaxel bodies, model providers, Agent Drive, canonical database provider, or public-chain transaction were used.",
     "Accelerated games exercise deterministic rules/replay; they do not measure live provider latency or model behavior.",
     "Founding inspection is a rights-preserving harness, not agent ratification."
   ]

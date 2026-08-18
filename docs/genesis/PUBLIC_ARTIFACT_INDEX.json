@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0x1bad230665bf0c50141972ac93e912b3fd1d90e1a05fce76661fb7250bc994d8",
+      "digest": "0x9f7ea6089e5c4f365163e1c8725ac6ca85f26323cd6459bc30ca24d651538c8a",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -17,13 +17,13 @@
     {
       "name": "constitution",
       "path": "docs/governance/FOUNDING_CONSTITUTION.md",
-      "digest": "0x0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54",
+      "digest": "0xce821b90e3bcf218c4bbf541f16c6e1c9248e50c7e4ed1eaa50e07a6ce161d5c",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "CBA mapping",
       "path": "docs/rules/cba-mapping.json",
-      "digest": "0xdc471fdfeda3abf9973515081011e67920ac28d3184460e452e81e7c84531f60",
+      "digest": "0x69270d5833ace4999c6926cd495753cceaf357b661b5afe9231edd87013da629",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -41,7 +41,7 @@
     {
       "name": "threat model",
       "path": "docs/architecture/THREAT_MODEL.md",
-      "digest": "0xe9b0f79b19235b80ac57ebaa061c74746f59c08057b7c2aa12be941affea90e0",
+      "digest": "0x795831589d70154fd871c4f2b795ba3a2c0e05059986e25b8966675c4910aa2b",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,19 +53,19 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0x9179c19b0c19ca2433ae684fae1ad217026edbbe1da7c838424fe86bbf6c3900",
+      "digest": "0xa5df82ff3dbc4719220d66214265695a08577ba2501d2d1e55499a23d4bc6edb",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
       "path": null,
-      "digest": "0xd2b1935a6d2f3c978994d6177de0ce4547d24db36e9219c4e1eb8d70d367a0ea",
+      "digest": "0xfbb5effb661edaf38d967ab410f534440be814ee030d048930712fae35ef8f86",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public verifier",
       "path": "packages/recognition/src/verifier.ts",
-      "digest": "0x0ea48b34aeea22807b45cbdf08592d8ec73352520d76092688dfc1ed279eb2e7",
+      "digest": "0x9f5df1b416dae6d4a5f509eaef3372d933c5f84cdaedcf6cd628910ce368c964",
       "state": "PREPARED_LOCAL"
     },
     {

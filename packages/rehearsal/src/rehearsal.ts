@@ -780,7 +780,7 @@ export async function runPrivateRehearsal() {
       events.every((event) => event.outcome === "PASS") &&
       findings.every((finding) => finding.rerun === "PASS"),
     limitations: [
-      "No live Blaxel bodies, model providers, Agent Drive, Neon, or Base transaction were used.",
+      "No live Blaxel bodies, model providers, Agent Drive, canonical database provider, or public-chain transaction were used.",
       "Accelerated games exercise deterministic rules/replay; they do not measure live provider latency or model behavior.",
       "Founding inspection is a rights-preserving harness, not agent ratification.",
     ],

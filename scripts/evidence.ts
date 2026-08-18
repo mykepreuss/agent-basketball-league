@@ -190,7 +190,7 @@ async function main(): Promise<void> {
       "Live escape execution in the Blaxel custom-image sandbox is unavailable.",
       "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
       "Four target Blaxel workspaces and Agent Drive are unavailable.",
-      "Neon PITR lacks project credentials.",
+      "Live recovery against the selected canonical database provider lacks project credentials.",
       "Base finality lacks a ratified deployment and credentials.",
       "Remote capacity reservations and provider costs were not requested.",
       "Founding-agent decisions and signatures do not exist.",

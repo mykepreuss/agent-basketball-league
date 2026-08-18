@@ -1,0 +1,32 @@
+{
+  "profileVersion": 1,
+  "provider": "SELECTED_MANAGED_POSTGRES_PROVIDER",
+  "engine": "POSTGRESQL",
+  "region": "SELECTED_REGION",
+  "connection": {
+    "tlsRequired": true,
+    "publicInternetAllowed": true,
+    "sourceRestricted": true,
+    "applicationCredentialsLeastPrivilege": true,
+    "credentialRotationSupported": true
+  },
+  "transactions": {
+    "serializable": true,
+    "advisoryLocks": true,
+    "atomicOutbox": true
+  },
+  "recovery": {
+    "continuousBackup": true,
+    "pointInTimeRecovery": false,
+    "restoreWindowDays": 7,
+    "maxRpoSeconds": 900,
+    "maxRtoSeconds": 7200,
+    "cleanRoomRestoreVerifiedAt": null,
+    "replayRootsMatched": false
+  },
+  "durability": {
+    "multiZone": false,
+    "encryptedAtRest": true,
+    "independentBackupCopy": true
+  }
+}

@@ -1,4 +1,6 @@
 export * from "./canonical.js";
+export * from "./checkpoint-authorization.js";
+export * from "./checkpoint-witnesses.js";
 export * from "./checkpoints.js";
 export * from "./events.js";
 export * from "./identity.js";

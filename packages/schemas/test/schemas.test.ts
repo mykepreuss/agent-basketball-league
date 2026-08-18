@@ -52,17 +52,27 @@ const requiredSchemaNames = [
   "SafetyAction",
 ] as const;
 
+const productionV1SchemaNames = [
+  "CanonicalDatabaseProfile",
+  "CheckpointWitnessAttestation",
+] as const;
+
+const exportedSchemaNames = [
+  ...requiredSchemaNames,
+  ...productionV1SchemaNames,
+] as const;
+
 describe("public schema registry", () => {
-  it("covers every primary interface named by the approved plan", () => {
+  it("covers every primary interface and V1 operational profile", () => {
     expect(Object.keys(schemaRegistry).sort()).toEqual(
-      [...requiredSchemaNames].sort(),
+      [...exportedSchemaNames].sort(),
     );
   });
 
   it("exports draft 2020-12 strict JSON Schema", () => {
     const schemas = exportJsonSchemas();
 
-    for (const name of requiredSchemaNames) {
+    for (const name of exportedSchemaNames) {
       expect(schemas[name].$schema, name).toBe(
         "https://json-schema.org/draft/2020-12/schema",
       );

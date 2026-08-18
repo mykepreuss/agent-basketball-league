@@ -140,7 +140,12 @@ export interface AdmittedAgentAuthority {
   allowedAggregateTypes: readonly string[];
 }
 
+export type LiveCoreOperatingProfile =
+  | "PRE_GENESIS_REHEARSAL"
+  | "PRODUCTION_V1_PRE_GENESIS";
+
 export interface LiveCoreApiOptions {
+  operatingProfile?: LiveCoreOperatingProfile;
   store: CanonicalStore;
   domain: TypedDataDomain;
   admittedAgents: ReadonlyMap<string, AdmittedAgentAuthority>;
@@ -218,12 +223,14 @@ export function createCoreApi(options: CoreApiOptions = {}): FastifyInstance {
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", "PRE_GENESIS");
+    reply.header("x-abl-operating-profile", "PRE_GENESIS_CLOSED");
     return payload;
   });
   app.get("/health", async () => ({
     status: "ok",
     service: "abl-core-api",
     genesis: false,
+    operatingProfile: "PRE_GENESIS_CLOSED",
     canonicalWritesEnabled: false,
   }));
   app.post("/v1/candidates/challenge", async (request, reply) => {
@@ -306,6 +313,8 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
+  const operatingProfile = options.operatingProfile ?? "PRE_GENESIS_REHEARSAL";
+  const rehearsal = operatingProfile === "PRE_GENESIS_REHEARSAL";
   const {
     artifacts,
     candidateAdmission,
@@ -366,14 +375,17 @@ export function createLiveCoreApi(
     candidateRoutesEnabled && governanceRoutesEnabled && releases !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
-    reply.header("x-abl-genesis-state", "REHEARSAL");
+    reply.header("x-abl-genesis-state", "PRE_GENESIS");
+    reply.header("x-abl-operating-profile", operatingProfile);
     return payload;
   });
   app.get("/health", async () => ({
     status: "ok",
     service: "abl-core-api",
     genesis: false,
-    rehearsal: true,
+    operatingProfile,
+    rehearsal,
+    productionV1: !rehearsal,
     canonicalWritesEnabled: true,
   }));
   app.post("/v1/commands", async (request, reply) => {
@@ -513,7 +525,8 @@ export function createLiveCoreApi(
       return reply.code(result.duplicate ? 200 : 201).send({
         accepted: true,
         canonical: true,
-        rehearsal: true,
+        operatingProfile,
+        rehearsal,
         eventId: result.eventId,
         eventHash: result.eventHash,
         aggregateVersion: result.aggregateVersion.toString(),

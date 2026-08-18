@@ -2,13 +2,19 @@ import {
   checkpointManifestDigest,
   createCheckpointManifest,
   verifyCheckpointClaim,
+  verifyCheckpointWitnesses,
+  type CheckpointAuthorizationResult,
   type CheckpointChainClaim,
   type CheckpointChainObservation,
   type CheckpointManifest,
+  type CheckpointRecognitionLevel,
   type CheckpointRecognitionAnchor,
+  type CheckpointWitnessRecord,
+  type CheckpointWitnessResult,
   type VerificationLabel,
 } from "@abl/recognition";
 import {
+  CheckpointWitnessAttestationSchema,
   CheckpointManifestSchema,
   RecognitionCheckpointSchema,
 } from "@abl/schemas";
@@ -19,6 +25,7 @@ export const CheckpointPublicationSchema = z
   .strictObject({
     manifest: CheckpointManifestSchema,
     checkpoint: RecognitionCheckpointSchema,
+    witnesses: z.array(CheckpointWitnessAttestationSchema).max(16).optional(),
   })
   .superRefine(({ checkpoint }, context) => {
     if (
@@ -41,12 +48,27 @@ export interface CheckpointObservationReader {
   ): Promise<CheckpointChainObservation | null>;
 }
 
+export interface CheckpointAuthorizationReader {
+  checkpointAuthorization(
+    publication: CheckpointPublication,
+  ): Promise<CheckpointAuthorizationResult>;
+}
+
 export interface PublicCheckpointProjection {
   state: "REHEARSAL";
   canonical: boolean;
   recognized: boolean;
+  recognitionLevel: CheckpointRecognitionLevel;
   verification: VerificationLabel;
   reasons: readonly string[];
+  authorizationVerified: boolean;
+  authorizationReasons: readonly string[];
+  authorizedSigners: readonly Address[];
+  witnessVerification: CheckpointWitnessResult["status"];
+  witnessReasons: readonly string[];
+  verifiedWitnessIds: readonly string[];
+  verifiedWitnessAdministrativeDomains: readonly string[];
+  minimumWitnesses: number;
   manifest: CheckpointManifest;
   checkpoint: CheckpointPublication["checkpoint"];
   confirmations: number | null;
@@ -66,6 +88,9 @@ export interface PublicCheckpointProjectionRepositoryOptions
   extends CheckpointObservationReader {
   publications: readonly unknown[];
   anchor: CheckpointRecognitionAnchor;
+  checkpointAuthorization?: CheckpointAuthorizationReader["checkpointAuthorization"];
+  witnessRegistry?: readonly CheckpointWitnessRecord[];
+  minimumWitnesses?: number;
   now?: () => Date;
 }
 
@@ -105,7 +130,9 @@ function manifestFromPublication(
   return recomputed;
 }
 
-function chainClaim(publication: CheckpointPublication): CheckpointChainClaim {
+export function checkpointChainClaim(
+  publication: CheckpointPublication,
+): CheckpointChainClaim {
   const { checkpoint } = publication;
   return {
     checkpointType: checkpoint.checkpointType,
@@ -124,11 +151,25 @@ function chainClaim(publication: CheckpointPublication): CheckpointChainClaim {
   };
 }
 
+function recognitionLevelForCheckpoint(input: {
+  verification: VerificationLabel;
+  authorizationValid: boolean;
+  witnessesVerified: boolean;
+}): CheckpointRecognitionLevel {
+  if (input.verification === "CANONICAL") return "ONCHAIN_FINALIZED";
+  if (!input.authorizationValid) return "NONE";
+  if (input.witnessesVerified) return "INDEPENDENTLY_WITNESSED";
+  return "SIGNED_VALID";
+}
+
 export class PublicCheckpointProjectionRepository
   implements PublicCheckpointProjectionReader
 {
   readonly #publications: readonly CheckpointPublication[];
   readonly #checkpointObservation: CheckpointObservationReader["checkpointObservation"];
+  readonly #checkpointAuthorization: CheckpointAuthorizationReader["checkpointAuthorization"];
+  readonly #witnessRegistry: readonly CheckpointWitnessRecord[];
+  readonly #minimumWitnesses: number;
   readonly #anchor: CheckpointRecognitionAnchor;
   readonly #now: () => Date;
   readonly #projections: PublicCheckpointProjection[] = [];
@@ -145,6 +186,15 @@ export class PublicCheckpointProjectionRepository
       throw new Error("Checkpoint finality threshold is invalid");
     }
     this.#checkpointObservation = options.checkpointObservation;
+    this.#checkpointAuthorization =
+      options.checkpointAuthorization ??
+      (async () => ({
+        valid: false,
+        reasons: ["CHECKPOINT_AUTHORIZATION_VERIFIER_NOT_CONFIGURED"],
+        signers: [],
+      }));
+    this.#witnessRegistry = structuredClone(options.witnessRegistry ?? []);
+    this.#minimumWitnesses = options.minimumWitnesses ?? 2;
     this.#anchor = structuredClone(options.anchor);
     this.#now = options.now ?? (() => new Date());
   }
@@ -172,7 +222,7 @@ export class PublicCheckpointProjectionRepository
       const projections: PublicCheckpointProjection[] = [];
       for (const publication of this.#publications) {
         const manifest = manifestFromPublication(publication);
-        const claim = chainClaim(publication);
+        const claim = checkpointChainClaim(publication);
         if (
           publication.checkpoint.manifestDigest !==
             checkpointManifestDigest(manifest) ||
@@ -207,12 +257,57 @@ export class PublicCheckpointProjectionRepository
               observation,
               anchor: this.#anchor,
             });
+        let authorization: CheckpointAuthorizationResult;
+        try {
+          authorization = await this.#checkpointAuthorization(publication);
+        } catch {
+          authorization = {
+            valid: false,
+            reasons: ["CHECKPOINT_AUTHORIZATION_READ_FAILED"],
+            signers: [],
+          };
+        }
+        const evaluatedAt = canonicalInstant(
+          this.#now().toISOString(),
+          "Checkpoint evaluation time",
+        );
+        const witnessVerification = await verifyCheckpointWitnesses({
+          manifestDigest: publication.checkpoint.manifestDigest as Hex,
+          root: publication.checkpoint.root as Hex,
+          attestations: (publication.witnesses ?? []).map((attestation) => ({
+            ...attestation,
+            manifestDigest: attestation.manifestDigest as Hex,
+            root: attestation.root as Hex,
+            signature: attestation.signature as Hex,
+          })),
+          registry: this.#witnessRegistry,
+          minimumWitnesses: this.#minimumWitnesses,
+          notBefore: manifest.createdAt,
+          evaluatedAt,
+        });
+        const recognitionLevel = recognitionLevelForCheckpoint({
+          verification: verification.label,
+          authorizationValid: authorization.valid,
+          witnessesVerified: witnessVerification.status === "VERIFIED",
+        });
         projections.push({
           state: "REHEARSAL",
           canonical: verification.label === "CANONICAL",
           recognized: verification.label === "CANONICAL",
+          recognitionLevel,
           verification: verification.label,
           reasons: [...verification.reasons],
+          authorizationVerified:
+            authorization.valid || verification.label === "CANONICAL",
+          authorizationReasons: [...authorization.reasons],
+          authorizedSigners: [...authorization.signers],
+          witnessVerification: witnessVerification.status,
+          witnessReasons: [...witnessVerification.reasons],
+          verifiedWitnessIds: [...witnessVerification.verifiedWitnessIds],
+          verifiedWitnessAdministrativeDomains: [
+            ...witnessVerification.verifiedAdministrativeDomains,
+          ],
+          minimumWitnesses: this.#minimumWitnesses,
           manifest,
           checkpoint: structuredClone(publication.checkpoint),
           confirmations: observation?.confirmations ?? null,
@@ -226,10 +321,7 @@ export class PublicCheckpointProjectionRepository
                   observation.observedAt,
                   "Checkpoint observation time",
                 ),
-          evaluatedAt: canonicalInstant(
-            this.#now().toISOString(),
-            "Checkpoint evaluation time",
-          ),
+          evaluatedAt,
         });
       }
       this.#projections.splice(0, this.#projections.length, ...projections);

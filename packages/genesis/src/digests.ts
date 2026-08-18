@@ -126,11 +126,17 @@ export async function prepareGenesisArtifactDigests(
     "packages/recognition/src/verifier.ts",
     "packages/recognition/src/registry.ts",
     "packages/recognition/src/checkpoints.ts",
+    "packages/recognition/src/checkpoint-authorization.ts",
+    "packages/recognition/src/checkpoint-witnesses.ts",
     "docs/architecture/VERIFIER_RULES.md",
     "contracts/RecognitionRegistry.sol",
   ];
   const deploymentManifestPaths = allFiles.filter(
-    (path) => path.startsWith("infra/blaxel/") && /\.(json|yaml)$/.test(path),
+    (path) =>
+      ((path.startsWith("infra/blaxel/") ||
+        path.startsWith("infra/canonical-database/")) &&
+        /\.(json|yaml)$/.test(path)) ||
+      path === "docs/architecture/PRODUCTION_V1.md",
   );
   const publicProjectionPaths = allFiles.filter(
     (path) =>

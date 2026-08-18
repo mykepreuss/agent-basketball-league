@@ -186,7 +186,8 @@ describe("recovery and deliberative wind-down", () => {
         exact: true,
         eventCount: 3,
         outboxCount: 3,
-        liveNeonPitrStatus: "NOT_EXECUTED_NEON_CREDENTIAL_GATE",
+        liveCanonicalDatabaseRecoveryStatus:
+          "NOT_EXECUTED_DATABASE_CREDENTIAL_GATE",
       },
       checkpoint: {
         localVerificationLabel: "UNVERIFIABLE",

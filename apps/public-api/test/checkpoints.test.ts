@@ -154,19 +154,28 @@ describe("Base-backed checkpoint API", () => {
       checkpointObservation: (input) => reader.checkpointObservation(input),
     });
     await checkpoints.initialize();
-    const app = createPublicApi({ checkpointProjections: checkpoints });
+    const app = createPublicApi({
+      checkpointProjections: checkpoints,
+      operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+    });
     const response = await app.inject({
       method: "GET",
       url: "/v1/public/checkpoints",
     });
     expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-operating-profile"]).toBe(
+      "PRODUCTION_V1_PRE_GENESIS",
+    );
     expect(response.json()).toMatchObject({
-      state: "REHEARSAL",
+      state: "PRODUCTION_V1_PRE_GENESIS",
       canonical: true,
+      recognitionLevel: "ONCHAIN_FINALIZED",
+      productionV1Ready: true,
       items: [
         {
           verification: "CANONICAL",
           recognized: true,
+          recognitionLevel: "ONCHAIN_FINALIZED",
           confirmations: 12,
           observedBlockNumber: "100",
           checkpoint: { transactionHash },

@@ -1,6 +1,6 @@
 # Public verifier rules
 
-The verifier is deterministic, offline-capable after artifact acquisition, and independent of model inference. It emits `CANONICAL`, `NONCANONICAL_FORK`, `PENDING_FINALITY`, or `UNVERIFIABLE`, plus machine-readable reasons.
+The verifier is deterministic, offline-capable after artifact acquisition, and independent of model inference. Chain verification emits `CANONICAL`, `NONCANONICAL_FORK`, `PENDING_FINALITY`, or `UNVERIFIABLE`, plus machine-readable reasons. Checkpoint projections separately expose `NONE`, `SIGNED_VALID`, `INDEPENDENTLY_WITNESSED`, or `ONCHAIN_FINALIZED`; only the last corresponds to chain-level `CANONICAL`.
 
 ## Verification order
 
@@ -20,7 +20,7 @@ A release begins with the strict unsigned `ReleaseManifestBody`. Its canonical S
 
 Every release transition is a signed `software-release` canonical event. The actor must have a replay-verifiable admitted career key and configured `software-release` scope. Approvals bind the approver DID, institutional role, release ID/version, manifest commitment, and canonical approval time. Routine authorization requires distinct career signatures from two of three commissioners and two of three integrity officers. Identity, constitutional, voting, recognition, or verifier changes additionally require four of five Tribunal approvals and exact passed governance evidence. Three distinct unrecused Tribunal careers may stay a release; participating and recused DIDs must all belong to the configured Tribunal roster. Emergency releases are limited to availability or vulnerability repair and expire no more than 72 hours after effectiveness.
 
-The public release repository re-verifies every signature, role, transition, state root, prior-event hash, verifier result, and required ratification on ingest and restart. It reconstructs the final manifest from the stable body plus the recorded approval signatures and exposes the approval commands, event hashes, signer addresses, and signatures as independent authorization proofs. Local output is labeled `CANONICAL_LOCAL_REHEARSAL`, `recognizedGenesisRelease: false`, and `baseRecognition: NOT_SUBMITTED`. Only a separately verified finalized Base checkpoint may upgrade recognition; local authorization alone never does.
+The public release repository re-verifies every signature, role, transition, state root, prior-event hash, verifier result, and required ratification on ingest and restart. It reconstructs the final manifest from the stable body plus the recorded approval signatures and exposes the approval commands, event hashes, signer addresses, and signatures as independent authorization proofs. Local output is labeled `CANONICAL_LOCAL_REHEARSAL`, `recognizedGenesisRelease: false`, and `baseRecognition: NOT_SUBMITTED`. A production pre-genesis profile may additionally verify the exact checkpoint authorization as `SIGNED_VALID` and require at least two separately administered witness signatures for `INDEPENDENTLY_WITNESSED`. Neither label sets `canonical` or `recognized`. Only a separately verified finalized Base checkpoint may produce `ONCHAIN_FINALIZED` and upgrade recognition.
 
 ## Base-checkpoint verification
 
@@ -38,6 +38,7 @@ An unsubmitted artifact or unavailable RPC is `UNVERIFIABLE`; a mined but insuff
 - A software deployment without a matching effective release manifest is a fork even if its output resembles canonical state.
 - A self-declared verifier pass, a release actor without `software-release` scope, an aliased institutional key, an out-of-roster approval/recusal, or a missing/mismatched ratification is not an authorized release.
 - A checkpoint cannot become canonical from caller-supplied transaction metadata, a successful lookalike contract, an L2 receipt without finalized-head evidence, or a public host's assertion.
+- A witness cannot create genesis recognition. Duplicate witness identities, addresses, or administrative domains; an invalid witness signature; a substituted manifest/root/URI/time; or fewer than the configured threshold prevents `INDEPENDENTLY_WITNESSED`.
 - Database state inconsistent with signed events/checkpoints is a fork. A Base checkpoint alone cannot authorize an invalid event.
 - Emergency code expires at 72 hours unless normally ratified and can never validate a forbidden state category.
 - A public host's `CANONICAL` label is untrusted; clients derive their own result.

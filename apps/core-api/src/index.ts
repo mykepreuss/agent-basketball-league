@@ -1,4 +1,7 @@
-import { PostgresCanonicalStore } from "@abl/database";
+import {
+  PostgresCanonicalStore,
+  assessCanonicalDatabaseProfile,
+} from "@abl/database";
 import {
   FinalizedGameAuthorityDidsSchema,
   assertFinalizedGameAuthorityConfiguration,
@@ -157,289 +160,333 @@ function rehearsalAuthority(): {
   };
 }
 
-const rehearsal = process.env.ABL_REHEARSAL_MODE === "1";
+const operatingProfile = z
+  .enum([
+    "PRE_GENESIS_CLOSED",
+    "PRE_GENESIS_REHEARSAL",
+    "PRODUCTION_V1_PRE_GENESIS",
+  ])
+  .parse(
+    process.env.ABL_OPERATING_PROFILE ??
+      (process.env.ABL_REHEARSAL_MODE === "1"
+        ? "PRE_GENESIS_REHEARSAL"
+        : "PRE_GENESIS_CLOSED"),
+  );
+const liveOperatingProfile =
+  operatingProfile === "PRE_GENESIS_CLOSED" ? null : operatingProfile;
 let closeStore: (() => Promise<void>) | undefined;
 let projectionTimer: NodeJS.Timeout | undefined;
-const app = rehearsal
-  ? await (async () => {
-      const authority = rehearsalAuthority();
-      const contractClubGovernors = ContractClubGovernorsSchema.parse(
-        JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
-      );
-      const combineOfficialDid = z
-        .string()
-        .startsWith("did:")
-        .parse(required("ABL_COMBINE_OFFICIAL_DID"));
-      const draftAuthorityDid = z
-        .string()
-        .startsWith("did:")
-        .parse(required("ABL_DRAFT_AUTHORITY_DID"));
-      const draftEvidenceRegistry = PremierDraftEvidenceRegistrySchema.parse(
-        JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
-      );
-      const draftEvidence = createPremierDraftEvidenceReader(
-        draftEvidenceRegistry,
-      );
-      const economyDraftId = required("ABL_ECONOMY_DRAFT_ID");
-      const economyDraftEvidence = draftEvidenceRegistry.find(
-        ({ draftId }) => draftId === economyDraftId,
-      );
-      if (economyDraftEvidence === undefined)
-        throw new Error(
-          "ABL_ECONOMY_DRAFT_ID is absent from the draft evidence registry",
+const app =
+  liveOperatingProfile !== null
+    ? await (async () => {
+        const activeOperatingProfile = liveOperatingProfile;
+        const authority = rehearsalAuthority();
+        const contractClubGovernors = ContractClubGovernorsSchema.parse(
+          JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
         );
-      const capAuthorityDid = z
-        .string()
-        .startsWith("did:")
-        .parse(required("ABL_CAP_AUTHORITY_DID"));
-      const developmentConferenceId = z
-        .string()
-        .regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
-        .parse(required("ABL_DEVELOPMENT_CONFERENCE_ID"));
-      const developmentCharterAuthorityDid = z
-        .string()
-        .startsWith("did:")
-        .parse(required("ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID"));
-      const tradeAccessEvidence = createTradeAccessEvidenceReader(
-        JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
-      );
-      const governanceEligibilitySnapshot =
-        GovernanceEligibilitySnapshotSchema.parse(
-          JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
+        const combineOfficialDid = z
+          .string()
+          .startsWith("did:")
+          .parse(required("ABL_COMBINE_OFFICIAL_DID"));
+        const draftAuthorityDid = z
+          .string()
+          .startsWith("did:")
+          .parse(required("ABL_DRAFT_AUTHORITY_DID"));
+        const draftEvidenceRegistry = PremierDraftEvidenceRegistrySchema.parse(
+          JSON.parse(required("ABL_DRAFT_EVIDENCE_JSON")),
         );
-      const approvedArtifactInstitutionIds =
-        ApprovedArtifactInstitutionIdsSchema.parse(
-          JSON.parse(required("ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON")),
+        const draftEvidence = createPremierDraftEvidenceReader(
+          draftEvidenceRegistry,
         );
-      const caseTribunalDids = caseAdjudicatorRoster(5).parse(
-        JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
-      );
-      const caseAppellateDids = caseAdjudicatorRoster(3).parse(
-        JSON.parse(required("ABL_CASE_APPELLATE_DIDS_JSON")),
-      );
-      const releaseInstitutionalRoster = ReleaseInstitutionalRosterSchema.parse(
-        JSON.parse(required("ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON")),
-      );
-      const releaseVerifierResults = ReleaseVerifierResultRegistrySchema.parse(
-        JSON.parse(required("ABL_RELEASE_VERIFIER_RESULTS_JSON")),
-      );
-      const disclosureReleaseAuthorityDids = new Set(
-        DisclosureReleaseAuthorityDidsSchema.parse(
-          JSON.parse(required("ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON")),
-        ),
-      );
-      const competitiveDisclosureAuthorDids = new Set(
-        CompetitiveDisclosureAuthorDidsSchema.parse(
-          JSON.parse(required("ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON")),
-        ),
-      );
-      const competitionEvidence = createCompetitionReleaseEvidenceReader(
-        JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
-      );
-      const finalizedGameAuthorityDids = new Set(
-        FinalizedGameAuthorityDidsSchema.parse(
-          JSON.parse(required("ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON")),
-        ),
-      );
-      const finalizedGameEvidence = createFinalizedGameEvidenceReader(
-        JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
-      );
-      const finalizedGameScheduleEvidence =
-        createFinalizedGameScheduleEvidenceReader(
-          JSON.parse(required("ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON")),
+        const economyDraftId = required("ABL_ECONOMY_DRAFT_ID");
+        const economyDraftEvidence = draftEvidenceRegistry.find(
+          ({ draftId }) => draftId === economyDraftId,
         );
-      const filmDeliveryEvidence = createFilmDeliveryEvidenceReader(
-        JSON.parse(required("ABL_FILM_DELIVERY_EVIDENCE_JSON")),
-      );
-      assertDisclosureAuthorityConfiguration(authority.admittedAgents, {
-        releaseAuthorityDids: disclosureReleaseAuthorityDids,
-        competitiveAuthorDids: competitiveDisclosureAuthorDids,
-      });
-      assertFinalizedGameAuthorityConfiguration(
-        authority.admittedAgents,
-        finalizedGameAuthorityDids,
-      );
-      if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
-        throw new Error("Case merits and appellate rosters must be disjoint");
-      const store = new PostgresCanonicalStore(required("DATABASE_URL"));
-      closeStore = async () => store.close();
-      const privateStorageVerifier = new HttpMemoryStorageVerifier({
-        origin: required("ABL_PRIVATE_STORAGE_URL"),
-        identity: {
-          serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
-          secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
-          capabilities: new Set(["private:commitment:verify"]),
-        },
-      });
-      const candidateAdmission = {
-        challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
-      };
-      const competitionId = required("ABL_COMPETITION_ID");
-      const seasonId = required("ABL_SEASON_ID");
-      const economyId = `${competitionId}:${seasonId}`;
-      const projectionSink = new HttpProjectionEventSink({
-        origin: required("ABL_PUBLIC_PROJECTION_URL"),
-        identity: {
-          serviceId: required("ABL_PROJECTION_SERVICE_ID"),
-          secret: secret("ABL_PROJECTION_HMAC_BASE64"),
-          capabilities: new Set(["projection:append"]),
-        },
-      });
-      const resourceScheduleRatification = (proposalId: string) =>
-        readResourceScheduleRatification(
-          {
-            store,
-            domain: authority.domain,
-            competitionId,
-            seasonId,
-            candidateAdmission,
-            eligibilitySnapshot: governanceEligibilitySnapshot,
-          },
-          proposalId,
-        );
-      const tierCbaRatification = { resourceScheduleRatification };
-      const worker = new PublicProjectionWorker({
-        store,
-        sink: projectionSink,
-        contractClubGovernors,
-        governanceEligibilitySnapshotDigest: sha256Commitment(
-          governanceEligibilitySnapshot,
-        ),
-        caseTribunalDids,
-        caseAppellateDids,
-        resourceScheduleRatification,
-        releaseRatification: resourceScheduleRatification,
-        releaseInstitutionalRoster,
-        disclosureReleaseAuthorityDids,
-        competitiveDisclosureAuthorDids,
-        competitionReleaseEvidence:
-          competitionEvidence.competitionReleaseEvidence,
-        finalizedGameAuthorityDids,
-        finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
-        finalizedGameScheduleEvidence,
-        draftAuthorityDid,
-        draftClubGovernors: contractClubGovernors,
-        premierDraftEvidence: draftEvidence.premierDraftEvidence,
-        developmentAuthority: {
-          conferenceId: developmentConferenceId,
-          competitionId,
-          seasonId,
-          charterAuthorityDid: developmentCharterAuthorityDid,
-          premierClubGovernors: contractClubGovernors,
-          tierCbaRatification,
-        },
-        ...authority,
-      });
-      projectionTimer = setInterval(() => {
-        void worker
-          .drain()
-          .catch((error: unknown) =>
-            process.stderr.write(
-              `Projection worker: ${error instanceof Error ? error.message : String(error)}\n`,
-            ),
+        if (economyDraftEvidence === undefined)
+          throw new Error(
+            "ABL_ECONOMY_DRAFT_ID is absent from the draft evidence registry",
           );
-      }, 250);
-      projectionTimer.unref();
-      return createLiveCoreApi({
-        store,
-        ...authority,
-        competitionId,
-        seasonId,
-        candidateAdmission,
-        combine: {
-          combineId: required("ABL_COMBINE_ID"),
-          openedAt: required("ABL_COMBINE_OPENED_AT"),
-        },
-        draft: {
-          combineOfficialDid,
-          draftAuthorityDid,
-          clubGovernors: contractClubGovernors,
-          draftEvidence,
-        },
-        contracts: {
-          clubGovernors: contractClubGovernors,
-        },
-        economy: {
-          economyId,
-          capAuthorityDid,
-          playerDids: economyDraftEvidence.eligiblePlayerDids,
-          freeAgencyWindow: {
-            opensAt: required("ABL_FREE_AGENCY_OPENS_AT"),
-            closesAt: required("ABL_FREE_AGENCY_CLOSES_AT"),
-          },
-          tradeAccessEvidence,
-        },
-        development: {
-          conferenceId: developmentConferenceId,
-          charterAuthorityDid: developmentCharterAuthorityDid,
-          premierClubGovernors: contractClubGovernors,
-          tierCbaRatification,
-        },
-        memory: {
-          storageVerifier: privateStorageVerifier,
-        },
-        continuity: {
-          recognizedImageDigests: new Set(
-            RecognizedBodyImagesSchema.parse(
-              JSON.parse(required("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")),
-            ),
+        const capAuthorityDid = z
+          .string()
+          .startsWith("did:")
+          .parse(required("ABL_CAP_AUTHORITY_DID"));
+        const developmentConferenceId = z
+          .string()
+          .regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
+          .parse(required("ABL_DEVELOPMENT_CONFERENCE_ID"));
+        const developmentCharterAuthorityDid = z
+          .string()
+          .startsWith("did:")
+          .parse(required("ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID"));
+        const tradeAccessEvidence = createTradeAccessEvidenceReader(
+          JSON.parse(required("ABL_TRADE_ACCESS_EVIDENCE_JSON")),
+        );
+        const governanceEligibilitySnapshot =
+          GovernanceEligibilitySnapshotSchema.parse(
+            JSON.parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON")),
+          );
+        const approvedArtifactInstitutionIds =
+          ApprovedArtifactInstitutionIdsSchema.parse(
+            JSON.parse(required("ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON")),
+          );
+        const caseTribunalDids = caseAdjudicatorRoster(5).parse(
+          JSON.parse(required("ABL_CASE_TRIBUNAL_DIDS_JSON")),
+        );
+        const caseAppellateDids = caseAdjudicatorRoster(3).parse(
+          JSON.parse(required("ABL_CASE_APPELLATE_DIDS_JSON")),
+        );
+        const releaseInstitutionalRoster =
+          ReleaseInstitutionalRosterSchema.parse(
+            JSON.parse(required("ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON")),
+          );
+        const releaseVerifierResults =
+          ReleaseVerifierResultRegistrySchema.parse(
+            JSON.parse(required("ABL_RELEASE_VERIFIER_RESULTS_JSON")),
+          );
+        const disclosureReleaseAuthorityDids = new Set(
+          DisclosureReleaseAuthorityDidsSchema.parse(
+            JSON.parse(required("ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON")),
           ),
-        },
-        exit: {
-          portabilityVerifier: new HttpExitPackagePortabilityVerifier({
-            origin: required("ABL_EXIT_PORTABILITY_VERIFIER_URL"),
-            identity: {
-              serviceId: required("ABL_EXIT_PORTABILITY_SERVICE_ID"),
-              secret: secret("ABL_EXIT_PORTABILITY_HMAC_BASE64"),
-              capabilities: new Set(["exit:portability:verify"]),
-            },
-          }),
-        },
-        governance: {
-          eligibilitySnapshot: governanceEligibilitySnapshot,
-        },
-        artifacts: {
-          governance: {
-            eligibilitySnapshot: governanceEligibilitySnapshot,
-          },
-          approvedInstitutionIds: new Set(approvedArtifactInstitutionIds),
-        },
-        disclosures: {
+        );
+        const competitiveDisclosureAuthorDids = new Set(
+          CompetitiveDisclosureAuthorDidsSchema.parse(
+            JSON.parse(required("ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON")),
+          ),
+        );
+        const competitionEvidence = createCompetitionReleaseEvidenceReader(
+          JSON.parse(required("ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON")),
+        );
+        const finalizedGameAuthorityDids = new Set(
+          FinalizedGameAuthorityDidsSchema.parse(
+            JSON.parse(required("ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON")),
+          ),
+        );
+        const finalizedGameEvidence = createFinalizedGameEvidenceReader(
+          JSON.parse(required("ABL_FINALIZED_GAME_EVIDENCE_JSON")),
+        );
+        const finalizedGameScheduleEvidence =
+          createFinalizedGameScheduleEvidenceReader(
+            JSON.parse(required("ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON")),
+          );
+        const filmDeliveryEvidence = createFilmDeliveryEvidenceReader(
+          JSON.parse(required("ABL_FILM_DELIVERY_EVIDENCE_JSON")),
+        );
+        assertDisclosureAuthorityConfiguration(authority.admittedAgents, {
           releaseAuthorityDids: disclosureReleaseAuthorityDids,
           competitiveAuthorDids: competitiveDisclosureAuthorDids,
-          competitionEvidence,
-        },
-        finalizedGames: {
-          finalizerDids: finalizedGameAuthorityDids,
-          evidence: finalizedGameEvidence,
-          scheduleEvidence: finalizedGameScheduleEvidence,
-        },
-        filmPractice: {
-          storageVerifier: privateStorageVerifier,
-          filmDeliveryEvidence,
-        },
-        resources: {
+        });
+        assertFinalizedGameAuthorityConfiguration(
+          authority.admittedAgents,
+          finalizedGameAuthorityDids,
+        );
+        if (caseAppellateDids.some((did) => caseTribunalDids.includes(did)))
+          throw new Error("Case merits and appellate rosters must be disjoint");
+        const databaseProfile = process.env.ABL_CANONICAL_DATABASE_PROFILE_JSON;
+        if (
+          activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS" &&
+          databaseProfile === undefined
+        ) {
+          throw new Error(
+            "Production V1 requires ABL_CANONICAL_DATABASE_PROFILE_JSON",
+          );
+        }
+        if (databaseProfile !== undefined) {
+          const stage =
+            activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS"
+              ? "PRODUCTION_V1"
+              : z
+                  .enum(["PRODUCTION_V1", "GENESIS"])
+                  .parse(required("ABL_CANONICAL_DATABASE_STAGE"));
+          const assessment = assessCanonicalDatabaseProfile(
+            JSON.parse(databaseProfile),
+            stage,
+          );
+          if (!assessment.ready) {
+            throw new Error(
+              `Canonical database profile is not ready for ${stage}: ${assessment.missing.join(", ")}`,
+            );
+          }
+        }
+        const store = new PostgresCanonicalStore(required("DATABASE_URL"));
+        closeStore = async () => store.close();
+        const privateStorageVerifier = new HttpMemoryStorageVerifier({
+          origin: required("ABL_PRIVATE_STORAGE_URL"),
+          identity: {
+            serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
+            secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
+            capabilities: new Set(["private:commitment:verify"]),
+          },
+        });
+        const candidateAdmission = {
+          challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
+        };
+        const competitionId = required("ABL_COMPETITION_ID");
+        const seasonId = required("ABL_SEASON_ID");
+        const economyId = `${competitionId}:${seasonId}`;
+        const projectionSink = new HttpProjectionEventSink({
+          origin: required("ABL_PUBLIC_PROJECTION_URL"),
+          identity: {
+            serviceId: required("ABL_PROJECTION_SERVICE_ID"),
+            secret: secret("ABL_PROJECTION_HMAC_BASE64"),
+            capabilities: new Set(["projection:append"]),
+          },
+        });
+        const resourceScheduleRatification = (proposalId: string) =>
+          readResourceScheduleRatification(
+            {
+              store,
+              domain: authority.domain,
+              competitionId,
+              seasonId,
+              candidateAdmission,
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+            proposalId,
+          );
+        const tierCbaRatification = { resourceScheduleRatification };
+        const worker = new PublicProjectionWorker({
+          store,
+          sink: projectionSink,
+          contractClubGovernors,
+          governanceEligibilitySnapshotDigest: sha256Commitment(
+            governanceEligibilitySnapshot,
+          ),
+          caseTribunalDids,
+          caseAppellateDids,
+          resourceScheduleRatification,
+          releaseRatification: resourceScheduleRatification,
+          releaseInstitutionalRoster,
+          disclosureReleaseAuthorityDids,
+          competitiveDisclosureAuthorDids,
+          competitionReleaseEvidence:
+            competitionEvidence.competitionReleaseEvidence,
+          finalizedGameAuthorityDids,
+          finalizedGameEvidence: finalizedGameEvidence.finalizedGameEvidence,
+          finalizedGameScheduleEvidence,
+          draftAuthorityDid,
+          draftClubGovernors: contractClubGovernors,
+          premierDraftEvidence: draftEvidence.premierDraftEvidence,
+          developmentAuthority: {
+            conferenceId: developmentConferenceId,
+            competitionId,
+            seasonId,
+            charterAuthorityDid: developmentCharterAuthorityDid,
+            premierClubGovernors: contractClubGovernors,
+            tierCbaRatification,
+          },
+          ...authority,
+        });
+        projectionTimer = setInterval(() => {
+          void worker
+            .drain()
+            .catch((error: unknown) =>
+              process.stderr.write(
+                `Projection worker: ${error instanceof Error ? error.message : String(error)}\n`,
+              ),
+            );
+        }, 250);
+        projectionTimer.unref();
+        return createLiveCoreApi({
+          operatingProfile: activeOperatingProfile,
+          store,
+          ...authority,
+          competitionId,
+          seasonId,
+          candidateAdmission,
+          combine: {
+            combineId: required("ABL_COMBINE_ID"),
+            openedAt: required("ABL_COMBINE_OPENED_AT"),
+          },
+          draft: {
+            combineOfficialDid,
+            draftAuthorityDid,
+            clubGovernors: contractClubGovernors,
+            draftEvidence,
+          },
+          contracts: {
+            clubGovernors: contractClubGovernors,
+          },
+          economy: {
+            economyId,
+            capAuthorityDid,
+            playerDids: economyDraftEvidence.eligiblePlayerDids,
+            freeAgencyWindow: {
+              opensAt: required("ABL_FREE_AGENCY_OPENS_AT"),
+              closesAt: required("ABL_FREE_AGENCY_CLOSES_AT"),
+            },
+            tradeAccessEvidence,
+          },
+          development: {
+            conferenceId: developmentConferenceId,
+            charterAuthorityDid: developmentCharterAuthorityDid,
+            premierClubGovernors: contractClubGovernors,
+            tierCbaRatification,
+          },
+          memory: {
+            storageVerifier: privateStorageVerifier,
+          },
+          continuity: {
+            recognizedImageDigests: new Set(
+              RecognizedBodyImagesSchema.parse(
+                JSON.parse(required("ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON")),
+              ),
+            ),
+          },
+          exit: {
+            portabilityVerifier: new HttpExitPackagePortabilityVerifier({
+              origin: required("ABL_EXIT_PORTABILITY_VERIFIER_URL"),
+              identity: {
+                serviceId: required("ABL_EXIT_PORTABILITY_SERVICE_ID"),
+                secret: secret("ABL_EXIT_PORTABILITY_HMAC_BASE64"),
+                capabilities: new Set(["exit:portability:verify"]),
+              },
+            }),
+          },
           governance: {
             eligibilitySnapshot: governanceEligibilitySnapshot,
           },
-        },
-        releases: {
-          governance: {
-            eligibilitySnapshot: governanceEligibilitySnapshot,
+          artifacts: {
+            governance: {
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+            approvedInstitutionIds: new Set(approvedArtifactInstitutionIds),
           },
-          institutionalRoster: releaseInstitutionalRoster,
-          verifierResults: {
-            releaseVerifierResult: async (resultDigest) =>
-              releaseVerifierResults[resultDigest] ?? null,
+          disclosures: {
+            releaseAuthorityDids: disclosureReleaseAuthorityDids,
+            competitiveAuthorDids: competitiveDisclosureAuthorDids,
+            competitionEvidence,
           },
-        },
-        cases: {
-          tribunalDids: caseTribunalDids,
-          appellateDids: caseAppellateDids,
-        },
-      });
-    })()
-  : createCoreApi();
+          finalizedGames: {
+            finalizerDids: finalizedGameAuthorityDids,
+            evidence: finalizedGameEvidence,
+            scheduleEvidence: finalizedGameScheduleEvidence,
+          },
+          filmPractice: {
+            storageVerifier: privateStorageVerifier,
+            filmDeliveryEvidence,
+          },
+          resources: {
+            governance: {
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+          },
+          releases: {
+            governance: {
+              eligibilitySnapshot: governanceEligibilitySnapshot,
+            },
+            institutionalRoster: releaseInstitutionalRoster,
+            verifierResults: {
+              releaseVerifierResult: async (resultDigest) =>
+                releaseVerifierResults[resultDigest] ?? null,
+            },
+          },
+          cases: {
+            tribunalDids: caseTribunalDids,
+            appellateDids: caseAppellateDids,
+          },
+        });
+      })()
+    : createCoreApi();
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, async () => {

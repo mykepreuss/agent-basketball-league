@@ -10,7 +10,11 @@ export const WorkspaceNameSchema = z.enum([
 ]);
 export type WorkspaceName = z.infer<typeof WorkspaceNameSchema>;
 
-const ExternalNameSchema = z.enum(["base", "neon", "agent-drive-direct"]);
+const ExternalNameSchema = z.enum([
+  "base",
+  "canonical-postgres",
+  "agent-drive-direct",
+]);
 
 const WorkspaceSpecSchema = z.strictObject({
   name: WorkspaceNameSchema,
@@ -68,6 +72,7 @@ export const forbiddenCompetitionEnvironmentNames = new Set([
   "DRIVE_TOKEN",
   "BLFS_TOKEN",
   "NEON_DATABASE_URL",
+  "CANONICAL_POSTGRES_URL",
   "PRIVATE_STORAGE_KEY",
   "MODEL_PROVIDER_API_KEY",
 ]);

@@ -798,6 +798,23 @@ export const RecognitionCheckpointSchema = z.strictObject({
   signatures: z.array(Eip712SignatureSchema).min(1).max(11),
 });
 
+export const CheckpointWitnessAttestationSchema = z.strictObject({
+  witnessId: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9][a-z0-9.-]*$/),
+  manifestDigest: Sha256Schema,
+  root: Sha256Schema,
+  observedAt: IsoDateTimeSchema,
+  publicationUri: z
+    .string()
+    .min(1)
+    .max(4_096)
+    .regex(/^(https:\/\/|ipfs:\/\/)[^\s]+$/),
+  signature: Eip712SignatureSchema,
+});
+
 export const CheckpointManifestSchema = z.strictObject({
   manifestId: UuidV7Schema,
   checkpointType: z.enum([
@@ -818,6 +835,39 @@ export const CheckpointManifestSchema = z.strictObject({
   verifierDigest: Sha256Schema,
   previousManifestDigest: Sha256Schema.nullable(),
   createdAt: IsoDateTimeSchema,
+});
+
+export const CanonicalDatabaseProfileSchema = z.strictObject({
+  profileVersion: z.literal(1),
+  provider: z.string().min(1).max(120),
+  engine: z.literal("POSTGRESQL"),
+  region: z.string().min(1).max(120),
+  connection: z.strictObject({
+    tlsRequired: z.boolean(),
+    publicInternetAllowed: z.boolean(),
+    sourceRestricted: z.boolean(),
+    applicationCredentialsLeastPrivilege: z.boolean(),
+    credentialRotationSupported: z.boolean(),
+  }),
+  transactions: z.strictObject({
+    serializable: z.boolean(),
+    advisoryLocks: z.boolean(),
+    atomicOutbox: z.boolean(),
+  }),
+  recovery: z.strictObject({
+    continuousBackup: z.boolean(),
+    pointInTimeRecovery: z.boolean(),
+    restoreWindowDays: z.number().int().nonnegative(),
+    maxRpoSeconds: z.number().int().nonnegative(),
+    maxRtoSeconds: z.number().int().nonnegative(),
+    cleanRoomRestoreVerifiedAt: IsoDateTimeSchema.nullable(),
+    replayRootsMatched: z.boolean(),
+  }),
+  durability: z.strictObject({
+    multiZone: z.boolean(),
+    encryptedAtRest: z.boolean(),
+    independentBackupCopy: z.boolean(),
+  }),
 });
 
 export const DisclosurePolicySchema = z.strictObject({
@@ -953,7 +1003,9 @@ export const schemaRegistry = {
   TribunalRuling: TribunalRulingSchema,
   ReleaseManifest: ReleaseManifestSchema,
   RecognitionCheckpoint: RecognitionCheckpointSchema,
+  CheckpointWitnessAttestation: CheckpointWitnessAttestationSchema,
   CheckpointManifest: CheckpointManifestSchema,
+  CanonicalDatabaseProfile: CanonicalDatabaseProfileSchema,
   DisclosurePolicy: DisclosurePolicySchema,
   DisclosureEnvelope: DisclosureEnvelopeSchema,
   MemoryCommitment: MemoryCommitmentSchema,

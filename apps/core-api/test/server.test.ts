@@ -95,9 +95,11 @@ function finalizedEvent(
 
 function finalizedGameApp(
   evidence: ReturnType<typeof finalizedPayload>["agentEvidence"] | null,
+  operatingProfile?: "PRE_GENESIS_REHEARSAL" | "PRODUCTION_V1_PRE_GENESIS",
 ) {
   const store = new InMemoryCanonicalStore();
   const app = createLiveCoreApi({
+    ...(operatingProfile === undefined ? {} : { operatingProfile }),
     store,
     domain,
     admittedAgents: new Map([
@@ -124,6 +126,23 @@ function finalizedGameApp(
 }
 
 describe("core API pre-genesis boundary", () => {
+  it("identifies an explicitly selected production V1 without claiming genesis", async () => {
+    const { app } = finalizedGameApp(null, "PRODUCTION_V1_PRE_GENESIS");
+    const response = await app.inject({ method: "GET", url: "/health" });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-operating-profile"]).toBe(
+      "PRODUCTION_V1_PRE_GENESIS",
+    );
+    expect(response.json()).toMatchObject({
+      genesis: false,
+      operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+      rehearsal: false,
+      productionV1: true,
+      canonicalWritesEnabled: true,
+    });
+    await app.close();
+  });
+
   it("issues bounded challenges that do not grant admission", async () => {
     const app = createCoreApi({
       now: () => Date.parse("2026-08-13T08:00:00.000Z"),

@@ -22,6 +22,12 @@ export const checkpointTypes = [
   "DAILY_ROOT",
 ] as const satisfies readonly CheckpointType[];
 
+export type CheckpointRecognitionLevel =
+  | "NONE"
+  | "SIGNED_VALID"
+  | "INDEPENDENTLY_WITNESSED"
+  | "ONCHAIN_FINALIZED";
+
 export interface CheckpointManifest {
   manifestId: string;
   checkpointType: CheckpointType;

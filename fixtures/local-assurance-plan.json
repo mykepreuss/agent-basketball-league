@@ -45,7 +45,7 @@
     "sandboxEscapeTests": "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
     "blaxelCapacityAndIsolation": "NOT_EXECUTED_BLAXEL_GATE",
     "agentDriveRecovery": "NOT_EXECUTED_AGENT_DRIVE_GATE",
-    "neonPointInTimeRecovery": "NOT_EXECUTED_NEON_CREDENTIAL_GATE",
+    "canonicalDatabaseRecovery": "NOT_EXECUTED_DATABASE_CREDENTIAL_GATE",
     "baseCheckpointFinality": "NOT_EXECUTED_BASE_CREDENTIAL_GATE",
     "paidReservations": "NOT_REQUESTED_MATERIAL_SPEND_GATE"
   }

@@ -190,7 +190,47 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
   return paths;
 }, {});
 
+type CheckpointCollectionRecognitionLevel =
+  | "NONE"
+  | "SIGNED_VALID"
+  | "INDEPENDENTLY_WITNESSED"
+  | "ONCHAIN_FINALIZED";
+
+function checkpointCollectionStatus(items: readonly unknown[]): {
+  recognitionLevel: CheckpointCollectionRecognitionLevel;
+  productionV1Ready: boolean;
+} {
+  const levels = items.map(
+    (item) =>
+      (item as { recognitionLevel?: string }).recognitionLevel ?? "NONE",
+  );
+  if (levels.length === 0) {
+    return { recognitionLevel: "NONE", productionV1Ready: false };
+  }
+  if (levels.every((level) => level === "ONCHAIN_FINALIZED")) {
+    return { recognitionLevel: "ONCHAIN_FINALIZED", productionV1Ready: true };
+  }
+  const independentlyWitnessed = levels.every(
+    (level) =>
+      level === "INDEPENDENTLY_WITNESSED" || level === "ONCHAIN_FINALIZED",
+  );
+  if (independentlyWitnessed) {
+    return {
+      recognitionLevel: "INDEPENDENTLY_WITNESSED",
+      productionV1Ready: true,
+    };
+  }
+  if (levels.every((level) => level !== "NONE")) {
+    return { recognitionLevel: "SIGNED_VALID", productionV1Ready: false };
+  }
+  return { recognitionLevel: "NONE", productionV1Ready: false };
+}
+
 export interface PublicApiOptions {
+  operatingProfile?:
+    | "PRE_GENESIS_CLOSED"
+    | "PRE_GENESIS_REHEARSAL"
+    | "PRODUCTION_V1_PRE_GENESIS";
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   draftProjections?: PublicDraftProjectionReader;
@@ -345,7 +385,8 @@ export function createPublicApi(
     options.socialProjections !== undefined ||
     options.finalGameProjections !== undefined ||
     options.checkpointProjections !== undefined;
-  const state = rehearsal ? "REHEARSAL" : "PRE_GENESIS";
+  const state =
+    options.operatingProfile ?? (rehearsal ? "REHEARSAL" : "PRE_GENESIS");
   let refreshInFlight: Promise<void> | null = null;
   async function refreshPublicProjections(): Promise<void> {
     if (refreshInFlight !== null) return refreshInFlight;
@@ -377,6 +418,7 @@ export function createPublicApi(
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", state);
+    reply.header("x-abl-operating-profile", state);
     return payload;
   });
   app.addHook("onRequest", async (request) => {
@@ -1048,9 +1090,14 @@ export function createPublicApi(
                 "CANONICAL",
             )
           : rehearsal;
+      const checkpointStatus =
+        path === "/v1/public/checkpoints"
+          ? checkpointCollectionStatus(items)
+          : null;
       return {
         state,
         canonical: collectionCanonical,
+        ...(checkpointStatus ?? {}),
         items,
         nextCursor:
           path === "/v1/public/events" && items.length > 0

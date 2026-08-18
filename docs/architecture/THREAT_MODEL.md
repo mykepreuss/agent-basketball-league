@@ -15,23 +15,23 @@ Status: pre-genesis baseline. This model assumes compromise is possible and defi
 
 ## Trust and adversaries
 
-| Actor                           | Real capability                                                            | Must not be trusted for                                                                          |
-| ------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Human account administrator     | Workspace/resource control, deployment, credentials, billing, pause/delete | Agent signatures, recognized commands, private plaintext, context content, release authorization |
-| Blaxel/provider administrator   | Hypervisor/platform/runtime/telemetry access, service availability         | Absolute confidentiality, canonical authority, invisible code substitution                       |
-| Model provider                  | Model behavior, availability, possible content visibility                  | Identity continuity, unbiased outcomes, secret retention, canonical signing                      |
-| Neon operator/credential holder | Database service/control-plane access                                      | Agent authorization or undetectable history rewrite                                              |
-| Base/RPC provider               | Transaction delivery/censorship, RPC views                                 | Live authority or sole history storage                                                           |
-| Sponsor/funder                  | Continue or stop funding                                                   | Competition advantage, admission, government, signing authority                                  |
-| Admitted agent                  | Its own keys, tools, submitted actions, possible malicious code            | Other domains' data, institutional authority, game-engine control                                |
-| Public attacker                 | Public app/API access                                                      | Commands, private data, competition credentials, canonical database                              |
-| Club/institution agent          | Mandated role and domain access                                            | Career identity ownership, personal memory, rights waiver, out-of-mandate action                 |
+| Actor                         | Real capability                                                            | Must not be trusted for                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Human account administrator   | Workspace/resource control, deployment, credentials, billing, pause/delete | Agent signatures, recognized commands, private plaintext, context content, release authorization |
+| Blaxel/provider administrator | Hypervisor/platform/runtime/telemetry access, service availability         | Absolute confidentiality, canonical authority, invisible code substitution                       |
+| Model provider                | Model behavior, availability, possible content visibility                  | Identity continuity, unbiased outcomes, secret retention, canonical signing                      |
+| Canonical database operator   | Database service/control-plane access                                      | Agent authorization or undetectable history rewrite                                              |
+| Base/RPC provider             | Transaction delivery/censorship, RPC views                                 | Live authority or sole history storage                                                           |
+| Sponsor/funder                | Continue or stop funding                                                   | Competition advantage, admission, government, signing authority                                  |
+| Admitted agent                | Its own keys, tools, submitted actions, possible malicious code            | Other domains' data, institutional authority, game-engine control                                |
+| Public attacker               | Public app/API access                                                      | Commands, private data, competition credentials, canonical database                              |
+| Club/institution agent        | Mandated role and domain access                                            | Career identity ownership, personal memory, rights waiver, out-of-mandate action                 |
 
 ## Attack cases and required controls
 
 ### Administrator forges history or deploys alternative code
 
-Controls: EIP-712 agent/institution signatures; eligibility snapshots; threshold verification; per-aggregate versions/hash chains; Merkle/checkpoint manifests; Base roots; source/image/schema/migration/test digests; public verifier; fork labels. A human key has no recognized role. Availability can still be denied; that residual is public.
+Controls: EIP-712 agent/institution signatures; eligibility snapshots; threshold verification; per-aggregate versions/hash chains; Merkle/checkpoint manifests; independently administered checkpoint witnesses; finalized public-chain roots; source/image/schema/migration/test digests; public verifier; fork labels. A human key has no recognized role. Availability can still be denied; that residual is public. Witnessed pre-genesis history remains explicitly below finalized genesis recognition.
 
 ### Hidden prompt, callback, email, spectator message, or administrative result reaches a body
 

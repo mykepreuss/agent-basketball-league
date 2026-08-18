@@ -2,12 +2,14 @@ import {
   checkpointManifestDigest,
   checkpointSubjectId,
   checkpointTypeId,
+  createSigningIdentity,
   createCheckpointManifest,
   sha256Commitment,
+  signCheckpointWitness,
   type CheckpointChainObservation,
   type CheckpointRecognitionAnchor,
 } from "@abl/recognition";
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -118,6 +120,7 @@ describe("public checkpoint projection", () => {
     expect(repository.checkpoints()[0]).toMatchObject({
       canonical: false,
       recognized: false,
+      recognitionLevel: "NONE",
       verification: "UNVERIFIABLE",
       reasons: ["CHECKPOINT_RECOGNITION_ANCHOR_UNRATIFIED"],
       recognitionAnchorState: "PRE_GENESIS_UNRATIFIED",
@@ -140,6 +143,7 @@ describe("public checkpoint projection", () => {
       {
         canonical: false,
         recognized: false,
+        recognitionLevel: "NONE",
         verification: "UNVERIFIABLE",
         reasons: ["CHECKPOINT_TRANSACTION_MISSING"],
         confirmations: null,
@@ -167,6 +171,7 @@ describe("public checkpoint projection", () => {
       verification: "CANONICAL",
       canonical: true,
       recognized: true,
+      recognitionLevel: "ONCHAIN_FINALIZED",
       confirmations: 12,
     });
 
@@ -258,6 +263,74 @@ describe("public checkpoint projection", () => {
     expect(repository.checkpoints()[0]).toMatchObject({
       verification: "NONCANONICAL_FORK",
       reasons: ["CHECKPOINT_MANIFEST_NOT_ANCHORED"],
+      recognized: false,
+    });
+  });
+
+  it("separates signed and independently witnessed V1 history from on-chain finality", async () => {
+    const candidate = publication(false);
+    const signed = new PublicCheckpointProjectionRepository({
+      publications: [candidate],
+      anchor: pendingRecognitionAnchor,
+      checkpointObservation: async () => null,
+      checkpointAuthorization: async () => ({
+        valid: true,
+        reasons: [],
+        signers: [contractAddress as Address],
+      }),
+      now: () => new Date("2026-08-13T09:10:00.000Z"),
+    });
+    await signed.initialize();
+    expect(signed.checkpoints()[0]).toMatchObject({
+      recognitionLevel: "SIGNED_VALID",
+      authorizationVerified: true,
+      witnessVerification: "NOT_CONFIGURED",
+      canonical: false,
+      recognized: false,
+    });
+
+    const identities = [createSigningIdentity(), createSigningIdentity()];
+    candidate.witnesses = await Promise.all(
+      identities.map(async (identity, index) => {
+        const statement = {
+          witnessId: `witness-${index + 1}`,
+          manifestDigest: candidate.checkpoint.manifestDigest as Hex,
+          root: candidate.checkpoint.root as Hex,
+          observedAt: "2026-08-13T09:05:00.000Z",
+          publicationUri: `https://operator-${index + 1}.example/checkpoints/${candidate.checkpoint.manifestDigest}`,
+        };
+        return {
+          ...statement,
+          signature: await signCheckpointWitness(identity, statement),
+        };
+      }),
+    );
+    const witnessed = new PublicCheckpointProjectionRepository({
+      publications: [candidate],
+      anchor: pendingRecognitionAnchor,
+      checkpointObservation: async () => null,
+      checkpointAuthorization: async () => ({
+        valid: true,
+        reasons: [],
+        signers: [contractAddress as Address],
+      }),
+      witnessRegistry: identities.map((identity, index) => ({
+        witnessId: `witness-${index + 1}`,
+        address: identity.address,
+        administrativeDomain: `operator-${index + 1}.example`,
+        validFrom: "2026-08-01T00:00:00.000Z",
+        validUntil: null,
+      })),
+      minimumWitnesses: 2,
+      now: () => new Date("2026-08-13T09:10:00.000Z"),
+    });
+    await witnessed.initialize();
+    expect(witnessed.checkpoints()[0]).toMatchObject({
+      recognitionLevel: "INDEPENDENTLY_WITNESSED",
+      authorizationVerified: true,
+      witnessVerification: "VERIFIED",
+      verifiedWitnessIds: ["witness-1", "witness-2"],
+      canonical: false,
       recognized: false,
     });
   });
