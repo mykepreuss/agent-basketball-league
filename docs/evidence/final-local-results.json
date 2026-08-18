@@ -36,8 +36,8 @@
       "command": "pnpm turbo run test --force",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 252,
-      "testFiles": 56,
+      "assertions": 261,
+      "testFiles": 59,
       "successfulTasks": 37,
       "totalTasks": 37
     },
@@ -92,7 +92,7 @@
       "totalTasks": 25
     }
   ],
-  "recordedAt": "2026-08-14T09:41:54.365Z",
+  "recordedAt": "2026-08-18T16:44:45.337Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -100,7 +100,7 @@
     "pnpm": "11.21.0"
   },
   "overall": "PASS_LOCAL_WITH_EXTERNAL_GATES",
-  "stableResultDigest": "0x4675c1d0161119825a33e6d2b9b38ba6305ab4d61e6be7679ff16e87149a3a88",
+  "stableResultDigest": "0x909ba6218128323f94841d21dba384149ed58418a83e2dbd24566bafa618df04",
   "routeCount": 49,
   "rawResults": [
     {
@@ -140,28 +140,28 @@
       "testFiles": 0,
       "successfulTasks": 37,
       "totalTasks": 37,
-      "outputSha256": "01e1a04a3770f23be495ed167b2fcb1bd02d7bc4778566b1e25e704cd0078af2",
+      "outputSha256": "0787427ef1cbcf7bcf087e9850097f2908f4e5b5571759159a564f5c107d7ae2",
       "outputTail": [
-        "@abl/safety-gateway:check: cache bypass, force executing 1042fb51e8ad4f4e",
+        "@abl/safety-gateway:check: cache bypass, force executing 997a51bfb8e3e06b",
         "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/basketball-mcp:check: cache bypass, force executing f497324ee851f07b",
+        "@abl/basketball-mcp:check: cache bypass, force executing 810ea8a063adf976",
         "@abl/basketball-mcp:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/rehearsal:check: cache bypass, force executing a6b2a617cddbe4ba",
-        "@abl/assurance:check: cache bypass, force executing 85d7795fe5727eb6",
-        "@abl/projections:check: cache bypass, force executing eb8f106aa0a1dba0",
-        "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/projections:check: cache bypass, force executing 020971c2081b7876",
+        "@abl/rehearsal:check: cache bypass, force executing 488df00911a69b94",
+        "@abl/assurance:check: cache bypass, force executing c5e9b8cbc06288c1",
         "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/core-api:check: cache bypass, force executing a4198350282be49a",
-        "@abl/arena:check: cache bypass, force executing c083c078950863a4",
-        "@abl/public-api:check: cache bypass, force executing dda814217fe5f7ee",
+        "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/core-api:check: cache bypass, force executing f33dddde68176eb3",
+        "@abl/public-api:check: cache bypass, force executing 3900c197f0d6bab7",
+        "@abl/arena:check: cache bypass, force executing 336cea24d7a8c90e",
+        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/arena:check: $ tsc --noEmit",
-        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
         " Tasks:    37 successful, 37 total",
         "Cached:    0 cached, 37 total",
-        "  Time:    20.637s"
+        "  Time:    19.608s"
       ]
     },
     {
@@ -169,11 +169,11 @@
       "command": "pnpm turbo run test --force",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 252,
-      "testFiles": 56,
+      "assertions": 261,
+      "testFiles": 59,
       "successfulTasks": 37,
       "totalTasks": 37,
-      "outputSha256": "f41eb62ab5396310ba266cf8da336e63ff94d1dc10c1ab140d109d75d2f53608",
+      "outputSha256": "a365e157ee9e753ab62b462e856827f623ba017ae73e6a681aca0775a70af6d6",
       "outputTail": [
         " WARNING  no output files found for task @abl/career#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/career-mcp#test. Please check your `outputs` key in `turbo.json`",
@@ -206,7 +206,7 @@
       "testFiles": 3,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "bd31635744d0a6161643ccf182898977bbc6f448fbb593621e76c89bdb7f90d9",
+      "outputSha256": "28179e09d8f224d98dddfc2862563e8a9d93bc31cfeb8d383c2dcff47901c825",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
@@ -215,8 +215,8 @@
         "",
         " Test Files  3 passed (3)",
         "      Tests  17 passed (17)",
-        "   Start at  02:41:20",
-        "   Duration  10.33s (transform 1.13s, setup 0ms, import 2.73s, tests 9.82s, environment 0ms)"
+        "   Start at  09:44:12",
+        "   Duration  9.87s (transform 1.16s, setup 0ms, import 2.67s, tests 9.38s, environment 0ms)"
       ]
     },
     {
@@ -228,7 +228,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "5551bc9ef75bb612bd83bb2413ed1889a02295a0961a4f26dc2a0c42956992ba",
+      "outputSha256": "6099655bd95c4aa81c6a0a2fb782f756e70ffc3ce4a634ee05fb5763c9cd6457",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
@@ -237,8 +237,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  02:41:30",
-        "   Duration  1.20s (transform 412ms, setup 0ms, import 1.00s, tests 131ms, environment 0ms)"
+        "   Start at  09:44:22",
+        "   Duration  1.15s (transform 407ms, setup 0ms, import 963ms, tests 125ms, environment 0ms)"
       ]
     },
     {
@@ -250,10 +250,10 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "0545d97126f3ac937aee0408d88cd4aa6290161a25d10e134b951ea42df6ce09",
+      "outputSha256": "8f3518540ccb78fa15af668deb2c55f5ea75c4379341612c49f3ec153d58b352",
       "outputTail": [
         "$ tsx scripts/run-network-load.ts",
-        "loopback HTTP requests: 22000; failures: 0; p95: 20.00ms",
+        "loopback HTTP requests: 22000; failures: 0; p95: 19.78ms",
         "ABL Assertions 2 passed",
         "ABL Test Files 1 passed"
       ]
@@ -267,28 +267,28 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "fcffda78c492e82aafe5b0db0d67b025e8f7ffb19079c6d1a346f95d811a4714",
+      "outputSha256": "fd6ee39fb3ceb5d3e2c74fc7c5fb6754fe941a4d02d8a772bdde050c58495c92",
       "outputTail": [
-        "[arena] (node:96067) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:57045) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
-        "[arena] (node:96068) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:57046) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "Running 2 tests using 1 worker",
         "",
-        "(node:96069) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:57047) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[1/2] [desktop-chromium] › tests/browser/arena.spec.ts:3:1 › renders a canonical read-only game from the public API",
-        "(node:96074) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:57052) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[2/2] [mobile-chromium] › tests/browser/arena.spec.ts:3:1 › renders a canonical read-only game from the public API",
-        "  2 passed (7.6s)"
+        "  2 passed (7.5s)"
       ]
     },
     {
@@ -300,13 +300,13 @@
       "testFiles": 0,
       "successfulTasks": 25,
       "totalTasks": 25,
-      "outputSha256": "00e490abe47402ddba7e87919fb25f3c93f5a2a2f24cbcd7c0f4af21ca2247fb",
+      "outputSha256": "d343385a64479f14955c9d127fc85ef9e8c8cfd052375878bf21de2e860db276",
       "outputTail": [
         "@abl/arena:build:   Running TypeScript ...",
-        "@abl/arena:build:   Finished TypeScript in 976ms ...",
+        "@abl/arena:build:   Finished TypeScript in 783ms ...",
         "@abl/arena:build:   Collecting page data using 5 workers ...",
         "@abl/arena:build:   Generating static pages using 5 workers (0/3) ...",
-        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 189ms",
+        "@abl/arena:build: ✓ Generating static pages using 5 workers (3/3) in 176ms",
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
         "@abl/arena:build: Route (app)",
@@ -321,7 +321,7 @@
         "",
         " Tasks:    25 successful, 25 total",
         "Cached:    0 cached, 25 total",
-        "  Time:    8.644s"
+        "  Time:    8.15s"
       ]
     }
   ],
@@ -329,7 +329,7 @@
     "Live escape execution in the Blaxel custom-image sandbox is unavailable.",
     "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
     "Four target Blaxel workspaces and Agent Drive are unavailable.",
-    "Neon PITR lacks project credentials.",
+    "Live recovery against the selected canonical database provider lacks project credentials.",
     "Base finality lacks a ratified deployment and credentials.",
     "Remote capacity reservations and provider costs were not requested.",
     "Founding-agent decisions and signatures do not exist.",

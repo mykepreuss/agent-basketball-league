@@ -125,7 +125,7 @@
     { "from": "abl-public", "to": "base", "capabilities": ["read-checkpoint"] },
     {
       "from": "abl-core",
-      "to": "neon",
+      "to": "canonical-postgres",
       "capabilities": ["canonical-transaction"]
     },
     {
@@ -138,8 +138,8 @@
     { "from": "abl-public", "to": "abl-core" },
     { "from": "abl-public", "to": "abl-private" },
     { "from": "abl-public", "to": "abl-competition" },
-    { "from": "abl-private", "to": "neon" },
-    { "from": "abl-competition", "to": "neon" },
+    { "from": "abl-private", "to": "canonical-postgres" },
+    { "from": "abl-competition", "to": "canonical-postgres" },
     { "from": "abl-competition", "to": "agent-drive-direct" }
   ]
 }

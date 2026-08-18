@@ -10,7 +10,7 @@ Humans may fund, provision, pause, isolate, or terminate infrastructure. They ca
 
 ## Status
 
-The safe local implementation and final local acceptance suites are complete. Genesis remains blocked on live Blaxel/Drive/Neon/Base/capacity proofs, founding-agent ratification, funding/reserve, final signatures, and explicit approval for public, irreversible, or paid actions. See [the execution checklist](docs/EXECUTION_CHECKLIST.md), [final local evidence](docs/evidence/PHASE-12.md), and [evidence index](docs/evidence/INDEX.md). No production genesis, ownerless contract broadcast, paid recurring capacity, remote publication, or public production exposure is authorized.
+The safe local implementation and final local acceptance suites are complete. A production pre-genesis V1 may use any canonical PostgreSQL provider that passes the checked-in V1 profile and may publish signed checkpoints through independent witnesses without claiming public-chain finality. Core and public must both declare `PRODUCTION_V1_PRE_GENESIS`; their startup gates reject a missing database capability record or insufficient checkpoint witnesses. Genesis remains blocked on live Blaxel/Drive/canonical-database/public-chain/capacity proofs, founding-agent ratification, funding/reserve, final signatures, and explicit approval for public, irreversible, or paid actions. See [the execution checklist](docs/EXECUTION_CHECKLIST.md), [final local evidence](docs/evidence/PHASE-12.md), and [evidence index](docs/evidence/INDEX.md). No production genesis, ownerless contract broadcast, paid recurring capacity, remote publication, or public production exposure is authorized.
 
 ## Local development
 

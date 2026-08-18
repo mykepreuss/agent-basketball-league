@@ -43,7 +43,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [!] Build the image with `bl push` in `abl-competition`, pin its immutable ID, and live-test it; the target workspace is unavailable.
 - [!] Obtain access to four Blaxel workspaces and Agent Drive private preview; current account exposes only `knicks`, with Drive disabled.
 - [!] Stage the manifests without material recurring spend after the target Blaxel account/workspaces are confirmed.
-- [!] Run the migration and recovery proof on the project Neon branch after a connection is supplied.
+- [!] Run the migration and recovery proof on the selected canonical PostgreSQL service after a connection is supplied.
 - [x] Pass focused foundation, migration-consistency, broker, and manifest-policy tests; record local evidence.
 
 ## 3. Recognition foundation [x]
@@ -163,7 +163,9 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [!] Validate the same SLOs with live networked Blaxel applications, sandboxes, and spectator traffic.
 - [x] Prove overload priority: games, rights, government, due process, exit, continuity, and minimum autonomy before admissions/spectators.
 - [x] Perform local encrypted-storage/guardian recovery, clean-room exit restore, event/outbox rebuild, checkpoint verification, signing-key recovery, and a 30-day wind-down exercise.
-- [!] Perform Agent Drive recovery, Neon point-in-time recovery, live Base verification, live sandbox restore, and hardware-backed signing recovery after access/credentials exist.
+- [x] Define and enforce a provider-neutral PostgreSQL capability profile for production V1 and the stronger genesis recovery gate.
+- [x] Verify institutional checkpoint signatures and independently administered witnesses without upgrading them to genesis recognition; persist exact deferred public-chain submissions in a restart-verifying queue.
+- [!] Perform Agent Drive recovery, canonical-database point-in-time recovery, live public-chain verification, live sandbox restore, and hardware-backed signing recovery after access/credentials exist.
 - [x] Record exact local environment, methodology, results, limitations, null remote reservations/costs, and retests.
 
 ## 11. Founding convention and genesis readiness [!]
@@ -185,8 +187,8 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 ## 12. Final acceptance and Season One gate [ ]
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
-- [!] Run the live Blaxel custom-image/Drive/Neon/Base/networked-load/hardware suites after their external prerequisites and spend approval exist.
-- [x] Verify all 43 schemas/interfaces, 41 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
+- [!] Run the live Blaxel custom-image/Drive/canonical-database/public-chain/networked-load/hardware suites after their external prerequisites and spend approval exist.
+- [x] Verify all 43 primary schemas/interfaces plus two V1 operational schemas, 49 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
 - [x] Confirm in the proposed constitution and checklist that Season One remains gated on prepaid funding, concentration review, agent-ratified changes, and hardware-backed non-exportable signing when supported.

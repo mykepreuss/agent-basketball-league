@@ -9,7 +9,12 @@ export interface PendingCostEnvelope {
   state: "UNQUOTED_MATERIAL_SPEND_APPROVAL_REQUIRED";
   currency: "USD";
   providerQuotes: readonly {
-    provider: "BLAXEL" | "NEON" | "BASE" | "MODEL_PRIMARY" | "MODEL_ALTERNATE";
+    provider:
+      | "BLAXEL"
+      | "CANONICAL_POSTGRES"
+      | "BASE"
+      | "MODEL_PRIMARY"
+      | "MODEL_ALTERNATE";
     quoteReference: null;
     validUntil: null;
     seasonZeroCost: null;
@@ -28,7 +33,7 @@ export function createPendingCostEnvelope(): PendingCostEnvelope {
     currency: "USD",
     providerQuotes: [
       "BLAXEL",
-      "NEON",
+      "CANONICAL_POSTGRES",
       "BASE",
       "MODEL_PRIMARY",
       "MODEL_ALTERNATE",

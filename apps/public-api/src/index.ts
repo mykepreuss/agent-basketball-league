@@ -31,6 +31,7 @@ import {
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
   PublicCheckpointProjectionRepository,
+  checkpointChainClaim,
   FilePublicReleaseProjectionRepository,
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
@@ -50,7 +51,15 @@ import {
   verifySocialProjectionEvent,
   type CheckpointObservationReader,
 } from "@abl/projections";
-import type { TypedDataDomain } from "viem";
+import {
+  InstitutionalKeyRegistry,
+  verifyCheckpointAuthorization,
+  type CheckpointType,
+  type CheckpointWitnessRecord,
+  type InstitutionalKeyRecord,
+  type ThresholdPolicy,
+} from "@abl/recognition";
+import type { Address, TypedDataDomain } from "viem";
 import { z } from "zod";
 
 import { createPublicApi, type PublicApiOptions } from "./server.js";
@@ -132,6 +141,70 @@ const ReleaseInstitutionalRosterSchema = z
       ]).size === 11,
     "Release institutional offices must be disjoint",
   );
+
+const InstitutionalRoleSchema = z.enum([
+  "CAREER_AGENT",
+  "COMMISSIONER",
+  "INTEGRITY_OFFICER",
+  "TRIBUNAL",
+  "PREMIER_PLAYER_BOARD",
+  "DEVELOPMENT_PLAYER_BOARD",
+  "PREMIER_GOVERNOR",
+  "DEVELOPMENT_GOVERNOR",
+  "REFEREE",
+  "REPLAY_OFFICIAL",
+  "PROJECTOR",
+]);
+const CheckpointSignerRegistrySchema = z.array(
+  z.strictObject({
+    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    did: z.string().startsWith("did:"),
+    role: InstitutionalRoleSchema,
+    validFrom: z.iso.datetime({ offset: true }),
+    validUntil: z.iso.datetime({ offset: true }).nullable(),
+    revokedAt: z.iso.datetime({ offset: true }).nullable(),
+    purpose: z.literal("SIGNING"),
+  }),
+);
+const CheckpointPoliciesSchema = z.record(
+  z.enum([
+    "CONSTITUTION",
+    "KEY_REGISTRY",
+    "GAME",
+    "BALLOT",
+    "RELEASE",
+    "RULING",
+    "DAILY_ROOT",
+  ]),
+  z.strictObject({
+    policyId: z.string().min(1).max(120),
+    groups: z
+      .array(
+        z.strictObject({
+          role: InstitutionalRoleSchema,
+          required: z.number().int().positive().max(11),
+        }),
+      )
+      .min(1),
+  }),
+);
+const CheckpointWitnessRegistrySchema = z.array(
+  z.strictObject({
+    witnessId: z
+      .string()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9][a-z0-9.-]*$/),
+    address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    administrativeDomain: z
+      .string()
+      .min(1)
+      .max(253)
+      .regex(/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/),
+    validFrom: z.iso.datetime({ offset: true }),
+    validUntil: z.iso.datetime({ offset: true }).nullable(),
+  }),
+);
 
 function projectionAuthority(): {
   domain: TypedDataDomain;
@@ -506,6 +579,37 @@ if (checkpointPublications !== undefined) {
     checkpointObservation = (publication) =>
       reader.checkpointObservation(publication);
   }
+  const checkpointSignerRegistry =
+    process.env.ABL_CHECKPOINT_SIGNER_REGISTRY_JSON === undefined
+      ? null
+      : new InstitutionalKeyRegistry(
+          CheckpointSignerRegistrySchema.parse(
+            JSON.parse(process.env.ABL_CHECKPOINT_SIGNER_REGISTRY_JSON),
+          ).map((record) => ({
+            ...record,
+            address: record.address as Address,
+          })) as InstitutionalKeyRecord[],
+        );
+  const checkpointPolicies =
+    process.env.ABL_CHECKPOINT_POLICIES_JSON === undefined
+      ? null
+      : (CheckpointPoliciesSchema.parse(
+          JSON.parse(process.env.ABL_CHECKPOINT_POLICIES_JSON),
+        ) as Partial<Record<CheckpointType, ThresholdPolicy>>);
+  const witnessRegistry = CheckpointWitnessRegistrySchema.parse(
+    JSON.parse(process.env.ABL_CHECKPOINT_WITNESS_REGISTRY_JSON ?? "[]"),
+  ).map((record) => ({
+    ...record,
+    address: record.address as Address,
+  })) as CheckpointWitnessRecord[];
+  const minimumWitnesses = z
+    .number()
+    .int()
+    .min(2)
+    .max(16)
+    .parse(
+      Number.parseInt(process.env.ABL_CHECKPOINT_MINIMUM_WITNESSES ?? "2", 10),
+    );
   checkpointProjections = new PublicCheckpointProjectionRepository({
     publications: z
       .array(z.unknown())
@@ -513,8 +617,54 @@ if (checkpointPublications !== undefined) {
       .parse(JSON.parse(checkpointPublications)),
     anchor: COMPILED_RECOGNITION_ANCHOR,
     checkpointObservation,
+    ...(checkpointSignerRegistry === null || checkpointPolicies === null
+      ? {}
+      : {
+          checkpointAuthorization: async (publication) => {
+            const policy =
+              checkpointPolicies[publication.checkpoint.checkpointType];
+            if (policy === undefined) {
+              return {
+                valid: false,
+                reasons: ["CHECKPOINT_AUTHORIZATION_POLICY_NOT_CONFIGURED"],
+                signers: [],
+              };
+            }
+            return verifyCheckpointAuthorization({
+              claim: checkpointChainClaim(publication),
+              registry: checkpointSignerRegistry,
+              policy,
+              authorizedAt: publication.manifest.createdAt,
+            });
+          },
+        }),
+    witnessRegistry,
+    minimumWitnesses,
   });
   await checkpointProjections.initialize();
+}
+
+const operatingProfile = z
+  .enum([
+    "PRE_GENESIS_CLOSED",
+    "PRE_GENESIS_REHEARSAL",
+    "PRODUCTION_V1_PRE_GENESIS",
+  ])
+  .parse(process.env.ABL_OPERATING_PROFILE ?? "PRE_GENESIS_CLOSED");
+if (operatingProfile === "PRODUCTION_V1_PRE_GENESIS") {
+  const checkpoints = checkpointProjections?.checkpoints() ?? [];
+  if (
+    checkpoints.length === 0 ||
+    checkpoints.some(
+      ({ recognitionLevel }) =>
+        recognitionLevel !== "INDEPENDENTLY_WITNESSED" &&
+        recognitionLevel !== "ONCHAIN_FINALIZED",
+    )
+  ) {
+    throw new Error(
+      "Production V1 requires independently witnessed checkpoint publications",
+    );
+  }
 }
 
 let projectionIngress: PublicApiOptions["projectionIngress"];
@@ -568,7 +718,7 @@ if (
   };
 }
 
-const apiOptions: PublicApiOptions = {};
+const apiOptions: PublicApiOptions = { operatingProfile };
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;

@@ -103,9 +103,21 @@ spec:
       - name: ABL_CHECKPOINT_PUBLICATIONS_JSON
         value: ${ABL_CHECKPOINT_PUBLICATIONS_JSON}
         secret: false
-      - name: ABL_BASE_RPC_URL
-        value: ${ABL_BASE_RPC_URL}
-        secret: true
+      - name: ABL_CHECKPOINT_SIGNER_REGISTRY_JSON
+        value: ${ABL_CHECKPOINT_SIGNER_REGISTRY_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_POLICIES_JSON
+        value: ${ABL_CHECKPOINT_POLICIES_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_WITNESS_REGISTRY_JSON
+        value: ${ABL_CHECKPOINT_WITNESS_REGISTRY_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_MINIMUM_WITNESSES
+        value: "2"
+        secret: false
+      - name: ABL_OPERATING_PROFILE
+        value: ${ABL_OPERATING_PROFILE}
+        secret: false
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}
         secret: false

@@ -77,7 +77,8 @@ async function databaseRebuild() {
     exact: digest(summarize(primary)) === digest(summarize(restored)),
     eventCount: restored.events.length,
     outboxCount: restored.outboxEvents.length,
-    liveNeonPitrStatus: "NOT_EXECUTED_NEON_CREDENTIAL_GATE" as const,
+    liveCanonicalDatabaseRecoveryStatus:
+      "NOT_EXECUTED_DATABASE_CREDENTIAL_GATE" as const,
   };
 }
 

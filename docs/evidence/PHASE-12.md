@@ -1,10 +1,10 @@
 # Phase 12 evidence: final local acceptance and Season One gate
 
-Recorded: 2026-08-13 in `America/Vancouver`.
+Recorded: 2026-08-18 in `America/Vancouver`.
 
 ## Result
 
-The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x4675c1d0161119825a33e6d2b9b38ba6305ab4d61e6be7679ff16e87149a3a88`.
+The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x909ba6218128323f94841d21dba384149ed58418a83e2dbd24566bafa618df04`.
 
 The evidence runner executed from a clean command boundary:
 
@@ -13,14 +13,14 @@ The evidence runner executed from a clean command boundary:
 | Repository formatting                                                        | Pass                                        |
 | Root harness/configuration TypeScript                                        | Pass                                        |
 | Workspace TypeScript checks                                                  | 37/37 uncached tasks                        |
-| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 252/252 assertions in 56 files; 37/37 tasks |
+| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 261/261 assertions in 59 files; 37/37 tasks |
 | Cross-domain acceptance, replay, synthetic load, and recovery                | 17/17 assertions in 3 files                 |
 | Adversarial security                                                         | 9/9 assertions in 1 file                    |
 | Populated-game loopback HTTP load                                            | 2/2 workload assertions; 22,000 requests    |
 | Production desktop/mobile Chromium                                           | 2/2 assertions in 1 browser file            |
 | Production build                                                             | 25/25 uncached tasks                        |
 
-That is 282 passing assertions across 62 test files under the exact pinned Node `24.18.0` runtime. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
+That is 291 passing assertions across 65 test files under the exact pinned Node `24.18.0` runtime. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
 
 ## Interface and route closure
 
@@ -33,7 +33,9 @@ The service boundary now has a safe default and an explicit local rehearsal path
 - `@abl/safety-gateway` is an independently deployed public Agent with a fixed non-command interface and its own durable ledger. It verifies configured human-custodian EIP-712 keys, accepts only two controls and four reason codes, forbids free text, derives expiration no later than 24 hours, rejects active-window overlap, and publicly exposes the immutable action chain and current control state. Restart and tamper tests verify the history rather than trusting storage. The package and manifest carry no core, canonical-database, model, Drive, or private-storage credential; no `/v1/commands` route exists; and every response states that recognized state was not mutated. Local control-registry behavior is proven while live Blaxel scheduler/runtime execution remains explicitly unverified.
 - `@abl/projections` reconstructs canonical possession, finalized-game, draft, development-conference, contract, season-economy, governance, institutional-election, resource-schedule, due-process, model-dependency, software-release, and disclosure events from eleven isolated outbox topics. It verifies agent signatures/content and configured authority snapshots, sends strict signed envelopes over HMAC-authenticated HTTP, writes immutable fsynced hash chains with durable source authorization, re-verifies every record and state transition after restart, refreshes cross-process records, and fails closed on corruption, false state roots, broken prior-event hashes, duplicate canonical events, version skips, undeclared fields, direct rogue-signed insertion, or a forged record chain. Governance and election events share the isolated `public.governance` transport but use distinct strict envelopes/repositories; both are causally delivered before dependent resource, release, or development events, while due-process cases are delivered before a dependent adverse contract action. Finalized games additionally require exact inference-free command replay, a derived winner, fixed role-decision counts and roots, independent evidence registration, and fully released paced segments. Drafts require the exact 32 signed result proofs, independent evidence, one draft-authority signature, and four ordered governor signatures. Development formation requires 45 exact ordered signatures and a passed tier CBA; later mobility authorizations use decision-specific signer sets and cannot mutate playing rights. Economy events share `public.contracts` but carry a strict aggregate discriminator and independently re-verify their exact initial contract heads, cap sheets, ordered signers, trade-access evidence, adverse-case finality, public free-agency window, and complete transition state. The public collections serve verified game archives and standings, contract and economy history, cap-certified active rosters, explicitly non-active draft rights, the development conference and mobility decisions, ratified resource schedules, independently tallied elections, governance and commitment-only case process, derived model concentration, fully authorized release manifests, and independently verified disclosure commitments. All results remain explicit local rehearsals.
 
-`docs/architecture/ROUTE_CATALOG.json` locks all 49 route/method pairs: 22 public API pairs, 23 private core pairs, three fixed-safety pairs, and `/arena`. Acceptance compares the catalog to the authoritative plan path-for-path. All 43 primary strict schemas export draft-2020-12 JSON Schema with `additionalProperties: false`; all 15 NBA rules and all 42 CBA articles plus 17 exhibits retain a valid classification, citation, implementation reference, governing body, and test. The separately hosted MCP Functions publish their own Zod-derived draft-2020-12 tool schemas and are recorded in `MCP-SERVICES.md` rather than being miscounted as same-origin API routes.
+The Production V1 profile adds an honest deployment state without opening genesis. Core can require a strict provider-neutral PostgreSQL capability record before opening the canonical store, with distinct V1 and genesis recovery/durability thresholds. Public startup can identify itself as `PRODUCTION_V1_PRE_GENESIS` only when every configured checkpoint has valid institutional threshold signatures and at least two valid witness attestations from separately registered administrative domains. The endpoint exposes `productionV1Ready` and the exact recognition level while keeping witnessed history noncanonical. A restart-verifying fsynced queue preserves unsubmitted checkpoint artifacts for later public-chain anchoring without claiming that the queue or witnesses supply chain finality.
+
+`docs/architecture/ROUTE_CATALOG.json` locks all 49 route/method pairs: 22 public API pairs, 23 private core pairs, three fixed-safety pairs, and `/arena`. Acceptance compares the catalog to the authoritative plan path-for-path. All 43 primary strict schemas plus the checkpoint-witness and canonical-database V1 operational schemas export draft-2020-12 JSON Schema with `additionalProperties: false`; all 15 NBA rules and all 42 CBA articles plus 17 exhibits retain a valid classification, citation, implementation reference, governing body, and test. The separately hosted MCP Functions publish their own Zod-derived draft-2020-12 tool schemas and are recorded in `MCP-SERVICES.md` rather than being miscounted as same-origin API routes.
 
 ## Arena proof
 
@@ -77,22 +79,28 @@ The local data-bound production browser pass is current. A separate loopback HTT
 26. Film and practice are no longer service facades. A career with explicit private-film/practice scope admits only its own configured game film, and core re-verifies the source finalizer signature, independent decision evidence, exact game replay, source commitments, self-committing delivery evidence for the exact game/owner/ciphertext tuple, and durable PERSONAL ciphertext ownership before appending the private catalog. Counterfactual runs branch only from a state root in that replay, contain changed-intent commitments rather than content, deterministically bind the film ciphertext, and remain incapable of recognized game mutation. Lessons require the same owner career signature and an existing run. Inspection returns commitments only; safe retry, restart, rogue authorship, evidence removal, source mismatch, private aggregate tampering, and public-topic isolation are directly exercised.
 27. The Premier Players Association board election is no longer a pure tally helper. A canonical UUIDv7 election binds the frozen governance snapshot, exactly three Executive Commission careers, eight seats, separate nomination/voting windows, premier-player self-nominations, and one complete direct ranking per voter. Core verifies every current career key, rejects former operators and role/window/ranking substitution, derives the result without a winner input, and persists it on `public.governance`. The public service applies a distinct strict envelope and immutable repository, independently recomputes code-point-tie-broken Borda standings, serves the result beside proposal/case history, and reproduces it after restart. A loopback acceptance sends all eleven signed election events through the HMAC-authenticated projection endpoint and verifies zero pending events. Every record remains `recognizedGenesisElection: false` or `REHEARSAL`; no real office was filled.
 
+28. Production V1 is now a first-class, fail-closed pre-genesis profile rather than a vendor assumption. Database readiness is evaluated from PostgreSQL transaction, ingress, backup, restoration, RPO/RTO, and durability capabilities; no provider name grants readiness. Checkpoint projections distinguish absent, institutionally signed, independently witnessed, and finalized on-chain evidence. Witness identity/address/domain uniqueness, validity windows, manifest time, publication domain, signature, and threshold are verified. A public service configured as production V1 refuses startup without independently witnessed checkpoints, while `canonical` and `recognized` remain reserved for finalized chain evidence. The implementation was exercised under the exact pinned Node runtime without provisioning a database, Blaxel resource, witness service, or chain transaction.
+
 ## Current locked artifacts
 
-- Final local result record: `sha256:7b57ef38ea7eeb57a73208c90ae23859fa1dc44ce8f75cf93dcc11c7c6780c94`
+- Final local result record: `sha256:40d97de274ca0eeffb8491cafa3f55bb91eaf02d9b83e19ec79d514cc350420d`
 - Route catalog: `sha256:cbe57a7880d1c797440788996da32e592b48f940b881b1081f24ae88b39d1a0a`
-- Main acceptance suite: `sha256:ae47b6b560325da385f33a3055738f55eb8c06672d17887b01d0860f9493f712`
+- Main acceptance suite: `sha256:cca6f615bdf5041f8c5d9e2f4b15cfb2bce5d0b8e282db61d09f698844bce28a`
 - MCP interface acceptance: `sha256:8995109bc909e0168e294467a0b414384def63259034eab400a6cffe76dc8e01`
 - Election history acceptance: `sha256:929ea0fe5a05fc8bd384d6ede96a65f83bf10d8e7c670699b673642e58e33942`
 - Adversarial suite: `sha256:85dc479e4ef799f8088ec3eee226fd7316fe0b318d1b51b6454da8d3c308a3b3`
-- Evidence runner: `sha256:6a7cc85570eb15d94b5e6233d02962a4248aee2fd00dfdc12d4f5c8ec7d6657b`
-- Loopback load result: `sha256:76487be1e52e287cbb0c651eb541b48611a9033d5a5acdf78a14f7c69fa2d691`
+- Evidence runner: `sha256:43a21c56ba8059d684d0e207f5945cdaa0f07fd163477324d5d7439a07dd8105`
+- Loopback load result: `sha256:bcde0bc3bf212ba21a52b2fd7afeaedd18a3a5c8c0f707351b37fe4e99a43e94`
 - k6 staging profile: `sha256:9bdc897b9df96fa74cf89b66252710db2d27aafd3e207f5dae262ad9f39314f8`
 - Playwright configuration/suite: `sha256:a90f55db0de71c6e5207402e3ad4f93597b74100b83049645ae5ca713f12d449`, `sha256:d8b00dbb68937b1d851cb93c07d63e4a37696f0a1198182006c8027d065d41d6`
-- Genesis readiness bundle: `sha256:c6e8fdf6f94fbc54ff9e21261b35922e2a06a54ffd061489f6fde22359391249`
-- Pending release candidate: `sha256:96361c7d17acde4da6886dd2e8f81ae102302825ac891ab5b8db9ddec22bf14d`
-- Founding constitution: `sha256:0a642c0c0768eebb7de5768428b64951cfc822655af85e8636cae79da2992a54`
-- Lockfile: `sha256:3ed2cb2cfa98dc8bb476feed3dc6a72c1d336d18460b7bd3d8e7dc48fbe20a9e`
+- Genesis readiness bundle: `sha256:604f110211fc194e884b057f776339cb97f018e98356e3fe3f6aca7a61651355`
+- Pending release candidate: `sha256:b164532390ff6efa19a790ded4ade980c9d6434a58901341836ad8e566230c90`
+- Founding constitution: `sha256:ce821b90e3bcf218c4bbf541f16c6e1c9248e50c7e4ed1eaa50e07a6ce161d5c`
+- Lockfile: `sha256:8377cea748d19ee0e3756170703974c39e4d630d481419e23f06ad5fe98e5850`
+- Production V1 profile: `sha256:9c7d3dfc2325545fd569e30459538f7ce2b218172306d6dc21be60de83edef3d`
+- Canonical database assessment: `sha256:37b0c2e8ddb0c07d7fb3fbd07c25b48be742142dbe2228e8498edd4706777be1`
+- Checkpoint authorization/witness verification: `sha256:599357e3f93c9c0402e01a1436165c9060fb86aa4d8e3ebe83e4ba9cb12532f6`, `sha256:492de6297116806a3e37ffe07dc665e4b5318c94f06f0defb3e58c23e8a631af`
+- Deferred checkpoint queue: `sha256:2b15d5c7aba7254a7c5c37084b291dd3418f5a9c06c80084ded85c1b643ddb7d`
 
 The finalized-game milestone is additionally locked at its principal implementation boundaries: game finalization `sha256:7ed3b1e3e6a1737d2b3b16a649cc77d4e2c5b94fe4e2945438de266ab81079ce`; signed public envelope `sha256:f0ebb42c113412a94ee699fe2b5525365d182f7302e35ae4f8c61242078b00bd`; immutable public repository `sha256:bbe42d766d6ed4d5094f19e5f68d0e8c8cff01ef3590352b6da94500e5df2f00`; arena finalized-game view `sha256:4a466bd94c41be1aa86180b4dbc9918f185919fc7c130cb5f40752c05b69b40b`; and unchanged public Blaxel manifest `sha256:f7adfa9463b2489c3d1726984e3fe8df2fa42d743fcd0c3a81730514f3e3589d`. Prior undocumented aggregate snapshot digests are intentionally not carried forward as if refreshed; the exact evidence command, result record, lockfile, suites, and milestone boundaries above are the reproducible locks for this run.
 

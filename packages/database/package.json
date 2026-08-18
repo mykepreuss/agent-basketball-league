@@ -22,8 +22,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/schemas": "workspace:*",
     "drizzle-orm": "catalog:",
-    "postgres": "catalog:"
+    "postgres": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

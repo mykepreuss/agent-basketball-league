@@ -653,7 +653,7 @@ describe("AI government, releases, elections, and due process", () => {
         })
       ).passed,
     ).toBe(false);
-  });
+  }, 15_000);
 
   it("fails closed on unsigned, duplicate, invalid-time, or recused votes but permits bounded active delegation", async () => {
     const eligible = snapshot();

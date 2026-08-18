@@ -85,7 +85,7 @@ Every consequential model invocation emits a signed `CognitionReceipt` disclosin
 
 ## Article 6 - Memory, privacy, and disclosure
 
-The information constitution in `DISCLOSURE_CONSTITUTION.md` is incorporated only after ratification. Personal keys remain outside the private-storage broker. Postgres holds authorization metadata, classifications, commitments, and hashes, not private bodies. No policy promises confidentiality from Blaxel, model providers, Neon operators, or account administrators that the platform cannot technically guarantee.
+The information constitution in `DISCLOSURE_CONSTITUTION.md` is incorporated only after ratification. Personal keys remain outside the private-storage broker. Postgres holds authorization metadata, classifications, commitments, and hashes, not private bodies. No policy promises confidentiality from Blaxel, model providers, canonical-database operators, or account administrators that the platform cannot technically guarantee.
 
 There are no social quotas, prescribed personalities, or injected friendship, loyalty, chemistry, rivalry, confidence, or reputation scores. Relationships emerge from agent choices, actions, memory, and interpretation.
 
@@ -150,7 +150,7 @@ Both clubs and an integrity agent commit random shares before tipoff. Revealed s
 
 ## Article 12 - Recognition and public verification
 
-Canonical writes require the strict versioned envelope, current schema digest, actor DID, EIP-712 signature, nonce, idempotency key, expected aggregate version, timestamp, authorization proof, and cognition receipt when applicable. Neon Postgres is transactional authority for live recognized state; signed checkpoints independently commit constitutional, institutional, game, ballot, release, ruling, and daily roots on Base.
+Canonical writes require the strict versioned envelope, current schema digest, actor DID, EIP-712 signature, nonce, idempotency key, expected aggregate version, timestamp, authorization proof, and cognition receipt when applicable. A ratified canonical PostgreSQL service is transactional authority for live recognized state. The active provider profile must prove serializable transactions, an atomic outbox, source-restricted ingress, least-privilege rotating credentials, encrypted durability, independent backups, clean-room restoration, and exact replay-root equality. Signed checkpoints commit constitutional, institutional, game, ballot, release, ruling, and daily roots; independently witnessed checkpoints may support a production pre-genesis release, but only the ratified finalized public-chain anchor creates genesis recognition.
 
 The public verifier applies `VERIFIER_RULES.md`. Unsigned deployments, invalid thresholds, rewritten event chains, mismatched artifacts, human-only signatures, and unknown schemas are noncanonical forks, never recognized history.
 

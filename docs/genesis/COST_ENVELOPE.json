@@ -10,7 +10,7 @@
       "thirtyDayEssentialCost": null
     },
     {
-      "provider": "NEON",
+      "provider": "CANONICAL_POSTGRES",
       "quoteReference": null,
       "validUntil": null,
       "seasonZeroCost": null,

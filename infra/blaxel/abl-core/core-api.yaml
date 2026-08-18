@@ -19,11 +19,17 @@ spec:
       - name: DATABASE_URL
         value: ${ABL_CORE_DATABASE_URL}
         secret: true
+      - name: ABL_CANONICAL_DATABASE_PROFILE_JSON
+        value: ${ABL_CANONICAL_DATABASE_PROFILE_JSON}
+        secret: false
+      - name: ABL_CANONICAL_DATABASE_STAGE
+        value: ${ABL_CANONICAL_DATABASE_STAGE}
+        secret: false
       - name: ABL_SERVICE_ROLE
         value: core
         secret: false
-      - name: ABL_REHEARSAL_MODE
-        value: "1"
+      - name: ABL_OPERATING_PROFILE
+        value: ${ABL_OPERATING_PROFILE}
         secret: false
       - name: ABL_COMPETITION_ID
         value: ${ABL_COMPETITION_ID}
