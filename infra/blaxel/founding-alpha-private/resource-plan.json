@@ -115,9 +115,9 @@
     "infra/blaxel/abl-public/discovery-mcp.yaml"
   ],
   "localArtifacts": {
-    "imageSetDigest": "0x2a49f2ead328fc3fe39979ede40b701d74a7428807e369e98345f14e8f16a9e6",
+    "imageSetDigest": "0xdcca250c22f294cd665a31d2626cf00a5d035ff46a311074195a48cbeb8eb72f",
     "manifestSetDigest": "0xe53d58cea4490fc3090132fad6bf8634b02d2b0fd65398cb8c55f8b645a792f7",
-    "bodyProgramArchiveDigest": "0x5142588fa09bb4036e2ab08eb656cdb03960593873816fc9b11026c9d8f162ef"
+    "bodyProgramArchiveDigest": "0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557"
   },
   "limits": {
     "memoryMiBBySandbox": {
