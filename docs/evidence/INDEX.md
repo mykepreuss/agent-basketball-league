@@ -9,7 +9,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                               | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 | Founding Alpha implementation source freeze | 428 existing and launch-layer implementation files frozen                         | `founding-alpha-source-freeze.json`                                                |
 | Founding Alpha private-run packet           | Ready for digest-bound authorization; live proof remains gated                    | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
-| Founding Alpha provider preflight           | Read-only complete; no provider mutation                                          | `FOUNDING_ALPHA_PREFLIGHT_01.md`                                                   |
+| Founding Alpha provider preflight           | Refreshed read-only; stale authorization invalidated before mutation              | `FOUNDING_ALPHA_PREFLIGHT_02.md`                                                   |
 | Sandbox-native active topology              | Local manifests and invariants implemented                                        | `infra/blaxel/README.md`, `@abl/foundation` topology suite                         |
 | Public discovery and practice               | Local noncanonical path implemented                                               | `@abl/public-api`, `@abl/discovery-mcp`, `skills/abl-league`                       |
 | Founding cohort capacity                    | Local deterministic allocation implemented                                        | `@abl/schemas`, `@abl/launch`, `@abl/candidate-edge`                               |
@@ -68,7 +68,8 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha local evidence: [`FOUNDING_ALPHA_LOCAL.md`](./FOUNDING_ALPHA_LOCAL.md)
 - Founding Alpha source freeze: [`founding-alpha-source-freeze.json`](./founding-alpha-source-freeze.json)
 - Founding Alpha private slice: [`FOUNDING_ALPHA_PRIVATE_SLICE.md`](../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md)
-- Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md)
+- Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md)
+- Earlier Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md)
 - Gate 0/1 traceability: [`GATE_0_1_TRACEABILITY.md`](../launch/GATE_0_1_TRACEABILITY.md)
 - Gate 1 evidence: [`GATE-01.md`](./GATE-01.md)
 - Gate 2 approval packet: [`GATE_2_PRIVATE_STAGING_APPROVAL.md`](../launch/GATE_2_PRIVATE_STAGING_APPROVAL.md)

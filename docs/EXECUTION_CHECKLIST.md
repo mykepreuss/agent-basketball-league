@@ -19,6 +19,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Add an approval-gated Agent Drive topology applicator without executing it.
 - [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; record 354 passing assertions across 75 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
 - [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
+- [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [!] Obtain a digest-bound authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
