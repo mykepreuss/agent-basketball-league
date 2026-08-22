@@ -20,7 +20,16 @@
     "dev": "turbo run dev --parallel",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
+    "founding-alpha:freeze": "tsx scripts/freeze-founding-alpha-source.ts",
     "genesis:prepare": "tsx scripts/prepare-genesis-readiness.ts",
+    "launch:ledger": "tsx scripts/generate-launch-ledger.ts",
+    "platform:apply-drives": "tsx scripts/apply-agent-drive-topology.ts",
+    "founding-alpha:render-manifests": "tsx scripts/render-founding-alpha-manifests.ts",
+    "staging:prepare-checkpoint": "tsx scripts/prepare-staging-checkpoint.ts",
+    "staging:package-body": "tsx scripts/package-staging-body.ts",
+    "staging:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
+    "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
+    "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
     "test": "turbo run test",
     "test:acceptance": "vitest run --config tests/vitest.acceptance.ts",
     "test:adversarial": "vitest run --config tests/vitest.adversarial.ts",
@@ -31,6 +40,7 @@
     "evidence": "tsx scripts/evidence.ts"
   },
   "devDependencies": {
+    "@blaxel/core": "0.3.13",
     "@playwright/test": "catalog:",
     "@types/node": "26.2.0",
     "@vitest/coverage-v8": "4.1.10",
@@ -40,6 +50,7 @@
     "turbo": "2.10.9",
     "typescript": "6.0.3",
     "viem": "catalog:",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "zod": "catalog:"
   }
 }

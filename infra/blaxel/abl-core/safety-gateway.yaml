@@ -1,26 +1,37 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Agent
+kind: Sandbox
 metadata:
   name: abl-safety-gateway
   labels:
     abl-workspace-role: fixed-safety-boundary
+    abl-drive-role: safety-ledger-writer
     abl-release: ${ABL_RELEASE_ID}
 spec:
   enabled: true
-  public: true
   region: us-was-1
-  volumes:
-    - name: ${ABL_SAFETY_LEDGER_VOLUME_NAME}
-      mountPath: /mnt/abl-safety
   runtime:
-    generation: mk3
     image: ${ABL_SAFETY_GATEWAY_IMAGE_DIGEST}
     memory: 1024
-    minScale: 1
-    maxScale: 1
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
     envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
       - name: ABL_SAFETY_LEDGER_ROOT
         value: /mnt/abl-safety
+        secret: false
+      - name: ABL_SAFETY_STORAGE_BACKEND
+        value: AGENT_DRIVE
+        secret: false
+      - name: ABL_BLAXEL_REGION
+        value: us-was-1
         secret: false
       - name: ABL_SAFETY_CUSTODIAN_PUBLIC_KEYS_JSON
         value: ${ABL_SAFETY_CUSTODIAN_PUBLIC_KEYS_JSON}
@@ -43,19 +54,3 @@ spec:
       - name: ABL_LOG_CONTENT
         value: "false"
         secret: false
-  triggers:
-    - id: safety-action-submit
-      type: http
-      configuration:
-        authenticationType: public
-        path: /v1/safety/actions
-    - id: safety-control-read
-      type: http
-      configuration:
-        authenticationType: public
-        path: /v1/safety/controls
-    - id: safety-health
-      type: http
-      configuration:
-        authenticationType: public
-        path: /health

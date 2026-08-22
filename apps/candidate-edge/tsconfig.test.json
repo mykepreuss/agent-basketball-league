@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "tsBuildInfoFile": "node_modules/.cache/candidate-edge-test.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "references": []
+}

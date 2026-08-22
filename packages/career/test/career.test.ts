@@ -199,6 +199,21 @@ describe("agent-controlled credentials, guardians, and delegation", () => {
         identity.address,
       ),
     ).toThrow("cannot be delegated");
+    expect(() =>
+      controller.delegate(
+        {
+          mandateId: "constitutional-vote",
+          principalDid: "did:abl:agent-a",
+          delegateDid: "did:abl:advocate",
+          capabilities: ["governance:constitutional:vote"],
+          subjectIds: ["proposal-1"],
+          validFrom: iso(0),
+          expiresAt: iso(day),
+          revokedAt: null,
+        },
+        identity.address,
+      ),
+    ).toThrow("cannot be delegated");
     controller.delegate(
       {
         mandateId: "case-mandate",
@@ -230,6 +245,16 @@ describe("agent-controlled credentials, guardians, and delegation", () => {
         iso(1_000),
       ),
     ).toThrow("overbroad");
+    controller.revokeDelegation("case-mandate", iso(2_000), identity.address);
+    expect(() =>
+      controller.authorizeDelegation(
+        "case-mandate",
+        "did:abl:advocate",
+        "case:respond",
+        "case-1",
+        iso(3_000),
+      ),
+    ).toThrow("revoked");
     expect(() =>
       controller.authorizeDelegation(
         "case-mandate",

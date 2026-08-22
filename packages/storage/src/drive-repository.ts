@@ -59,7 +59,26 @@ async function readJson<T>(path: string): Promise<T> {
   return value as T;
 }
 
-export class DriveCiphertextRepository {
+export interface CiphertextRepository {
+  initialize(): Promise<void>;
+  putPolicy(policy: StorageDomainPolicy): Promise<void>;
+  putCiphertext(blob: EncryptedBlob): Promise<void>;
+  putGuardianEnvelope(envelope: GuardianWrappedKey): Promise<void>;
+  putDeletion(receipt: CiphertextDeletionReceipt): Promise<void>;
+  getDeletion(
+    domainId: string,
+    objectId: string,
+  ): Promise<CiphertextDeletionReceipt>;
+  eraseCiphertext(domainId: string, objectId: string): Promise<void>;
+  getCiphertext(
+    domainId: string,
+    objectId: string,
+    version: number,
+  ): Promise<EncryptedBlob>;
+  loadState(): Promise<CiphertextBrokerState>;
+}
+
+export class FilesystemCiphertextRepository implements CiphertextRepository {
   readonly #root: string;
 
   public constructor(root: string) {
@@ -300,3 +319,6 @@ export class DriveCiphertextRepository {
     return { policies, objects, guardianEnvelopes, deletions };
   }
 }
+
+/** Compatibility name retained for the original rehearsal backend. */
+export class DriveCiphertextRepository extends FilesystemCiphertextRepository {}

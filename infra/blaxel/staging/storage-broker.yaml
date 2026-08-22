@@ -1,0 +1,56 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: abl-stage-storage-broker
+  labels:
+    abl-stage: private-gate-2
+    abl-authority: ciphertext-only
+    abl-drive-role: ciphertext-broker
+spec:
+  enabled: true
+  region: us-was-1
+  lifecycle:
+    expirationPolicies:
+      - action: delete
+        type: ttl-idle
+        value: 4h
+    terminatedRetention: 24h
+  runtime:
+    image: ${ABL_STAGE_STORAGE_BROKER_IMAGE_DIGEST}
+    memory: 1024
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_STORAGE_BACKEND
+        value: AGENT_DRIVE
+        secret: false
+      - name: ABL_STORAGE_ROOT
+        value: /mnt/abl-stage-ciphertext
+        secret: false
+      - name: ABL_STORAGE_BROKER_ONLY
+        value: "1"
+        secret: false
+      - name: ABL_BLAXEL_REGION
+        value: us-was-1
+        secret: false
+      - name: ABL_AGENT_DRIVE_PERMISSIONS_CONFIGURED
+        value: "1"
+        secret: false
+      - name: ABL_STORAGE_BOOTSTRAP_JSON
+        value: ${ABL_STAGE_STORAGE_BOOTSTRAP_JSON}
+        secret: true
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false

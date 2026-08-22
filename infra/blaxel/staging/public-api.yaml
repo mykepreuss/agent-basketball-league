@@ -1,0 +1,149 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: abl-stage-public-api
+  labels:
+    abl-stage: private-gate-2
+    abl-authority: read-only-rehearsal-projection
+    abl-drive-role: projection-writer
+spec:
+  enabled: true
+  region: us-was-1
+  lifecycle:
+    expirationPolicies:
+      - action: delete
+        type: ttl-idle
+        value: 4h
+    terminatedRetention: 24h
+  runtime:
+    image: ${ABL_STAGE_PUBLIC_API_IMAGE_DIGEST}
+    memory: 1536
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_PUBLIC_PROJECTION_ROOT
+        value: /mnt/abl-stage-projections
+        secret: false
+      - name: ABL_PROJECTION_INGEST_SERVICE_ID
+        value: stage-core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_INGEST_HMAC_BASE64
+        value: ${ABL_STAGE_PROJECTION_HMAC_BASE64}
+        secret: true
+      - name: ABL_PROJECTION_VERIFY_KEY_REGISTRY
+        value: ${ABL_STAGE_ADMITTED_AGENTS_JSON}
+        secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_STAGE_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_STAGE_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_STAGE_DRAFT_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_STAGE_ECONOMY_DRAFT_ID}
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: abl-stage-possession
+        secret: false
+      - name: ABL_SEASON_ID
+        value: abl-stage-season
+        secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_STAGE_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_STAGE_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_STAGE_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_STAGE_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_STAGE_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_STAGE_TRADE_ACCESS_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST
+        value: ${ABL_STAGE_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST}
+        secret: false
+      - name: ABL_CASE_TRIBUNAL_DIDS_JSON
+        value: ${ABL_STAGE_CASE_TRIBUNAL_DIDS_JSON}
+        secret: false
+      - name: ABL_CASE_APPELLATE_DIDS_JSON
+        value: ${ABL_STAGE_CASE_APPELLATE_DIDS_JSON}
+        secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_STAGE_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_STAGE_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_STAGE_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_STAGE_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_STAGE_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_PUBLICATIONS_JSON
+        value: ${ABL_STAGE_CHECKPOINT_PUBLICATIONS_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_SIGNER_REGISTRY_JSON
+        value: ${ABL_STAGE_CHECKPOINT_SIGNER_REGISTRY_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_POLICIES_JSON
+        value: ${ABL_STAGE_CHECKPOINT_POLICIES_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_WITNESS_REGISTRY_JSON
+        value: ${ABL_STAGE_CHECKPOINT_WITNESS_REGISTRY_JSON}
+        secret: false
+      - name: ABL_CHECKPOINT_MINIMUM_WITNESSES
+        value: "2"
+        secret: false
+      - name: ABL_OPERATING_PROFILE
+        value: PRE_GENESIS_REHEARSAL
+        secret: false
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_STAGE_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_STAGE_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: ABL_PUBLIC_ORIGIN
+        value: ${ABL_STAGE_PRIVATE_PUBLIC_API_ORIGIN}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

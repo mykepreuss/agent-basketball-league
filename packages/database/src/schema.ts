@@ -79,7 +79,14 @@ export const recognizedEvents = pgTable(
     }).notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.occurredAt, table.eventId] }),
+    primaryKey({
+      columns: [
+        table.occurredAt,
+        table.competitionId,
+        table.seasonId,
+        table.eventId,
+      ],
+    }),
     index("recognized_events_competition_season_time_idx").on(
       table.competitionId,
       table.seasonId,

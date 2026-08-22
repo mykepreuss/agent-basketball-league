@@ -177,7 +177,7 @@ async function signCheckpoint(input: {
 
 beforeAll(async () => {
   compiled = (await compileContract()).contract;
-});
+}, 30_000);
 
 describe("ownerless recognition contract", () => {
   it("compiles with an immutable genesis and exposes no owner or unilateral mutation route", async () => {
@@ -210,7 +210,7 @@ describe("ownerless recognition contract", () => {
     expect(source).not.toMatch(
       /onlyOwner|tx\.origin|delegatecall|selfdestruct/,
     );
-  });
+  }, 30_000);
 
   it("executes policy removal and signer rotation in a local EVM", async () => {
     const account0 = privateKeyToAccount(privateKeys[0]);

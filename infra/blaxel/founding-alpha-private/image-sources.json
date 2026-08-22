@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "LOCAL_PREPARED_NOT_PUSHED",
+  "runId": "ABL-FOUNDING-ALPHA-R01",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "runtime": {
+    "node": "24.18.0",
+    "pnpm": "11.21.0"
+  },
+  "generator": "scripts/prepare-staging-image-contexts.ts",
+  "command": "pnpm founding-alpha:prepare-images <external-directory>",
+  "arenaBuild": {
+    "id": "abl-aefec806a420ce6d0d9572429861abce",
+    "sourceDigest": "0xaefec806a420ce6d0d9572429861abce66d93b554d77cb440eb2b59cab3b371f"
+  },
+  "imageSourceDigests": {
+    "abl-alpha-r01-arena-image": "0x5fa2fc3df86e4a16dd07d571c1217e1c665867270d9c92e9c70fddf8571717cf",
+    "abl-alpha-r01-basketball-mcp-image": "0xd50a2d9efd47a49319b01eb7ee4f1ce0c8763d9b352255246983de6a04385120",
+    "abl-alpha-r01-body-image": "0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642",
+    "abl-alpha-r01-candidate-edge-image": "0x4af632c3c43adab01fb3aa510c4ef6a43cbc41a3922e74471192ab67e46a7e89",
+    "abl-alpha-r01-candidate-provisioner-image": "0x7298ffa68d30bc2d33ceaed7ee4902b4a58443ea82efff048a749cece32095a2",
+    "abl-alpha-r01-candidate-store-image": "0xfeb8b46f5863e386bac4f09d45aca86dfa4328756aaaae936276e9a6ec75ab08",
+    "abl-alpha-r01-career-mcp-image": "0xcf75ffc6dce43fa5bafc176d1df8832d2a7d295db6c8df29ff8bc09161036c3e",
+    "abl-alpha-r01-core-api-image": "0xbe83d3a32da16ce44eddce1abf3b1b45d1c5f213a10190c7b5d02d53565f2fb5",
+    "abl-alpha-r01-discovery-mcp-image": "0x7ac112f85a563523cff0473b28faef015c8f793aa3b85eaf252fa91dc6c6164c",
+    "abl-alpha-r01-fixed-broker-image": "0x2e8bf0499f8e2c6de86f9779ba56f38edd94f9f00b28efd48afecd747ac1fe80",
+    "abl-alpha-r01-government-mcp-image": "0x9413e356f7bd9305104934c8e35ffbd98d0c60e0ee73cc34dc7700b6a51102f1",
+    "abl-alpha-r01-public-api-image": "0xcc1b53f77d7c7b7e21d9e3d03896d6ada0cfd232f317d8d2577df67b4ea3c19a",
+    "abl-alpha-r01-storage-broker-image": "0x3b44103c9913f01b6090ef4dcaf78b88d82dc7a754dec8e409d62dd3524a0217"
+  },
+  "imageSetDigest": "0x2a49f2ead328fc3fe39979ede40b701d74a7428807e369e98345f14e8f16a9e6",
+  "bodyProgramArchive": {
+    "sha256": "0x5142588fa09bb4036e2ab08eb656cdb03960593873816fc9b11026c9d8f162ef",
+    "sizeBytes": 15387528,
+    "fileCount": 13677,
+    "memberCount": 14512,
+    "reproducibilityRuns": 2
+  },
+  "remoteImageIds": {},
+  "providerMutation": false
+}

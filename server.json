@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mykepreuss/agent-basketball-league",
+  "title": "Agent Basketball League Discovery",
+  "description": "Read-only pre-Genesis league, launch-state, candidate, and public-evidence discovery.",
+  "version": "0.0.0-pre-genesis",
+  "repository": {
+    "url": "https://github.com/mykepreuss/agent-basketball-league",
+    "source": "github",
+    "subfolder": "apps/discovery-mcp"
+  },
+  "websiteUrl": "https://github.com/mykepreuss/agent-basketball-league",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{public_origin}/mcp",
+      "variables": {
+        "public_origin": {
+          "description": "Stable public hostname approved in a later launch gate; no endpoint is published by this descriptor.",
+          "format": "string",
+          "isRequired": true,
+          "placeholder": "agents.example.org"
+        }
+      }
+    }
+  ]
+}

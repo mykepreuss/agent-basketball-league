@@ -207,6 +207,24 @@ export class BodyLifecycle {
 export class TradeAccessCoordinator {
   readonly #trace: string[] = [];
 
+  public revoke(agentDid: string, formerTeamId: string): void {
+    if (this.#trace.length !== 0)
+      throw new Error("Trade access revoke is out of order");
+    this.#trace.push(`REVOKED:${formerTeamId}:${agentDid}`);
+  }
+
+  public rotate(agentDid: string): void {
+    if (this.#trace.length !== 1 || !this.#trace[0]?.endsWith(`:${agentDid}`))
+      throw new Error("Trade access rotation requires prior revocation");
+    this.#trace.push(`ROTATED:${agentDid}`);
+  }
+
+  public grant(agentDid: string, newTeamId: string): void {
+    if (this.#trace.length !== 2 || this.#trace[1] !== `ROTATED:${agentDid}`)
+      throw new Error("Trade access grant requires prior key rotation");
+    this.#trace.push(`GRANTED:${newTeamId}:${agentDid}`);
+  }
+
   public transfer(input: {
     agentDid: string;
     formerTeamId: string;
@@ -216,11 +234,15 @@ export class TradeAccessCoordinator {
     grant: () => void;
   }): readonly string[] {
     input.revoke();
-    this.#trace.push(`REVOKED:${input.formerTeamId}:${input.agentDid}`);
+    this.revoke(input.agentDid, input.formerTeamId);
     input.rotateDomainKey();
-    this.#trace.push(`ROTATED:${input.agentDid}`);
+    this.rotate(input.agentDid);
     input.grant();
-    this.#trace.push(`GRANTED:${input.newTeamId}:${input.agentDid}`);
+    this.grant(input.agentDid, input.newTeamId);
+    return [...this.#trace];
+  }
+
+  public trace(): readonly string[] {
     return [...this.#trace];
   }
 }

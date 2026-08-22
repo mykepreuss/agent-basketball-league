@@ -1,95 +1,235 @@
 #!/bin/sh
 set -eu
 
-readonly BROKER_UID=10100
+readonly INIT_STATUS_FILE=/run/abl-init-status
+readonly DIAGNOSTIC_SERVER=/usr/local/lib/abl-init-diagnostics.mjs
+readonly CREDENTIAL_GUARD=/usr/local/lib/abl-provider-credential-guard.mjs
+readonly CAPABILITY_DIRECTORY=/run/abl-body-capability
+readonly AGENT_WORKSPACE=/workspace
 readonly AGENT_UID=10101
-readonly BROKER_PORT=7777
-readonly NFT_TABLE=abl_egress
+readonly DIAGNOSTIC_UID=10102
+readonly PROXY_ADDRESS=127.0.0.1
+readonly PROXY_PORT=49152
+readonly IPV4_CHAIN=ABL_AGENT_OUTPUT
+readonly IPV6_CHAIN=ABL_AGENT6_OUTPUT
+
+diagnostic_pid=
+stage=STARTING_DIAGNOSTICS
+
+write_status() {
+  printf '%s\n' "$1" >"$INIT_STATUS_FILE"
+  chown root:root "$INIT_STATUS_FILE"
+  chmod 0444 "$INIT_STATUS_FILE"
+}
+
+stop_diagnostics() {
+  if [ -n "$diagnostic_pid" ] && kill -0 "$diagnostic_pid" 2>/dev/null; then
+    kill "$diagnostic_pid" 2>/dev/null || true
+    wait "$diagnostic_pid" 2>/dev/null || true
+  fi
+  diagnostic_pid=
+}
+
+fail_stage() {
+  exit_code="$1"
+  write_status "FAILED:${stage}:${exit_code}"
+  printf 'Body initialization failed at %s with exit code %s\n' "$stage" "$exit_code" >&2
+  wait "$diagnostic_pid" 2>/dev/null || true
+  exit "$exit_code"
+}
+
+must() {
+  "$@" && return 0
+  exit_code="$?"
+  fail_stage "$exit_code"
+}
 
 required() {
   eval "value=\${$1:-}"
   if [ -z "$value" ]; then
     printf 'Missing required environment value: %s\n' "$1" >&2
-    exit 78
+    return 78
   fi
 }
 
-for name in ABL_CORE_ORIGIN ABL_MODEL_ORIGIN ABL_PRIVATE_ORIGIN ABL_AGENT_DID ABL_SERVICE_ID \
-  ABL_SERVICE_CREDENTIAL_B64 ABL_MODEL_CREDENTIAL_B64 ABL_PERSONAL_DOMAIN_ID ABL_DOMAIN_KEY_B64; do
-  required "$name"
-done
+proxy_identity_token_path() {
+  env -i \
+    PATH=/usr/local/bin:/usr/bin:/bin \
+    BL_ENV_VAR_PATH="${BL_ENV_VAR_PATH:-}" \
+    ABL_HTTP_PROXY_PRESENT="${HTTP_PROXY+x}" \
+    ABL_http_proxy_PRESENT="${http_proxy+x}" \
+    ABL_HTTPS_PROXY_PRESENT="${HTTPS_PROXY+x}" \
+    ABL_https_proxy_PRESENT="${https_proxy+x}" \
+    HTTP_PROXY="${HTTP_PROXY:-}" \
+    http_proxy="${http_proxy:-}" \
+    HTTPS_PROXY="${HTTPS_PROXY:-}" \
+    https_proxy="${https_proxy:-}" \
+    /usr/local/bin/node --disable-proto=throw --frozen-intrinsics \
+    "$CREDENTIAL_GUARD" discover
+}
+
+harden_root_only_file() {
+  path="$1"
+  if [ ! -f "$path" ] || [ -L "$path" ]; then
+    printf 'Required provider credential is not a regular file: %s\n' "$path" >&2
+    return 78
+  fi
+  chown root:root "$path" || return "$?"
+  chmod 0400 "$path" || return "$?"
+}
+
+assert_unreadable_by_agent() {
+  path="$1"
+  env -i \
+    PATH=/usr/local/bin:/usr/bin:/bin \
+    ABL_PROTECTED_PATH="$path" \
+    ABL_AGENT_UID="$AGENT_UID" \
+    /usr/local/bin/node --disable-proto=throw --frozen-intrinsics \
+    "$CREDENTIAL_GUARD" assert-unreadable
+}
+
+prepare_agent_workspace() {
+  path="$AGENT_WORKSPACE"
+  if [ -L "$path" ] || { [ -e "$path" ] && [ ! -d "$path" ]; }; then
+    printf 'Agent workspace is not a regular directory: %s\n' "$path" >&2
+    return 78
+  fi
+  install -d -o abl-agent -g abl-agent -m 0700 "$path" || return "$?"
+  workspace_metadata=$(stat -c '%u:%g:%a' "$path") || return "$?"
+  if [ "$workspace_metadata" != "$AGENT_UID:$AGENT_UID:700" ]; then
+    printf 'Agent workspace permissions are inconsistent: %s\n' "$path" >&2
+    return 78
+  fi
+}
+
+validate_broker_origin() {
+  env -i \
+    PATH=/usr/local/bin:/usr/bin:/bin \
+    ABL_FIXED_BROKER_ORIGIN="$ABL_FIXED_BROKER_ORIGIN" \
+    /usr/local/bin/node --input-type=module -e '
+      try {
+        const origin = new URL(process.env.ABL_FIXED_BROKER_ORIGIN ?? "");
+        if (
+          origin.protocol !== "https:" ||
+          origin.username !== "" ||
+          origin.password !== "" ||
+          origin.pathname !== "/" ||
+          origin.search !== "" ||
+          origin.hash !== ""
+        ) process.exit(78);
+      } catch {
+        process.exit(78);
+      }
+    '
+}
+
+write_secret() {
+  destination="$1"
+  encoded="$2"
+  minimum_size="$3"
+  maximum_size="$4"
+  printf '%s' "$encoded" | base64 -d >"$destination" || return "$?"
+  canonical_encoded=$(base64 <"$destination" | tr -d '\n') || return "$?"
+  if [ "$canonical_encoded" != "$encoded" ]; then
+    printf 'Secret must use canonical Base64 encoding: %s\n' "$destination" >&2
+    return 78
+  fi
+  secret_size=$(wc -c <"$destination" | tr -d ' ') || return "$?"
+  if [ "$secret_size" -lt "$minimum_size" ] || [ "$secret_size" -gt "$maximum_size" ]; then
+    printf 'Decoded secret size is outside the allowed range: %s\n' "$destination" >&2
+    return 78
+  fi
+  chown abl-agent:abl-agent "$destination" || return "$?"
+  chmod 0400 "$destination" || return "$?"
+}
 
 umask 077
-export ABL_SERVICE_CREDENTIAL_FILE=/run/abl-broker/service-credential
-export ABL_MODEL_CREDENTIAL_FILE=/run/abl-broker/model-credential
-export ABL_DOMAIN_KEY_FILE=/run/abl-broker/domain-key
-printf '%s' "$ABL_SERVICE_CREDENTIAL_B64" | base64 -d >"$ABL_SERVICE_CREDENTIAL_FILE"
-printf '%s' "$ABL_MODEL_CREDENTIAL_B64" | base64 -d >"$ABL_MODEL_CREDENTIAL_FILE"
-printf '%s' "$ABL_DOMAIN_KEY_B64" | base64 -d >"$ABL_DOMAIN_KEY_FILE"
-unset ABL_SERVICE_CREDENTIAL_B64 ABL_MODEL_CREDENTIAL_B64 ABL_DOMAIN_KEY_B64
-
-case "$ABL_CORE_ORIGIN $ABL_MODEL_ORIGIN $ABL_PRIVATE_ORIGIN" in
-  *[!A-Za-z0-9.:/_-]*) printf '%s\n' 'Outbound origins contain forbidden characters' >&2; exit 78 ;;
-esac
-
-allowed_ipv4=""
-for origin in "$ABL_CORE_ORIGIN" "$ABL_MODEL_ORIGIN" "$ABL_PRIVATE_ORIGIN"; do
-  case "$origin" in
-    https://*) host=${origin#https://}; host=${host%%/*}; host=${host%%:*} ;;
-    *) printf '%s\n' 'Every outbound origin must use https' >&2; exit 78 ;;
-  esac
-  addresses=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u)
-  if [ -z "$addresses" ]; then
-    printf 'Unable to resolve approved broker host: %s\n' "$host" >&2
-    exit 69
-  fi
-  for address in $addresses; do
-    allowed_ipv4="$allowed_ipv4${allowed_ipv4:+, }$address"
-    if ! grep -q "[[:space:]]$host\([[:space:]]\|$\)" /etc/hosts; then
-      printf '%s %s\n' "$address" "$host" >>/etc/hosts
-    fi
-  done
-done
-
-for secret_file in "$ABL_SERVICE_CREDENTIAL_FILE" "$ABL_MODEL_CREDENTIAL_FILE" "$ABL_DOMAIN_KEY_FILE"; do
-  case "$secret_file" in /run/abl-broker/*) ;; *) printf '%s\n' 'Broker secret file is outside its private runtime directory' >&2; exit 78 ;; esac
-  chown "$BROKER_UID:$BROKER_UID" "$secret_file"
-  chmod 0400 "$secret_file"
-done
-
-nft delete table inet "$NFT_TABLE" 2>/dev/null || true
-nft -f - <<EOF
-table inet $NFT_TABLE {
-  set approved_v4 { type ipv4_addr; flags interval; elements = { $allowed_ipv4 } }
-  chain output {
-    type filter hook output priority -100; policy drop;
-    ct state established,related accept
-    meta skuid 0 accept
-    meta skuid $AGENT_UID ip daddr 127.0.0.1 tcp dport $BROKER_PORT accept
-    meta skuid $BROKER_UID ip daddr @approved_v4 tcp dport 443 accept
-    oifname "lo" meta skuid $BROKER_UID accept
-    meta skuid $AGENT_UID reject with icmpx type admin-prohibited
-    meta skuid $BROKER_UID reject with icmpx type admin-prohibited
-  }
-}
-EOF
-
-su-exec abl-broker /usr/local/bin/node /opt/abl/body-broker/dist/index.js &
-broker_pid=$!
-trap 'kill "$broker_pid" 2>/dev/null || true' EXIT INT TERM
+write_status "$stage"
+env -i \
+  PATH=/usr/local/bin:/usr/bin:/bin \
+  NODE_ENV=production \
+  ABL_INIT_STATUS_FILE="$INIT_STATUS_FILE" \
+  ABL_INIT_DIAGNOSTIC_PORT=8080 \
+  ABL_INIT_DIAGNOSTIC_UID="$DIAGNOSTIC_UID" \
+  ABL_INIT_DIAGNOSTIC_GID="$DIAGNOSTIC_UID" \
+  /usr/local/bin/node --disable-proto=throw --frozen-intrinsics "$DIAGNOSTIC_SERVER" &
+diagnostic_pid=$!
+trap 'stop_diagnostics' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 attempt=0
-until su-exec abl-agent wget -q -T 1 -O /dev/null "http://127.0.0.1:$BROKER_PORT/health"; do
+until env -i PATH=/usr/bin:/bin wget -q -T 1 -O /dev/null "http://127.0.0.1:8080/abl-init-status"; do
   attempt=$((attempt + 1))
-  if [ "$attempt" -ge 50 ] || ! kill -0 "$broker_pid" 2>/dev/null; then
-    printf '%s\n' 'Fixed broker failed to become ready' >&2
+  if [ "$attempt" -ge 50 ] || ! kill -0 "$diagnostic_pid" 2>/dev/null; then
+    printf '%s\n' 'Body-init diagnostic server failed to become ready' >&2
     exit 70
   fi
   sleep 0.1
 done
 
-# The immutable agent-runtime launcher constructs the admitted process's
-# allowlisted environment. The root sandbox API keeps platform duties but runs
-# every user operation as uid 10101; nftables denies that uid every route except
-# the broker port.
-exec /usr/local/bin/sandbox-api --disable-telemetry --user abl-agent "$@"
+stage=VALIDATING_CONFIGURATION
+write_status "$stage"
+for name in ABL_FIXED_BROKER_ORIGIN ABL_AGENT_DID ABL_AGENT_SIGNER_ADDRESS \
+  ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64; do
+  must required "$name"
+done
+
+must validate_broker_origin
+
+stage=RESOLVING_FILTERED_PROXY
+write_status "$stage"
+if [ "${SANDBOX_LOCAL_PROXY_PORT:-}" != "$PROXY_PORT" ]; then
+  printf '%s\n' 'Pinned Sandbox API proxy port is missing or inconsistent' >&2
+  fail_stage 78
+fi
+proxy_token_path=
+if proxy_token_path=$(proxy_identity_token_path); then
+  :
+else
+  fail_stage "$?"
+fi
+
+stage=HARDENING_PROVIDER_CREDENTIALS
+write_status "$stage"
+must harden_root_only_file "$proxy_token_path"
+must assert_unreadable_by_agent "$proxy_token_path"
+if [ -n "${BL_ENV_VAR_PATH:-}" ]; then
+  must harden_root_only_file "$BL_ENV_VAR_PATH"
+  must assert_unreadable_by_agent "$BL_ENV_VAR_PATH"
+fi
+
+stage=PREPARING_AGENT_WORKSPACE
+write_status "$stage"
+must prepare_agent_workspace
+
+stage=INSTALLING_UID_EGRESS_POLICY
+write_status "$stage"
+iptables -w -D OUTPUT -m owner --uid-owner "$AGENT_UID" -j "$IPV4_CHAIN" 2>/dev/null || true
+iptables -w -F "$IPV4_CHAIN" 2>/dev/null || true
+iptables -w -X "$IPV4_CHAIN" 2>/dev/null || true
+must iptables -w -N "$IPV4_CHAIN"
+must iptables -w -A "$IPV4_CHAIN" -d "$PROXY_ADDRESS/32" -p tcp --dport "$PROXY_PORT" -j ACCEPT
+must iptables -w -A "$IPV4_CHAIN" -j REJECT --reject-with icmp-port-unreachable
+must iptables -w -I OUTPUT 1 -m owner --uid-owner "$AGENT_UID" -j "$IPV4_CHAIN"
+
+ip6tables -w -D OUTPUT -m owner --uid-owner "$AGENT_UID" -j "$IPV6_CHAIN" 2>/dev/null || true
+ip6tables -w -F "$IPV6_CHAIN" 2>/dev/null || true
+ip6tables -w -X "$IPV6_CHAIN" 2>/dev/null || true
+must ip6tables -w -N "$IPV6_CHAIN"
+must ip6tables -w -A "$IPV6_CHAIN" -j REJECT --reject-with icmp6-adm-prohibited
+must ip6tables -w -I OUTPUT 1 -m owner --uid-owner "$AGENT_UID" -j "$IPV6_CHAIN"
+
+stage=INSTALLING_SHORT_LIVED_CAPABILITY
+write_status "$stage"
+must install -d -o abl-agent -g abl-agent -m 0700 "$CAPABILITY_DIRECTORY"
+must write_secret "$CAPABILITY_DIRECTORY/body-token" "$ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64" 32 512
+# Keep empty sentinels present so the pinned Sandbox API cannot rehydrate the
+# original values from BL_ENV_VAR_PATH before spawning unprivileged processes.
+export ABL_FIXED_BROKER_PREVIEW_TOKEN_B64=
+export ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64=
+
+write_status READY
+stop_diagnostics
+trap - EXIT INT TERM
+exec /usr/local/bin/sandbox-api --disable-telemetry --user abl-agent

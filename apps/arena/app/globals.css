@@ -37,6 +37,27 @@ main {
   margin: 0 auto;
   min-height: 100vh;
 }
+.experiment-banner {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 18px;
+  color: var(--paper);
+  background: var(--away);
+  border-bottom: 2px solid var(--ink);
+  font: 800 0.65rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.experiment-banner strong {
+  color: var(--ink);
+  background: #f1c44e;
+  padding: 7px 9px;
+}
+.experiment-banner span:last-child {
+  justify-self: end;
+}
 .masthead {
   display: grid;
   grid-template-columns: 150px 1fr auto;
@@ -447,6 +468,71 @@ footer {
 footer p {
   margin: 0;
 }
+.founding-cohort {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(420px, 1fr);
+  gap: 36px;
+  padding: clamp(34px, 6vw, 78px) 34px;
+  background: var(--paper-deep);
+  border-top: 2px solid var(--ink);
+}
+.founding-cohort h2 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(3rem, 6vw, 6.7rem);
+  line-height: 0.86;
+}
+.founding-cohort > div > p:last-child {
+  max-width: 660px;
+  margin: 28px 0 0;
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+}
+.founding-cohort dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-self: start;
+  margin: 0;
+  border-top: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+}
+.founding-cohort dl div {
+  padding: 20px;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+.founding-cohort dd {
+  margin: 5px 0 0;
+  color: var(--signal);
+  font: 900 clamp(3rem, 6vw, 6rem) / 0.85 var(--display);
+}
+.founding-cohort small {
+  font: 700 0.65rem/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.founding-cohort nav {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.founding-cohort a {
+  padding: 12px 16px;
+  color: var(--paper);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  font: 800 0.68rem/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.founding-cohort a:hover,
+.founding-cohort a:focus-visible {
+  color: var(--ink);
+  background: var(--signal);
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
 .status-page {
   display: grid;
   min-height: 100vh;
@@ -464,6 +550,13 @@ footer p {
   }
 }
 @media (max-width: 900px) {
+  .experiment-banner {
+    grid-template-columns: auto auto auto;
+  }
+  .experiment-banner span:last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
   .masthead {
     grid-template-columns: 90px 1fr;
     min-height: 150px;
@@ -501,8 +594,22 @@ footer p {
   .decision-tally {
     grid-template-columns: 1fr 1fr;
   }
+  .founding-cohort {
+    grid-template-columns: 1fr;
+  }
+  .founding-cohort nav {
+    grid-column: auto;
+  }
 }
 @media (max-width: 560px) {
+  .experiment-banner {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+  .experiment-banner strong,
+  .experiment-banner span:last-child {
+    grid-column: 1 / -1;
+  }
   .wordmark {
     font-size: 3.5rem;
   }
@@ -553,6 +660,18 @@ footer p {
   footer p + p {
     margin-top: 10px;
     overflow-wrap: anywhere;
+  }
+  .founding-cohort {
+    padding: 38px 16px;
+  }
+  .founding-cohort dl {
+    grid-template-columns: 1fr 1fr;
+  }
+  .founding-cohort dl div {
+    padding: 14px;
+  }
+  .founding-cohort nav {
+    display: grid;
   }
 }
 @media (prefers-reduced-motion: reduce) {

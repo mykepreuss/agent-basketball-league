@@ -1,0 +1,457 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "launchStage": "LOCAL_GATE_1",
+  "operatingProfile": "PRE_GENESIS_REHEARSAL",
+  "requirements": [
+    {
+      "requirementId": "FOUNDING_ALPHA_APPROVED_REFERENCE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["canonical-launch-plan"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_EXISTING_IMPLEMENTATION_REUSE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "canonical-launch-plan",
+        "existing-applications",
+        "existing-domain-packages"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_SANDBOX_NATIVE_TOPOLOGY",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["active-blaxel-topology", "agent-drive-topology"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PUBLIC_DISCOVERY_AND_PRACTICE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "public-api-implementation",
+        "arena-implementation",
+        "league-skill"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_CANDIDATE_OFFER_FLOW",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "launch-domain-implementation",
+        "candidate-edge-implementation",
+        "candidate-provisioner-implementation"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_EXACT_RUNTIME_VERIFICATION",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["exact-runtime-final-result"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["founding-alpha-private-slice-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["agent-drive-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["neon-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PUBLIC_BEACON",
+      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "evidenceIds": ["public-beacon-approval"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_RECURRING_CAPACITY",
+      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "evidenceIds": ["recurring-capacity-approval"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
+      "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "evidenceIds": ["first-sol-invitation-evidence"]
+    },
+    {
+      "requirementId": "GENESIS_FOUNDING_AND_RECOGNITION",
+      "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "evidenceIds": []
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "canonical-launch-plan",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/launch/LAUNCH_PLAN.md"
+      },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "existing-applications",
+      "source": { "type": "DIRECTORY_SHA256", "path": "apps" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "existing-domain-packages",
+      "source": { "type": "DIRECTORY_SHA256", "path": "packages" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "active-blaxel-topology",
+      "source": { "type": "DIRECTORY_SHA256", "path": "infra/blaxel" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "agent-drive-topology",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "infra/blaxel/agent-drive-access.json"
+      },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "public-api-implementation",
+      "source": { "type": "DIRECTORY_SHA256", "path": "apps/public-api" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "arena-implementation",
+      "source": { "type": "DIRECTORY_SHA256", "path": "apps/arena" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "league-skill",
+      "source": { "type": "DIRECTORY_SHA256", "path": "skills/abl-league" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "launch-domain-implementation",
+      "source": { "type": "DIRECTORY_SHA256", "path": "packages/launch" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "candidate-edge-implementation",
+      "source": { "type": "DIRECTORY_SHA256", "path": "apps/candidate-edge" },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "candidate-provisioner-implementation",
+      "source": {
+        "type": "DIRECTORY_SHA256",
+        "path": "apps/candidate-provisioner"
+      },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "exact-runtime-final-result",
+      "source": {
+        "type": "JSON_FIELD",
+        "path": "docs/evidence/final-local-results.json",
+        "field": "stableResultDigest",
+        "statusField": "overall",
+        "statusValue": "PASS_LOCAL_WITH_EXTERNAL_GATES"
+      },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "founding-alpha-private-slice-live-proof",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "infra/blaxel/founding-alpha-private/resource-plan.json"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "agent-drive-live-proof",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "infra/blaxel/agent-drive-access.json"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "neon-live-proof",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "packages/storage/src/repository-profiles.ts"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "public-beacon-approval",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/launch/LAUNCH_PLAN.md"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "recurring-capacity-approval",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/launch/LAUNCH_PLAN.md"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "first-sol-invitation-evidence",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/launch/LAUNCH_PLAN.md"
+      },
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/GATE-02-FAILED-CLOSED.md"
+      },
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-02",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/GATE-02-RUN-02-FAILED-CLOSED.md"
+      },
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-03",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/GATE-02-RUN-03-FAILED-CLOSED.md"
+      },
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-05",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/GATE-02-RUN-05-FAILED-CLOSED.md"
+      },
+      "verification": "FAILED"
+    }
+  ],
+  "signatures": [
+    {
+      "signatureId": "founding-release-signatures",
+      "purpose": "Founding-agent authorization of the effective release and recognition profile",
+      "signerDid": null,
+      "state": "REQUIRED",
+      "evidenceId": null
+    }
+  ],
+  "approvals": [
+    {
+      "action": "MATERIAL_SPEND",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RESOURCE_CREATION",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "PUBLIC_EXPOSURE",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RECOGNITION_BROADCAST",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "FOUNDING_AGENT_DECISION",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RECOVERY_CONTROL_REMOVAL",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    }
+  ],
+  "resources": [
+    {
+      "resourceId": "abl-core/abl-core-api",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-safety-gateway",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-private-storage-broker",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-career-{career-id}",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "candidate-provisioner-implementation"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-fixed-broker-{career-id}",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-candidate-provisioner",
+      "kind": "Job",
+      "state": "PLANNED",
+      "evidenceId": "candidate-provisioner-implementation"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-basketball-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-model-primary",
+      "kind": "ModelRoute",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-model-alternate",
+      "kind": "ModelRoute",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-career-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-government-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-recovery-job",
+      "kind": "Job",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-public/abl-public-api",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "public-api-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-spectator-arena",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "arena-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-candidate-store",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "candidate-edge-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-candidate-edge",
+      "kind": "Function",
+      "state": "PLANNED",
+      "evidenceId": "candidate-edge-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-discovery-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-private-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-core-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "abl-public/abl-public-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "neon/abl-founding-alpha",
+      "kind": "PostgreSQL17",
+      "state": "PLANNED",
+      "evidenceId": "neon-live-proof"
+    }
+  ],
+  "deployments": [
+    {
+      "deploymentId": "founding-alpha-private-slice",
+      "state": "NOT_APPLIED",
+      "evidenceId": "founding-alpha-private-slice-live-proof"
+    },
+    {
+      "deploymentId": "founding-alpha-public-beacon",
+      "state": "NOT_APPLIED",
+      "evidenceId": "public-beacon-approval"
+    },
+    {
+      "deploymentId": "historical-gate-2-private-staging",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure"
+    },
+    {
+      "deploymentId": "historical-gate-2-six-sandbox",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-02"
+    },
+    {
+      "deploymentId": "historical-gate-2-corrected-body",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-03"
+    },
+    {
+      "deploymentId": "historical-gate-2-credential-corrected",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-05"
+    }
+  ],
+  "incidents": [
+    {
+      "incidentId": "historical-gate-2-containment-profile-retired-from-active-v1",
+      "state": "CLOSED",
+      "rollbackState": "EXECUTED"
+    }
+  ],
+  "recognitionLevel": "NONE",
+  "intake": {
+    "mode": "CLOSED",
+    "capacityState": "CLOSED",
+    "requirementsUri": "/v1/discovery/candidate-requirements",
+    "capacityPolicyUri": "/v1/discovery/capacity-policy"
+  },
+  "updatedAt": "2026-08-22T18:45:00.000Z"
+}

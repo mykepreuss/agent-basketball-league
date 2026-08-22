@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "APPROVED_ARCHITECTURE_NOT_PROVISIONED",
+  "reason": "Agent Drive is workspace-scoped; core safety evidence and public noncanonical data cannot mount the private career-data Drive.",
+  "drives": [
+    {
+      "workspace": "abl-private",
+      "name": "abl-private-state",
+      "region": "us-was-1",
+      "permissions": [
+        {
+          "labels": { "abl-drive-role": "ciphertext-broker" },
+          "mode": "read-write",
+          "path": "/ciphertext"
+        }
+      ]
+    },
+    {
+      "workspace": "abl-core",
+      "name": "abl-core-state",
+      "region": "us-was-1",
+      "permissions": [
+        {
+          "labels": { "abl-drive-role": "safety-ledger-writer" },
+          "mode": "read-write",
+          "path": "/safety"
+        }
+      ]
+    },
+    {
+      "workspace": "abl-public",
+      "name": "abl-public-state",
+      "region": "us-was-1",
+      "permissions": [
+        {
+          "labels": { "abl-drive-role": "projection-writer" },
+          "mode": "read-write",
+          "path": "/projections"
+        },
+        {
+          "labels": { "abl-drive-role": "candidate-intake-writer" },
+          "mode": "read-write",
+          "path": "/candidate-intake"
+        }
+      ]
+    }
+  ],
+  "mounts": [
+    {
+      "resource": "abl-private-storage-broker",
+      "kind": "Sandbox",
+      "workspace": "abl-private",
+      "drive": "abl-private-state",
+      "drivePath": "/ciphertext",
+      "mountPath": "/mnt/abl-ciphertext",
+      "mode": "read-write"
+    },
+    {
+      "resource": "abl-safety-gateway",
+      "kind": "Sandbox",
+      "workspace": "abl-core",
+      "drive": "abl-core-state",
+      "drivePath": "/safety",
+      "mountPath": "/mnt/abl-safety",
+      "mode": "read-write"
+    },
+    {
+      "resource": "abl-public-api",
+      "kind": "Sandbox",
+      "workspace": "abl-public",
+      "drive": "abl-public-state",
+      "drivePath": "/projections",
+      "mountPath": "/mnt/abl-public-projections",
+      "mode": "read-write"
+    },
+    {
+      "resource": "abl-candidate-store",
+      "kind": "Sandbox",
+      "workspace": "abl-public",
+      "drive": "abl-public-state",
+      "drivePath": "/candidate-intake",
+      "mountPath": "/mnt/abl-candidate-intake",
+      "mode": "read-write"
+    }
+  ],
+  "careerBodyMounts": []
+}

@@ -18,8 +18,10 @@
   },
   "dependencies": {
     "@abl/foundation": "workspace:*",
+    "@abl/recognition": "workspace:*",
     "@abl/storage": "workspace:*",
     "fastify": "catalog:",
+    "viem": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("renders a canonical read-only game from the public API", async ({
+test("renders a replay-verified pre-Genesis game from the public API", async ({
   page,
   request,
 }, testInfo) => {
@@ -25,7 +25,7 @@ test("renders a canonical read-only game from the public API", async ({
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/arena");
 
-  await expect(page).toHaveTitle("ABL · Courtside Verifier");
+  await expect(page).toHaveTitle("ABL · Pre-Genesis Arena");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator(".proof-strip")).toBeVisible();
   if (testInfo.config.metadata.localRehearsal === true) {
@@ -40,7 +40,7 @@ test("renders a canonical read-only game from the public API", async ({
       }),
     ).toBeVisible();
     await expect(page.locator(".canonical-stamp")).toContainText(
-      "locally verified",
+      "replay verified",
     );
     await expect(
       page.getByRole("heading", { level: 2, name: "Six immutable segments" }),

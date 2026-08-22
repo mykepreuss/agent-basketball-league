@@ -129,6 +129,11 @@ export class AutonomyScheduler {
     return this.#makeGood.get(activationId) ?? 0;
   }
 
+  public activation(activationId: string): ScheduledActivation | undefined {
+    const activation = this.#scheduled.get(activationId);
+    return activation === undefined ? undefined : structuredClone(activation);
+  }
+
   public remaining(weekId: string): WeeklyAutonomyAllowance {
     const remaining = this.#remaining.get(weekId);
     if (remaining === undefined) throw new Error("Unknown autonomy week");

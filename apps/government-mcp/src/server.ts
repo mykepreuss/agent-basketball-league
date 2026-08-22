@@ -101,6 +101,7 @@ function commandInputSchema<
 export interface GovernmentMcpOptions {
   coreOrigin: string;
   coreCredential: string;
+  previewToken?: string;
   allowedOrigins?: ReadonlySet<string>;
   fetchImplementation?: typeof fetch;
   allowHttpForTest?: boolean;
@@ -112,6 +113,9 @@ export function createGovernmentMcp(
   const requestCore = createFixedUpstream({
     origin: options.coreOrigin,
     credential: options.coreCredential,
+    ...(options.previewToken === undefined
+      ? {}
+      : { previewToken: options.previewToken }),
     ...(options.fetchImplementation === undefined
       ? {}
       : { fetchImplementation: options.fetchImplementation }),

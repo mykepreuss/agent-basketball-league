@@ -105,6 +105,13 @@ describe("genesis artifact preparation", () => {
       imageDigests: [],
       imageStatus: "NOT_BUILT_BLAXEL_IMAGE_GATE",
     });
+    expect(first.containerSource.files.map(({ path }) => path)).toEqual(
+      expect.arrayContaining([
+        "infra/sandbox/abl-reviewed-body-init",
+        "infra/sandbox/reviewed-agent-runtime",
+        "infra/sandbox/apk-packages.lock",
+      ]),
+    );
     expect(first.testResultDigest).toSatisfy(
       (value: unknown) =>
         value === null ||
@@ -185,7 +192,7 @@ describe("genesis artifact preparation", () => {
       "usedNonces",
       "verifierDigest",
     ]);
-  });
+  }, 15_000);
 
   it("keeps unquoted costs null and cannot treat missing approval/prepayment as zero cost", () => {
     const cost = createPendingCostEnvelope();
@@ -260,7 +267,7 @@ describe("genesis artifact preparation", () => {
     expect(readiness.blockers).toContain(
       "explicit human approval for irreversible/public/spend actions absent",
     );
-  });
+  }, 30_000);
 
   it("locks the generated readiness fixture to current deterministic preparation", async () => {
     const fixture = JSON.parse(

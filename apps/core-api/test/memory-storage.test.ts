@@ -43,10 +43,14 @@ describe("memory storage verifier transport", () => {
     const observed: Array<{ path: string; body: unknown }> = [];
     const mockFetch = (async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = new URL(String(input));
+      const requestHeaders = new Headers(init?.headers);
+      expect(requestHeaders.get("x-blaxel-preview-token")).toBe(
+        "private-preview-token",
+      );
       const body = new Uint8Array(
         await new Response(init?.body ?? null).arrayBuffer(),
       );
-      requestVerifier.verify(signedHeaders(new Headers(init?.headers)), {
+      requestVerifier.verify(signedHeaders(requestHeaders), {
         method: init?.method ?? "GET",
         path: url.pathname,
         body,
@@ -60,6 +64,7 @@ describe("memory storage verifier transport", () => {
     const verifier = new HttpMemoryStorageVerifier({
       origin: "https://storage.internal.example",
       identity,
+      previewToken: "private-preview-token",
       now: () => now,
       fetch: mockFetch,
     });

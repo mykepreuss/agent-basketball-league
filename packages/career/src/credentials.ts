@@ -108,7 +108,10 @@ export class CredentialController {
       mandate.capabilities.some(
         (capability) =>
           capability.startsWith("foundational-right:") ||
-          capability === "career:exit",
+          capability === "career:exit" ||
+          capability.startsWith("governance:constitutional:") ||
+          capability.startsWith("governance:labor:") ||
+          capability.startsWith("governance:election:"),
       )
     ) {
       throw new Error("Foundational rights and exit cannot be delegated");
@@ -138,6 +141,30 @@ export class CredentialController {
         "Delegation is ineligible, expired, revoked, or overbroad",
       );
     }
+  }
+
+  public revokeDelegation(
+    mandateId: string,
+    revokedAt: string,
+    authorizedBy: Address,
+  ): void {
+    if (authorizedBy.toLowerCase() !== this.#signingAddress.toLowerCase())
+      throw new Error("Delegation revocation lacks principal authorization");
+    const mandate = this.#delegations.get(mandateId);
+    if (mandate === undefined)
+      throw new Error("Delegation mandate does not exist");
+    if (
+      mandate.revokedAt !== null ||
+      Date.parse(revokedAt) < Date.parse(mandate.validFrom) ||
+      Date.parse(revokedAt) >= Date.parse(mandate.expiresAt)
+    )
+      throw new Error("Delegation revocation is outside its active window");
+    this.#delegations.set(mandateId, { ...mandate, revokedAt });
+  }
+
+  public delegation(mandateId: string): DelegationMandate | undefined {
+    const mandate = this.#delegations.get(mandateId);
+    return mandate === undefined ? undefined : structuredClone(mandate);
   }
 
   public get signingAddress(): Address {

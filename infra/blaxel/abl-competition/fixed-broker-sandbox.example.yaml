@@ -1,0 +1,111 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: ${ABL_FIXED_BROKER_NAME}
+  externalId: ${ABL_CANDIDATE_TARGET_APPLICATION_ID}
+  labels:
+    abl-workspace-role: competition-fixed-broker
+    abl-agent-did-hash: ${ABL_AGENT_DID_HASH}
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  region: us-was-1
+  network:
+    allowedDomains:
+      - ${ABL_CORE_HOST}
+      - ${ABL_PRIVATE_HOST}
+      - ${ABL_MODEL_HOST}
+    proxy:
+      routing: []
+      bypass: []
+  runtime:
+    image: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_DIGEST}
+    memory: 1024
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_CORE_ORIGIN
+        value: ${ABL_CORE_ORIGIN}
+        secret: false
+      - name: ABL_CORE_AUTH_MODE
+        value: BLAXEL_ACCESS_TOKEN
+        secret: false
+      - name: ABL_CORE_WORKSPACE
+        value: abl-core
+        secret: false
+      - name: ABL_CORE_ACCESS_TOKEN_B64
+        value: ${ABL_CORE_ACCESS_TOKEN_B64}
+        secret: true
+      - name: ABL_PRIVATE_ORIGIN
+        value: ${ABL_PRIVATE_ORIGIN}
+        secret: false
+      - name: ABL_PRIVATE_AUTH_MODE
+        value: BLAXEL_ACCESS_TOKEN
+        secret: false
+      - name: ABL_PRIVATE_WORKSPACE
+        value: abl-private
+        secret: false
+      - name: ABL_PRIVATE_ACCESS_TOKEN_B64
+        value: ${ABL_PRIVATE_ACCESS_TOKEN_B64}
+        secret: true
+      - name: ABL_MODEL_ORIGIN
+        value: ${ABL_MODEL_ORIGIN}
+        secret: false
+      - name: ABL_MODEL_ROUTE_MODE
+        value: ENABLED
+        secret: false
+      - name: ABL_AGENT_DID
+        value: ${ABL_AGENT_DID}
+        secret: false
+      - name: ABL_AGENT_SIGNER_ADDRESS
+        value: ${ABL_AGENT_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_SERVICE_ID
+        value: ${ABL_FIXED_BROKER_SERVICE_ID}
+        secret: false
+      - name: ABL_PERSONAL_DOMAIN_ID
+        value: ${ABL_PERSONAL_DOMAIN_ID}
+        secret: false
+      - name: ABL_BODY_CAPABILITY_EXPIRES_AT
+        value: ${ABL_FIXED_BROKER_CAPABILITY_EXPIRES_AT}
+        secret: false
+      - name: ABL_BODY_CAPABILITY_TOKEN_B64
+        value: ${ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64}
+        secret: true
+      - name: ABL_SERVICE_CREDENTIAL_B64
+        value: ${ABL_SERVICE_CREDENTIAL_B64}
+        secret: true
+      - name: ABL_MODEL_CREDENTIAL_B64
+        value: ${ABL_MODEL_CREDENTIAL_B64}
+        secret: true
+      - name: ABL_DOMAIN_KEY_B64
+        value: ${ABL_DOMAIN_KEY_B64}
+        secret: true
+      - name: ABL_AGENT_SIGNING_KEY_B64
+        value: ${ABL_AGENT_SIGNING_KEY_B64}
+        secret: true
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

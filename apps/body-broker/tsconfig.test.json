@@ -8,6 +8,7 @@
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     { "path": "../../packages/foundation" },
+    { "path": "../../packages/recognition" },
     { "path": "../../packages/storage" }
   ]
 }

@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0x9f7ea6089e5c4f365163e1c8725ac6ca85f26323cd6459bc30ca24d651538c8a",
+      "digest": "0x5055e416bf8b1bf5b700a1d0abd5781ba85ce7d9ca25c228868d6c2178e39d9e",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -41,7 +41,7 @@
     {
       "name": "threat model",
       "path": "docs/architecture/THREAT_MODEL.md",
-      "digest": "0x795831589d70154fd871c4f2b795ba3a2c0e05059986e25b8966675c4910aa2b",
+      "digest": "0x8e23521fe4c41c51d355702da65dc7be2eaeb4cb78764895c7416d9043bc1204",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,13 +53,13 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0xa5df82ff3dbc4719220d66214265695a08577ba2501d2d1e55499a23d4bc6edb",
+      "digest": "0x092e69fcd944afe4f2c26ac654353698677a7e736decb75bc6ad888711aad7be",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
       "path": null,
-      "digest": "0xfbb5effb661edaf38d967ab410f534440be814ee030d048930712fae35ef8f86",
+      "digest": "0xfa62d3dc83a685c741d9f8439bc4198ca8ba54eada71c26802f9ded8af64e803",
       "state": "PREPARED_LOCAL"
     },
     {

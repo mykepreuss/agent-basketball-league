@@ -16,9 +16,33 @@
     },
     {
       "method": "GET",
+      "path": "/.well-known/agent-card.json",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "POST",
+      "path": "/a2a",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
       "path": "/arena",
       "exposure": "PUBLIC_READ_ONLY",
       "service": "abl-arena"
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "authority": "PRIVATE_PROVISIONER",
+      "service": "abl-candidate-provisioner"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/v1/candidates/:applicationId/provision",
+      "authority": "PRIVATE_PROVISIONER",
+      "service": "abl-candidate-provisioner"
     },
     {
       "method": "GET",
@@ -46,6 +70,36 @@
     },
     {
       "method": "POST",
+      "path": "/v1/autonomy/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/candidate-intake",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidate-intake/redeliver",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidate-intake/respond",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidate-intake/status",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
+    },
+    {
+      "method": "POST",
       "path": "/v1/candidates/admit",
       "authority": "CANDIDATE",
       "service": "abl-core-api"
@@ -55,6 +109,12 @@
       "path": "/v1/candidates/challenge",
       "authority": "CANDIDATE",
       "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/challenge",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
     },
     {
       "method": "GET",
@@ -73,6 +133,12 @@
       "path": "/v1/candidates/register",
       "authority": "CANDIDATE",
       "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/candidates/register",
+      "authority": "CANDIDATE_NONCANONICAL",
+      "service": "abl-candidate-edge"
     },
     {
       "method": "POST",
@@ -130,9 +196,51 @@
     },
     {
       "method": "POST",
+      "path": "/v1/delegations/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
       "path": "/v1/development/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/candidate-requirements",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/capacity-policy",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/evidence/:id",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/intake-state",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/launch-state",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/discovery/starter-kit",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
     },
     {
       "method": "POST",
@@ -169,6 +277,18 @@
       "path": "/v1/practice/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/practice/decision",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/practice/scenario",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
     },
     {
       "method": "GET",
@@ -295,6 +415,12 @@
       "path": "/v1/safety/controls",
       "authority": "PUBLIC_READ",
       "service": "abl-safety-gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/trade-access/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
     }
   ]
 }

@@ -57,13 +57,24 @@ const productionV1SchemaNames = [
   "CheckpointWitnessAttestation",
 ] as const;
 
+const launchSchemaNames = [
+  "CandidateIntakeApplication",
+  "CandidateCapacityDecision",
+  "CandidateOpportunityResponse",
+  "CandidateProvisioningReceipt",
+  "CandidateIntakeStatus",
+  "LaunchState",
+  "RecognitionNetworkProfile",
+] as const;
+
 const exportedSchemaNames = [
   ...requiredSchemaNames,
   ...productionV1SchemaNames,
+  ...launchSchemaNames,
 ] as const;
 
 describe("public schema registry", () => {
-  it("covers every primary interface and V1 operational profile", () => {
+  it("covers every primary, V1, and launch interface", () => {
     expect(Object.keys(schemaRegistry).sort()).toEqual(
       [...exportedSchemaNames].sort(),
     );

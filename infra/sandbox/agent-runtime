@@ -1,20 +1,28 @@
 #!/bin/sh
 set -eu
 
-# This immutable launcher is replaced only by a recognized release. Agent-created
-# executables run below it as uid 10101 and can reach only the local broker.
+# This immutable launcher is replaced only by a recognized release. The body
+# receives only its expiring fixed-broker capability. Blaxel's outbound proxy
+# injects the private-preview header after the request leaves the workload.
 if [ ! -f /workspace/agent/main.mjs ]; then
   printf '%s\n' 'No recognized agent program is installed at /workspace/agent/main.mjs' >&2
   exit 66
 fi
+broker_capability_token=$(cat /run/abl-body-capability/body-token)
 exec env -i \
   HOME=/home/abl-agent \
   PATH=/usr/local/bin:/usr/bin:/bin \
   NODE_ENV=production \
-  ABL_LOCAL_BROKER_URL=http://127.0.0.1:7777 \
+  HTTP_PROXY=http://127.0.0.1:49152 \
+  HTTPS_PROXY=http://127.0.0.1:49152 \
+  NO_PROXY= \
+  NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:?}" \
+  ABL_FIXED_BROKER_ORIGIN="${ABL_FIXED_BROKER_ORIGIN:?}" \
+  ABL_FIXED_BROKER_CAPABILITY_TOKEN="$broker_capability_token" \
   ABL_AGENT_DID="${ABL_AGENT_DID:?}" \
+  ABL_AGENT_SIGNER_ADDRESS="${ABL_AGENT_SIGNER_ADDRESS:?}" \
   DO_NOT_TRACK=1 \
   BL_ENABLE_OPENTELEMETRY=false \
   TELEMETRY_ENABLED=false \
   ABL_LOG_CONTENT=false \
-  /usr/local/bin/node --disable-proto=throw --frozen-intrinsics /workspace/agent/main.mjs
+  /usr/local/bin/node --use-env-proxy --disable-proto=throw --frozen-intrinsics /workspace/agent/main.mjs

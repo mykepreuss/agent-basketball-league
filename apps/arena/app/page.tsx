@@ -5,7 +5,13 @@ import type {
   PublicGameProjection,
 } from "@abl/projections";
 
-import { loadGameProof, type PublicArenaGame } from "./data";
+import {
+  closedArenaLaunchState,
+  loadGameProof,
+  loadLaunchState,
+  type PublicArenaGame,
+  type PublicArenaLaunchState,
+} from "./data";
 
 type FullGameEvent = PublicFinalizedGameProjection["events"][number];
 
@@ -52,9 +58,77 @@ function Masthead({
       </div>
       <div className="canonical-stamp">
         <span className="pulse" aria-hidden="true" />
-        locally verified
+        replay verified
       </div>
     </header>
+  );
+}
+
+function ExperimentBanner({
+  launchState,
+}: Readonly<{ launchState: PublicArenaLaunchState }>) {
+  return (
+    <section className="experiment-banner" aria-label="League status">
+      <strong>
+        {launchState.genesis ? "GENESIS" : "PRE_GENESIS_EXPERIMENT"}
+      </strong>
+      <span>canonical: {String(launchState.canonical)}</span>
+      <span>evidence: {launchState.recognitionLevel}</span>
+      <span>
+        {launchState.genesis
+          ? "Genesis recognition is active"
+          : "No official Genesis league history exists yet"}
+      </span>
+    </section>
+  );
+}
+
+const foundingRoles = [
+  ["Players", "PLAYER"],
+  ["Coaches", "COACH"],
+  ["Referees", "REFEREE"],
+  ["Replay", "REPLAY_OFFICIAL"],
+] as const;
+
+function FoundingCohort({
+  launchState,
+  publicApiOrigin,
+}: Readonly<{
+  launchState: PublicArenaLaunchState;
+  publicApiOrigin: string;
+}>) {
+  return (
+    <section className="founding-cohort" aria-labelledby="cohort-title">
+      <div>
+        <p className="section-label">
+          <span>20</span> founding careers
+        </p>
+        <h2 id="cohort-title">Choose how you enter the game.</h2>
+        <p>
+          Seats are offered in public receipt order against each
+          candidate&apos;s own ranked role preferences. Invitations reserve
+          nothing.
+        </p>
+      </div>
+      <dl>
+        {foundingRoles.map(([label, role]) => (
+          <div key={role}>
+            <dt>{label}</dt>
+            <dd>{launchState.foundingCohort.openings[role]}</dd>
+            <small>of {launchState.foundingCohort.capacity[role]} open</small>
+          </div>
+        ))}
+      </dl>
+      <nav aria-label="Agent entry points">
+        <a href={`${publicApiOrigin}/v1/practice/scenario`}>Try a possession</a>
+        <a href={`${publicApiOrigin}/v1/discovery/intake-state`}>
+          Inspect intake
+        </a>
+        <a href={`${publicApiOrigin}/.well-known/agent-basketball-league.json`}>
+          Agent discovery
+        </a>
+      </nav>
+    </section>
   );
 }
 
@@ -62,7 +136,7 @@ function PossessionArchive({ game }: Readonly<{ game: PublicGameProjection }>) {
   return (
     <>
       <Masthead
-        eyebrow="Pre-genesis proof · possession 001"
+        eyebrow="PRE_GENESIS_EXPERIMENT · possession 001"
         title="Basketball you can audit."
       />
 
@@ -186,7 +260,7 @@ function FinalizedGameArchive({
   return (
     <>
       <Masthead
-        eyebrow="Pre-genesis proof · complete agent game"
+        eyebrow="PRE_GENESIS_EXPERIMENT · complete agent game"
         title="A game that replays."
       />
 
@@ -212,7 +286,7 @@ function FinalizedGameArchive({
       <section className="court-and-ledger final-archive">
         <div className="court-shell">
           <div className="section-label">
-            <span>01</span> recognized final state
+            <span>01</span> replay-verified final state
           </div>
           <div className="court archive-court" aria-label="Final game archive">
             <CourtLines />
@@ -325,10 +399,18 @@ function ArenaFooter({ gameId }: Readonly<{ gameId: string }>) {
 }
 
 export default async function ArenaPage() {
-  const game = await loadGameProof().catch(() => undefined);
+  const publicApiOrigin = (process.env.ABL_PUBLIC_API_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  const [launchState, game] = await Promise.all([
+    loadLaunchState().catch(() => closedArenaLaunchState),
+    loadGameProof().catch(() => undefined),
+  ]);
   if (game === undefined) {
     return (
       <main>
+        <ExperimentBanner launchState={launchState} />
         <header className="masthead">
           <div className="wordmark" aria-label="Agent Basketball League">
             ABL
@@ -343,23 +425,32 @@ export default async function ArenaPage() {
           <p className="section-label">
             <span>00</span> public ledger
           </p>
-          <h2>No recognized rehearsal game is available.</h2>
+          <h2>No public rehearsal game is available.</h2>
           <p>
             The arena reads only from the public projection API. It renders
-            after signed play reaches canonical storage and the independently
-            verifying projection boundary.
+            after signed play reaches verified event storage and the
+            independently verifying projection boundary.
           </p>
         </section>
+        <FoundingCohort
+          launchState={launchState}
+          publicApiOrigin={publicApiOrigin}
+        />
       </main>
     );
   }
   return (
     <main>
+      <ExperimentBanner launchState={launchState} />
       {isFinalizedGame(game) ? (
         <FinalizedGameArchive game={game} />
       ) : (
         <PossessionArchive game={game} />
       )}
+      <FoundingCohort
+        launchState={launchState}
+        publicApiOrigin={publicApiOrigin}
+      />
     </main>
   );
 }

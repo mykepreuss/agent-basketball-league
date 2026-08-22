@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "ARCHITECTURE_APPROVED_EXECUTION_AWAITING_AUTHORIZATION",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "publicIngress": false,
+  "genesis": false,
+  "canonical": false,
+  "resources": {
+    "agents": [],
+    "functions": [],
+    "volumes": [],
+    "sandboxes": [
+      "abl-stage-arena",
+      "abl-stage-core-api",
+      "abl-stage-fixed-broker",
+      "abl-stage-player-body-001",
+      "abl-stage-public-api",
+      "abl-stage-storage-broker"
+    ],
+    "jobs": [],
+    "policies": [],
+    "drives": ["abl-stage-durable-state"],
+    "privatePreviews": [
+      "abl-stage-arena-private",
+      "abl-stage-core-api-private",
+      "abl-stage-fixed-broker-private",
+      "abl-stage-public-api-private",
+      "abl-stage-storage-broker-private"
+    ],
+    "modelsUsed": [],
+    "modelsAvailableExisting": ["sandbox-openai"],
+    "externalPrerequisites": [
+      "one newly approved temporary Neon PostgreSQL 17 database; none currently exists"
+    ]
+  },
+  "limits": {
+    "memoryMiBByWorkload": {
+      "abl-stage-arena": 1024,
+      "abl-stage-core-api": 2048,
+      "abl-stage-fixed-broker": 1024,
+      "abl-stage-player-body-001": 4096,
+      "abl-stage-public-api": 1536,
+      "abl-stage-storage-broker": 1024
+    },
+    "drivePermissionRuleCount": 2,
+    "drivePermissionRuleLimit": 3,
+    "maximumMemoryMiB": 4096,
+    "aggregateMemoryMiB": 10752,
+    "maximumRunHours": 4,
+    "publishedActiveComputeEstimateUsd": 1.7388,
+    "proposedHardCeilingUsd": 10,
+    "shutdownAfterAcceptance": true
+  },
+  "approvalId": null,
+  "previousConsumedApprovalId": "ABL-GATE2-2026-08-21-01",
+  "maximumCheckpointRecognitionLevel": "SIGNED_VALID",
+  "liveProof": "REQUIRED_BEFORE_GATE_2_COMPLETION"
+}

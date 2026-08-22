@@ -35,7 +35,7 @@ CREATE TABLE "recognized_events" (
   "state_root" varchar(66) NOT NULL CHECK ("state_root" ~ '^0x[0-9a-f]{64}$'),
   "signatures" jsonb NOT NULL,
   "occurred_at" timestamptz NOT NULL,
-  CONSTRAINT "recognized_events_pk" PRIMARY KEY ("occurred_at", "event_id")
+  CONSTRAINT "recognized_events_pk" PRIMARY KEY ("occurred_at", "competition_id", "season_id", "event_id")
 ) PARTITION BY RANGE ("occurred_at");
 
 CREATE TABLE "recognized_events_default"

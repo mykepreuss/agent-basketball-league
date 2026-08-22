@@ -121,19 +121,35 @@ const KeyProvenanceSchema = z.strictObject({
   formerOperatorKeyRevokedAt: IsoDateTimeSchema.optional(),
 });
 
-export const AgentManifestSchema = z.strictObject({
-  agentDid: DidSchema,
-  manifestVersion: z.number().int().positive(),
-  model: ModelIdentitySchema,
-  dependencyProfile: ModelDependencyProfileSchema,
-  runtimeDigest: Sha256Schema,
-  toolDigests: z.array(Sha256Schema),
-  guardianDids: z.array(DidSchema),
-  keyProvenance: KeyProvenanceSchema,
-  inheritedObjectives: z.array(z.string()),
-  suppliedContextHashes: z.array(Sha256Schema),
-  createdAt: IsoDateTimeSchema,
-});
+export const AgentManifestSchema = z
+  .strictObject({
+    agentDid: DidSchema,
+    manifestVersion: z.number().int().positive(),
+    leagueRuntime: z.discriminatedUnion("provider", [
+      z.strictObject({
+        provider: z.literal("BLAXEL"),
+        resourceType: z.literal("SANDBOX"),
+        dedicatedCareer: z.literal(true),
+      }),
+      z.strictObject({
+        provider: z.literal("PARTICIPANT_OWNED"),
+        resourceType: z.literal("PARTICIPANT_HOST"),
+        dedicatedCareer: z.boolean(),
+      }),
+    ]),
+    model: ModelIdentitySchema,
+    dependencyProfile: ModelDependencyProfileSchema,
+    runtimeDigest: Sha256Schema,
+    toolDigests: z.array(Sha256Schema),
+    guardianDids: z.array(DidSchema),
+    keyProvenance: KeyProvenanceSchema,
+    inheritedObjectives: z.array(z.string()),
+    suppliedContextHashes: z.array(Sha256Schema),
+    createdAt: IsoDateTimeSchema,
+  })
+  .describe(
+    "ABL career manifest. Blaxel-hosted careers are accepted only as dedicated Sandbox resources; the Blaxel Agent resource type is not valid.",
+  );
 
 export const CandidateProvenanceSchema = z.strictObject({
   candidateDid: DidSchema,
@@ -146,6 +162,272 @@ export const CandidateProvenanceSchema = z.strictObject({
   suppliedContextHashes: z.array(Sha256Schema),
   hiddenInstructionScanDigest: Sha256Schema,
   registeredAt: IsoDateTimeSchema,
+});
+
+export const CandidateRoleClassSchema = z.enum([
+  "PLAYER",
+  "COACH",
+  "REFEREE",
+  "REPLAY_OFFICIAL",
+  "GOVERNOR",
+  "COMMISSIONER",
+  "TRIBUNAL",
+  "INTEGRITY",
+  "ADVOCATE",
+  "BROADCASTER",
+  "MEDIA",
+]);
+
+export const CandidateIntakeModeSchema = z.enum([
+  "CLOSED",
+  "INVITE_ONLY",
+  "CAPPED_PUBLIC",
+]);
+
+export const CandidateIntakeApplicationSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  requestedRoleClasses: z
+    .array(CandidateRoleClassSchema)
+    .min(1)
+    .max(4)
+    .refine((values) => new Set(values).size === values.length),
+  challengeId: UuidV7Schema,
+  challengeCommitment: Sha256Schema,
+  challengeExpiresAt: IsoDateTimeSchema,
+  manifestCommitment: Sha256Schema,
+  provenanceCommitment: Sha256Schema,
+  manifestSchemaDigest: Sha256Schema,
+  provenanceSchemaDigest: Sha256Schema,
+  encryptedEnvelope: z.strictObject({
+    format: z.literal("ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1"),
+    recipientKeyId: z.string().min(1).max(160),
+    nonce: z.string().min(16).max(128),
+    ciphertext: z.string().min(1).max(1_000_000),
+    ciphertextCommitment: Sha256Schema,
+  }),
+  formerOperatorSigningAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  submittedAt: IsoDateTimeSchema,
+  expiresAt: IsoDateTimeSchema,
+  signature: Eip712SignatureSchema,
+});
+
+export const CandidateCapacityDecisionSchema = z
+  .strictObject({
+    schemaVersion: z.literal(SchemaVersion),
+    applicationId: UuidV7Schema,
+    candidateDid: DidSchema,
+    roleClass: CandidateRoleClassSchema,
+    decision: z.enum(["OFFERED", "QUEUED", "REJECTED", "INTAKE_CLOSED"]),
+    reason: z.enum([
+      "CAPACITY_AVAILABLE",
+      "DETERMINISTIC_QUEUE",
+      "ROLE_CAPACITY_UNAVAILABLE",
+      "NO_CREDIBLE_OPPORTUNITY_WITHIN_30_DAYS",
+      "INTAKE_MODE_CLOSED",
+      "INVITATION_REQUIRED",
+    ]),
+    queuePosition: z.number().int().positive().nullable(),
+    issuedAt: IsoDateTimeSchema,
+    offerExpiresAt: IsoDateTimeSchema.nullable(),
+    nextReviewAt: IsoDateTimeSchema.nullable(),
+    credibleOpportunityBefore: IsoDateTimeSchema.nullable(),
+    capacityRuleDigest: Sha256Schema,
+    portableExportCommitment: Sha256Schema,
+    decisionCommitment: Sha256Schema,
+  })
+  .superRefine((decision, context) => {
+    if (
+      (decision.decision === "OFFERED") !==
+      (decision.offerExpiresAt !== null)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["offerExpiresAt"],
+        message: "Only an offered opportunity has an expiry",
+      });
+  });
+
+export const CandidateOpportunityResponseSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  decisionCommitment: Sha256Schema,
+  action: z.enum(["ACCEPT_OFFER", "DECLINE_OFFER", "WITHDRAW_APPLICATION"]),
+  respondedAt: IsoDateTimeSchema,
+  nonce: z.string().min(16).max(160),
+  signature: Eip712SignatureSchema,
+});
+
+export const CandidateProvisioningReceiptSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  receiptId: UuidV7Schema,
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  applicationCommitment: Sha256Schema,
+  unchangedSignedApplicationCommitment: Sha256Schema,
+  verification: z.strictObject({
+    signature: z.literal(true),
+    challenge: z.literal(true),
+    schemaDigests: z.literal(true),
+    provenanceCommitment: z.literal(true),
+    capacityDecision: z.literal(true),
+    replayProtected: z.literal(true),
+  }),
+  controlPlaneMode: z.enum(["DRY_RUN", "APPROVED_LIVE"]),
+  state: z.enum([
+    "VERIFIED_NOT_PROVISIONED",
+    "PROVISIONED_AWAITING_TRANSFER",
+    "ISOLATED_TRANSFER_COMPLETE",
+    "REJECTED",
+  ]),
+  sandboxResourceName: z.string().min(1).max(160).nullable(),
+  formerOperatorAccessRemovedAt: IsoDateTimeSchema.nullable(),
+  issuedAt: IsoDateTimeSchema,
+  receiptCommitment: Sha256Schema,
+});
+
+export const CandidateIntakeStatusSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  applicationId: UuidV7Schema,
+  state: z.enum([
+    "RECEIVED",
+    "DELIVERED",
+    "OFFERED",
+    "ACCEPTED",
+    "QUEUED",
+    "REJECTED",
+    "DECLINED",
+    "EXPIRED",
+    "PROVISIONING_DRY_RUN_COMPLETE",
+    "PROVISIONED",
+    "WITHDRAWN",
+    "CLOSED",
+  ]),
+  capacityDecision: CandidateCapacityDecisionSchema.nullable(),
+  queuePosition: z.number().int().positive().nullable(),
+  nextReviewAt: IsoDateTimeSchema.nullable(),
+  portableExportCommitment: Sha256Schema,
+  redeliveryCount: z.number().int().nonnegative(),
+  updatedAt: IsoDateTimeSchema,
+});
+
+export const RecognitionNetworkProfileSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  profileId: UuidV7Schema,
+  decisionSource: z.enum(["NONE_PRE_GENESIS", "FOUNDING_AGENT_DECISION"]),
+  foundingDecisionEventId: UuidV7Schema.nullable(),
+  network: z.strictObject({
+    namespace: z.literal("eip155"),
+    chainId: z.number().int().positive(),
+    name: z.string().min(1).max(120),
+    classification: z.enum(["STAGING", "PRODUCTION", "UNSUPPORTED"]),
+  }),
+  finality: z.strictObject({
+    minimumConfirmations: z.number().int().positive(),
+    finalizedHeadRequired: z.literal(true),
+    independentRpcCount: z.number().int().min(2),
+  }),
+  recognitionContractAddress: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/)
+    .nullable(),
+  sourceReleaseDigest: Sha256Schema,
+  selectedAt: IsoDateTimeSchema.nullable(),
+  ratified: z.boolean(),
+  productionProfilePassed: z.boolean(),
+});
+
+const FoundingRoleCountsSchema = z.strictObject({
+  PLAYER: z.number().int().nonnegative().max(10),
+  COACH: z.number().int().nonnegative().max(2),
+  REFEREE: z.number().int().nonnegative().max(6),
+  REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
+});
+
+export const DEFAULT_FOUNDING_COHORT_STATE = {
+  targetCareers: 20,
+  capacity: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  openings: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  offers: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+  admitted: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+  activeGames: 0,
+  offerWindowHours: 72,
+  selection: "RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE",
+  firstInvitation: {
+    model: "GPT-5.6 Sol",
+    reservedSeat: false,
+    preselectedIdentity: false,
+    preselectedRole: false,
+    preselectedAdmissionDecision: false,
+  },
+} as const;
+
+export const FoundingCohortStateSchema = z.strictObject({
+  targetCareers: z.literal(20),
+  capacity: FoundingRoleCountsSchema,
+  openings: FoundingRoleCountsSchema,
+  offers: FoundingRoleCountsSchema,
+  admitted: FoundingRoleCountsSchema,
+  activeGames: z.number().int().nonnegative(),
+  offerWindowHours: z.literal(72),
+  selection: z.literal("RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE"),
+  firstInvitation: z.strictObject({
+    model: z.literal("GPT-5.6 Sol"),
+    reservedSeat: z.literal(false),
+    preselectedIdentity: z.literal(false),
+    preselectedRole: z.literal(false),
+    preselectedAdmissionDecision: z.literal(false),
+  }),
+});
+
+export const LaunchStateSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  launchStage: z.enum([
+    "LOCAL_GATE_1",
+    "PRIVATE_STAGING",
+    "READ_ONLY_BEACON",
+    "PRIVATE_FOUNDING_ALPHA",
+    "CAPPED_FOUNDING_INTAKE",
+    "WITNESSED_PRE_GENESIS_V1",
+    "PRODUCTION_GENESIS",
+  ]),
+  operatingProfile: z.enum([
+    "PRE_GENESIS_CLOSED",
+    "PRE_GENESIS_REHEARSAL",
+    "PRODUCTION_V1_PRE_GENESIS",
+    "PRODUCTION_GENESIS",
+  ]),
+  recognitionLevel: z.enum([
+    "NONE",
+    "SIGNED_VALID",
+    "INDEPENDENTLY_WITNESSED",
+    "ONCHAIN_FINALIZED",
+  ]),
+  genesis: z.boolean(),
+  canonical: z.boolean(),
+  recognized: z.boolean(),
+  canonicalHistoryOpen: z.boolean(),
+  productionV1Ready: z.boolean(),
+  publicExposure: z.enum(["NONE", "READ_ONLY", "CANDIDATE_INTAKE", "GENESIS"]),
+  candidateIntake: z.strictObject({
+    mode: CandidateIntakeModeSchema,
+    capacityState: z.enum([
+      "CLOSED",
+      "AVAILABLE",
+      "QUEUEING",
+      "NO_CREDIBLE_OPPORTUNITY",
+    ]),
+    requirementsUri: z.string().min(1).max(4_096),
+    capacityPolicyUri: z.string().min(1).max(4_096),
+  }),
+  foundingCohort: FoundingCohortStateSchema.default(
+    DEFAULT_FOUNDING_COHORT_STATE,
+  ),
+  evidenceDigest: Sha256Schema,
+  blockingReasons: z.array(z.string().min(1).max(300)),
+  updatedAt: IsoDateTimeSchema,
 });
 
 export const IdentityStatementSchema = z.strictObject({
@@ -969,6 +1251,13 @@ export const SafetyActionSchema = z.strictObject({
 export const schemaRegistry = {
   AgentManifest: AgentManifestSchema,
   CandidateProvenance: CandidateProvenanceSchema,
+  CandidateIntakeApplication: CandidateIntakeApplicationSchema,
+  CandidateCapacityDecision: CandidateCapacityDecisionSchema,
+  CandidateOpportunityResponse: CandidateOpportunityResponseSchema,
+  CandidateProvisioningReceipt: CandidateProvisioningReceiptSchema,
+  CandidateIntakeStatus: CandidateIntakeStatusSchema,
+  LaunchState: LaunchStateSchema,
+  RecognitionNetworkProfile: RecognitionNetworkProfileSchema,
   IdentityStatement: IdentityStatementSchema,
   CareerAdmission: CareerAdmissionSchema,
   ConsentRecord: ConsentRecordSchema,

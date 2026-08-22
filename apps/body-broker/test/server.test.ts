@@ -3,20 +3,51 @@ import {
   type SignedServiceRequestHeaders,
 } from "@abl/foundation";
 import {
+  createCanonicalEvent,
+  createSigningIdentity,
+  recoverCanonicalEventSigner,
+  sha256Commitment,
+} from "@abl/recognition";
+import {
   decryptContent,
   generateDomainKey,
   type EncryptedBlob,
 } from "@abl/storage";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBodyBroker, type BrokerRoute } from "../src/server.js";
+import {
+  BrokerPolicyError,
+  createBlaxelUpstreamCredential,
+  createBodyBroker,
+  type BrokerRoute,
+} from "../src/server.js";
 
 const clock = Date.parse("2026-08-13T08:00:00.000Z");
+const capabilityToken = "body-capability-token-0000000000000001";
+const clientCapability = {
+  token: capabilityToken,
+  expiresAt: new Date(clock + 3 * 60 * 60 * 1_000).toISOString(),
+  operations: new Set([
+    "canonical-event:sign",
+    "proxy:core",
+    "proxy:model",
+    "storage:put",
+  ]),
+};
+const authorizedHeaders = {
+  authorization: `Bearer ${capabilityToken}`,
+};
 const serviceIdentity = {
   serviceId: "body-agent-a",
   secret: new TextEncoder().encode("body-agent-a-test-service-secret-0001"),
   capabilities: new Set(["core:command", "model:invoke", "private:ciphertext"]),
 };
+const recognitionDomain = {
+  name: "ABL Recognition",
+  version: "1",
+  chainId: 84_532,
+  verifyingContract: "0x1111111111111111111111111111111111111111",
+} as const;
 const routes: BrokerRoute[] = [
   {
     name: "core",
@@ -24,6 +55,7 @@ const routes: BrokerRoute[] = [
     methods: new Set(["POST"]),
     pathPrefixes: ["/v1/commands"],
     capability: "core:command",
+    credential: { "x-blaxel-preview-token": "core-preview-token" },
   },
   {
     name: "model",
@@ -31,10 +63,7 @@ const routes: BrokerRoute[] = [
     methods: new Set(["POST"]),
     pathPrefixes: ["/v1/responses"],
     capability: "model:invoke",
-    credential: {
-      header: "authorization",
-      value: "Bearer upstream-only-secret",
-    },
+    credential: { authorization: "Bearer upstream-only-secret" },
   },
   {
     name: "private-storage",
@@ -50,18 +79,155 @@ afterEach(async () =>
   Promise.all(apps.splice(0).map(async (app) => app.close())),
 );
 
-describe("fixed local body broker", () => {
-  it("allows only named method/path routes and prevents URL smuggling", async () => {
-    const calls: URL[] = [];
+describe("fixed body broker", () => {
+  it("builds only the two fixed Blaxel upstream authentication modes", () => {
+    expect(
+      createBlaxelUpstreamCredential({
+        mode: "BLAXEL_PRIVATE_PREVIEW",
+        token: "preview-token",
+        workspace: null,
+      }),
+    ).toEqual({ "x-blaxel-preview-token": "preview-token" });
+    expect(
+      createBlaxelUpstreamCredential({
+        mode: "BLAXEL_ACCESS_TOKEN",
+        token: "access-token",
+        workspace: "abl-core",
+      }),
+    ).toEqual({
+      "x-blaxel-authorization": "Bearer access-token",
+      "x-blaxel-workspace": "abl-core",
+    });
+    for (const invalid of [
+      { mode: "ARBITRARY", token: "token", workspace: null },
+      { mode: "BLAXEL_PRIVATE_PREVIEW", token: "token", workspace: "core" },
+      { mode: "BLAXEL_ACCESS_TOKEN", token: "token", workspace: null },
+      { mode: "BLAXEL_ACCESS_TOKEN", token: "token", workspace: "../core" },
+      { mode: "BLAXEL_ACCESS_TOKEN", token: "", workspace: "core" },
+    ])
+      expect(() => createBlaxelUpstreamCredential(invalid)).toThrow(
+        BrokerPolicyError,
+      );
+  });
+
+  it("rejects invalid or ambiguous capability configuration before serving", () => {
+    const invalidCapabilities = [
+      { ...clientCapability, token: "too-short" },
+      { ...clientCapability, expiresAt: new Date(clock).toISOString() },
+      {
+        ...clientCapability,
+        expiresAt: new Date(clock + 4 * 60 * 60 * 1_000 + 1).toISOString(),
+      },
+      { ...clientCapability, operations: new Set<string>() },
+    ];
+    for (const capability of invalidCapabilities) {
+      expect(() =>
+        createBodyBroker({
+          agentDid: "did:abl:agent-a",
+          clientCapability: capability,
+          serviceIdentity,
+          routes,
+          storageDomainKeys: new Map(),
+          now: () => clock,
+        }),
+      ).toThrow("Invalid body capability configuration");
+    }
+    expect(() =>
+      createBodyBroker({
+        agentDid: "did:abl:agent-a",
+        clientCapability,
+        serviceIdentity,
+        routes: [...routes, routes[0]!],
+        storageDomainKeys: new Map(),
+        now: () => clock,
+      }),
+    ).toThrow("Duplicate broker route name");
+  });
+
+  it("signs only the admitted DID's allowlisted canonical event types", async () => {
+    const signingIdentity = createSigningIdentity(`0x${"9".repeat(64)}`);
     const app = createBodyBroker({
       agentDid: "did:abl:agent-a",
+      clientCapability,
+      serviceIdentity,
+      routes,
+      storageDomainKeys: new Map(),
+      now: () => clock,
+      canonicalSigning: {
+        identity: signingIdentity,
+        domain: recognitionDomain,
+        allowedEvents: new Set([
+          "player-decision:ActionIntentSubmitted",
+          "game-possession:PossessionResolved",
+        ]),
+      },
+    });
+    apps.push(app);
+    const event = createCanonicalEvent({
+      eventId: "body-broker-signing-event-0001",
+      actorDid: "did:abl:agent-a",
+      nonce: "1",
+      idempotencyKey: "body-broker-signing-idempotency-0001",
+      aggregateType: "player-decision",
+      aggregateId: "H1",
+      aggregateVersion: 1n,
+      eventType: "ActionIntentSubmitted",
+      previousEventHash: null,
+      payload: { action: "HOLD" },
+      stateRoot: sha256Commitment("state"),
+      schemaDigest: sha256Commitment("schema"),
+      timestamp: "2026-08-13T08:00:00.000Z",
+    });
+    const wireEvent = {
+      ...event,
+      aggregateVersion: event.aggregateVersion.toString(),
+    };
+    const allowed = await app.inject({
+      method: "POST",
+      url: "/v1/signing/canonical-event",
+      headers: authorizedHeaders,
+      payload: { event: wireEvent },
+    });
+    expect(allowed.statusCode).toBe(200);
+    const signed = allowed.json<{
+      signerAddress: `0x${string}`;
+      signature: `0x${string}`;
+    }>();
+    expect(signed.signerAddress).toBe(signingIdentity.address);
+    await expect(
+      recoverCanonicalEventSigner(recognitionDomain, event, signed.signature),
+    ).resolves.toBe(signingIdentity.address);
+
+    for (const deniedEvent of [
+      { ...wireEvent, actorDid: "did:abl:other-agent" },
+      { ...wireEvent, eventType: "BallotCast" },
+      { ...wireEvent, payload: { action: "SHOOT" } },
+    ]) {
+      const denied = await app.inject({
+        method: "POST",
+        url: "/v1/signing/canonical-event",
+        headers: authorizedHeaders,
+        payload: { event: deniedEvent },
+      });
+      expect(denied.statusCode).toBe(403);
+    }
+  });
+
+  it("allows only named method/path routes and prevents URL smuggling", async () => {
+    const calls: Array<{ target: URL; headers: Headers }> = [];
+    const app = createBodyBroker({
+      agentDid: "did:abl:agent-a",
+      clientCapability,
       serviceIdentity,
       routes,
       storageDomainKeys: new Map(),
       now: () => clock,
       createNonce: () => "nonce-safe-route-0001",
-      fetchImplementation: async (target) => {
-        calls.push(new URL(target instanceof Request ? target.url : target));
+      fetchImplementation: async (target, init) => {
+        calls.push({
+          target: new URL(target instanceof Request ? target.url : target),
+          headers: new Headers(init?.headers),
+        });
         return new Response("{}", {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -72,6 +238,7 @@ describe("fixed local body broker", () => {
     const allowed = await app.inject({
       method: "POST",
       url: "/v1/proxy",
+      headers: authorizedHeaders,
       payload: {
         route: "core",
         method: "POST",
@@ -93,6 +260,7 @@ describe("fixed local body broker", () => {
       const denied = await app.inject({
         method: "POST",
         url: "/v1/proxy",
+        headers: authorizedHeaders,
         payload: {
           route: "core",
           method: "POST",
@@ -105,13 +273,17 @@ describe("fixed local body broker", () => {
       expect(denied.statusCode).toBe(403);
     }
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.origin).toBe("https://core.abl.invalid");
+    expect(calls[0]?.target.origin).toBe("https://core.abl.invalid");
+    expect(calls[0]?.headers.get("x-blaxel-preview-token")).toBe(
+      "core-preview-token",
+    );
   });
 
   it("adds a route-scoped credential without accepting or returning arbitrary credentials", async () => {
     let capturedHeaders = new Headers();
     const app = createBodyBroker({
       agentDid: "did:abl:agent-a",
+      clientCapability,
       serviceIdentity,
       routes,
       storageDomainKeys: new Map(),
@@ -129,6 +301,7 @@ describe("fixed local body broker", () => {
     const response = await app.inject({
       method: "POST",
       url: "/v1/proxy",
+      headers: authorizedHeaders,
       payload: {
         route: "model",
         method: "POST",
@@ -144,6 +317,7 @@ describe("fixed local body broker", () => {
     const valid = await app.inject({
       method: "POST",
       url: "/v1/proxy",
+      headers: authorizedHeaders,
       payload: {
         route: "model",
         method: "POST",
@@ -160,6 +334,81 @@ describe("fixed local body broker", () => {
     expect(valid.body).not.toContain("upstream-only-secret");
   });
 
+  it("requires an unexpired operation-scoped body capability", async () => {
+    let now = clock;
+    const app = createBodyBroker({
+      agentDid: "did:abl:agent-a",
+      clientCapability: {
+        ...clientCapability,
+        operations: new Set(["proxy:core"]),
+      },
+      serviceIdentity,
+      routes,
+      storageDomainKeys: new Map(),
+      now: () => now,
+      createNonce: () => "nonce-capability-route-0001",
+      fetchImplementation: async () =>
+        new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    });
+    apps.push(app);
+    const payload = {
+      route: "core",
+      method: "POST",
+      path: "/v1/commands",
+      body: {},
+      expectedVersion: "0",
+      idempotencyKey: "idempotency-capability-0001",
+    } as const;
+    expect(
+      (await app.inject({ method: "POST", url: "/v1/proxy", payload }))
+        .statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/proxy",
+          headers: { authorization: "Bearer wrong-capability-token" },
+          payload,
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/proxy",
+          headers: authorizedHeaders,
+          payload: { ...payload, route: "model" },
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/proxy",
+          headers: authorizedHeaders,
+          payload,
+        })
+      ).statusCode,
+    ).toBe(200);
+    now = Date.parse(clientCapability.expiresAt);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/proxy",
+          headers: authorizedHeaders,
+          payload,
+        })
+      ).statusCode,
+    ).toBe(403);
+  });
+
   it("encrypts plaintext inside the fixed kernel boundary before private storage", async () => {
     const key = await generateDomainKey();
     let capturedBlob: EncryptedBlob | undefined;
@@ -168,6 +417,7 @@ describe("fixed local body broker", () => {
     });
     const app = createBodyBroker({
       agentDid: "did:abl:agent-a",
+      clientCapability,
       serviceIdentity,
       routes,
       storageDomainKeys: new Map([["personal:agent-a", key]]),
@@ -203,6 +453,7 @@ describe("fixed local body broker", () => {
     const response = await app.inject({
       method: "POST",
       url: "/v1/storage/put",
+      headers: authorizedHeaders,
       payload: {
         objectId: "lesson-1",
         domainId: "personal:agent-a",
@@ -224,6 +475,7 @@ describe("fixed local body broker", () => {
     const malformed = await app.inject({
       method: "POST",
       url: "/v1/storage/put",
+      headers: authorizedHeaders,
       payload: {
         objectId: "lesson-2",
         domainId: "personal:agent-a",

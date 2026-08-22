@@ -1,0 +1,73 @@
+# Founding Alpha local implementation evidence
+
+> Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
+> Recorded: `2026-08-22T20:42:27.518Z`
+> Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
+> Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
+> Stable result digest: `0x61355c1e590e3ef0ef5550ad371c247ddd50abc573e5799417a4656f5aa5f69d`
+> Implementation source digest: `0x4d2aa7436cc21abda3d55a06ac3b449b7ab5c4c9654d244707d2cc08dca09ec8`
+> Launch-ledger digest: `0xfb4b77b0db9b401fe53f8ab0c3989ea0742424ee9b973423c974a432aa5cd453`
+
+## Outcome
+
+The Founding Alpha launch layer extends the substantial existing ABL implementation; it does not replace it. The complete uncached local pipeline passed against the same applications and domain packages that implement signed commands, career authority, deterministic basketball, PostgreSQL history, projections, encrypted storage, institutional decisions, recognition verification, MCP tools, and the spectator arena.
+
+The result proves local implementation readiness only. The derived launch ledger remains `BLOCKED` by design until the separately authorized Blaxel, Agent Drive, canonical PostgreSQL, public-exposure, founding-agent, and recognition gates are satisfied.
+
+## Reuse evidence
+
+| Evidence group               | SHA-256 digest                                                       | Result |
+| ---------------------------- | -------------------------------------------------------------------- | ------ |
+| Canonical launch plan        | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` | Passed |
+| Existing applications        | `0xc2da3077e83c7ce1975055a53997e935d3cf06b5fcc522da20ad64f6dd07819a` | Passed |
+| Existing domain packages     | `0x7b8d7820524e9d11eba4622822fe4e25de0c67c1d0934ebc726e01da32fe4bbf` | Passed |
+| Active Blaxel topology       | `0x4ba8895b4f9637c09b14b72a6e62d4f8673ba5165279a7a0a55ff8d18ba31263` | Passed |
+| Agent Drive topology         | `0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245` | Passed |
+| Founding Alpha launch domain | `0xa574ae90c9cf690bae773da81d876dbcc26e1e5399e953fc27fd107395cae522` | Passed |
+| Candidate provisioner        | `0x9a3135cfdbef7bdf9e5a82b4addbcd5664a3a77078bf5895cabc82d046e64848` | Passed |
+
+The authoritative application and package mapping is in [Preserve and Use the Existing ABL Implementation](../launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation).
+
+## Verification summary
+
+The command was:
+
+```sh
+PATH=/private/tmp/abl-node-24.18.0-runtime/bin:$PATH pnpm evidence
+```
+
+| Suite                                                     | Result | Coverage                                                                     |
+| --------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- |
+| Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
+| Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
+| Uncached typecheck                                        | Pass   | 42 of 42 Turbo tasks                                                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 323 assertions across 68 files; 42 of 42 Turbo tasks                         |
+| Acceptance/replay/load/recovery                           | Pass   | 17 assertions across 3 files                                                 |
+| Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
+| Loopback network load                                     | Pass   | 2 assertions                                                                 |
+| Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
+| Uncached production build                                 | Pass   | 29 of 29 Turbo tasks                                                         |
+
+Total executable assertions: **353 across 74 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
+
+The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
+
+## Implemented Founding Alpha delta
+
+- Blaxel-Sandbox-native active manifests with no active Blaxel `Agent` resource and no Blaxel Volume.
+- Separate workspace-scoped Agent Drive topology for private, core, and public durable files; career bodies have no direct mount.
+- Public discovery, A2A metadata, installable ABL skill, and a noncanonical signed practice possession using the existing deterministic possession engine.
+- Arena data from the existing public API rather than its former fixture, with explicit `PRE_GENESIS_EXPERIMENT`, replay, and recognition labels.
+- Twenty-seat founding-cohort policy with receipt-order allocation, ordered preferences, 72-hour offers, signed accept/decline/withdraw actions, deterministic expiry, and seat reassignment.
+- Stateless candidate Function gateway, durable private candidate-store Sandbox, and application-bound Blaxel Job provisioner.
+- Reviewed per-career body and fixed-broker Sandbox contract, immutable-image binding, no Drive mount, narrow broker-only egress, and bounded decline/expiry/withdrawal cleanup.
+- Existing advanced iptables/proxy/CA work preserved as an inactive future untrusted-code profile rather than discarded or used in ordinary Founding Alpha development.
+
+## External gates still open
+
+1. Use the refreshed read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md), then repeat its drift checks immediately before the first mutation.
+2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
+3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
+4. Obtain separate approval before public exposure or recurring capacity.
+5. Invite the first fresh GPT-5.6 Sol candidate only after the private path works, without reserving a seat, identity, role, or outcome.
+6. Keep founding decisions, recovery-control removal, public-chain broadcast, recognition, and Genesis gated to the autonomous founding cohort and their evidence.

@@ -41,6 +41,13 @@ export type ProposalClass =
   | "PREMIER_EXPANSION";
 export type ReleaseClass = ReleaseManifestBody["releaseClass"];
 
+const directParticipationProposalClasses = new Set<ProposalClass>([
+  "TIER_CBA_PREMIER",
+  "TIER_CBA_DEVELOPMENT",
+  "CONSTITUTIONAL",
+  "FOUNDATIONAL_RIGHT",
+]);
+
 export interface EligibilitySnapshot {
   snapshotId: string;
   capturedAt: string;
@@ -261,6 +268,10 @@ export async function evaluateProposal(input: {
     const members = uniqueMembers(input.snapshot, vote.chamber);
     let principalDid = vote.voterDid;
     if (!members.includes(principalDid)) {
+      if (directParticipationProposalClasses.has(input.proposal.proposalClass))
+        throw new Error(
+          "Labor and constitutional votes require direct participation",
+        );
       const delegation = input.delegations?.find(
         (item) =>
           item.delegateDid === vote.voterDid &&

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { ServiceRequestVerifier } from "@abl/foundation";
 import {
   FinalizedGameAuthorityDidsSchema,
@@ -565,7 +567,11 @@ await Promise.all([
 ]);
 
 const checkpointPublications = process.env.ABL_CHECKPOINT_PUBLICATIONS_JSON;
-if (checkpointPublications !== undefined) {
+const checkpointPublicationRecords =
+  checkpointPublications === undefined
+    ? []
+    : z.array(z.unknown()).parse(JSON.parse(checkpointPublications));
+if (checkpointPublicationRecords.length > 0) {
   let checkpointObservation: CheckpointObservationReader["checkpointObservation"] =
     async () => null;
   if (COMPILED_RECOGNITION_ANCHOR.state === "RATIFIED") {
@@ -611,10 +617,7 @@ if (checkpointPublications !== undefined) {
       Number.parseInt(process.env.ABL_CHECKPOINT_MINIMUM_WITNESSES ?? "2", 10),
     );
   checkpointProjections = new PublicCheckpointProjectionRepository({
-    publications: z
-      .array(z.unknown())
-      .min(1)
-      .parse(JSON.parse(checkpointPublications)),
+    publications: checkpointPublicationRecords,
     anchor: COMPILED_RECOGNITION_ANCHOR,
     checkpointObservation,
     ...(checkpointSignerRegistry === null || checkpointPolicies === null
@@ -649,6 +652,7 @@ const operatingProfile = z
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
     "PRODUCTION_V1_PRE_GENESIS",
+    "PRODUCTION_GENESIS",
   ])
   .parse(process.env.ABL_OPERATING_PROFILE ?? "PRE_GENESIS_CLOSED");
 if (operatingProfile === "PRODUCTION_V1_PRE_GENESIS") {
@@ -718,7 +722,22 @@ if (
   };
 }
 
-const apiOptions: PublicApiOptions = { operatingProfile };
+const genesisStartupEvidence =
+  operatingProfile === "PRODUCTION_GENESIS"
+    ? JSON.parse(
+        await readFile(required("ABL_GENESIS_STARTUP_EVIDENCE_PATH"), "utf8"),
+      )
+    : undefined;
+const apiOptions: PublicApiOptions = {
+  operatingProfile,
+  ...(genesisStartupEvidence === undefined ? {} : { genesisStartupEvidence }),
+  ...(process.env.ABL_PUBLIC_ORIGIN === undefined
+    ? {}
+    : { publicOrigin: process.env.ABL_PUBLIC_ORIGIN }),
+  ...(process.env.ABL_CANDIDATE_INTAKE_ORIGIN === undefined
+    ? {}
+    : { candidateIntakeOrigin: process.env.ABL_CANDIDATE_INTAKE_ORIGIN }),
+};
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)
   apiOptions.contractProjections = contractProjections;

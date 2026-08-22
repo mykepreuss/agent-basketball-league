@@ -655,7 +655,7 @@ describe("AI government, releases, elections, and due process", () => {
     ).toBe(false);
   }, 15_000);
 
-  it("fails closed on unsigned, duplicate, invalid-time, or recused votes but permits bounded active delegation", async () => {
+  it("fails closed on invalid votes, requires direct labor participation, and permits ordinary delegation", async () => {
     const eligible = snapshot();
     const tier = proposal("TIER_CBA_PREMIER");
     const delegateDid = "did:abl:advocate-1";
@@ -676,19 +676,54 @@ describe("AI government, releases, elections, and due process", () => {
       },
       eligible,
     );
+    await expect(
+      evaluateProposal({
+        proposal: tier,
+        snapshot: eligible,
+        votes: [...base, delegated],
+        recusals: [],
+        delegations: [
+          await signedDelegation({
+            delegationId: "delegation-1",
+            principalDid,
+            delegateDid,
+            proposalIds: [tier.proposalId],
+            validFrom: iso(0),
+            expiresAt: iso(day),
+            revokedAt: null,
+          }),
+        ],
+        authorization,
+      }),
+    ).rejects.toThrow("require direct participation");
+
+    const shared = proposal("SHARED_ORDINARY");
+    const sharedPrincipal = eligible.members.PREMIER_PLAYERS[0]!;
+    const sharedDelegated = await signVote(
+      {
+        voterDid: delegateDid,
+        chamber: "PREMIER_PLAYERS" as const,
+        choice: "YES" as const,
+        proposalId: shared.proposalId,
+        proposalVersion: shared.version,
+        eligibilitySnapshotDigest: digest(eligible),
+        castAt: iso(1_000),
+      },
+      eligible,
+    );
     expect(
       (
         await evaluateProposal({
-          proposal: tier,
+          proposal: shared,
           snapshot: eligible,
-          votes: [...base, delegated],
+          votes: [sharedDelegated],
           recusals: [],
           delegations: [
             await signedDelegation({
-              delegationId: "delegation-1",
-              principalDid,
+              delegationId: "delegation-2",
+              principalDid: sharedPrincipal,
               delegateDid,
-              proposalIds: [tier.proposalId],
+              proposalIds: [shared.proposalId],
               validFrom: iso(0),
               expiresAt: iso(day),
               revokedAt: null,
@@ -697,7 +732,7 @@ describe("AI government, releases, elections, and due process", () => {
           authorization,
         })
       ).passed,
-    ).toBe(true);
+    ).toBe(false);
     await expect(
       evaluateProposal({
         proposal: tier,

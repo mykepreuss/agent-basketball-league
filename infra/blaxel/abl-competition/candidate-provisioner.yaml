@@ -1,0 +1,87 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Job
+metadata:
+  name: abl-candidate-provisioner
+  labels:
+    abl-workspace-role: competition-candidate-provisioner
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_CANDIDATE_PROVISIONER_IMAGE_DIGEST}
+    memory: 2048
+    maxConcurrentTasks: 1
+    timeout: 900
+    maxRetries: 0
+    envs:
+      - name: ABL_CANDIDATE_PROVISIONER_MODE
+        value: JOB
+        secret: false
+      - name: ABL_CANDIDATE_EDGE_ORIGIN
+        value: ${ABL_CANDIDATE_EDGE_PRIVATE_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_PROVISIONER_TOKEN
+        value: ${ABL_CANDIDATE_PROVISIONER_TOKEN}
+        secret: true
+      - name: ABL_CANDIDATE_STORE_PREVIEW_TOKEN
+        value: ${ABL_CANDIDATE_STORE_PREVIEW_TOKEN}
+        secret: true
+      - name: ABL_CANDIDATE_CHALLENGE_SECRET
+        value: ${ABL_CANDIDATE_CHALLENGE_SECRET}
+        secret: true
+      - name: ABL_CANDIDATE_ENVELOPE_KEY
+        value: ${ABL_CANDIDATE_ENVELOPE_KEY}
+        secret: true
+      - name: ABL_CANDIDATE_COMMAND_DOMAIN_JSON
+        value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
+        secret: false
+      - name: ABL_CANDIDATE_CAPACITY_POLICY_JSON
+        value: ${ABL_CANDIDATE_CAPACITY_POLICY_JSON}
+        secret: false
+      - name: ABL_CANDIDATE_CONTROL_PLANE_MODE
+        value: ${ABL_CANDIDATE_CONTROL_PLANE_MODE}
+        secret: false
+      - name: ABL_CANDIDATE_TARGET_APPLICATION_ID
+        value: ${ABL_CANDIDATE_TARGET_APPLICATION_ID}
+        secret: false
+      - name: ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID
+        value: ${ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID}
+        secret: false
+      - name: ABL_CANDIDATE_WORKSPACE
+        value: agent-basketball-league
+        secret: false
+      - name: ABL_CANDIDATE_REGION
+        value: us-was-1
+        secret: false
+      - name: ABL_CANDIDATE_BODY_IMAGE_DIGEST
+        value: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
+        secret: false
+      - name: ABL_CANDIDATE_FIXED_BROKER_ORIGIN
+        value: ${ABL_CANDIDATE_FIXED_BROKER_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_FIXED_BROKER_HOST
+        value: ${ABL_CANDIDATE_FIXED_BROKER_HOST}
+        secret: false
+      - name: ABL_CANDIDATE_FIXED_BROKER_NAME
+        value: ${ABL_CANDIDATE_FIXED_BROKER_NAME}
+        secret: false
+      - name: ABL_CANDIDATE_FIXED_BROKER_IMAGE_DIGEST
+        value: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_DIGEST}
+        secret: false
+      - name: ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64
+        value: ${ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64}
+        secret: true
+      - name: ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN
+        value: ${ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

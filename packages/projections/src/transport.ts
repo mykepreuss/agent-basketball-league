@@ -58,6 +58,7 @@ export class ProjectionTransportError extends Error {
 export class HttpProjectionEventSink implements ProjectionEventSink {
   readonly #endpoint: URL;
   readonly #identity: ServiceRequestIdentity;
+  readonly #previewToken: string | undefined;
   readonly #fetch: typeof fetch;
   readonly #now: () => number;
   readonly #createNonce: () => string;
@@ -65,6 +66,7 @@ export class HttpProjectionEventSink implements ProjectionEventSink {
   public constructor(input: {
     origin: string;
     identity: ServiceRequestIdentity;
+    previewToken?: string;
     fetchImplementation?: typeof fetch;
     now?: () => number;
     createNonce?: () => string;
@@ -85,6 +87,7 @@ export class HttpProjectionEventSink implements ProjectionEventSink {
     const basePath = origin.pathname.replace(/\/$/, "");
     this.#endpoint.pathname = `${basePath}${PROJECTION_APPEND_PATH}`;
     this.#identity = input.identity;
+    this.#previewToken = input.previewToken;
     this.#fetch = input.fetchImplementation ?? fetch;
     this.#now = input.now ?? Date.now;
     this.#createNonce = input.createNonce ?? randomUUID;
@@ -108,7 +111,13 @@ export class HttpProjectionEventSink implements ProjectionEventSink {
     try {
       response = await this.#fetch(this.#endpoint, {
         method: "POST",
-        headers: { ...headers, "content-type": "application/json" },
+        headers: {
+          ...headers,
+          "content-type": "application/json",
+          ...(this.#previewToken === undefined
+            ? {}
+            : { "x-blaxel-preview-token": this.#previewToken }),
+        },
         body: Buffer.from(body),
         redirect: "error",
         signal: AbortSignal.timeout(12_000),

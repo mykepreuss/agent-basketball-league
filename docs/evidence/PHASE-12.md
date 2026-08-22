@@ -1,10 +1,10 @@
 # Phase 12 evidence: final local acceptance and Season One gate
 
-Recorded: 2026-08-18 in `America/Vancouver`.
+Recorded: 2026-08-18; refreshed 2026-08-21 in `America/Vancouver`.
 
 ## Result
 
-The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x909ba6218128323f94841d21dba384149ed58418a83e2dbd24566bafa618df04`.
+The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x5e753b36a342e926e319ae8a13c8d547a7fb328a18bbc8429e7dc998b658baa6`.
 
 The evidence runner executed from a clean command boundary:
 
@@ -12,15 +12,15 @@ The evidence runner executed from a clean command boundary:
 | ---------------------------------------------------------------------------- | ------------------------------------------- |
 | Repository formatting                                                        | Pass                                        |
 | Root harness/configuration TypeScript                                        | Pass                                        |
-| Workspace TypeScript checks                                                  | 37/37 uncached tasks                        |
-| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 261/261 assertions in 59 files; 37/37 tasks |
+| Workspace TypeScript checks                                                  | 42/42 uncached tasks                        |
+| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 305/305 assertions in 68 files; 42/42 tasks |
 | Cross-domain acceptance, replay, synthetic load, and recovery                | 17/17 assertions in 3 files                 |
 | Adversarial security                                                         | 9/9 assertions in 1 file                    |
 | Populated-game loopback HTTP load                                            | 2/2 workload assertions; 22,000 requests    |
 | Production desktop/mobile Chromium                                           | 2/2 assertions in 1 browser file            |
-| Production build                                                             | 25/25 uncached tasks                        |
+| Production build                                                             | 29/29 uncached tasks                        |
 
-That is 291 passing assertions across 65 test files under the exact pinned Node `24.18.0` runtime. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
+That is 335 passing assertions across 74 test files and 113/113 uncached type-check, test, and production-build tasks under exact Node `24.18.0` and pnpm `11.21.0`. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
 
 ## Interface and route closure
 

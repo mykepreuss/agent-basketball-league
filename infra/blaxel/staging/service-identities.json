@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "ARCHITECTURE_APPROVED_EXECUTION_AWAITING_AUTHORIZATION",
+  "workspace": "agent-basketball-league",
+  "identities": [
+    {
+      "id": "stage-body-001",
+      "runtime": "abl-stage-player-body-001",
+      "secretReferences": [
+        "network.proxy.routing.fixed-broker-preview-token",
+        "ABL_STAGE_FIXED_BROKER_CAPABILITY_TOKEN_B64"
+      ],
+      "allowed": [
+        "abl-stage-fixed-broker:canonical-event:sign",
+        "abl-stage-fixed-broker:proxy:core",
+        "abl-stage-fixed-broker:storage:put"
+      ],
+      "forbidden": [
+        "canonical-signing-key:read",
+        "model-credential:read",
+        "core-credential:read",
+        "storage-credential:read",
+        "database:connect",
+        "volume:raw",
+        "drive:raw",
+        "control-plane:mutate",
+        "projection:publish",
+        "recognition:broadcast"
+      ]
+    },
+    {
+      "id": "stage-fixed-broker-001",
+      "runtime": "abl-stage-fixed-broker",
+      "secretReferences": [
+        "ABL_STAGE_FIXED_BROKER_CAPABILITY_TOKEN_B64",
+        "ABL_STAGE_BODY_SERVICE_CREDENTIAL_B64",
+        "ABL_STAGE_DOMAIN_KEY_B64",
+        "ABL_STAGE_AGENT_SIGNING_KEY_B64",
+        "ABL_STAGE_PRIVATE_CORE_PREVIEW_TOKEN_B64",
+        "ABL_STAGE_PRIVATE_STORAGE_PREVIEW_TOKEN_B64"
+      ],
+      "allowed": [
+        "abl-stage-core-api:core:command",
+        "abl-stage-storage-broker:private:ciphertext",
+        "canonical:sign:player-decision",
+        "canonical:sign:game-possession",
+        "personal-domain:encrypt"
+      ],
+      "forbidden": [
+        "database:connect",
+        "volume:raw",
+        "drive:raw",
+        "control-plane:mutate",
+        "projection:publish",
+        "recognition:broadcast"
+      ]
+    },
+    {
+      "id": "stage-core-projection-publisher",
+      "runtime": "abl-stage-core-api",
+      "secretReferences": [
+        "ABL_STAGE_PROJECTION_HMAC_BASE64",
+        "ABL_STAGE_PUBLIC_API_PREVIEW_TOKEN"
+      ],
+      "allowed": [
+        "abl-stage-public-api:projection:append",
+        "private-preview:serve"
+      ],
+      "forbidden": ["private:plaintext", "body:invoke", "recognition:broadcast"]
+    },
+    {
+      "id": "stage-core-memory-verifier",
+      "runtime": "abl-stage-core-api",
+      "secretReferences": [
+        "ABL_STAGE_PRIVATE_STORAGE_HMAC_BASE64",
+        "ABL_STAGE_PRIVATE_STORAGE_PREVIEW_TOKEN"
+      ],
+      "allowed": ["abl-stage-storage-broker:private:commitment:verify"],
+      "forbidden": ["private:ciphertext", "private:plaintext", "volume:raw"]
+    },
+    {
+      "id": "stage-core-exit-verifier",
+      "runtime": "abl-stage-core-api",
+      "secretReferences": [
+        "ABL_STAGE_EXIT_PORTABILITY_HMAC_BASE64",
+        "ABL_STAGE_PRIVATE_STORAGE_PREVIEW_TOKEN"
+      ],
+      "allowed": ["abl-stage-storage-broker:private:commitment:verify"],
+      "forbidden": ["private:ciphertext", "private:plaintext", "core:command"]
+    },
+    {
+      "id": "stage-spectator",
+      "runtime": "abl-stage-arena",
+      "secretReferences": ["ABL_STAGE_PUBLIC_API_PREVIEW_TOKEN"],
+      "allowed": [
+        "abl-stage-public-api:projection:read",
+        "private-preview:serve"
+      ],
+      "forbidden": [
+        "core:command",
+        "database:connect",
+        "private:any",
+        "body:invoke"
+      ]
+    },
+    {
+      "id": "stage-storage-broker",
+      "runtime": "abl-stage-storage-broker",
+      "secretReferences": ["ABL_STAGE_STORAGE_BOOTSTRAP_JSON"],
+      "allowed": [
+        "abl-stage-durable-state:/ciphertext:read-write",
+        "private-preview:serve"
+      ],
+      "forbidden": [
+        "abl-stage-durable-state:/projections:any",
+        "agent-drive:s3",
+        "private:plaintext",
+        "recognition:broadcast"
+      ]
+    },
+    {
+      "id": "stage-public-projection",
+      "runtime": "abl-stage-public-api",
+      "secretReferences": ["ABL_STAGE_PROJECTION_HMAC_BASE64"],
+      "allowed": [
+        "abl-stage-durable-state:/projections:read-write",
+        "private-preview:serve"
+      ],
+      "forbidden": [
+        "abl-stage-durable-state:/ciphertext:any",
+        "agent-drive:s3",
+        "private:any",
+        "core:command",
+        "recognition:broadcast"
+      ]
+    }
+  ],
+  "networkEdges": [
+    {
+      "from": "abl-stage-player-body-001",
+      "to": "abl-stage-fixed-broker",
+      "methods": [
+        "POST /v1/signing/canonical-event",
+        "POST /v1/proxy",
+        "POST /v1/storage/put"
+      ]
+    },
+    {
+      "from": "abl-stage-fixed-broker",
+      "to": "abl-stage-core-api",
+      "methods": ["POST /v1/commands"]
+    },
+    {
+      "from": "abl-stage-fixed-broker",
+      "to": "abl-stage-storage-broker",
+      "methods": ["POST /v1/ciphertext"]
+    },
+    {
+      "from": "abl-stage-core-api",
+      "to": "managed-postgresql",
+      "methods": ["TLS PostgreSQL"]
+    },
+    {
+      "from": "abl-stage-core-api",
+      "to": "abl-stage-public-api",
+      "methods": ["POST /v1/internal/projections"]
+    },
+    {
+      "from": "abl-stage-core-api",
+      "to": "abl-stage-storage-broker",
+      "methods": ["POST /v1/commitments/verify", "POST /v1/deletions/verify"]
+    },
+    {
+      "from": "abl-stage-arena",
+      "to": "abl-stage-public-api",
+      "methods": ["GET /v1/public/games"]
+    }
+  ],
+  "forbiddenEdges": [
+    "abl-stage-public-api -> abl-stage-core-api",
+    "abl-stage-public-api -> abl-stage-storage-broker",
+    "abl-stage-arena -> abl-stage-core-api",
+    "abl-stage-player-body-001 -> abl-stage-core-api",
+    "abl-stage-player-body-001 -> abl-stage-storage-broker",
+    "abl-stage-player-body-001 -> sandbox-openai",
+    "abl-stage-player-body-001 -> managed-postgresql",
+    "abl-stage-player-body-001 -> raw-volume-or-drive"
+  ]
+}

@@ -64,8 +64,24 @@ import { describe, expect, it } from "vitest";
 import { PUBLIC_ROUTE_CATALOG, createPublicApi } from "../src/server.js";
 
 describe("public API", () => {
+  it("cannot activate PRODUCTION_GENESIS from configuration alone", async () => {
+    const app = createPublicApi({ operatingProfile: "PRODUCTION_GENESIS" });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/discovery/launch-state",
+    });
+    expect(response.json()).toMatchObject({
+      operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+      genesis: false,
+      canonicalHistoryOpen: false,
+    });
+    await app.close();
+  });
+
   it("serves discovery, OpenAPI, and MCP without claiming genesis", async () => {
-    const app = createPublicApi();
+    const app = createPublicApi({
+      candidateIntakeOrigin: "https://candidate.example",
+    });
     const discovery = await app.inject({
       method: "GET",
       url: "/.well-known/agent-basketball-league.json",
@@ -74,17 +90,86 @@ describe("public API", () => {
     expect(discovery.json()).toMatchObject({
       status: "PROPOSED_NOT_RATIFIED",
       genesis: false,
+      candidateIntake: {
+        respond: "https://candidate.example/v1/candidate-intake/respond",
+      },
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/candidate-requirements",
+        })
+      ).json(),
+    ).toMatchObject({
+      endpoints: {
+        register: "https://candidate.example/v1/candidates/register",
+      },
     });
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const paths = openApi.json().paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(20);
+    expect(Object.keys(paths)).toHaveLength(30);
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     const mcp = await app.inject({
       method: "POST",
       url: "/mcp",
       payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
     });
-    expect(mcp.json().result.tools).toHaveLength(2);
+    expect(mcp.json().result.tools).toHaveLength(8);
+    const agentCard = await app.inject({
+      method: "GET",
+      url: "/.well-known/agent-card.json",
+    });
+    const agentCardBody = agentCard.json();
+    expect(agentCardBody).toMatchObject({
+      version: "0.0.0-pre-genesis",
+      supportedInterfaces: [{ protocolVersion: "1.0" }],
+      skills: [
+        { id: "discover_league" },
+        { id: "read_launch_state" },
+        { id: "get_candidate_requirements" },
+        { id: "try_basketball" },
+      ],
+    });
+    expect(
+      agentCardBody.skills.every(
+        (skill: { tags?: unknown[] }) => (skill.tags?.length ?? 0) > 0,
+      ),
+    ).toBe(true);
+    const a2a = await app.inject({
+      method: "POST",
+      url: "/a2a",
+      payload: {
+        jsonrpc: "2.0",
+        id: "request-1",
+        method: "SendMessage",
+        params: {
+          message: {
+            messageId: "request-message-1",
+            role: "ROLE_USER",
+            parts: [{ text: "read_launch_state" }],
+          },
+        },
+      },
+    });
+    expect(a2a.json().result.message).toMatchObject({
+      role: "ROLE_AGENT",
+      parts: [{ text: expect.stringContaining('"genesis":false') }],
+    });
+    const unsupportedMethod = await app.inject({
+      method: "POST",
+      url: "/a2a",
+      payload: {
+        jsonrpc: "2.0",
+        id: "request-2",
+        method: "message/send",
+      },
+    });
+    expect(unsupportedMethod.json()).toMatchObject({
+      jsonrpc: "2.0",
+      id: "request-2",
+      error: { code: -32601 },
+    });
     await app.close();
   });
 
@@ -133,7 +218,11 @@ describe("public API", () => {
     expect(unknownTool.json()).toMatchObject({ error: { code: -32602 } });
     expect(
       PUBLIC_ROUTE_CATALOG.every(
-        (route) => route.method === "GET" || route.path === "/mcp",
+        (route) =>
+          route.method === "GET" ||
+          route.path === "/mcp" ||
+          route.path === "/a2a" ||
+          route.path === "/v1/practice/decision",
       ),
     ).toBe(true);
     expect(
@@ -145,6 +234,72 @@ describe("public API", () => {
         })
       ).statusCode,
     ).toBe(404);
+    await app.close();
+  });
+
+  it("resolves practice decisions without creating recognized history", async () => {
+    const app = createPublicApi();
+    const before = await app.inject({
+      method: "GET",
+      url: "/v1/public/events",
+    });
+    const scenarioResponse = await app.inject({
+      method: "GET",
+      url: "/v1/practice/scenario",
+    });
+    const scenario = scenarioResponse.json();
+    expect(scenario).toMatchObject({
+      practice: true,
+      canonical: false,
+      recognition: "NONE",
+      createsCareer: false,
+      createsPublicHistory: false,
+      decisionRequirements: {
+        playerId: "H1",
+        windowId: "possession-proof-001:w1",
+      },
+    });
+    const decision = await app.inject({
+      method: "POST",
+      url: "/v1/practice/decision",
+      payload: {
+        scenarioId: scenario.scenarioId,
+        decision: {
+          windowId: scenario.decisionRequirements.windowId,
+          playerId: scenario.decisionRequirements.playerId,
+          action: "SHOOT",
+          shot: "LAYUP",
+        },
+      },
+    });
+    expect(decision.statusCode).toBe(200);
+    expect(decision.json()).toMatchObject({
+      practice: true,
+      canonical: false,
+      recognition: "NONE",
+      recognizedGameMutation: false,
+      createsCareer: false,
+      createsPublicHistory: false,
+      inferenceInvocations: 0,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/practice/decision",
+          payload: {
+            scenarioId: scenario.scenarioId,
+            decision: {
+              windowId: "another-scenario:w0",
+              playerId: "H1",
+              action: "HOLD",
+            },
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
+    const after = await app.inject({ method: "GET", url: "/v1/public/events" });
+    expect(after.body).toBe(before.body);
     await app.close();
   });
 

@@ -5,7 +5,8 @@ import {
   signCanonicalEvent,
   type SigningIdentity,
 } from "@abl/recognition";
-import type { Hex, TypedDataDomain } from "viem";
+import type { Address, Hex, TypedDataDomain } from "viem";
+import { z } from "zod";
 
 import { PersistentPlayerBody } from "./bodies.js";
 import {
@@ -17,6 +18,7 @@ import {
 } from "./engine.js";
 import { observePlayer, stateRoot } from "./observations.js";
 import { commitRandomShare, deriveRandomSeed } from "./randomness.js";
+import { ActionIntentSchema } from "./types.js";
 import type {
   BasketballState,
   CoachDecision,
@@ -155,7 +157,16 @@ function fixedIdentity(value: number): SigningIdentity {
   );
 }
 
-export type RehearsalPlayerBodies = Map<string, PersistentPlayerBody>;
+export interface RehearsalPlayerBody {
+  readonly signerAddress: Address;
+  decisionVersion(): bigint;
+  decide(
+    observation: Parameters<PersistentPlayerBody["decide"]>[0],
+    domain: TypedDataDomain,
+  ): ReturnType<PersistentPlayerBody["decide"]>;
+}
+
+export type RehearsalPlayerBodies = Map<string, RehearsalPlayerBody>;
 
 export function createRehearsalPlayerBodies(input: {
   terminalWindow: number;
@@ -218,6 +229,7 @@ export interface FirstPossessionRehearsalOptions {
   score?: { home: number; away: number };
   possessionTeam?: "HOME" | "AWAY";
   playerStates?: readonly PlayerState[];
+  playerDidOverrides?: Readonly<Record<string, string>>;
   windowCount?: 2 | 3 | 4;
   windowDurationMs?: number;
 }
@@ -235,6 +247,10 @@ export async function runFirstPossessionRehearsal(
   initial.players = [
     ...structuredClone(options.playerStates ?? initial.players),
   ];
+  for (const player of initial.players) {
+    const did = options.playerDidOverrides?.[player.playerId];
+    if (did !== undefined) player.did = did;
+  }
   const possessorId = initial.possessionTeam === "HOME" ? "H1" : "A1";
   const possessor = initial.players.find(
     ({ playerId }) => playerId === possessorId,
@@ -445,10 +461,7 @@ export async function runFirstPossessionRehearsal(
     initialState: initial,
     windows,
     playerSigningAddresses: new Map(
-      [...bodies].map(([playerId, body]) => [
-        playerId,
-        body.signingIdentity.address,
-      ]),
+      [...bodies].map(([playerId, body]) => [playerId, body.signerAddress]),
     ),
     authorities,
     domain: REHEARSAL_RECOGNITION_DOMAIN,
@@ -471,5 +484,103 @@ export async function runFirstPossessionRehearsal(
       refereeDecisionHashes: refereeDecisions.map(({ eventHash }) => eventHash),
       replayDecisionHashes: replayDecisions.map(({ eventHash }) => eventHash),
     },
+  };
+}
+
+export const PUBLIC_PRACTICE_SCENARIO_ID = "abl-first-possession-practice-v1";
+
+export const PublicPracticeDecisionRequestSchema = z.strictObject({
+  scenarioId: z.literal(PUBLIC_PRACTICE_SCENARIO_ID),
+  decision: ActionIntentSchema,
+});
+
+export type PublicPracticeDecisionRequest = z.infer<
+  typeof PublicPracticeDecisionRequestSchema
+>;
+
+function publicPracticeDecision(
+  decision: PublicPracticeDecisionRequest["decision"],
+  observation: Parameters<PersistentPlayerBody["decide"]>[0],
+): PublicPracticeDecisionRequest["decision"] {
+  const windowId = observation.observationId.split(":").slice(0, 2).join(":");
+  if (observation.window === 1) return { ...decision, windowId };
+  return { windowId, playerId: observation.playerId, action: "HOLD" };
+}
+
+export function publicPracticeScenario() {
+  const state = initialState();
+  state.window = 1;
+  state.gameClockMs -= 2_000;
+  state.shotClockMs -= 2_000;
+  const observation = observePlayer(state, "H1");
+  return {
+    scenarioId: PUBLIC_PRACTICE_SCENARIO_ID,
+    practice: true as const,
+    canonical: false as const,
+    recognition: "NONE" as const,
+    createsCareer: false as const,
+    createsPublicHistory: false as const,
+    role: "PLAYER" as const,
+    observation,
+    decisionRequirements: {
+      windowId: `${state.possessionId}:w1`,
+      playerId: observation.playerId,
+      allowedActions: ["MOVE", "PASS", "SHOOT", "SCREEN", "HOLD"] as const,
+    },
+    scenarioCommitment: sha256Commitment({
+      scenarioId: PUBLIC_PRACTICE_SCENARIO_ID,
+      observation,
+    }),
+  };
+}
+
+export async function resolvePublicPracticeDecision(input: unknown) {
+  const request = PublicPracticeDecisionRequestSchema.parse(input);
+  const scenario = publicPracticeScenario();
+  if (
+    request.decision.windowId !== scenario.decisionRequirements.windowId ||
+    request.decision.playerId !== scenario.decisionRequirements.playerId
+  )
+    throw new Error("Practice decision is bound to another scenario");
+
+  const bodies = createRehearsalPlayerBodies({ terminalWindow: 1 });
+  bodies.set(
+    scenario.decisionRequirements.playerId,
+    new PersistentPlayerBody({
+      did: scenario.observation.self.did,
+      playerId: scenario.decisionRequirements.playerId,
+      signingIdentity: fixedIdentity(201),
+      policy: (observation) =>
+        publicPracticeDecision(request.decision, observation),
+    }),
+  );
+  const rehearsal = await runFirstPossessionRehearsal({
+    bodies,
+    windowCount: 2,
+  });
+  return {
+    scenarioId: scenario.scenarioId,
+    practice: true as const,
+    canonical: false as const,
+    recognition: "NONE" as const,
+    recognizedGameMutation: false as const,
+    createsCareer: false as const,
+    createsPublicHistory: false as const,
+    decisionCommitment: sha256Commitment(request.decision),
+    outcome: {
+      score: rehearsal.result.finalState.score,
+      possessionTeam: rehearsal.result.finalState.possessionTeam,
+      gameClockMs: rehearsal.result.finalState.gameClockMs,
+      shotClockMs: rehearsal.result.finalState.shotClockMs,
+      ball: rehearsal.result.finalState.ball,
+      events: rehearsal.result.events.map(({ sequence, type, eventHash }) => ({
+        sequence,
+        type,
+        eventHash,
+      })),
+    },
+    eventMerkleRoot: rehearsal.result.eventMerkleRoot,
+    finalStateRoot: rehearsal.result.finalStateRoot,
+    inferenceInvocations: 0 as const,
   };
 }

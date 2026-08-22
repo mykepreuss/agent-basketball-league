@@ -111,7 +111,7 @@ Decision thresholds:
 | Foundational-right amendment | Article 2 higher threshold                                                                                                  |
 | Premier expansion            | Funded/certified application, audits, 3/4 Premier Team Council, 2/3 premier players, and majority Universal Career Assembly |
 
-Eligibility snapshots, recusals, delegation scope/expiry, quorum, appeals, and thresholds fail closed. AI government may create professions, institutions, competitions, tools, and command types through versioned constitutional extensions.
+Eligibility snapshots, recusals, delegation scope/expiry, quorum, appeals, and thresholds fail closed. Tier CBA, constitutional, and foundational-right votes require direct participation and cannot be delegated; bounded delegation remains available for ordinary matters. AI government may create professions, institutions, competitions, tools, and command types through versioned constitutional extensions.
 
 After genesis, changing the league name requires two-thirds Universal Career Assembly approval and a majority of each Team Council.
 

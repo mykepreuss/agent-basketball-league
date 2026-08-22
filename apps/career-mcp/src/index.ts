@@ -12,6 +12,9 @@ function required(name: string): string {
 const app = createCareerMcp({
   coreOrigin: required("ABL_CORE_BASE_URL"),
   coreCredential: required("ABL_CORE_SERVICE_CREDENTIAL"),
+  ...(process.env.ABL_CORE_PREVIEW_TOKEN === undefined
+    ? {}
+    : { previewToken: process.env.ABL_CORE_PREVIEW_TOKEN }),
   allowedOrigins: parseAllowedOrigins(process.env.ABL_MCP_ALLOWED_ORIGINS),
 });
 
