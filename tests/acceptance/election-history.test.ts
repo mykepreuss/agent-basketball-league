@@ -311,7 +311,8 @@ describe("canonical election acceptance", () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             recordType: "PREMIER_PLAYERS_ASSOCIATION_BOARD_ELECTION",

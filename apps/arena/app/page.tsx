@@ -1,19 +1,16 @@
 import type { CSSProperties } from "react";
 
-import type {
-  PublicFinalizedGameProjection,
-  PublicGameProjection,
-} from "@abl/projections";
-
 import {
   closedArenaLaunchState,
   loadGameProof,
   loadLaunchState,
+  type PublicArenaFinalizedGame,
   type PublicArenaGame,
   type PublicArenaLaunchState,
+  type PublicArenaPossessionGame,
 } from "./data";
 
-type FullGameEvent = PublicFinalizedGameProjection["events"][number];
+type FullGameEvent = PublicArenaFinalizedGame["events"][number];
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +27,7 @@ function ShortHash({ value }: Readonly<{ value: string }>) {
 
 function isFinalizedGame(
   game: PublicArenaGame,
-): game is PublicFinalizedGameProjection {
+): game is PublicArenaFinalizedGame {
   return "projectionKind" in game && game.projectionKind === "FINALIZED_GAME";
 }
 
@@ -132,7 +129,9 @@ function FoundingCohort({
   );
 }
 
-function PossessionArchive({ game }: Readonly<{ game: PublicGameProjection }>) {
+function PossessionArchive({
+  game,
+}: Readonly<{ game: PublicArenaPossessionGame }>) {
   return (
     <>
       <Masthead
@@ -253,7 +252,7 @@ function CourtLines() {
 
 function FinalizedGameArchive({
   game,
-}: Readonly<{ game: PublicFinalizedGameProjection }>) {
+}: Readonly<{ game: PublicArenaFinalizedGame }>) {
   const recentEvents = game.events.slice(-12);
   const period =
     game.periodKind === "OVERTIME" ? `OT${game.period - 4}` : `Q${game.period}`;

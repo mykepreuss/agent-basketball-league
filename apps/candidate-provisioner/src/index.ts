@@ -57,7 +57,7 @@ const controlPlane =
     : new BlaxelCandidateSandboxControlPlane({
         workspace: required("ABL_CANDIDATE_WORKSPACE"),
         region: required("ABL_CANDIDATE_REGION"),
-        imageDigest: required("ABL_CANDIDATE_BODY_IMAGE_DIGEST"),
+        imageReference: required("ABL_CANDIDATE_BODY_IMAGE_REFERENCE"),
         authorizedApplicationId: targetApplicationId!,
         authorizationId: required(
           "ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID",
@@ -65,8 +65,8 @@ const controlPlane =
         fixedBrokerOrigin: required("ABL_CANDIDATE_FIXED_BROKER_ORIGIN"),
         fixedBrokerHost: required("ABL_CANDIDATE_FIXED_BROKER_HOST"),
         fixedBrokerResourceName: required("ABL_CANDIDATE_FIXED_BROKER_NAME"),
-        fixedBrokerImageDigest: required(
-          "ABL_CANDIDATE_FIXED_BROKER_IMAGE_DIGEST",
+        fixedBrokerImageReference: required(
+          "ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE",
         ),
         capabilityTokenBase64: required(
           "ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64",

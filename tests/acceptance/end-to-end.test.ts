@@ -665,7 +665,8 @@ describe("complete local acceptance", () => {
       const arenaProjection = await loadPossessionProof(publicAddress);
       expect(arenaProjection).toMatchObject({
         gameId: result.finalState.gameId,
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         score: result.finalState.score,
         finalStateRoot: result.finalStateRoot,
         eventMerkleRoot: result.eventMerkleRoot,
@@ -675,7 +676,10 @@ describe("complete local acceptance", () => {
         url: `/v1/public/games/${result.finalState.gameId}/live`,
       });
       expect(stream.body).toContain(result.finalStateRoot);
-      expect(stream.body).toContain('"canonical":true');
+      expect(stream.body).toContain('"canonical":false');
+      expect(stream.body).toContain(
+        '"historyClassification":"PRE_GENESIS_EXPERIMENT"',
+      );
     } finally {
       await Promise.all([publicApi.close(), coreApi.close()]);
     }
@@ -951,7 +955,8 @@ describe("complete local acceptance", () => {
       expect(arenaGame).toMatchObject({
         projectionKind: "FINALIZED_GAME",
         gameId,
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         phase: "FINAL",
         score: exhibition.finalState.score,
         winner: exhibition.finalState.winner,
@@ -966,7 +971,8 @@ describe("complete local acceptance", () => {
           })
         ).json(),
       ).toMatchObject({
-        authoritative: true,
+        authoritative: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         latestSegment: exhibition.events.length - 1,
       });
       const stream = await publicApi.inject({
@@ -982,7 +988,8 @@ describe("complete local acceptance", () => {
         })
       ).json();
       expect(standingsResponse).toMatchObject({
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             recordType: "SEASON_STANDINGS",
@@ -1202,7 +1209,8 @@ describe("complete local acceptance", () => {
       });
       expect(response.json()).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             recognizedGenesisConcentration: false,
@@ -1780,7 +1788,8 @@ describe("complete local acceptance", () => {
       });
       expect(contracts.json()).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: expect.arrayContaining([
           expect.objectContaining({
             playerDid,
@@ -1806,7 +1815,8 @@ describe("complete local acceptance", () => {
       });
       expect(rosters.json()).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: expect.arrayContaining([
           expect.objectContaining({
             clubId: clubIds[1],
@@ -2194,7 +2204,8 @@ describe("complete local acceptance", () => {
         ).json(),
       ).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             scheduleId,
@@ -2494,7 +2505,8 @@ describe("complete local acceptance", () => {
         ).json(),
       ).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             releaseId,
@@ -2745,7 +2757,8 @@ describe("complete local acceptance", () => {
       });
       expect(response.json()).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             envelopeId,
@@ -2943,7 +2956,8 @@ describe("complete local acceptance", () => {
         new URL("/v1/public/drafts", publicAddress),
       );
       expect(await draftResponse.json()).toMatchObject({
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             draftId,
@@ -2956,7 +2970,8 @@ describe("complete local acceptance", () => {
         new URL("/v1/public/rosters", publicAddress),
       );
       expect(await rosterResponse.json()).toMatchObject({
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: clubOrder.map((clubId) => ({
           clubId,
           rosterKind: "DRAFT_SELECTIONS",
@@ -3257,7 +3272,8 @@ describe("complete local acceptance", () => {
       };
       expect(developmentResponse).toMatchObject({
         state: "REHEARSAL",
-        canonical: true,
+        canonical: false,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
         items: [
           {
             conferenceId,

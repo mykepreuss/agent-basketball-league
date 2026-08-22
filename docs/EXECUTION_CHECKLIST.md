@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -17,13 +17,15 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
 - [x] Replace the ordinary career image's advanced proxy/iptables/CA initialization with the reviewed Sandbox body profile; preserve the former work under the inactive future untrusted-code profile.
 - [x] Add an approval-gated Agent Drive topology applicator without executing it.
-- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; record 354 passing assertions across 75 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
+- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 357 passing assertions across 76 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
 - [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
 - [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-02` closed before provider mutation when fresh image packaging exposed output-path-sensitive pnpm metadata; remove that deployment-only metadata and reproduce byte-identical contexts beneath `/tmp` and `/private/tmp`.
 - [x] Merge the packaging correction, refresh the read-only Blaxel and Neon state, and record the corrected bindings, quota, balance, privacy support, inventory, and USD 6.00 projection in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_03.md`.
 - [x] Fail the proposed replacement authorization closed before mutation when the private resource plan's synthetic body name conflicted with the existing candidate-provisioner's deterministic `abl-career-<application-id>` contract; freeze one synthetic application UUID, derive the exact body name through that contract, and assert the binding in the topology suite.
 - [x] Rerun the complete exact-runtime evidence suite and refresh the read-only Blaxel and Neon state after the name-contract correction; record the corrected bindings and zero provider mutation in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_04.md`.
+- [x] Fail `ABL-FOUNDING-ALPHA-R01-03` closed before provider mutation when the executable audit proved that the candidate Job rejected Blaxel's provider-generated immutable image revisions and the arena required an unauthorized canonical rehearsal claim; record the zero-mutation result and correct both boundaries locally.
+- [~] Rerun exact-runtime verification, reproduce the corrected image and manifest sets, review and merge the correction, refresh the read-only provider preflight, and prepare a digest-bound `ABL-FOUNDING-ALPHA-R01-04` authorization.
 - [!] Obtain a digest-bound authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 

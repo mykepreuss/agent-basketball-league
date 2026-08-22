@@ -257,6 +257,49 @@ type CheckpointCollectionRecognitionLevel =
   | "INDEPENDENTLY_WITNESSED"
   | "ONCHAIN_FINALIZED";
 
+type PublicHistoryClassification =
+  | "PRE_GENESIS_EXPERIMENT"
+  | "CANONICAL_GENESIS_HISTORY";
+
+function suppressCanonicalClaims(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(suppressCanonicalClaims);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [
+      key,
+      key === "canonical" ? false : suppressCanonicalClaims(nested),
+    ]),
+  );
+}
+
+function classifyPublicValue(input: {
+  value: unknown;
+  canonicalHistoryOpen: boolean;
+  historyClassification: PublicHistoryClassification;
+  recognitionLevel: CheckpointCollectionRecognitionLevel;
+}): unknown {
+  const classified = input.canonicalHistoryOpen
+    ? input.value
+    : suppressCanonicalClaims(input.value);
+  if (classified === null || typeof classified !== "object") return classified;
+  return {
+    ...classified,
+    recognitionLevel: input.recognitionLevel,
+    historyClassification: input.historyClassification,
+  };
+}
+
+function classifyPublicItems(
+  input: Omit<Parameters<typeof classifyPublicValue>[0], "value"> & {
+    items: readonly unknown[];
+  },
+): readonly unknown[] {
+  const { items, ...classification } = input;
+  return items.map((value) =>
+    classifyPublicValue({ ...classification, value }),
+  );
+}
+
 function checkpointCollectionStatus(items: readonly unknown[]): {
   recognitionLevel: CheckpointCollectionRecognitionLevel;
   productionV1Ready: boolean;
@@ -533,6 +576,14 @@ export function createPublicApi(
     !genesisAssessment.ready
   )
     launchState = LaunchStateSchema.parse(defaultLaunchState);
+  const canonicalHistoryOpen =
+    launchState.genesis &&
+    launchState.canonical &&
+    launchState.canonicalHistoryOpen;
+  const historyClassification: PublicHistoryClassification =
+    canonicalHistoryOpen
+      ? "CANONICAL_GENESIS_HISTORY"
+      : "PRE_GENESIS_EXPERIMENT";
   const publicOrigin = publicServiceOrigin(
     options.publicOrigin ?? "https://agent-basketball-league.invalid",
   );
@@ -1588,7 +1639,7 @@ export function createPublicApi(
           ...(options.caseProjections?.cases() ?? []),
         ];
       }
-      const collectionCanonical =
+      const projectionCanonical =
         path === "/v1/public/checkpoints"
           ? items.length > 0 &&
             items.every(
@@ -1596,16 +1647,26 @@ export function createPublicApi(
                 (item as { verification?: unknown }).verification ===
                 "CANONICAL",
             )
-          : rehearsal;
+          : true;
+      const collectionCanonical = canonicalHistoryOpen && projectionCanonical;
       const checkpointStatus =
         path === "/v1/public/checkpoints"
           ? checkpointCollectionStatus(items)
           : null;
+      const recognitionLevel =
+        checkpointStatus?.recognitionLevel ?? launchState.recognitionLevel;
       return {
         state,
         canonical: collectionCanonical,
+        historyClassification,
+        recognitionLevel,
         ...(checkpointStatus ?? {}),
-        items,
+        items: classifyPublicItems({
+          items,
+          canonicalHistoryOpen,
+          historyClassification,
+          recognitionLevel,
+        }),
         nextCursor:
           path === "/v1/public/events" && items.length > 0
             ? (items.at(-1) as { cursor: number }).cursor
@@ -1622,7 +1683,10 @@ export function createPublicApi(
       return {
         state,
         gameId: request.params.id,
-        authoritative: rehearsal,
+        canonical: canonicalHistoryOpen,
+        authoritative: canonicalHistoryOpen,
+        historyClassification,
+        recognitionLevel: launchState.recognitionLevel,
         latestSegment: cursor?.latestSegment ?? null,
         nextCursor: cursor?.nextCursor ?? null,
       };
@@ -1639,7 +1703,13 @@ export function createPublicApi(
           options.projections?.segment(request.params.id, sequence))
         : undefined;
       if (segment !== undefined)
-        return reply.send({ state, canonical: true, segment });
+        return reply.send({
+          state,
+          canonical: canonicalHistoryOpen,
+          historyClassification,
+          recognitionLevel: launchState.recognitionLevel,
+          segment,
+        });
       return reply.code(404).send({
         error: "segment_not_found",
         state,
@@ -1654,15 +1724,19 @@ export function createPublicApi(
       const projection =
         options.finalGameProjections?.game(request.params.id) ??
         options.projections?.game(request.params.id);
-      return reply.type("text/event-stream; charset=utf-8").send(
-        `event: state\ndata: ${JSON.stringify(
-          projection ?? {
-            state,
-            gameId: request.params.id,
-            canonical: false,
-          },
-        )}\n\n`,
-      );
+      const publicProjection = classifyPublicValue({
+        value: projection ?? {
+          state,
+          gameId: request.params.id,
+          canonical: canonicalHistoryOpen,
+        },
+        canonicalHistoryOpen,
+        historyClassification,
+        recognitionLevel: launchState.recognitionLevel,
+      });
+      return reply
+        .type("text/event-stream; charset=utf-8")
+        .send(`event: state\ndata: ${JSON.stringify(publicProjection)}\n\n`);
     },
   );
   return app;

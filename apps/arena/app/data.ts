@@ -8,13 +8,41 @@ import {
   SchemaVersion,
 } from "@abl/schemas";
 
+export type PublicArenaHistoryClassification =
+  | "PRE_GENESIS_EXPERIMENT"
+  | "CANONICAL_GENESIS_HISTORY";
+
+interface PublicArenaHistoryStatus {
+  canonical: boolean;
+  historyClassification: PublicArenaHistoryClassification;
+  recognitionLevel:
+    | "NONE"
+    | "SIGNED_VALID"
+    | "INDEPENDENTLY_WITNESSED"
+    | "ONCHAIN_FINALIZED";
+}
+
+export type PublicArenaPossessionGame = Omit<
+  PublicGameProjection,
+  "canonical"
+> &
+  PublicArenaHistoryStatus;
+
+export type PublicArenaFinalizedGame = Omit<
+  PublicFinalizedGameProjection,
+  "canonical"
+> &
+  PublicArenaHistoryStatus;
+
 export type PublicArenaGame =
-  | PublicGameProjection
-  | PublicFinalizedGameProjection;
+  | PublicArenaPossessionGame
+  | PublicArenaFinalizedGame;
 
 interface GamesResponse {
   state: string;
   canonical: boolean;
+  historyClassification: PublicArenaHistoryClassification;
+  recognitionLevel: PublicArenaHistoryStatus["recognitionLevel"];
   items: PublicArenaGame[];
 }
 
@@ -69,7 +97,7 @@ export async function loadLaunchState(
 
 function isFinalizedGame(
   projection: PublicArenaGame,
-): projection is PublicFinalizedGameProjection {
+): projection is PublicArenaFinalizedGame {
   return (
     "projectionKind" in projection &&
     projection.projectionKind === "FINALIZED_GAME"
@@ -91,20 +119,33 @@ export async function loadGameProof(
     );
   const payload = (await response.json()) as GamesResponse;
   const projection = payload.items.at(-1);
-  if (
-    payload.canonical !== true ||
-    projection === undefined ||
-    projection.canonical !== true
-  ) {
-    throw new Error("No canonical public game projection is available");
-  }
+  if (projection === undefined)
+    throw new Error("No public game projection is available");
+  const recognitionMatches =
+    payload.recognitionLevel === projection.recognitionLevel;
+  const preGenesisExperiment =
+    payload.historyClassification === "PRE_GENESIS_EXPERIMENT" &&
+    projection.historyClassification === "PRE_GENESIS_EXPERIMENT" &&
+    payload.canonical === false &&
+    projection.canonical === false &&
+    recognitionMatches &&
+    ["NONE", "SIGNED_VALID"].includes(payload.recognitionLevel);
+  const canonicalGenesisHistory =
+    payload.historyClassification === "CANONICAL_GENESIS_HISTORY" &&
+    projection.historyClassification === "CANONICAL_GENESIS_HISTORY" &&
+    payload.canonical === true &&
+    projection.canonical === true &&
+    recognitionMatches &&
+    payload.recognitionLevel === "ONCHAIN_FINALIZED";
+  if (!preGenesisExperiment && !canonicalGenesisHistory)
+    throw new Error("Public game history classification is inconsistent");
   return projection;
 }
 
 export async function loadPossessionProof(
   baseUrl?: string,
   fetcher?: typeof fetch,
-): Promise<PublicGameProjection> {
+): Promise<PublicArenaPossessionGame> {
   const projection = await loadGameProof(baseUrl, fetcher);
   if (isFinalizedGame(projection)) {
     throw new Error("The latest public game is a finalized-game archive");

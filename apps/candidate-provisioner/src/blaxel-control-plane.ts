@@ -7,11 +7,20 @@ import type {
 } from "@abl/launch";
 import { z } from "zod";
 
-const ImmutableImageSchema = z
+const OciDigestImageReferenceSchema = z
   .string()
   .min(1)
   .max(500)
   .regex(/@sha256:[0-9a-f]{64}$/);
+const BlaxelRevisionImageReferenceSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/^sandbox\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?:[a-z0-9]{12}$/);
+const ImmutableImageReferenceSchema = z.union([
+  OciDigestImageReferenceSchema,
+  BlaxelRevisionImageReferenceSchema,
+]);
 const WorkspaceNameSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
@@ -45,13 +54,13 @@ export interface CandidateSandboxFactory {
 export interface BlaxelCandidateControlPlaneOptions {
   workspace: string;
   region: string;
-  imageDigest: string;
+  imageReference: string;
   authorizedApplicationId: string;
   authorizationId: string;
   fixedBrokerOrigin: string;
   fixedBrokerHost: string;
   fixedBrokerResourceName: string;
-  fixedBrokerImageDigest: string;
+  fixedBrokerImageReference: string;
   capabilityTokenBase64: string;
   previewToken?: string;
   memory?: number;
@@ -64,13 +73,13 @@ export class BlaxelCandidateSandboxControlPlane
   readonly mode = "APPROVED_LIVE" as const;
   readonly #workspace: string;
   readonly #region: string;
-  readonly #imageDigest: string;
+  readonly #imageReference: string;
   readonly #authorizedApplicationId: string;
   readonly #authorizationId: string;
   readonly #fixedBrokerOrigin: string;
   readonly #fixedBrokerHost: string;
   readonly #fixedBrokerResourceName: string;
-  readonly #fixedBrokerImageDigest: string;
+  readonly #fixedBrokerImageReference: string;
   readonly #capabilityTokenBase64: string;
   readonly #previewToken: string | undefined;
   readonly #memory: number;
@@ -79,7 +88,9 @@ export class BlaxelCandidateSandboxControlPlane
   constructor(options: BlaxelCandidateControlPlaneOptions) {
     this.#workspace = WorkspaceNameSchema.parse(options.workspace);
     this.#region = z.literal("us-was-1").parse(options.region);
-    this.#imageDigest = ImmutableImageSchema.parse(options.imageDigest);
+    this.#imageReference = ImmutableImageReferenceSchema.parse(
+      options.imageReference,
+    );
     this.#authorizedApplicationId = z
       .uuid()
       .parse(options.authorizedApplicationId);
@@ -98,8 +109,8 @@ export class BlaxelCandidateSandboxControlPlane
     this.#fixedBrokerResourceName = WorkspaceNameSchema.parse(
       options.fixedBrokerResourceName,
     );
-    this.#fixedBrokerImageDigest = ImmutableImageSchema.parse(
-      options.fixedBrokerImageDigest,
+    this.#fixedBrokerImageReference = ImmutableImageReferenceSchema.parse(
+      options.fixedBrokerImageReference,
     );
     this.#capabilityTokenBase64 = Base64SecretSchema.parse(
       options.capabilityTokenBase64,
@@ -139,7 +150,7 @@ export class BlaxelCandidateSandboxControlPlane
       applicationId: input.applicationId,
       workspace: this.#workspace,
       region: this.#region,
-      imageDigest: this.#fixedBrokerImageDigest,
+      imageReference: this.#fixedBrokerImageReference,
     });
     const resourceName = candidateSandboxName(input.applicationId);
     const envs = [
@@ -179,7 +190,7 @@ export class BlaxelCandidateSandboxControlPlane
       "abl-runtime-contract": runtimeContractCommitment({
         applicationId: input.applicationId,
         authorizationId: this.#authorizationId,
-        image: this.#imageDigest,
+        image: this.#imageReference,
         region: this.#region,
         memory: this.#memory,
         allowedDomains: [this.#fixedBrokerHost],
@@ -198,7 +209,7 @@ export class BlaxelCandidateSandboxControlPlane
         region: this.#region,
         network: { allowedDomains: [this.#fixedBrokerHost] },
         runtime: {
-          image: this.#imageDigest,
+          image: this.#imageReference,
           memory: this.#memory,
           envs,
         },
@@ -209,7 +220,7 @@ export class BlaxelCandidateSandboxControlPlane
       resourceName,
       workspace: this.#workspace,
       region: this.#region,
-      imageDigest: this.#imageDigest,
+      imageReference: this.#imageReference,
       fixedBrokerHost: this.#fixedBrokerHost,
       applicationId: input.applicationId,
       memory: this.#memory,
@@ -287,7 +298,7 @@ function assertFixedBroker(input: {
   applicationId: string;
   workspace: string;
   region: string;
-  imageDigest: string;
+  imageReference: string;
 }): void {
   const { sandbox } = input;
   if (
@@ -296,7 +307,7 @@ function assertFixedBroker(input: {
     sandbox.metadata.workspace !== input.workspace ||
     sandbox.spec.enabled !== true ||
     sandbox.spec.region !== input.region ||
-    sandbox.spec.runtime?.image !== input.imageDigest ||
+    sandbox.spec.runtime?.image !== input.imageReference ||
     !sandbox.spec.runtime.ports?.some(
       ({ protocol, target }) => protocol === "HTTP" && target === 3_000,
     )
@@ -311,7 +322,7 @@ function assertReturnedSandbox(input: {
   resourceName: string;
   workspace: string;
   region: string;
-  imageDigest: string;
+  imageReference: string;
   fixedBrokerHost: string;
   applicationId: string;
   memory: number;
@@ -325,7 +336,7 @@ function assertReturnedSandbox(input: {
     sandbox.metadata.externalId !== input.applicationId ||
     sandbox.spec.region !== input.region ||
     sandbox.spec.enabled !== true ||
-    sandbox.spec.runtime?.image !== input.imageDigest ||
+    sandbox.spec.runtime?.image !== input.imageReference ||
     sandbox.spec.runtime.memory !== input.memory
   )
     throw new Error("Existing candidate Sandbox configuration drifted");

@@ -39,20 +39,26 @@ try {
           `${publicUrl}/v1/public/games/${gameId}/cursor`,
         );
         return (await response.json()) as {
+          canonical?: unknown;
           authoritative?: unknown;
+          historyClassification?: unknown;
           latestSegment?: unknown;
         };
       }),
     );
     if (
       cursors.some(
-        ({ authoritative, latestSegment }) =>
-          authoritative !== true ||
+        ({ canonical, authoritative, historyClassification, latestSegment }) =>
+          canonical !== false ||
+          authoritative !== false ||
+          historyClassification !== "PRE_GENESIS_EXPERIMENT" ||
           typeof latestSegment !== "number" ||
           latestSegment < 0,
       )
     )
-      throw new Error("Network load game lanes are not authoritative");
+      throw new Error(
+        "Network load game lanes are not consistent pre-Genesis experiments",
+      );
 
     const result = await runHttpLoadProof([
       {
@@ -88,6 +94,8 @@ try {
         spectatorRequests: 20_000,
         candidateChallenges: 2_000,
         gameCursorLanes: gameIds.length,
+        historyClassification: "PRE_GENESIS_EXPERIMENT",
+        canonical: false,
         transport: "LOOPBACK_TCP_HTTP",
         dockerRequired: false,
       },

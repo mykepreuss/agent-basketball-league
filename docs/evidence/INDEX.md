@@ -7,10 +7,11 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Canonical launch reference                  | Approved reference; execution approval gated                                      | `docs/launch/LAUNCH_PLAN.md`                                                       |
 | Existing implementation reuse map           | Authoritative launch foundation; no rewrite                                       | `docs/launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation`      |
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                               | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
-| Founding Alpha implementation source freeze | 428 existing and launch-layer implementation files frozen                         | `founding-alpha-source-freeze.json`                                                |
+| Founding Alpha implementation source freeze | 429 existing and launch-layer implementation files frozen                         | `founding-alpha-source-freeze.json`                                                |
 | Founding Alpha private-run packet           | Ready for digest-bound authorization; live proof remains gated                    | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
 | Founding Alpha provider preflight           | Post-name-contract read-only refresh; replacement authorization required          | `FOUNDING_ALPHA_PREFLIGHT_04.md`                                                   |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally   | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                           |
+| Founding Alpha R01-03 execution gate        | Failed closed before provider mutation; runtime contradictions corrected locally  | `FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`                                           |
 | Sandbox-native active topology              | Local manifests and invariants implemented                                        | `infra/blaxel/README.md`, `@abl/foundation` topology suite                         |
 | Public discovery and practice               | Local noncanonical path implemented                                               | `@abl/public-api`, `@abl/discovery-mcp`, `skills/abl-league`                       |
 | Founding cohort capacity                    | Local deterministic allocation implemented                                        | `@abl/schemas`, `@abl/launch`, `@abl/candidate-edge`                               |
@@ -49,7 +50,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                    | `PHASE-05.md`, continuity/exit tests                                               |
 | Founding convention                         | Packet ready; live-agent gate                                                     | `PHASE-11.md`, blank decision packet                                               |
 | Genesis readiness                           | Local bundle ready; gated                                                         | `PHASE-11.md`, release/deployment/cost/risk bundle                                 |
-| Final local acceptance                      | 354 assertions across 75 files; 113 uncached tasks pass                           | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
+| Final local acceptance                      | 357 assertions across 76 files; 113 uncached tasks pass                           | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 
 ## Known limitations and external dependencies
 
@@ -72,6 +73,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_04.md`](./FOUNDING_ALPHA_PREFLIGHT_04.md)
 - Earlier post-packaging preflight: [`FOUNDING_ALPHA_PREFLIGHT_03.md`](./FOUNDING_ALPHA_PREFLIGHT_03.md)
 - Founding Alpha R01-02 failed-closed result: [`FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md)
+- Founding Alpha R01-03 failed-closed result: [`FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md)
 - Earlier replacement preflight: [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md)
 - Earlier Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md)
 - Gate 0/1 traceability: [`GATE_0_1_TRACEABILITY.md`](../launch/GATE_0_1_TRACEABILITY.md)
