@@ -63,7 +63,14 @@
   },
   "syntheticCandidate": {
     "applicationId": "0198e000-0000-7000-8000-000000000001",
-    "bodySandboxName": "abl-career-0198e000000070008000000000000001"
+    "bodySandboxName": "abl-career-0198e000000070008000000000000001",
+    "capacityPolicy": {
+      "mode": "CAPPED_PUBLIC",
+      "roleCapacity": { "PLAYER": 1 },
+      "invitedCandidateDids": [],
+      "credibleOpportunityDelayHours": 24,
+      "unlistedRoleCapacity": 0
+    }
   },
   "sandboxProcesses": {
     "abl-alpha-r01-arena": {
@@ -119,9 +126,9 @@
     "infra/blaxel/abl-public/discovery-mcp.yaml"
   ],
   "localArtifacts": {
-    "imageSetDigest": "0x9072d771bb75ebfb0181334179caa89608f84bfb553c478fc9ebc31bcf32660a",
-    "manifestSetDigest": "0x31598bba8e517d0d43fd23f385833cb3a701034ec02656a35dc81a6bb15b6013",
-    "bodyProgramArchiveDigest": "0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557"
+    "imageSetDigest": "0x4165da91cba6abe18f50317aabc826635d62aefc724747f6349ac32084cb2e3b",
+    "manifestSetDigest": "0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828",
+    "bodyProgramArchiveDigest": "0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569"
   },
   "limits": {
     "memoryMiBBySandbox": {
@@ -138,6 +145,14 @@
     "aggregateSandboxMemoryMiB": 23552,
     "aggregateFunctionMemoryMiB": 10240,
     "maximumRunHours": 4,
+    "sandboxLifecycle": {
+      "expirationPolicy": {
+        "action": "delete",
+        "type": "ttl-max-age",
+        "value": "4h"
+      },
+      "terminatedRetention": "24h"
+    },
     "publishedMaximumActiveComputeUsd": 4.9896,
     "transientStorageAndMeteringBufferUsd": 1.0104,
     "projectedAllInUsd": 6,

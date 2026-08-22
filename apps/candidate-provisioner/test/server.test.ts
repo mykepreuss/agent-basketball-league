@@ -125,6 +125,12 @@ describe("candidate provisioner private boundary", () => {
       },
       spec: {
         region: "us-was-1",
+        lifecycle: {
+          expirationPolicies: [
+            { action: "delete", type: "ttl-max-age", value: "4h" },
+          ],
+          terminatedRetention: "24h",
+        },
         network: { allowedDomains: ["broker.example"] },
         runtime: { image: imageReference, memory: 4_096 },
       },

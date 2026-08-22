@@ -42,9 +42,9 @@ spec:
       - name: ABL_AGENT_DRIVE_PERMISSIONS_CONFIGURED
         value: "1"
         secret: false
-      - name: ABL_STORAGE_BOOTSTRAP_FILE
-        value: /run/secrets/abl-storage-bootstrap.json
-        secret: false
+      - name: ABL_STORAGE_BOOTSTRAP_JSON
+        value: ${ABL_STORAGE_BOOTSTRAP_JSON}
+        secret: true
       - name: ABL_SERVICE_ROLE
         value: private-storage-broker
         secret: false

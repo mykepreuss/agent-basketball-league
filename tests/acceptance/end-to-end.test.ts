@@ -345,6 +345,42 @@ describe("complete local acceptance", () => {
         })
       ).statusCode,
     ).toBe(400);
+    const staleEvent = createCanonicalEvent({
+      eventId: "0198a000-0000-7000-8000-000000000306",
+      actorDid: submittingBody.did,
+      nonce: "possession-resolution-stale",
+      idempotencyKey: "0198a000-0000-7000-8000-000000000307",
+      aggregateType: "game-possession",
+      aggregateId: result.finalState.gameId,
+      aggregateVersion: 2n,
+      eventType: "PossessionResolved",
+      previousEventHash: event.eventHash,
+      payload: { source, decisionProof: rehearsal.decisionProof },
+      stateRoot: result.finalStateRoot,
+      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      timestamp: "2026-08-13T10:03:59.000Z",
+    });
+    expect(
+      (
+        await coreApi.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            event: {
+              ...staleEvent,
+              aggregateVersion: staleEvent.aggregateVersion.toString(),
+            },
+            signatures: [
+              await signCanonicalEvent(
+                submittingBody.signingIdentity,
+                REHEARSAL_RECOGNITION_DOMAIN,
+                staleEvent,
+              ),
+            ],
+          },
+        })
+      ).statusCode,
+    ).toBe(400);
     const malformedEvent = createCanonicalEvent({
       eventId: "0198a000-0000-7000-8000-000000000304",
       actorDid: submittingBody.did,

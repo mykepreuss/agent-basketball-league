@@ -1009,7 +1009,7 @@ describe("Founding Alpha private slice", () => {
     });
     expect(plan.resources.sandboxes).toHaveLength(7);
     expect(plan.resources.sandboxes).toContain("abl-alpha-r01-candidate-store");
-    expect(plan.syntheticCandidate).toEqual({
+    expect(plan.syntheticCandidate).toMatchObject({
       applicationId: "0198e000-0000-7000-8000-000000000001",
       bodySandboxName: "abl-career-0198e000000070008000000000000001",
     });
@@ -1084,10 +1084,29 @@ describe("Founding Alpha private slice", () => {
       expect(result.manifestSetDigest).toMatch(/^0x[0-9a-f]{64}$/);
       const plan = (await readJson(
         new URL("founding-alpha-private/resource-plan.json", infraRoot),
-      )) as { localArtifacts: { manifestSetDigest: string } };
+      )) as {
+        localArtifacts: { manifestSetDigest: string };
+        limits: { sandboxLifecycle: unknown };
+        syntheticCandidate: { capacityPolicy: unknown };
+      };
       expect(result.manifestSetDigest).toBe(
         plan.localArtifacts.manifestSetDigest,
       );
+      expect(plan.limits.sandboxLifecycle).toEqual({
+        expirationPolicy: {
+          action: "delete",
+          type: "ttl-max-age",
+          value: "4h",
+        },
+        terminatedRetention: "24h",
+      });
+      expect(plan.syntheticCandidate.capacityPolicy).toEqual({
+        mode: "CAPPED_PUBLIC",
+        roleCapacity: { PLAYER: 1 },
+        invitedCandidateDids: [],
+        credibleOpportunityDelayHours: 24,
+        unlistedRoleCapacity: 0,
+      });
       expect(result.rendered).toHaveLength(13);
       expect(
         result.rendered.filter(({ kind }) => kind === "Sandbox"),
@@ -1162,6 +1181,41 @@ describe("Founding Alpha private slice", () => {
           variable,
         );
       }
+      const storageBroker = parse(
+        await readFile(
+          join(outputRoot, "abl-alpha-r01-storage-broker.yaml"),
+          "utf8",
+        ),
+      ) as {
+        spec: {
+          runtime: {
+            envs: Array<{ name: string; value: string; secret: boolean }>;
+          };
+        };
+      };
+      expect(
+        storageBroker.spec.runtime.envs.find(
+          ({ name }) => name === "ABL_STORAGE_BOOTSTRAP_JSON",
+        ),
+      ).toMatchObject({ value: "${ABL_STORAGE_BOOTSTRAP_JSON}", secret: true });
+      expect(
+        storageBroker.spec.runtime.envs.map(({ name }) => name),
+      ).not.toContain("ABL_STORAGE_BOOTSTRAP_FILE");
+      const provisioner = parse(
+        await readFile(
+          join(outputRoot, "abl-alpha-r01-candidate-provisioner.yaml"),
+          "utf8",
+        ),
+      ) as {
+        spec: {
+          runtime: { envs: Array<{ name: string; value: string }> };
+        };
+      };
+      expect(
+        provisioner.spec.runtime.envs.find(
+          ({ name }) => name === "ABL_CANDIDATE_EDGE_ORIGIN",
+        )?.value,
+      ).toBe("${ABL_CANDIDATE_STORE_ORIGIN}");
     } finally {
       await rm(outputRoot, { recursive: true, force: true });
     }

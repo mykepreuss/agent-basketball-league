@@ -6,7 +6,10 @@ import {
 } from "@abl/recognition";
 import type { TypedDataDomain } from "viem";
 
-import { createStagingPossessionCommand } from "../src/command.js";
+import {
+  STAGING_POSSESSION_TEST_TIMESTAMP,
+  createStagingPossessionCommand,
+} from "../src/command.js";
 
 describe("private staging body", () => {
   it("produces one deterministic signed possession without embedding a key", async () => {
@@ -19,10 +22,12 @@ describe("private staging body", () => {
     const first = await createStagingPossessionCommand({
       actorDid: "did:abl:stage-player-001",
       signer,
+      timestamp: STAGING_POSSESSION_TEST_TIMESTAMP,
     });
     const second = await createStagingPossessionCommand({
       actorDid: "did:abl:stage-player-001",
       signer,
+      timestamp: STAGING_POSSESSION_TEST_TIMESTAMP,
     });
     expect(first.eventHash).toBe(second.eventHash);
     expect(first.command.signatures[0]).toMatch(/^0x[0-9a-f]{130}$/);

@@ -14,7 +14,7 @@ import {
 } from "@abl/recognition";
 import type { Address, Hex, TypedDataDomain } from "viem";
 
-const eventTimestamp = "2026-08-19T12:00:00.000Z";
+export const STAGING_POSSESSION_TEST_TIMESTAMP = "2026-08-19T12:00:00.000Z";
 
 export interface CanonicalEventSigner {
   readonly address: Address;
@@ -25,15 +25,18 @@ class StagingPlayerBody implements RehearsalPlayerBody {
   readonly signerAddress: Address;
   readonly #actorDid: string;
   readonly #signer: CanonicalEventSigner;
+  readonly #timestamp: string;
   #version = 0n;
   #lastEventHash: Hex | null = null;
 
   public constructor(input: {
     actorDid: string;
     signer: CanonicalEventSigner;
+    timestamp: string;
   }) {
     this.#actorDid = input.actorDid;
     this.#signer = input.signer;
+    this.#timestamp = input.timestamp;
     this.signerAddress = input.signer.address;
   }
 
@@ -86,7 +89,7 @@ class StagingPlayerBody implements RehearsalPlayerBody {
       payload: { intent, receiptCommitment: sha256Commitment(receipt) },
       stateRoot: observation.stateCommitment as Hex,
       schemaDigest: sha256Commitment("ActionIntentSchema:1.0.0"),
-      timestamp: eventTimestamp,
+      timestamp: this.#timestamp,
     });
     const signature = await this.#signer.sign(event, domain);
     this.#version = version;
@@ -113,13 +116,16 @@ export function wireCanonicalEvent(event: CanonicalEvent) {
 export async function createStagingPossessionCommand(input: {
   actorDid: string;
   signer: CanonicalEventSigner;
+  timestamp?: string;
 }) {
+  const timestamp = input.timestamp ?? new Date().toISOString();
   const bodies = createRehearsalPlayerBodies({ terminalWindow: 2 });
   bodies.set(
     "H1",
     new StagingPlayerBody({
       actorDid: input.actorDid,
       signer: input.signer,
+      timestamp,
     }),
   );
   const rehearsal = await runFirstPossessionRehearsal({
@@ -171,7 +177,7 @@ export async function createStagingPossessionCommand(input: {
     payload: { source, decisionProof: rehearsal.decisionProof },
     stateRoot: result.finalStateRoot,
     schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
-    timestamp: eventTimestamp,
+    timestamp,
   });
   return {
     signerAddress: input.signer.address,
