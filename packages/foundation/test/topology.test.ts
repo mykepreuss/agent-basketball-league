@@ -956,6 +956,10 @@ describe("Founding Alpha private slice", () => {
         images: string[];
         modelsUsed: string[];
       };
+      syntheticCandidate: {
+        applicationId: string;
+        bodySandboxName: string;
+      };
       sandboxProcesses: Record<
         string,
         {
@@ -1005,6 +1009,16 @@ describe("Founding Alpha private slice", () => {
     });
     expect(plan.resources.sandboxes).toHaveLength(7);
     expect(plan.resources.sandboxes).toContain("abl-alpha-r01-candidate-store");
+    expect(plan.syntheticCandidate).toEqual({
+      applicationId: "0198e000-0000-7000-8000-000000000001",
+      bodySandboxName: "abl-career-0198e000000070008000000000000001",
+    });
+    expect(plan.syntheticCandidate.bodySandboxName).toBe(
+      `abl-career-${plan.syntheticCandidate.applicationId.replaceAll("-", "")}`,
+    );
+    expect(plan.resources.sandboxes).toContain(
+      plan.syntheticCandidate.bodySandboxName,
+    );
     expect(plan.resources.functions).toHaveLength(5);
     expect(plan.resources.privatePreviews).toHaveLength(6);
     expect(plan.resources.images).toHaveLength(13);
@@ -1030,7 +1044,7 @@ describe("Founding Alpha private slice", () => {
       plan.resources.sandboxes.toSorted(),
     );
     expect(
-      plan.sandboxProcesses["abl-alpha-r01-career-body-001"],
+      plan.sandboxProcesses[plan.syntheticCandidate.bodySandboxName],
     ).toMatchObject({
       command: ["/usr/local/bin/agent-runtime"],
       workingDirectory: "/workspace",

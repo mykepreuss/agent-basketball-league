@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-22T21:25:18.343Z`
+> Recorded: `2026-08-22T21:46:40.367Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
 > Stable result digest: `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5`
-> Implementation source digest: `0x5da38ce9f97ffbd101179e9c3f84a860ee31e66dd9e44cfedc8b32ea48c40cf4`
-> Launch-ledger digest: `0xb8839479d92d85975eb7a690766b23b043132de3a8a82d12ce4cf0004c658450`
+> Implementation source digest: `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`
+> Launch-ledger digest: `0xb57b83937bc32a07e2a8eb5d559e47beae9a7dd15ed715b09d22907c01f95d44`
 
 ## Outcome
 
@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use the post-correction read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_03.md`](./FOUNDING_ALPHA_PREFLIGHT_03.md), then repeat its drift checks immediately before the first mutation.
+1. Use the post-name-contract read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_04.md`](./FOUNDING_ALPHA_PREFLIGHT_04.md), then repeat its drift checks immediately before the first mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.
