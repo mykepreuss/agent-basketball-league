@@ -31,13 +31,13 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 428 implementation files to `0x5da38ce9f97ffbd101179e9c3f84a860ee31e66dd9e44cfedc8b32ea48c40cf4`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 428 implementation files to `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
 The machine-readable source of truth is [`resource-plan.json`](../../infra/blaxel/founding-alpha-private/resource-plan.json). The run may create only:
 
-- Seven Blaxel Sandboxes: `abl-alpha-r01-arena`, `abl-alpha-r01-candidate-store`, `abl-alpha-r01-career-body-001`, `abl-alpha-r01-core-api`, `abl-alpha-r01-fixed-broker`, `abl-alpha-r01-public-api`, and `abl-alpha-r01-storage-broker`.
+- Seven Blaxel Sandboxes: `abl-alpha-r01-arena`, `abl-alpha-r01-candidate-store`, `abl-alpha-r01-core-api`, `abl-alpha-r01-fixed-broker`, `abl-alpha-r01-public-api`, `abl-alpha-r01-storage-broker`, and `abl-career-0198e000000070008000000000000001`.
 - Five private Blaxel Functions/MCP servers: `abl-alpha-r01-basketball-mcp`, `abl-alpha-r01-candidate-edge`, `abl-alpha-r01-career-mcp`, `abl-alpha-r01-discovery-mcp`, and `abl-alpha-r01-government-mcp`.
 - One Blaxel Job: `abl-alpha-r01-candidate-provisioner`.
 - One Blaxel Agent Drive: `abl-alpha-r01-state`, with only the three rules in [`drive-access.json`](../../infra/blaxel/founding-alpha-private/drive-access.json).
@@ -47,19 +47,21 @@ The machine-readable source of truth is [`resource-plan.json`](../../infra/blaxe
 
 The run creates zero Blaxel `Agent`, Application, or Volume resources. The existing `sandbox-openai` model route is out of scope and must not be called.
 
+The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`. The existing candidate provisioner derives the corresponding body name `abl-career-0198e000000070008000000000000001`; both bindings are recorded in the resource plan. This keeps the live Job's rule-based naming path intact while making the bounded teardown target exact before mutation.
+
 ## Frozen local artifacts
 
 | Artifact                      | Digest                                                               |
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0x5da38ce9f97ffbd101179e9c3f84a860ee31e66dd9e44cfedc8b32ea48c40cf4` |
+| Implementation source         | `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410` |
 | Exact-runtime local result    | `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5` |
 | Thirteen-image source set     | `0xdcca250c22f294cd665a31d2626cf00a5d035ff46a311074195a48cbeb8eb72f` |
-| Thirteen rendered manifests   | `0xe53d58cea4490fc3090132fad6bf8634b02d2b0fd65398cb8c55f8b645a792f7` |
+| Thirteen rendered manifests   | `0xdad4a11e444cacf1b99fcb5f56ae57dffac59e5d5878669588712b60c3a81086` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
 | Reviewed body program archive | `0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557` |
-| Launch ledger                 | `0xb8839479d92d85975eb7a690766b23b043132de3a8a82d12ce4cf0004c658450` |
+| Launch ledger                 | `0xb57b83937bc32a07e2a8eb5d559e47beae9a7dd15ed715b09d22907c01f95d44` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -89,7 +91,7 @@ If and only if the digest-bound authorization is granted:
 7. Deploy the five existing MCP/Function packages privately and the deterministic candidate-provisioner Job. Verify that no Blaxel Agent, Application, Volume, custom domain, or public preview appeared.
 8. Prove service health, signed-command rejection, database capability checks, transaction/outbox behavior, projection delivery, SSE cursor delivery, encrypted storage, and arena rendering through the existing implementations.
 9. Restart candidate-store, storage-broker, core-api, public-api, and arena individually. Prove durable intake, ciphertext metadata, canonical events/outbox, projections, cursors, and spectator state recover without fixtures or in-memory-only assumptions.
-10. Use the existing candidate flow to create the fixed broker first, then invoke the existing provisioner for `abl-alpha-r01-career-body-001`. Verify application binding, immutable images, workspace/region, port, no-Drive posture, and no model access before body start.
+10. Use the existing candidate flow with the frozen synthetic application ID to create the fixed broker first, then invoke the existing provisioner for `abl-career-0198e000000070008000000000000001`. Verify the provisioner-derived name, application binding, immutable images, workspace/region, port, no-Drive posture, and no model access before body start.
 11. Upload only the reviewed body archive, start the existing body runtime, and run one noncanonical signed practice possession through the existing basketball engine, core validation boundary, database transaction, projection transport, public stream, arena, and recognition verifier. The result must remain labeled `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
 12. Prove unsigned, human-authored, wrong-career, wrong-role, replayed, stale, malformed, and direct-service mutation attempts cannot create accepted history.
 13. Export redacted logs, manifests, immutable IDs, readbacks, restart results, signed envelopes, event/projection hashes, recognition output, cost, and final inventory. Export no credentials or preview-token values.

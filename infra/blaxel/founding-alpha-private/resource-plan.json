@@ -14,11 +14,11 @@
     "sandboxes": [
       "abl-alpha-r01-arena",
       "abl-alpha-r01-candidate-store",
-      "abl-alpha-r01-career-body-001",
       "abl-alpha-r01-core-api",
       "abl-alpha-r01-fixed-broker",
       "abl-alpha-r01-public-api",
-      "abl-alpha-r01-storage-broker"
+      "abl-alpha-r01-storage-broker",
+      "abl-career-0198e000000070008000000000000001"
     ],
     "functions": [
       "abl-alpha-r01-basketball-mcp",
@@ -61,6 +61,10 @@
       "projectId": null
     }
   },
+  "syntheticCandidate": {
+    "applicationId": "0198e000-0000-7000-8000-000000000001",
+    "bodySandboxName": "abl-career-0198e000000070008000000000000001"
+  },
   "sandboxProcesses": {
     "abl-alpha-r01-arena": {
       "command": ["node", "server.js"],
@@ -92,7 +96,7 @@
       "workingDirectory": "/opt/abl",
       "keepAlive": true
     },
-    "abl-alpha-r01-career-body-001": {
+    "abl-career-0198e000000070008000000000000001": {
       "command": ["/usr/local/bin/agent-runtime"],
       "workingDirectory": "/workspace",
       "keepAlive": true,
@@ -116,18 +120,18 @@
   ],
   "localArtifacts": {
     "imageSetDigest": "0xdcca250c22f294cd665a31d2626cf00a5d035ff46a311074195a48cbeb8eb72f",
-    "manifestSetDigest": "0xe53d58cea4490fc3090132fad6bf8634b02d2b0fd65398cb8c55f8b645a792f7",
+    "manifestSetDigest": "0xdad4a11e444cacf1b99fcb5f56ae57dffac59e5d5878669588712b60c3a81086",
     "bodyProgramArchiveDigest": "0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557"
   },
   "limits": {
     "memoryMiBBySandbox": {
       "abl-alpha-r01-arena": 4096,
       "abl-alpha-r01-candidate-store": 2048,
-      "abl-alpha-r01-career-body-001": 4096,
       "abl-alpha-r01-core-api": 4096,
       "abl-alpha-r01-fixed-broker": 1024,
       "abl-alpha-r01-public-api": 4096,
-      "abl-alpha-r01-storage-broker": 4096
+      "abl-alpha-r01-storage-broker": 4096,
+      "abl-career-0198e000000070008000000000000001": 4096
     },
     "memoryMiBPerFunction": 2048,
     "jobMemoryMiB": 2048,

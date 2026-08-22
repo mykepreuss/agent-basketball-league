@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x5da38ce9f97ffbd101179e9c3f84a860ee31e66dd9e44cfedc8b32ea48c40cf4`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -22,6 +22,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-02` closed before provider mutation when fresh image packaging exposed output-path-sensitive pnpm metadata; remove that deployment-only metadata and reproduce byte-identical contexts beneath `/tmp` and `/private/tmp`.
 - [x] Merge the packaging correction, refresh the read-only Blaxel and Neon state, and record the corrected bindings, quota, balance, privacy support, inventory, and USD 6.00 projection in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_03.md`.
+- [x] Fail the proposed replacement authorization closed before mutation when the private resource plan's synthetic body name conflicted with the existing candidate-provisioner's deterministic `abl-career-<application-id>` contract; freeze one synthetic application UUID, derive the exact body name through that contract, and assert the binding in the topology suite.
+- [x] Rerun the complete exact-runtime evidence suite and refresh the read-only Blaxel and Neon state after the name-contract correction; record the corrected bindings and zero provider mutation in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_04.md`.
 - [!] Obtain a digest-bound authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 

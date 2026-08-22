@@ -9,6 +9,8 @@ import { parse, stringify } from "yaml";
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const runId = "ABL-FOUNDING-ALPHA-R01";
 const runLabel = "founding-alpha-r01";
+const syntheticApplicationId = "0198e000-0000-7000-8000-000000000001";
+const syntheticBodySandboxName = `abl-career-${syntheticApplicationId.replaceAll("-", "")}`;
 
 interface ManifestSpec {
   source: string;
@@ -73,7 +75,7 @@ const manifests: readonly ManifestSpec[] = [
   },
   {
     source: "infra/blaxel/abl-competition/body-sandbox.example.yaml",
-    targetName: "abl-alpha-r01-career-body-001",
+    targetName: syntheticBodySandboxName,
     imageEnvironmentName: "ABL_ALPHA_BODY_IMAGE_ID",
   },
   {
