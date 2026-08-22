@@ -13,13 +13,19 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
   expect(projectionResponse.ok()).toBe(true);
   const projection = (await projectionResponse.json()) as {
     canonical: boolean;
-    items: { canonical?: unknown }[];
+    historyClassification?: unknown;
+    items: { canonical?: unknown; historyClassification?: unknown }[];
   };
-  expect(projection.canonical).toBe(true);
+  expect(projection.canonical).toBe(false);
+  expect(projection.historyClassification).toBe("PRE_GENESIS_EXPERIMENT");
   expect(projection.items.length).toBeGreaterThan(0);
-  expect(projection.items.every(({ canonical }) => canonical === true)).toBe(
-    true,
-  );
+  expect(
+    projection.items.every(
+      ({ canonical, historyClassification }) =>
+        canonical === false &&
+        historyClassification === "PRE_GENESIS_EXPERIMENT",
+    ),
+  ).toBe(true);
 
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -41,6 +47,12 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
     ).toBeVisible();
     await expect(page.locator(".canonical-stamp")).toContainText(
       "replay verified",
+    );
+    await expect(page.locator(".experiment-banner")).toContainText(
+      "canonical: false",
+    );
+    await expect(page.locator(".experiment-banner")).toContainText(
+      "No official Genesis league history exists yet",
     );
     await expect(
       page.getByRole("heading", { level: 2, name: "Six immutable segments" }),

@@ -55,8 +55,8 @@ spec:
       - name: ABL_CANDIDATE_REGION
         value: us-was-1
         secret: false
-      - name: ABL_CANDIDATE_BODY_IMAGE_DIGEST
-        value: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
+      - name: ABL_CANDIDATE_BODY_IMAGE_REFERENCE
+        value: ${ABL_BODY_SANDBOX_IMAGE_REFERENCE}
         secret: false
       - name: ABL_CANDIDATE_FIXED_BROKER_ORIGIN
         value: ${ABL_CANDIDATE_FIXED_BROKER_ORIGIN}
@@ -67,8 +67,8 @@ spec:
       - name: ABL_CANDIDATE_FIXED_BROKER_NAME
         value: ${ABL_CANDIDATE_FIXED_BROKER_NAME}
         secret: false
-      - name: ABL_CANDIDATE_FIXED_BROKER_IMAGE_DIGEST
-        value: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_DIGEST}
+      - name: ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE
+        value: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_REFERENCE}
         secret: false
       - name: ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64
         value: ${ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64}

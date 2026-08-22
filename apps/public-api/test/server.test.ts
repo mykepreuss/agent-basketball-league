@@ -381,12 +381,13 @@ describe("public API", () => {
     expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           playerDid: "did:abl:player-public-contract",
           aggregateVersion: "2",
-          canonical: true,
+          canonical: false,
         },
       ],
     });
@@ -399,8 +400,9 @@ describe("public API", () => {
         })
       ).json(),
     ).toMatchObject({
-      canonical: true,
-      items: [{ clubId: "club-public-contract", canonical: true }],
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
+      items: [{ clubId: "club-public-contract", canonical: false }],
     });
     expect(refreshes).toBe(2);
     await app.close();
@@ -447,7 +449,8 @@ describe("public API", () => {
     expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           classification: "SEALED_30D",
@@ -523,12 +526,13 @@ describe("public API", () => {
     expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           scheduleId,
           aggregateVersion: "1",
-          canonical: true,
+          canonical: false,
           recognizedGenesisResources: false,
         },
       ],
@@ -598,7 +602,8 @@ describe("public API", () => {
     expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           releaseId,
@@ -656,7 +661,8 @@ describe("public API", () => {
     expect(response.headers["x-abl-genesis-state"]).toBe("REHEARSAL");
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           totalAgents: 1,
@@ -763,17 +769,18 @@ describe("public API", () => {
     });
     expect(response.json()).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           recordType: "GOVERNANCE_PROPOSAL",
           aggregateVersion: "4",
-          canonical: true,
+          canonical: false,
         },
         {
           recordType: "DUE_PROCESS_CASE",
           aggregateVersion: "1",
-          canonical: true,
+          canonical: false,
         },
       ],
     });
@@ -923,7 +930,7 @@ describe("public API", () => {
         })
       ).json(),
     ).toMatchObject({
-      items: [{ proposalId, aggregateVersion: "1", canonical: true }],
+      items: [{ proposalId, aggregateVersion: "1", canonical: false }],
     });
     await app.close();
   });
@@ -1084,7 +1091,7 @@ describe("public API", () => {
           recordType: "PREMIER_PLAYERS_ASSOCIATION_BOARD_ELECTION",
           electionId,
           aggregateVersion: "1",
-          canonical: true,
+          canonical: false,
         },
       ],
     });
@@ -1242,7 +1249,8 @@ describe("public API", () => {
       ).json(),
     ).toMatchObject({
       state: "REHEARSAL",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           scheduleId,
@@ -1557,16 +1565,21 @@ describe("public API", () => {
     expect(
       (await app.inject({ method: "GET", url: "/v1/public/games" })).json(),
     ).toMatchObject({
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           projectionKind: "FINALIZED_GAME",
           gameId,
+          canonical: false,
+          historyClassification: "PRE_GENESIS_EXPERIMENT",
+          recognitionLevel: "NONE",
           phase: "FINAL",
           score: { home: 5, away: 2 },
         },
       ],
     });
+    expect(finalGames.game(gameId)?.canonical).toBe(true);
     expect(
       (
         await app.inject({
@@ -1574,7 +1587,13 @@ describe("public API", () => {
           url: `/v1/public/games/${gameId}/cursor`,
         })
       ).json(),
-    ).toMatchObject({ gameId, latestSegment: game.events.length - 1 });
+    ).toMatchObject({
+      gameId,
+      canonical: false,
+      authoritative: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
+      latestSegment: game.events.length - 1,
+    });
     expect(
       (
         await app.inject({
@@ -1582,12 +1601,21 @@ describe("public API", () => {
           url: `/v1/public/games/${gameId}/segments/0`,
         })
       ).json(),
-    ).toMatchObject({ canonical: true, segment: { cursor: 0 } });
+    ).toMatchObject({
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
+      segment: { cursor: 0 },
+    });
     const live = await app.inject({
       method: "GET",
       url: `/v1/public/games/${gameId}/live`,
     });
     expect(live.body).toContain('"projectionKind":"FINALIZED_GAME"');
+    expect(live.body).toContain('"canonical":false');
+    expect(live.body).toContain(
+      '"historyClassification":"PRE_GENESIS_EXPERIMENT"',
+    );
+    expect(live.body).not.toContain('"canonical":true');
     expect(
       (
         await app.inject({

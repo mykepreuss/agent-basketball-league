@@ -179,7 +179,8 @@ describe("public premier draft ingress", () => {
     expect(
       (await app.inject({ method: "GET", url: "/v1/public/drafts" })).json(),
     ).toMatchObject({
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: [
         {
           draftId,
@@ -192,7 +193,8 @@ describe("public premier draft ingress", () => {
       await app.inject({ method: "GET", url: "/v1/public/rosters" })
     ).json();
     expect(rosters).toMatchObject({
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       items: clubOrder.map((clubId) => ({
         clubId,
         rosterKind: "DRAFT_SELECTIONS",

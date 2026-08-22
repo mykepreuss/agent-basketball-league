@@ -168,7 +168,8 @@ describe("Base-backed checkpoint API", () => {
     );
     expect(response.json()).toMatchObject({
       state: "PRODUCTION_V1_PRE_GENESIS",
-      canonical: true,
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
       recognitionLevel: "ONCHAIN_FINALIZED",
       productionV1Ready: true,
       items: [

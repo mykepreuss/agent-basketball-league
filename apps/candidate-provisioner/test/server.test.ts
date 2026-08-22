@@ -43,7 +43,7 @@ describe("candidate provisioner private boundary", () => {
 
   it("creates and narrowly tears down the authorized candidate Sandboxes", async () => {
     const applicationId = "0198e000-0000-7000-8000-000000000001";
-    const imageDigest = `registry.blaxel.ai/abl/body@sha256:${"a".repeat(64)}`;
+    const imageReference = "sandbox/abl-alpha-r01-body-image:a1b2c3d4e5f6";
     let requested:
       | Parameters<CandidateSandboxFactory["createIfNotExists"]>[0]
       | null = null;
@@ -61,7 +61,7 @@ describe("candidate provisioner private boundary", () => {
         enabled: true,
         region: "us-was-1",
         runtime: {
-          image: `registry.blaxel.ai/abl/broker@sha256:${"b".repeat(64)}`,
+          image: "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
           ports: [{ name: "http", protocol: "HTTP", target: 3_000 }],
         },
       },
@@ -94,13 +94,14 @@ describe("candidate provisioner private boundary", () => {
     const controlPlane = new BlaxelCandidateSandboxControlPlane({
       workspace: "agent-basketball-league",
       region: "us-was-1",
-      imageDigest,
+      imageReference,
       authorizedApplicationId: applicationId,
       authorizationId: "ABL-FOUNDING-ALPHA-TEST-001",
       fixedBrokerOrigin: "https://broker.example/",
       fixedBrokerHost: "broker.example",
       fixedBrokerResourceName: "abl-fixed-broker-candidate-one",
-      fixedBrokerImageDigest: `registry.blaxel.ai/abl/broker@sha256:${"b".repeat(64)}`,
+      fixedBrokerImageReference:
+        "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
       capabilityTokenBase64: Buffer.alloc(32, 7).toString("base64"),
       previewToken: "preview-token-with-at-least-32-bytes",
       factory,
@@ -125,7 +126,7 @@ describe("candidate provisioner private boundary", () => {
       spec: {
         region: "us-was-1",
         network: { allowedDomains: ["broker.example"] },
-        runtime: { image: imageDigest, memory: 4_096 },
+        runtime: { image: imageReference, memory: 4_096 },
       },
     });
     expect(
@@ -153,13 +154,13 @@ describe("candidate provisioner private boundary", () => {
     const controlPlane = new BlaxelCandidateSandboxControlPlane({
       workspace: "agent-basketball-league",
       region: "us-was-1",
-      imageDigest: `registry.blaxel.ai/abl/body@sha256:${"a".repeat(64)}`,
+      imageReference: `registry.blaxel.ai/abl/body@sha256:${"a".repeat(64)}`,
       authorizedApplicationId: "0198e000-0000-7000-8000-000000000001",
       authorizationId: "ABL-FOUNDING-ALPHA-TEST-002",
       fixedBrokerOrigin: "https://broker.example/",
       fixedBrokerHost: "broker.example",
       fixedBrokerResourceName: "abl-fixed-broker-candidate-two",
-      fixedBrokerImageDigest: `registry.blaxel.ai/abl/broker@sha256:${"b".repeat(64)}`,
+      fixedBrokerImageReference: `registry.blaxel.ai/abl/broker@sha256:${"b".repeat(64)}`,
       capabilityTokenBase64: Buffer.alloc(32, 7).toString("base64"),
       factory: {
         get: async () => Promise.reject(new Error()),
@@ -177,5 +178,29 @@ describe("candidate provisioner private boundary", () => {
         commandCommitment: `0x${"2".repeat(64)}`,
       }),
     ).rejects.toThrow("not authorized for this application");
+  });
+
+  it("rejects mutable or operator-selected Blaxel image tags", () => {
+    const options = {
+      workspace: "agent-basketball-league",
+      region: "us-was-1",
+      imageReference: "sandbox/abl-alpha-r01-body-image:latest",
+      authorizedApplicationId: "0198e000-0000-7000-8000-000000000001",
+      authorizationId: "ABL-FOUNDING-ALPHA-TEST-003",
+      fixedBrokerOrigin: "https://broker.example/",
+      fixedBrokerHost: "broker.example",
+      fixedBrokerResourceName: "abl-fixed-broker-candidate-three",
+      fixedBrokerImageReference:
+        "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
+      capabilityTokenBase64: Buffer.alloc(32, 7).toString("base64"),
+    };
+    expect(() => new BlaxelCandidateSandboxControlPlane(options)).toThrow();
+    expect(
+      () =>
+        new BlaxelCandidateSandboxControlPlane({
+          ...options,
+          imageReference: "sandbox/abl-alpha-r01-body-image:operator-tag",
+        }),
+    ).toThrow();
   });
 });

@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-22T21:46:40.367Z`
+> Recorded: `2026-08-22T23:09:11.768Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5`
-> Implementation source digest: `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`
-> Launch-ledger digest: `0xb57b83937bc32a07e2a8eb5d559e47beae9a7dd15ed715b09d22907c01f95d44`
+> Stable result digest: `0x04b2ea099dc44dce30ca0888fe895a31d573a710231a7a755ddcc0d36fb46fe4`
+> Implementation source digest: `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655`
+> Launch-ledger digest: `0xdd66dc98c811c3ef0d278cf897554745767492398053f679b95b2e85b1956e7a`
 
 ## Outcome
 
@@ -16,15 +16,15 @@ The result proves local implementation readiness only. The derived launch ledger
 
 ## Reuse evidence
 
-| Evidence group               | SHA-256 digest                                                       | Result |
-| ---------------------------- | -------------------------------------------------------------------- | ------ |
-| Canonical launch plan        | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` | Passed |
-| Existing applications        | `0x00b077bfbf635377ea3f8213e147947cdbdf45338ebc24b29e01e7b4f676f312` | Passed |
-| Existing domain packages     | `0xbb04218c6524eafec2c18540a0bfe2282d95cd76d78f8cd4c5713f6ee75b9db1` | Passed |
-| Active Blaxel topology       | `0x57bdc6a8b24b99b433e445b87f9f0cfa63adddc6ce7656d87b2ec88a670f41c8` | Passed |
-| Agent Drive topology         | `0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245` | Passed |
-| Founding Alpha launch domain | `0xa574ae90c9cf690bae773da81d876dbcc26e1e5399e953fc27fd107395cae522` | Passed |
-| Candidate provisioner        | `0x9a3135cfdbef7bdf9e5a82b4addbcd5664a3a77078bf5895cabc82d046e64848` | Passed |
+| Evidence group               | Current evidence source                                   | Result |
+| ---------------------------- | --------------------------------------------------------- | ------ |
+| Canonical launch plan        | `docs/launch/LAUNCH_PLAN.md`                              | Passed |
+| Existing applications        | 429-file implementation source freeze                     | Passed |
+| Existing domain packages     | Uncached package unit/integration suites                  | Passed |
+| Active Blaxel topology       | Founding Alpha topology suite and rendered manifest set   | Passed |
+| Agent Drive topology         | `drive-access.json` and topology invariants               | Passed |
+| Founding Alpha launch domain | Launch, acceptance, and adversarial suites                | Passed |
+| Candidate provisioner        | Native immutable-revision and mutable-tag rejection tests | Passed |
 
 The authoritative application and package mapping is in [Preserve and Use the Existing ABL Implementation](../launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation).
 
@@ -41,14 +41,14 @@ PATH=/private/tmp/abl-node-24.18.0-runtime/bin:$PATH pnpm evidence
 | Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 42 of 42 Turbo tasks                                                         |
-| Uncached unit/integration/property/contract/migration/API | Pass   | 323 assertions across 68 files; 42 of 42 Turbo tasks                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 326 assertions across 69 files; 42 of 42 Turbo tasks                         |
 | Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 29 of 29 Turbo tasks                                                         |
 
-Total executable assertions: **354 across 75 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
+Total executable assertions: **357 across 76 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 
@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use the post-name-contract read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_04.md`](./FOUNDING_ALPHA_PREFLIGHT_04.md), then repeat its drift checks immediately before the first mutation.
+1. Use [`FOUNDING_ALPHA_PREFLIGHT_04.md`](./FOUNDING_ALPHA_PREFLIGHT_04.md) only as the prior read-only baseline, then record a post-correction read-only preflight and repeat its drift checks immediately before the first mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.

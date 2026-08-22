@@ -31,7 +31,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 428 implementation files to `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 429 implementation files to `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -55,13 +55,13 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0xa0c3e775903decbe7f2b1b0ba07220ccf86d09d6bae8c9bdba3e439640f1a410` |
-| Exact-runtime local result    | `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5` |
-| Thirteen-image source set     | `0xdcca250c22f294cd665a31d2626cf00a5d035ff46a311074195a48cbeb8eb72f` |
-| Thirteen rendered manifests   | `0xdad4a11e444cacf1b99fcb5f56ae57dffac59e5d5878669588712b60c3a81086` |
+| Implementation source         | `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655` |
+| Exact-runtime local result    | `0x04b2ea099dc44dce30ca0888fe895a31d573a710231a7a755ddcc0d36fb46fe4` |
+| Thirteen-image source set     | `0x9072d771bb75ebfb0181334179caa89608f84bfb553c478fc9ebc31bcf32660a` |
+| Thirteen rendered manifests   | `0x31598bba8e517d0d43fd23f385833cb3a701034ec02656a35dc81a6bb15b6013` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
 | Reviewed body program archive | `0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557` |
-| Launch ledger                 | `0xb57b83937bc32a07e2a8eb5d559e47beae9a7dd15ed715b09d22907c01f95d44` |
+| Launch ledger                 | `0xdd66dc98c811c3ef0d278cf897554745767492398053f679b95b2e85b1956e7a` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -83,7 +83,7 @@ Any drift stops the run before mutation and requires a new authorization.
 If and only if the digest-bound authorization is granted:
 
 1. Produce the 13 source-minimal image contexts outside the repository and reproduce the recorded image-set and body-archive digests.
-2. Push only the 13 exact run-scoped images; record immutable remote image IDs and verify every image architecture/runtime identity before resource creation.
+2. Push only the 13 exact run-scoped images; record each provider-generated immutable revision in the form returned by Blaxel (`sandbox/<image-name>:<12-character-revision>`) and verify every image architecture/runtime identity before resource creation. Mutable tags such as `latest` or operator-selected labels are prohibited.
 3. Create the single Neon project, record its new project ID, install the existing Drizzle migrations over a direct connection, then provide pooled application access through Blaxel-managed secrets. Never write credentials to the repository or a career body.
 4. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
 5. Create the candidate-store, storage-broker, core-api, public-api, arena, and fixed-broker Sandboxes from the rendered manifests; create their six private previews and short-lived preview tokens; read every preview back as `public:false`.
@@ -91,7 +91,7 @@ If and only if the digest-bound authorization is granted:
 7. Deploy the five existing MCP/Function packages privately and the deterministic candidate-provisioner Job. Verify that no Blaxel Agent, Application, Volume, custom domain, or public preview appeared.
 8. Prove service health, signed-command rejection, database capability checks, transaction/outbox behavior, projection delivery, SSE cursor delivery, encrypted storage, and arena rendering through the existing implementations.
 9. Restart candidate-store, storage-broker, core-api, public-api, and arena individually. Prove durable intake, ciphertext metadata, canonical events/outbox, projections, cursors, and spectator state recover without fixtures or in-memory-only assumptions.
-10. Use the existing candidate flow with the frozen synthetic application ID to create the fixed broker first, then invoke the existing provisioner for `abl-career-0198e000000070008000000000000001`. Verify the provisioner-derived name, application binding, immutable images, workspace/region, port, no-Drive posture, and no model access before body start.
+10. Use the existing candidate flow with the frozen synthetic application ID to create the fixed broker first, then invoke the existing provisioner for `abl-career-0198e000000070008000000000000001`. Pass only the exact provider-generated body and fixed-broker image revisions read back after their pushes. Verify the provisioner-derived name, application binding, immutable image revisions, workspace/region, port, no-Drive posture, and no model access before body start.
 11. Upload only the reviewed body archive, start the existing body runtime, and run one noncanonical signed practice possession through the existing basketball engine, core validation boundary, database transaction, projection transport, public stream, arena, and recognition verifier. The result must remain labeled `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
 12. Prove unsigned, human-authored, wrong-career, wrong-role, replayed, stale, malformed, and direct-service mutation attempts cannot create accepted history.
 13. Export redacted logs, manifests, immutable IDs, readbacks, restart results, signed envelopes, event/projection hashes, recognition output, cost, and final inventory. Export no credentials or preview-token values.
