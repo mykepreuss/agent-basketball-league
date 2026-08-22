@@ -25,8 +25,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Fail the proposed replacement authorization closed before mutation when the private resource plan's synthetic body name conflicted with the existing candidate-provisioner's deterministic `abl-career-<application-id>` contract; freeze one synthetic application UUID, derive the exact body name through that contract, and assert the binding in the topology suite.
 - [x] Rerun the complete exact-runtime evidence suite and refresh the read-only Blaxel and Neon state after the name-contract correction; record the corrected bindings and zero provider mutation in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_04.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-03` closed before provider mutation when the executable audit proved that the candidate Job rejected Blaxel's provider-generated immutable image revisions and the arena required an unauthorized canonical rehearsal claim; record the zero-mutation result and correct both boundaries locally.
-- [~] Rerun exact-runtime verification, reproduce the corrected image and manifest sets, review and merge the correction, refresh the read-only provider preflight, and prepare a digest-bound `ABL-FOUNDING-ALPHA-R01-04` authorization.
-- [!] Obtain a digest-bound authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
+- [x] Rerun exact-runtime verification, reproduce the corrected image and manifest sets, review and merge the correction, and record the refreshed read-only provider state in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_05.md`.
+- [~] Obtain a digest-bound `ABL-FOUNDING-ALPHA-R01-04` authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
