@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+
+readonly CAPABILITY_DIRECTORY=/run/abl-body-capability
+readonly CAPABILITY_FILE="$CAPABILITY_DIRECTORY/body-token"
+readonly BODY_USER=abl-agent
+
+required() {
+  eval "value=\${$1:-}"
+  if [ -z "$value" ]; then
+    printf 'Missing required environment value: %s\n' "$1" >&2
+    exit 78
+  fi
+}
+
+for name in ABL_RUNTIME_RESOURCE_TYPE ABL_FIXED_BROKER_ORIGIN ABL_AGENT_DID \
+  ABL_AGENT_SIGNER_ADDRESS ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64; do
+  required "$name"
+done
+
+if [ "$ABL_RUNTIME_RESOURCE_TYPE" != SANDBOX ]; then
+  printf '%s\n' 'ABL career bodies require a Blaxel Sandbox runtime' >&2
+  exit 78
+fi
+
+env -i \
+  PATH=/usr/local/bin:/usr/bin:/bin \
+  ABL_FIXED_BROKER_ORIGIN="$ABL_FIXED_BROKER_ORIGIN" \
+  /usr/local/bin/node --input-type=module -e '
+    const origin = new URL(process.env.ABL_FIXED_BROKER_ORIGIN ?? "");
+    if (
+      origin.protocol !== "https:" ||
+      origin.username !== "" ||
+      origin.password !== "" ||
+      origin.pathname !== "/" ||
+      origin.search !== "" ||
+      origin.hash !== ""
+    ) process.exit(78);
+  '
+
+umask 077
+install -d -o abl-agent -g abl-agent -m 0700 /workspace "$CAPABILITY_DIRECTORY"
+printf '%s' "$ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64" | base64 -d >"$CAPABILITY_FILE"
+canonical_token=$(base64 <"$CAPABILITY_FILE" | tr -d '\n')
+if [ "$canonical_token" != "$ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64" ]; then
+  printf '%s\n' 'Capability token must use canonical Base64 encoding' >&2
+  exit 78
+fi
+token_size=$(wc -c <"$CAPABILITY_FILE" | tr -d ' ')
+if [ "$token_size" -lt 32 ] || [ "$token_size" -gt 512 ]; then
+  printf '%s\n' 'Capability token size is outside the allowed range' >&2
+  exit 78
+fi
+chown abl-agent:abl-agent "$CAPABILITY_FILE"
+chmod 0400 "$CAPABILITY_FILE"
+
+# Keep an empty sentinel so the Sandbox API cannot pass the encoded source
+# value to a child process. The reviewed runtime receives only the decoded,
+# short-lived broker capability.
+export ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64=
+
+exec /usr/local/bin/sandbox-api --disable-telemetry --user "$BODY_USER"

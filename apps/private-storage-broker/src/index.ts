@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 
 import {
@@ -7,26 +6,16 @@ import {
 } from "@abl/foundation";
 import {
   CiphertextBroker,
-  DriveCiphertextRepository,
-  type StorageDomainPolicy,
+  createCiphertextRepository,
+  type StorageBackendProfile,
 } from "@abl/storage";
 import { z } from "zod";
 
+import { loadStorageBootstrap } from "./bootstrap.js";
 import { createPrivateStorageBroker } from "./server.js";
 
-const BootstrapSchema = z.strictObject({
-  identities: z.array(
-    z.strictObject({
-      serviceId: z.string().min(1),
-      actorDid: z.string().startsWith("did:"),
-      secretBase64: z.string().min(1),
-      capabilities: z
-        .array(z.enum(["private:ciphertext", "private:commitment:verify"]))
-        .min(1),
-    }),
-  ),
-  policies: z.array(z.custom<StorageDomainPolicy>()),
-});
+const port = Number.parseInt(process.env.PORT ?? "8080", 10);
+const host = process.env.HOST ?? "0.0.0.0";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -35,10 +24,30 @@ function required(name: string): string {
   return value;
 }
 
-const bootstrap = BootstrapSchema.parse(
-  JSON.parse(await readFile(required("ABL_STORAGE_BOOTSTRAP_FILE"), "utf8")),
-);
-const repository = new DriveCiphertextRepository(required("ABL_DRIVE_MOUNT"));
+const bootstrap = await loadStorageBootstrap(process.env);
+const storageBackend = z
+  .enum(["LOCAL_REHEARSAL", "BLAXEL_VOLUME_V1", "AGENT_DRIVE"])
+  .parse(
+    process.env.ABL_STORAGE_BACKEND ?? "LOCAL_REHEARSAL",
+  ) satisfies StorageBackendProfile;
+const repository = createCiphertextRepository({
+  backend: storageBackend,
+  root:
+    process.env.ABL_STORAGE_ROOT ??
+    process.env.ABL_DRIVE_MOUNT ??
+    required("ABL_STORAGE_ROOT"),
+  brokerOnly:
+    storageBackend === "LOCAL_REHEARSAL" ||
+    process.env.ABL_STORAGE_BROKER_ONLY === "1",
+  region: process.env.ABL_BLAXEL_REGION ?? null,
+  permissionsConfigured:
+    storageBackend !== "AGENT_DRIVE" ||
+    process.env.ABL_AGENT_DRIVE_PERMISSIONS_CONFIGURED === "1",
+  liveProof:
+    storageBackend === "LOCAL_REHEARSAL"
+      ? "NOT_APPLICABLE"
+      : "LIVE_PROOF_REQUIRED",
+});
 await repository.initialize();
 const broker = CiphertextBroker.restore(await repository.loadState());
 for (const policy of bootstrap.policies) {
@@ -77,4 +86,4 @@ const app = createPrivateStorageBroker({
     ]),
   ),
 });
-await app.listen({ host: "0.0.0.0", port: 8080 });
+await app.listen({ host, port });

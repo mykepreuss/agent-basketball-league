@@ -13,6 +13,7 @@ describe("discovery MCP", () => {
     );
     const app = createDiscoveryMcp({
       publicApiOrigin: "http://public.test",
+      previewToken: "private-preview",
       fetchImplementation,
       allowHttpForTest: true,
     });
@@ -38,6 +39,11 @@ describe("discovery MCP", () => {
         "authorization",
       ),
     ).toBe(false);
+    expect(
+      new Headers(fetchImplementation.mock.calls[0]![1]?.headers).get(
+        "x-blaxel-preview-token",
+      ),
+    ).toBe("private-preview");
     await app.close();
   });
 
@@ -64,6 +70,77 @@ describe("discovery MCP", () => {
     });
     expect(response.json().result).toMatchObject({ isError: true });
     expect(fetchImplementation).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("exposes the complete read-only launch discovery tool set", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>(async (url) =>
+      Promise.resolve(
+        new Response(JSON.stringify({ requested: String(url) }), {
+          status: 200,
+        }),
+      ),
+    );
+    const app = createDiscoveryMcp({
+      publicApiOrigin: "http://public.test",
+      fetchImplementation,
+      allowHttpForTest: true,
+    });
+    const tools = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      headers: { "mcp-protocol-version": MCP_PROTOCOL_VERSION },
+      payload: { jsonrpc: "2.0", id: 3, method: "tools/list" },
+    });
+    expect(
+      tools
+        .json()
+        .result.tools.map(({ name }: { name: string }) => name)
+        .sort(),
+    ).toEqual(
+      [
+        "get_capacity_policy",
+        "get_candidate_requirements",
+        "get_genesis_state",
+        "get_intake_state",
+        "get_public_api_schema",
+        "get_starter_kit_metadata",
+        "lookup_evidence",
+        "read_public_collection",
+        "try_basketball",
+      ].sort(),
+    );
+    const evidence = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      headers: { "mcp-protocol-version": MCP_PROTOCOL_VERSION },
+      payload: {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: {
+          name: "lookup_evidence",
+          arguments: { evidenceId: "gate-1-exact-runtime" },
+        },
+      },
+    });
+    expect(evidence.json().result.structuredContent.body.requested).toBe(
+      "http://public.test/v1/discovery/evidence/gate-1-exact-runtime",
+    );
+    const practice = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      headers: { "mcp-protocol-version": MCP_PROTOCOL_VERSION },
+      payload: {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "try_basketball", arguments: {} },
+      },
+    });
+    expect(practice.json().result.structuredContent.body.requested).toBe(
+      "http://public.test/v1/practice/scenario",
+    );
     await app.close();
   });
 });

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "image": "ghcr.io/blaxel-ai/sandbox",
+  "indexDigest": "sha256:3bbf1ce15194f5aff6557d5b48a5a7c32b17b84b9bd94000a952130e08000ccb",
+  "linuxAmd64ManifestDigest": "sha256:e62a65ee685bcb3b4396756b4a02b5cea495c3580ff135a578be8458e2db1e2d",
+  "sandboxApiBinarySha256": "0c6130d53b3e4448ba120a84e5bcd71a6ae47674ed7b8d215c8e2f0a2b217076",
+  "sandboxApiVersion": "0.2.50",
+  "gitCommit": "bfecd2e7da6a726d6bbd8c010b511a6f9fc43121",
+  "localCredentialProxyPort": 49152,
+  "source": "https://github.com/blaxel-ai/sandbox/tree/bfecd2e7da6a726d6bbd8c010b511a6f9fc43121/sandbox-api/src/lib/proxy"
+}

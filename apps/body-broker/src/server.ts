@@ -1,12 +1,22 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 
 import {
   signServiceRequest,
   type ServiceRequestIdentity,
   type SignedServiceRequestHeaders,
 } from "@abl/foundation";
+import {
+  signCanonicalEvent,
+  type CanonicalEvent,
+  type SigningIdentity,
+} from "@abl/recognition";
 import { encryptContent } from "@abl/storage";
-import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from "fastify";
+import type { TypedDataDomain } from "viem";
 import { z } from "zod";
 
 const ProxyRequestSchema = z.strictObject({
@@ -39,20 +49,81 @@ const StoragePutSchema = z.strictObject({
   idempotencyKey: z.string().min(16).max(128),
 });
 
+const CanonicalSigningRequestSchema = z.strictObject({
+  event: z.strictObject({
+    eventId: z.string().min(1).max(200),
+    actorDid: z.string().startsWith("did:").max(500),
+    nonce: z.string().min(1).max(200),
+    idempotencyKey: z.string().min(16).max(200),
+    aggregateType: z.string().min(1).max(160),
+    aggregateId: z.string().min(1).max(200),
+    aggregateVersion: z.string().regex(/^[1-9][0-9]*$/),
+    eventType: z.string().min(1).max(160),
+    previousEventHash: z
+      .string()
+      .regex(/^0x[0-9a-f]{64}$/)
+      .nullable(),
+    payloadCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    payload: z.unknown(),
+    stateRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
+    schemaDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    timestamp: z.iso.datetime({ offset: true }),
+    eventHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  }),
+});
+
 export interface BrokerRoute {
   name: string;
   targetOrigin: string;
   methods: ReadonlySet<"GET" | "POST">;
   pathPrefixes: readonly string[];
   capability: string;
-  credential?: { header: string; value: string };
+  credential?: Readonly<Record<string, string>>;
+}
+
+export function createBlaxelUpstreamCredential(input: {
+  mode: string;
+  token: string;
+  workspace: string | null;
+}): Readonly<Record<string, string>> {
+  if (input.token.length < 1 || input.token.length > 4_096)
+    throw new BrokerPolicyError("Invalid upstream credential token");
+  if (input.mode === "BLAXEL_PRIVATE_PREVIEW") {
+    if (input.workspace !== null)
+      throw new BrokerPolicyError(
+        "Private-preview credentials cannot select a workspace",
+      );
+    return { "x-blaxel-preview-token": input.token };
+  }
+  if (input.mode === "BLAXEL_ACCESS_TOKEN") {
+    if (
+      input.workspace === null ||
+      !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(input.workspace)
+    )
+      throw new BrokerPolicyError("Invalid upstream credential workspace");
+    return {
+      "x-blaxel-authorization": `Bearer ${input.token}`,
+      "x-blaxel-workspace": input.workspace,
+    };
+  }
+  throw new BrokerPolicyError("Unsupported upstream credential mode");
 }
 
 export interface BodyBrokerOptions {
   agentDid: string;
+  clientCapability: {
+    token: string;
+    expiresAt: string;
+    operations: ReadonlySet<string>;
+  };
   serviceIdentity: ServiceRequestIdentity;
   routes: readonly BrokerRoute[];
   storageDomainKeys: ReadonlyMap<string, Uint8Array>;
+  canonicalSigning?: {
+    identity: SigningIdentity;
+    domain: TypedDataDomain;
+    allowedEvents: ReadonlySet<string>;
+  };
   fetchImplementation?: typeof fetch;
   now?: () => number;
   createNonce?: () => string;
@@ -62,6 +133,8 @@ export interface BodyBrokerOptions {
 export class BrokerPolicyError extends Error {
   public override readonly name = "BrokerPolicyError";
 }
+
+const maximumCapabilityLifetimeMs = 4 * 60 * 60 * 1_000;
 
 function assertCanonicalPath(path: string): void {
   const pathname = path.split(/[?#]/, 1)[0] ?? "";
@@ -133,15 +206,50 @@ function sendBrokerError(reply: FastifyReply, error: unknown) {
 }
 
 export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
+  const now = options.now ?? Date.now;
+  const configuredAt = now();
+  const capabilityExpiresAt = Date.parse(options.clientCapability.expiresAt);
+  if (
+    !Number.isFinite(capabilityExpiresAt) ||
+    capabilityExpiresAt <= configuredAt ||
+    capabilityExpiresAt - configuredAt > maximumCapabilityLifetimeMs ||
+    options.clientCapability.token.length < 32 ||
+    options.clientCapability.token.length > 512 ||
+    options.clientCapability.operations.size === 0
+  ) {
+    throw new BrokerPolicyError("Invalid body capability configuration");
+  }
+  const routes = new Map(options.routes.map((route) => [route.name, route]));
+  if (routes.size !== options.routes.length)
+    throw new BrokerPolicyError("Duplicate broker route name");
   const app = Fastify({
     logger: false,
     bodyLimit: 1_500_000,
     requestTimeout: 15_000,
   });
-  const routes = new Map(options.routes.map((route) => [route.name, route]));
   const fetchImplementation = options.fetchImplementation ?? fetch;
-  const now = options.now ?? Date.now;
   const createNonce = options.createNonce ?? randomUUID;
+
+  function assertClientCapability(
+    request: FastifyRequest,
+    operation: string,
+  ): void {
+    const authorization = request.headers.authorization;
+    const supplied =
+      typeof authorization === "string" && authorization.startsWith("Bearer ")
+        ? authorization.slice("Bearer ".length)
+        : "";
+    const expectedBytes = Buffer.from(options.clientCapability.token, "utf8");
+    const suppliedBytes = Buffer.from(supplied, "utf8");
+    if (
+      now() >= capabilityExpiresAt ||
+      !options.clientCapability.operations.has(operation) ||
+      suppliedBytes.length !== expectedBytes.length ||
+      !timingSafeEqual(suppliedBytes, expectedBytes)
+    ) {
+      throw new BrokerPolicyError("Body capability denied");
+    }
+  }
 
   async function forward(input: {
     routeName: string;
@@ -179,7 +287,8 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
     };
     if (input.method === "POST") headers["content-type"] = "application/json";
     if (route.credential !== undefined)
-      headers[route.credential.header.toLowerCase()] = route.credential.value;
+      for (const [name, value] of Object.entries(route.credential))
+        headers[name.toLowerCase()] = value;
     const response = await fetchImplementation(target, {
       method: input.method,
       headers,
@@ -200,12 +309,54 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
 
   app.get("/health", async () => ({
     status: "ok",
-    boundary: "fixed-local-broker",
+    boundary: "fixed-body-broker",
   }));
+
+  app.post("/v1/signing/canonical-event", async (request, reply) => {
+    try {
+      assertClientCapability(request, "canonical-event:sign");
+      const signing = options.canonicalSigning;
+      if (signing === undefined)
+        throw new BrokerPolicyError("Canonical signing is disabled");
+      const { event: wireEvent } = CanonicalSigningRequestSchema.parse(
+        request.body,
+      );
+      if (
+        wireEvent.actorDid !== options.agentDid ||
+        !signing.allowedEvents.has(
+          `${wireEvent.aggregateType}:${wireEvent.eventType}`,
+        )
+      ) {
+        throw new BrokerPolicyError("Canonical signing authority denied");
+      }
+      const event = {
+        ...wireEvent,
+        aggregateVersion: BigInt(wireEvent.aggregateVersion),
+      } as CanonicalEvent;
+      let signature;
+      try {
+        signature = await signCanonicalEvent(
+          signing.identity,
+          signing.domain,
+          event,
+        );
+      } catch {
+        throw new BrokerPolicyError("Canonical event content is invalid");
+      }
+      return reply.send({
+        eventHash: event.eventHash,
+        signerAddress: signing.identity.address,
+        signature,
+      });
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
 
   app.post("/v1/proxy", async (request, reply) => {
     try {
       const input = ProxyRequestSchema.parse(request.body);
+      assertClientCapability(request, `proxy:${input.route}`);
       if (input.route === "private-storage")
         throw new BrokerPolicyError("Use the encrypted storage interface");
       const response = await forward({
@@ -227,6 +378,7 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
 
   app.post("/v1/storage/put", async (request, reply) => {
     try {
+      assertClientCapability(request, "storage:put");
       const input = StoragePutSchema.parse(request.body);
       const key = options.storageDomainKeys.get(input.domainId);
       if (key === undefined)

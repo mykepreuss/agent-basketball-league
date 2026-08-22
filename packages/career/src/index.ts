@@ -1,6 +1,7 @@
 export * from "./admission.js";
 export * from "./candidate-workflow.js";
 export * from "./autonomy.js";
+export * from "./authority-workflow.js";
 export * from "./continuity.js";
 export * from "./continuity-workflow.js";
 export * from "./credentials.js";

@@ -32,17 +32,27 @@ const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 describe("adversarial acceptance", () => {
   it("denies every fixed-broker escape vector and retains the live-execution gate", async () => {
-    const [initSource, launcherSource, dockerfileSource] = await Promise.all(
+    const [
+      initSource,
+      credentialGuardSource,
+      launcherSource,
+      dockerfileSource,
+      bodyManifestSource,
+    ] = await Promise.all(
       [
         "infra/sandbox/abl-sandbox-init",
+        "infra/sandbox/abl-provider-credential-guard.mjs",
         "infra/sandbox/agent-runtime",
         "Dockerfile",
+        "infra/blaxel/staging/body-sandbox.yaml",
       ].map((path) => readFile(join(repositoryRoot, path), "utf8")),
     );
     const proofs = analyzeSandboxBoundary({
       initSource,
+      credentialGuardSource,
       launcherSource,
       dockerfileSource,
+      bodyManifestSource,
     });
     expect(proofs).toHaveLength(7);
     expect(proofs.every((proof) => proof.sourceVerified)).toBe(true);

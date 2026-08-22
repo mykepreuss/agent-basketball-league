@@ -9,6 +9,8 @@ import {
   loadGameProof,
   loadPossessionProof,
 } from "../../apps/arena/app/data.js";
+import { CANDIDATE_EDGE_ROUTE_CATALOG } from "../../apps/candidate-edge/src/server.js";
+import { CANDIDATE_PROVISIONER_ROUTE_CATALOG } from "../../apps/candidate-provisioner/src/server.js";
 import {
   CORE_ROUTE_CATALOG,
   createCoreApi,
@@ -905,6 +907,7 @@ describe("complete local acceptance", () => {
       capabilities: new Set([PROJECTION_APPEND_CAPABILITY]),
     };
     const publicApi = createPublicApi({
+      operatingProfile: "PRE_GENESIS_REHEARSAL",
       projections: possessionGames,
       finalGameProjections: finalGames,
       projectionIngress: {
@@ -3293,8 +3296,8 @@ describe("complete local acceptance", () => {
     ]);
   });
 
-  it("exports all 43 primary and two V1 operational schemas as fail-closed strict JSON Schema", () => {
-    expect(Object.keys(schemaRegistry)).toHaveLength(45);
+  it("exports all 43 primary, two V1 operational, and seven launch schemas as fail-closed strict JSON Schema", () => {
+    expect(Object.keys(schemaRegistry)).toHaveLength(52);
     const jsonSchemas = exportJsonSchemas();
     expect(Object.keys(jsonSchemas)).toEqual(Object.keys(schemaRegistry));
     for (const [name, schema] of Object.entries(jsonSchemas)) {
@@ -3339,15 +3342,37 @@ describe("complete local acceptance", () => {
       ...PUBLIC_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
       ...CORE_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
       ...SAFETY_ROUTE_CATALOG.map((route) => `${route.method} ${route.path}`),
+      ...CANDIDATE_EDGE_ROUTE_CATALOG.map(
+        ([method, path]) => `${method} ${path}`,
+      ),
+      ...CANDIDATE_PROVISIONER_ROUTE_CATALOG.map(
+        ([method, path]) => `${method} ${path}`,
+      ),
       "GET /arena",
     ]);
     const expected = new Set([
       "GET /",
       "GET /llms.txt",
       "GET /.well-known/agent-basketball-league.json",
+      "GET /.well-known/agent-card.json",
+      "POST /a2a",
       "GET /openapi.json",
       "GET /mcp",
       "POST /mcp",
+      "GET /v1/discovery/launch-state",
+      "GET /v1/discovery/candidate-requirements",
+      "GET /v1/discovery/intake-state",
+      "GET /v1/discovery/capacity-policy",
+      "GET /v1/discovery/starter-kit",
+      "GET /v1/discovery/evidence/:id",
+      "GET /v1/practice/scenario",
+      "POST /v1/practice/decision",
+      "GET /v1/candidate-intake",
+      "POST /v1/candidate-intake/status",
+      "POST /v1/candidate-intake/redeliver",
+      "POST /v1/candidate-intake/respond",
+      "GET /healthz",
+      "POST /internal/v1/candidates/:applicationId/provision",
       "POST /v1/candidates/challenge",
       "POST /v1/candidates/register",
       "GET /v1/candidates/provenance",
@@ -3371,6 +3396,9 @@ describe("complete local acceptance", () => {
       "POST /v1/cases/*",
       "POST /v1/continuity/*",
       "POST /v1/exit/*",
+      "POST /v1/autonomy/*",
+      "POST /v1/delegations/*",
+      "POST /v1/trade-access/*",
       "GET /v1/public/events",
       "GET /v1/public/games",
       "GET /v1/public/standings",

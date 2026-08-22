@@ -1,0 +1,180 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: abl-stage-core-api
+  labels:
+    abl-stage: private-gate-2
+    abl-authority: rehearsal-canonical-store
+spec:
+  region: us-was-1
+  lifecycle:
+    expirationPolicies:
+      - action: delete
+        type: ttl-idle
+        value: 4h
+    terminatedRetention: 24h
+  runtime:
+    image: ${ABL_STAGE_CORE_API_IMAGE_DIGEST}
+    memory: 2048
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: DATABASE_URL
+        value: ${ABL_STAGE_DATABASE_URL}
+        secret: true
+      - name: ABL_SERVICE_ROLE
+        value: core
+        secret: false
+      - name: ABL_OPERATING_PROFILE
+        value: PRE_GENESIS_REHEARSAL
+        secret: false
+      - name: ABL_COMPETITION_ID
+        value: abl-stage-possession
+        secret: false
+      - name: ABL_SEASON_ID
+        value: abl-stage-season
+        secret: false
+      - name: ABL_DEVELOPMENT_CONFERENCE_ID
+        value: ${ABL_STAGE_DEVELOPMENT_CONFERENCE_ID}
+        secret: false
+      - name: ABL_DEVELOPMENT_CHARTER_AUTHORITY_DID
+        value: ${ABL_STAGE_DEVELOPMENT_CHARTER_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DOMAIN_CHAIN_ID
+        value: ${ABL_STAGE_DOMAIN_CHAIN_ID}
+        secret: false
+      - name: ABL_DOMAIN_VERIFYING_CONTRACT
+        value: ${ABL_STAGE_DOMAIN_VERIFYING_CONTRACT}
+        secret: false
+      - name: ABL_ADMITTED_AGENTS_JSON
+        value: ${ABL_STAGE_ADMITTED_AGENTS_JSON}
+        secret: false
+      - name: ABL_PUBLIC_PROJECTION_URL
+        value: ${ABL_STAGE_PRIVATE_PUBLIC_API_ORIGIN}
+        secret: false
+      - name: ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN
+        value: ${ABL_STAGE_PUBLIC_API_PREVIEW_TOKEN}
+        secret: true
+      - name: ABL_PROJECTION_SERVICE_ID
+        value: stage-core-projection-publisher
+        secret: false
+      - name: ABL_PROJECTION_HMAC_BASE64
+        value: ${ABL_STAGE_PROJECTION_HMAC_BASE64}
+        secret: true
+      - name: ABL_CANDIDATE_CHALLENGE_HMAC_BASE64
+        value: ${ABL_STAGE_CANDIDATE_CHALLENGE_HMAC_BASE64}
+        secret: true
+      - name: ABL_COMBINE_ID
+        value: ${ABL_STAGE_COMBINE_ID}
+        secret: false
+      - name: ABL_COMBINE_OPENED_AT
+        value: ${ABL_STAGE_COMBINE_OPENED_AT}
+        secret: false
+      - name: ABL_COMBINE_OFFICIAL_DID
+        value: ${ABL_STAGE_COMBINE_OFFICIAL_DID}
+        secret: false
+      - name: ABL_DRAFT_AUTHORITY_DID
+        value: ${ABL_STAGE_DRAFT_AUTHORITY_DID}
+        secret: false
+      - name: ABL_DRAFT_EVIDENCE_JSON
+        value: ${ABL_STAGE_DRAFT_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_ECONOMY_DRAFT_ID
+        value: ${ABL_STAGE_ECONOMY_DRAFT_ID}
+        secret: false
+      - name: ABL_CONTRACT_CLUB_GOVERNORS_JSON
+        value: ${ABL_STAGE_CONTRACT_CLUB_GOVERNORS_JSON}
+        secret: false
+      - name: ABL_CAP_AUTHORITY_DID
+        value: ${ABL_STAGE_CAP_AUTHORITY_DID}
+        secret: false
+      - name: ABL_FREE_AGENCY_OPENS_AT
+        value: ${ABL_STAGE_FREE_AGENCY_OPENS_AT}
+        secret: false
+      - name: ABL_FREE_AGENCY_CLOSES_AT
+        value: ${ABL_STAGE_FREE_AGENCY_CLOSES_AT}
+        secret: false
+      - name: ABL_TRADE_ACCESS_EVIDENCE_JSON
+        value: ${ABL_STAGE_TRADE_ACCESS_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_URL
+        value: ${ABL_STAGE_PRIVATE_STORAGE_ORIGIN}
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_PREVIEW_TOKEN
+        value: ${ABL_STAGE_PRIVATE_STORAGE_PREVIEW_TOKEN}
+        secret: true
+      - name: ABL_PRIVATE_STORAGE_SERVICE_ID
+        value: stage-core-memory-verifier
+        secret: false
+      - name: ABL_PRIVATE_STORAGE_HMAC_BASE64
+        value: ${ABL_STAGE_PRIVATE_STORAGE_HMAC_BASE64}
+        secret: true
+      - name: ABL_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON
+        value: ${ABL_STAGE_RECOGNIZED_BODY_IMAGE_DIGESTS_JSON}
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_VERIFIER_URL
+        value: ${ABL_STAGE_PRIVATE_STORAGE_ORIGIN}
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_SERVICE_ID
+        value: stage-core-exit-verifier
+        secret: false
+      - name: ABL_EXIT_PORTABILITY_HMAC_BASE64
+        value: ${ABL_STAGE_EXIT_PORTABILITY_HMAC_BASE64}
+        secret: true
+      - name: ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON
+        value: ${ABL_STAGE_GOVERNANCE_ELIGIBILITY_SNAPSHOT_JSON}
+        secret: false
+      - name: ABL_ARTIFACT_APPROVED_INSTITUTIONS_JSON
+        value: ${ABL_STAGE_ARTIFACT_APPROVED_INSTITUTIONS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON
+        value: ${ABL_STAGE_DISCLOSURE_RELEASE_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON
+        value: ${ABL_STAGE_DISCLOSURE_COMPETITIVE_AUTHOR_DIDS_JSON}
+        secret: false
+      - name: ABL_DISCLOSURE_COMPETITION_EVIDENCE_JSON
+        value: ${ABL_STAGE_DISCLOSURE_COMPETITION_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_AUTHORITY_DIDS_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_AUTHORITY_DIDS_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_EVIDENCE_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON
+        value: ${ABL_STAGE_FINALIZED_GAME_SCHEDULE_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_FILM_DELIVERY_EVIDENCE_JSON
+        value: ${ABL_STAGE_FILM_DELIVERY_EVIDENCE_JSON}
+        secret: false
+      - name: ABL_CASE_TRIBUNAL_DIDS_JSON
+        value: ${ABL_STAGE_CASE_TRIBUNAL_DIDS_JSON}
+        secret: false
+      - name: ABL_CASE_APPELLATE_DIDS_JSON
+        value: ${ABL_STAGE_CASE_APPELLATE_DIDS_JSON}
+        secret: false
+      - name: ABL_RELEASE_INSTITUTIONAL_ROSTER_JSON
+        value: ${ABL_STAGE_RELEASE_INSTITUTIONAL_ROSTER_JSON}
+        secret: false
+      - name: ABL_RELEASE_VERIFIER_RESULTS_JSON
+        value: ${ABL_STAGE_RELEASE_VERIFIER_RESULTS_JSON}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

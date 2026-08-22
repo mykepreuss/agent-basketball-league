@@ -3,9 +3,9 @@
   "version": "1.0.0-pre-genesis",
   "identities": [
     {
-      "idPattern": "competition-body-{career-id}",
+      "idPattern": "competition-fixed-broker-{career-id}",
       "workspace": "abl-competition",
-      "secretReference": "body-{career-id}-core-hmac-v1",
+      "secretReference": "fixed-broker-{career-id}-core-hmac-v1",
       "allowedTargets": [
         { "workspace": "abl-core", "capabilities": ["core:command"] },
         { "workspace": "abl-private", "capabilities": ["private:ciphertext"] }
@@ -40,7 +40,7 @@
       ],
       "forbiddenCapabilities": [
         "private:plaintext",
-        "agent:invoke",
+        "career-sandbox:invoke",
         "public:command"
       ]
     },
@@ -58,7 +58,7 @@
         "private:ciphertext",
         "private:plaintext",
         "drive:raw",
-        "agent:invoke"
+        "career-sandbox:invoke"
       ]
     },
     {
@@ -91,7 +91,7 @@
       "forbiddenCapabilities": [
         "database:connect",
         "game:resolve",
-        "agent:invoke"
+        "career-sandbox:invoke"
       ]
     }
   ],

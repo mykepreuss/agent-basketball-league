@@ -1,6 +1,14 @@
 import { readFileSync } from "node:fs";
 
-import { createBodyBroker, type BrokerRoute } from "./server.js";
+import { createSigningIdentity } from "@abl/recognition";
+import type { Address, Hex } from "viem";
+import { z } from "zod";
+
+import {
+  createBlaxelUpstreamCredential,
+  createBodyBroker,
+  type BrokerRoute,
+} from "./server.js";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -9,11 +17,56 @@ function required(name: string): string {
   return value;
 }
 
-function secretFile(name: string): Uint8Array {
-  const path = required(name);
-  return new Uint8Array(readFileSync(path));
+function secretBytes(name: string): Uint8Array {
+  const fileName = `${name}_FILE`;
+  const encodedName = `${name}_B64`;
+  const file = process.env[fileName];
+  const encoded = process.env[encodedName];
+  if ((file === undefined) === (encoded === undefined))
+    throw new Error(`Exactly one of ${fileName} or ${encodedName} is required`);
+  const bytes =
+    file === undefined
+      ? Buffer.from(encoded!, "base64")
+      : Buffer.from(readFileSync(file));
+  if (file === undefined && bytes.toString("base64") !== encoded)
+    throw new Error(`${encodedName} must use canonical Base64 encoding`);
+  delete process.env[fileName];
+  delete process.env[encodedName];
+  if (bytes.length === 0) throw new Error(`${name} must not be empty`);
+  return new Uint8Array(bytes);
 }
 
+function secretText(name: string): string {
+  const value = new TextDecoder("utf-8", { fatal: true })
+    .decode(secretBytes(name))
+    .trim();
+  if (value === "") throw new Error(`${name} must not be empty`);
+  return value;
+}
+
+const privateKeySchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
+
+function upstreamCredential(prefix: "ABL_CORE" | "ABL_PRIVATE") {
+  const mode = required(`${prefix}_AUTH_MODE`);
+  if (mode === "BLAXEL_PRIVATE_PREVIEW")
+    return createBlaxelUpstreamCredential({
+      mode,
+      token: secretText(`${prefix}_PREVIEW_TOKEN`),
+      workspace: null,
+    });
+  if (mode === "BLAXEL_ACCESS_TOKEN")
+    return createBlaxelUpstreamCredential({
+      mode,
+      token: secretText(`${prefix}_ACCESS_TOKEN`),
+      workspace: required(`${prefix}_WORKSPACE`),
+    });
+  throw new Error(`Unsupported ${prefix}_AUTH_MODE`);
+}
+
+const modelRouteEnabled =
+  z.enum(["DISABLED", "ENABLED"]).parse(required("ABL_MODEL_ROUTE_MODE")) ===
+  "ENABLED";
 const routes: BrokerRoute[] = [
   {
     name: "core",
@@ -21,17 +74,7 @@ const routes: BrokerRoute[] = [
     methods: new Set(["POST"]),
     pathPrefixes: ["/v1/commands"],
     capability: "core:command",
-  },
-  {
-    name: "model",
-    targetOrigin: required("ABL_MODEL_ORIGIN"),
-    methods: new Set(["POST"]),
-    pathPrefixes: ["/v1/responses"],
-    capability: "model:invoke",
-    credential: {
-      header: "authorization",
-      value: `Bearer ${readFileSync(required("ABL_MODEL_CREDENTIAL_FILE"), "utf8").trim()}`,
-    },
+    credential: upstreamCredential("ABL_CORE"),
   },
   {
     name: "private-storage",
@@ -39,19 +82,65 @@ const routes: BrokerRoute[] = [
     methods: new Set(["POST"]),
     pathPrefixes: ["/v1/ciphertext"],
     capability: "private:ciphertext",
+    credential: upstreamCredential("ABL_PRIVATE"),
   },
 ];
+if (modelRouteEnabled)
+  routes.push({
+    name: "model",
+    targetOrigin: required("ABL_MODEL_ORIGIN"),
+    methods: new Set(["POST"]),
+    pathPrefixes: ["/v1/responses"],
+    capability: "model:invoke",
+    credential: {
+      authorization: `Bearer ${secretText("ABL_MODEL_CREDENTIAL")}`,
+    },
+  });
 
 const domainId = required("ABL_PERSONAL_DOMAIN_ID");
 const app = createBodyBroker({
   agentDid: required("ABL_AGENT_DID"),
+  clientCapability: {
+    token: secretText("ABL_BODY_CAPABILITY_TOKEN"),
+    expiresAt: required("ABL_BODY_CAPABILITY_EXPIRES_AT"),
+    operations: new Set([
+      "canonical-event:sign",
+      "proxy:core",
+      "storage:put",
+      ...(modelRouteEnabled ? ["proxy:model"] : []),
+    ]),
+  },
   serviceIdentity: {
     serviceId: required("ABL_SERVICE_ID"),
-    secret: secretFile("ABL_SERVICE_CREDENTIAL_FILE"),
+    secret: secretBytes("ABL_SERVICE_CREDENTIAL"),
     capabilities: new Set(routes.map((route) => route.capability)),
   },
   routes,
-  storageDomainKeys: new Map([[domainId, secretFile("ABL_DOMAIN_KEY_FILE")]]),
+  storageDomainKeys: new Map([[domainId, secretBytes("ABL_DOMAIN_KEY")]]),
+  canonicalSigning: {
+    identity: createSigningIdentity(
+      privateKeySchema.parse(secretText("ABL_AGENT_SIGNING_KEY")) as Hex,
+    ),
+    domain: {
+      name: "ABL Recognition",
+      version: "1",
+      chainId: z.coerce
+        .number()
+        .int()
+        .positive()
+        .parse(required("ABL_DOMAIN_CHAIN_ID")),
+      verifyingContract: addressSchema.parse(
+        required("ABL_DOMAIN_VERIFYING_CONTRACT"),
+      ) as Address,
+    },
+    allowedEvents: new Set([
+      "player-decision:ActionIntentSubmitted",
+      "game-possession:PossessionResolved",
+    ]),
+  },
 });
 
-await app.listen({ host: "127.0.0.1", port: 7777 });
+await app.listen({
+  host: required("HOST"),
+  port: z.coerce.number().int().positive().max(65_535).parse(required("PORT")),
+});

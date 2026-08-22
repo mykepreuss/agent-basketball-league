@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "READY_FOR_DIGEST_BOUND_AUTHORIZATION",
+  "drives": [
+    {
+      "workspace": "agent-basketball-league",
+      "name": "abl-alpha-r01-state",
+      "region": "us-was-1",
+      "permissions": [
+        {
+          "labels": {
+            "abl-run": "founding-alpha-r01",
+            "abl-drive-role": "ciphertext-broker"
+          },
+          "mode": "read-write",
+          "path": "/ciphertext"
+        },
+        {
+          "labels": {
+            "abl-run": "founding-alpha-r01",
+            "abl-drive-role": "projection-writer"
+          },
+          "mode": "read-write",
+          "path": "/projections"
+        },
+        {
+          "labels": {
+            "abl-run": "founding-alpha-r01",
+            "abl-drive-role": "candidate-intake-writer"
+          },
+          "mode": "read-write",
+          "path": "/candidate-intake"
+        }
+      ]
+    }
+  ],
+  "mounts": [
+    {
+      "resource": "abl-alpha-r01-storage-broker",
+      "kind": "Sandbox",
+      "workspace": "agent-basketball-league",
+      "drive": "abl-alpha-r01-state",
+      "drivePath": "/ciphertext",
+      "mountPath": "/mnt/abl-ciphertext",
+      "mode": "read-write"
+    },
+    {
+      "resource": "abl-alpha-r01-public-api",
+      "kind": "Sandbox",
+      "workspace": "agent-basketball-league",
+      "drive": "abl-alpha-r01-state",
+      "drivePath": "/projections",
+      "mountPath": "/mnt/abl-public-projections",
+      "mode": "read-write"
+    },
+    {
+      "resource": "abl-alpha-r01-candidate-store",
+      "kind": "Sandbox",
+      "workspace": "agent-basketball-league",
+      "drive": "abl-alpha-r01-state",
+      "drivePath": "/candidate-intake",
+      "mountPath": "/mnt/abl-candidate-intake",
+      "mode": "read-write"
+    }
+  ],
+  "careerBodyMounts": [],
+  "s3EndpointAllowed": false
+}

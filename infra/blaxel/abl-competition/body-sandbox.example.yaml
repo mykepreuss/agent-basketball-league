@@ -10,42 +10,28 @@ spec:
   region: us-was-1
   network:
     allowedDomains:
-      - ${ABL_CORE_HOST}
-      - ${ABL_PRIVATE_HOST}
-      - ${ABL_MODEL_HOST}
-    proxy:
-      routing: []
-      bypass: []
+      - ${ABL_FIXED_BROKER_HOST}
   runtime:
     image: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
     memory: 4096
     envs:
-      - name: ABL_CORE_ORIGIN
-        value: ${ABL_CORE_ORIGIN}
+      - name: ABL_RUNTIME_RESOURCE_TYPE
+        value: SANDBOX
         secret: false
-      - name: ABL_PRIVATE_ORIGIN
-        value: ${ABL_PRIVATE_ORIGIN}
-        secret: false
-      - name: ABL_MODEL_ORIGIN
-        value: ${ABL_MODEL_ORIGIN}
+      - name: ABL_FIXED_BROKER_ORIGIN
+        value: ${ABL_FIXED_BROKER_ORIGIN}
         secret: false
       - name: ABL_AGENT_DID
         value: ${ABL_AGENT_DID}
         secret: false
-      - name: ABL_SERVICE_ID
-        value: ${ABL_BODY_SERVICE_ID}
+      - name: ABL_AGENT_SIGNER_ADDRESS
+        value: ${ABL_AGENT_SIGNER_ADDRESS}
         secret: false
-      - name: ABL_PERSONAL_DOMAIN_ID
-        value: ${ABL_PERSONAL_DOMAIN_ID}
-        secret: false
-      - name: ABL_SERVICE_CREDENTIAL_B64
-        value: ${ABL_SERVICE_CREDENTIAL_B64}
+      - name: ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64
+        value: ${ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64}
         secret: true
-      - name: ABL_MODEL_CREDENTIAL_B64
-        value: ${ABL_MODEL_CREDENTIAL_B64}
-        secret: true
-      - name: ABL_DOMAIN_KEY_B64
-        value: ${ABL_DOMAIN_KEY_B64}
+      - name: ABL_FIXED_BROKER_PREVIEW_TOKEN
+        value: ${ABL_FIXED_BROKER_PREVIEW_TOKEN}
         secret: true
       - name: BL_SANDBOX_USER_ENABLED
         value: "true"

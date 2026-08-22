@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "ARCHITECTURE_APPROVED_EXECUTION_AWAITING_AUTHORIZATION",
+  "workspace": "agent-basketball-league",
+  "drive": {
+    "metadata": {
+      "name": "abl-stage-durable-state",
+      "displayName": "ABL Gate 2 durable state",
+      "labels": {
+        "abl-stage": "private-gate-2",
+        "abl-purpose": "encrypted-and-public-derived-state"
+      }
+    },
+    "spec": {
+      "region": "us-was-1",
+      "permissions": [
+        {
+          "labels": {
+            "abl-stage": "private-gate-2",
+            "abl-drive-role": "ciphertext-broker"
+          },
+          "mode": "read-write",
+          "path": "/ciphertext"
+        },
+        {
+          "labels": {
+            "abl-stage": "private-gate-2",
+            "abl-drive-role": "projection-writer"
+          },
+          "mode": "read-write",
+          "path": "/projections"
+        }
+      ]
+    }
+  },
+  "mounts": [
+    {
+      "sandbox": "abl-stage-storage-broker",
+      "driveName": "abl-stage-durable-state",
+      "drivePath": "/ciphertext",
+      "mountPath": "/mnt/abl-stage-ciphertext",
+      "readOnly": false
+    },
+    {
+      "sandbox": "abl-stage-public-api",
+      "driveName": "abl-stage-durable-state",
+      "drivePath": "/projections",
+      "mountPath": "/mnt/abl-stage-projections",
+      "readOnly": false
+    }
+  ],
+  "privatePreviews": [
+    {
+      "sandbox": "abl-stage-core-api",
+      "name": "abl-stage-core-api-private",
+      "port": 3000,
+      "public": false,
+      "maximumTokenLifetime": "4h"
+    },
+    {
+      "sandbox": "abl-stage-fixed-broker",
+      "name": "abl-stage-fixed-broker-private",
+      "port": 3000,
+      "public": false,
+      "maximumTokenLifetime": "4h"
+    },
+    {
+      "sandbox": "abl-stage-storage-broker",
+      "name": "abl-stage-storage-broker-private",
+      "port": 3000,
+      "public": false,
+      "maximumTokenLifetime": "4h"
+    },
+    {
+      "sandbox": "abl-stage-public-api",
+      "name": "abl-stage-public-api-private",
+      "port": 3000,
+      "public": false,
+      "maximumTokenLifetime": "4h"
+    },
+    {
+      "sandbox": "abl-stage-arena",
+      "name": "abl-stage-arena-private",
+      "port": 3000,
+      "public": false,
+      "maximumTokenLifetime": "4h"
+    }
+  ],
+  "invariants": [
+    "The Drive is created with both permission rules; it is never left unpermissioned.",
+    "The autonomous player program has no matching Drive label, mount, S3 credential, direct Drive API authority, signing key, model credential, or preview token; it receives only an expiring operation-scoped body capability, while Blaxel injects fixed-broker preview authentication outside the workload.",
+    "S3 access is forbidden because Agent Drive permission rules are not enforced on that endpoint.",
+    "Only ciphertext and public derived projections are stored; personal plaintext and signing keys are forbidden.",
+    "Every Sandbox and private preview is deleted after the bounded proof; Drive deletion remains an explicit teardown step."
+  ]
+}

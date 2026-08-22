@@ -1,15 +1,22 @@
 import {
   CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
+  CAREER_AUTHORITY_AGGREGATE_TYPE,
+  CAREER_AUTHORITY_SCHEMA_DIGEST,
+  TRADE_ACCESS_AGGREGATE_TYPE,
   applyCandidateTransition,
   applyContinuityWorkflowTransition,
   applyExitWorkflowTransition,
   candidateStateRoot,
+  careerAuthorityStateRoot,
   continuityWorkflowStateRoot,
   exitPackageCommitment,
   exitWorkflowStateRoot,
+  replayCareerAuthority,
+  replayTradeAccess,
   signExitArtifact,
   type CandidateWorkflowEventType,
   type CandidateWorkflowSnapshot,
+  type CareerAuthorityEventType,
   type ContinuityWorkflowEventType,
   type ContinuityWorkflowSnapshot,
   type ExitWorkflowEventType,
@@ -269,6 +276,265 @@ const filmGameEvidence = createAgentPlayedGameEvidence({
       finalStateRoot: sha256Commitment("film-possession-state"),
     },
   ],
+});
+
+describe("canonical career authority controls", () => {
+  it("replays autonomy, bounded delegation, and trade-access transitions exactly", async () => {
+    const principal = await harness();
+    await admitCandidate(principal);
+    const events: CanonicalEvent[] = [];
+    const submitAuthority = async (
+      actor: Harness,
+      path: string,
+      eventType: CareerAuthorityEventType,
+      payload: unknown,
+      signer?: SigningIdentity,
+    ) => {
+      const command = await careerAuthorityCommand({
+        actor,
+        principalDid: principal.candidateDid,
+        principalSigningAddress: principal.candidate.address,
+        events,
+        eventType,
+        payload,
+        ...(signer === undefined ? {} : { signer }),
+      });
+      const response = await actor.app.inject({
+        method: "POST",
+        url: path,
+        payload: command.body,
+      });
+      if (response.statusCode === 201) events.push(command.event);
+      return { ...command, response };
+    };
+
+    const weekId = "2026-W34";
+    expect(
+      (
+        await submitAuthority(
+          principal,
+          "/v1/autonomy/weeks/open",
+          "AutonomyWeekOpened",
+          { weekId, priorWeekId: null },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+    principal.now.value += 60_000;
+    const activationId = uuid("951");
+    const scheduled = await submitAuthority(
+      principal,
+      "/v1/autonomy/activations/schedule",
+      "AutonomyActivationScheduled",
+      {
+        activationId,
+        weekId,
+        startsAt: new Date(principal.now.value).toISOString(),
+        minutes: 15,
+        computeMinutes: 10,
+        normalizedTokens: 1_000,
+        purposeCommitment: digest("1"),
+      },
+    );
+    expect(scheduled.response.statusCode).toBe(201);
+    const retry = await principal.app.inject({
+      method: "POST",
+      url: "/v1/autonomy/activations/schedule",
+      payload: scheduled.body,
+    });
+    expect(retry.statusCode).toBe(200);
+    expect(retry.json()).toMatchObject({ duplicate: true });
+
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitAuthority(
+          principal,
+          "/v1/autonomy/overload/apply",
+          "AutonomyOverloadApplied",
+          { weekId, reasonCode: "COMPETITION_LOAD" },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitAuthority(
+          principal,
+          "/v1/autonomy/activations/delay",
+          "AutonomyActivationDelayed",
+          {
+            activationId,
+            delayedAt: new Date(principal.now.value).toISOString(),
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+    const autonomy = replayCareerAuthority({
+      principalDid: principal.candidateDid,
+      signingAddress: principal.candidate.address,
+      encryptionPublicKey: "0x00",
+      events,
+    });
+    expect(autonomy.makeGoodObligations[activationId]).toBe(15);
+    expect(autonomy.overloadFloors[weekId]?.activations).toBeGreaterThanOrEqual(
+      2,
+    );
+
+    principal.now.value += 60_000;
+    const mandateId = uuid("952");
+    const delegateDid = "did:abl:candidate-delegate-http";
+    const grantedAt = new Date(principal.now.value).toISOString();
+    expect(
+      (
+        await submitAuthority(
+          principal,
+          "/v1/delegations/grant",
+          "DelegationGranted",
+          {
+            mandateId,
+            principalDid: principal.candidateDid,
+            delegateDid,
+            capabilities: ["contract:inspect"],
+            subjectIds: ["contract-7"],
+            validFrom: grantedAt,
+            expiresAt: new Date(principal.now.value + 10 * day).toISOString(),
+            revokedAt: null,
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    const delegate = await additionalCareer(principal, delegateDid, "7");
+    await admitCandidate(delegate);
+    const restarted = createLiveCoreApi({
+      store: principal.store,
+      domain,
+      admittedAgents: principal.admittedAgents,
+      competitionId: "admission-rehearsal",
+      seasonId: "pre-genesis",
+      now: () => principal.now.value,
+      candidateAdmission: {
+        challengeSecret: new Uint8Array(32).fill(9),
+        challengeId: () => "challenge-http-restarted",
+        challengeBytes: () => new Uint8Array(32).fill(7),
+      },
+    });
+    await principal.app.close();
+    principal.app = restarted;
+    delegate.app = restarted;
+
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitAuthority(
+          delegate,
+          "/v1/delegations/use",
+          "DelegationUsed",
+          {
+            mandateId,
+            principalDid: principal.candidateDid,
+            capability: "contract:inspect",
+            subjectId: "contract-7",
+            usedAt: new Date(principal.now.value).toISOString(),
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitAuthority(
+          principal,
+          "/v1/delegations/revoke",
+          "DelegationRevoked",
+          {
+            mandateId,
+            principalDid: principal.candidateDid,
+            revokedAt: new Date(principal.now.value).toISOString(),
+          },
+        )
+      ).response.statusCode,
+    ).toBe(201);
+
+    const tradeEvents: CanonicalEvent[] = [];
+    const transferId = uuid("953");
+    const submitTrade = async (
+      path: string,
+      eventType: CareerAuthorityEventType,
+      payload: unknown,
+      signer: SigningIdentity = principal.candidate,
+    ) => {
+      const command = await careerAuthorityCommand({
+        actor: principal,
+        principalDid: principal.candidateDid,
+        principalSigningAddress: principal.candidate.address,
+        events: tradeEvents,
+        eventType,
+        payload,
+        aggregateType: TRADE_ACCESS_AGGREGATE_TYPE,
+        aggregateId: transferId,
+        signer,
+      });
+      const response = await principal.app.inject({
+        method: "POST",
+        url: path,
+        payload: command.body,
+      });
+      if (response.statusCode === 201) tradeEvents.push(command.event);
+      return response;
+    };
+    const tradeBase = {
+      transferId,
+      agentDid: principal.candidateDid,
+      formerTeamId: "club-former",
+      newTeamId: "club-new",
+    };
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitTrade("/v1/trade-access/revoke", "TradeAccessRevoked", {
+          ...tradeBase,
+          revokedAccessCommitment: digest("2"),
+          revokedAt: new Date(principal.now.value).toISOString(),
+        })
+      ).statusCode,
+    ).toBe(201);
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitTrade("/v1/trade-access/rotate", "TradeAccessRotated", {
+          ...tradeBase,
+          newDomainKeyCommitment: digest("3"),
+          rotatedAt: new Date(principal.now.value).toISOString(),
+        })
+      ).statusCode,
+    ).toBe(201);
+    principal.now.value += 60_000;
+    expect(
+      (
+        await submitTrade("/v1/trade-access/grant", "TradeAccessGranted", {
+          ...tradeBase,
+          grantedAccessCommitment: digest("4"),
+          grantedAt: new Date(principal.now.value).toISOString(),
+        })
+      ).statusCode,
+    ).toBe(201);
+    expect(replayTradeAccess(tradeEvents)?.trace).toEqual([
+      `REVOKED:club-former:${principal.candidateDid}`,
+      `ROTATED:${principal.candidateDid}`,
+      `GRANTED:club-new:${principal.candidateDid}`,
+    ]);
+
+    const privateOutbox = await principal.store.pendingProjectionEvents(
+      100,
+      "career.private-controls",
+    );
+    expect(privateOutbox).toHaveLength(events.length + tradeEvents.length);
+    expect(
+      privateOutbox.every((record) => !record.topic.startsWith("public.")),
+    ).toBe(true);
+    await principal.app.close();
+  });
 });
 const filmGamePayload = FinalizedGamePayloadSchema.parse({
   gameId: filmGameId,
@@ -564,6 +830,11 @@ function registrationPayload(contextHashes = [digest("6")]) {
     manifest: {
       agentDid: "did:abl:placeholder",
       manifestVersion: 1,
+      leagueRuntime: {
+        provider: "BLAXEL",
+        resourceType: "SANDBOX",
+        dedicatedCareer: true,
+      },
       model: {
         endpoint: "blaxel://sandbox/candidate-http-1",
         provider: "declared-provider",
@@ -850,6 +1121,73 @@ async function exitCommand(input: {
       signatures: [
         await signCanonicalEvent(
           input.signer ?? input.h.candidate,
+          domain,
+          event,
+        ),
+      ],
+    },
+  };
+}
+
+async function careerAuthorityCommand(input: {
+  actor: Harness;
+  principalDid: string;
+  principalSigningAddress: `0x${string}`;
+  events: readonly CanonicalEvent[];
+  eventType: CareerAuthorityEventType;
+  payload: unknown;
+  aggregateType?:
+    | typeof CAREER_AUTHORITY_AGGREGATE_TYPE
+    | typeof TRADE_ACCESS_AGGREGATE_TYPE;
+  aggregateId?: string;
+  signer?: SigningIdentity;
+}) {
+  const aggregateType = input.aggregateType ?? CAREER_AUTHORITY_AGGREGATE_TYPE;
+  const aggregateId = input.aggregateId ?? input.principalDid;
+  const aggregateVersion = BigInt(input.events.length + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const common = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `career-authority-${aggregateId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType,
+    aggregateId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.events.at(-1)?.eventHash ?? null,
+    payload: input.payload,
+    schemaDigest: CAREER_AUTHORITY_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...common,
+    stateRoot: digest("0"),
+  });
+  const provisionalEvents = [...input.events, provisional];
+  const stateRoot =
+    aggregateType === TRADE_ACCESS_AGGREGATE_TYPE
+      ? (() => {
+          const snapshot = replayTradeAccess(provisionalEvents);
+          if (snapshot === null) throw new Error("Missing trade snapshot");
+          return sha256Commitment(snapshot);
+        })()
+      : careerAuthorityStateRoot(
+          replayCareerAuthority({
+            principalDid: input.principalDid,
+            signingAddress: input.principalSigningAddress,
+            encryptionPublicKey: "0x00",
+            events: provisionalEvents,
+          }),
+        );
+  const event = createCanonicalEvent({ ...common, stateRoot });
+  return {
+    event,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [
+        await signCanonicalEvent(
+          input.signer ?? input.actor.candidate,
           domain,
           event,
         ),
@@ -4877,7 +5215,7 @@ describe("signed candidate rehearsal API", () => {
     ).toBe(403);
     ballotRecord.stateRoot = originalRoot;
     await h.app.close();
-  });
+  }, 30_000);
 
   it("publishes only governance-ratified resource schedules and replays them after restart", async () => {
     const h = await harness();

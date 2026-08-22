@@ -1,5 +1,5 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Application
+kind: Sandbox
 metadata:
   name: abl-spectator-arena
   labels:
@@ -7,17 +7,31 @@ metadata:
     abl-release: ${ABL_RELEASE_ID}
 spec:
   enabled: true
-  image: ${ABL_ARENA_APP_IMAGE_DIGEST}
-  memory: 4096
-  port: 3000
   region: us-was-1
-  envs:
-    - name: ABL_PUBLIC_API_URL
-      value: ${ABL_PUBLIC_API_URL}
-      secret: false
-    - name: DO_NOT_TRACK
-      value: "1"
-      secret: false
-    - name: BL_ENABLE_OPENTELEMETRY
-      value: "false"
-      secret: false
+  runtime:
+    image: ${ABL_ARENA_APP_IMAGE_DIGEST}
+    memory: 4096
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_PUBLIC_API_URL
+        value: ${ABL_PUBLIC_API_URL}
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

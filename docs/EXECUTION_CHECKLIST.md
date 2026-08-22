@@ -1,8 +1,48 @@
 # ABL execution checklist
 
-Authoritative plan SHA-256: `9bc695db70c60f271bc4be9dab56742c0afb07538c17021ad45ff720b79cbfe5`
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x4d2aa7436cc21abda3d55a06ac3b449b7ab5c4c9654d244707d2cc08dca09ec8`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
+
+The Gate 2 sections below are retained as historical evidence. Their advanced containment profile is inactive and does not define the normal Founding Alpha runtime.
+
+## Founding Alpha implementation — 2026-08-22 [~]
+
+- [x] Preserve the existing ABL applications, domain packages, schemas, signed-command paths, deterministic game engine, storage, projections, governance, recognition verifier, MCP services, and evidence tooling as the launch foundation.
+- [x] Record the approved Blaxel-first, Sandbox-native launch plan and make the reuse boundary prominent in the README, evidence index, and derived launch ledger.
+- [x] Convert every active league service and career runtime away from Blaxel Agent resources: long-running services and career bodies use Sandboxes, candidate intake uses a Function plus private Sandbox store, provisioning uses a Job, and typed tools use MCP hosting.
+- [x] Select Blaxel Agent Drive rather than Volumes, define separate workspace-scoped Drives for private, core, and public state, and keep every career body free of direct Drive mounts.
+- [x] Add the noncanonical signed practice possession, public discovery documents, installable `abl-league` skill, live-public-API arena, and unmistakable pre-Genesis labels.
+- [x] Add the twenty-career founding capacity policy, deterministic receipt-order allocation, 72-hour offers, signed accept/decline/withdraw responses, expiry, and deterministic seat reassignment.
+- [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
+- [x] Replace the ordinary career image's advanced proxy/iptables/CA initialization with the reviewed Sandbox body profile; preserve the former work under the inactive future untrusted-code profile.
+- [x] Add an approval-gated Agent Drive topology applicator without executing it.
+- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; record 353 passing assertions across 74 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
+- [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
+- [!] Obtain a digest-bound authorization before the private Sandbox slice, resource creation, image pushes, Agent Drive creation, Neon creation, or any spend.
+- [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
+
+## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
+
+- [x] Reconcile the full implementation, approved launch plan, historical phase evidence, and current authenticated Blaxel state.
+- [x] Preserve the baseline commit and unrelated user-owned/untracked files.
+- [x] Add strict launch schemas, truthful launch state, A2A discovery, extended discovery MCP, and a checked-in MCP Registry descriptor.
+- [x] Add the isolated signed candidate edge and restart-safe dry-run provisioner; prove the edge has no canonical/control-plane authority.
+- [x] Carry autonomy, delegation, and trade-access transitions through canonical signed service paths and public commitment projections.
+- [x] Add explicit `LOCAL_REHEARSAL`, `BLAXEL_VOLUME_V1`, and `AGENT_DRIVE` storage profiles and adapter parity tests; keep live proof gated.
+- [x] Add fail-closed `PRODUCTION_GENESIS` evidence gates and a decision-bound recognition-network profile.
+- [x] Derive the machine-readable launch ledger from hashed evidence; never accept an asserted `ready` field.
+- [x] Prepare the smallest private `abl-stage-*` Blaxel slice, immutable image contexts, broker-held body signing, checkpoint helper, resource/secret/cost boundary, rollback, and teardown.
+- [x] Prepare the decision-complete [Gate 2 approval packet](./launch/GATE_2_PRIVATE_STAGING_APPROVAL.md) without applying it.
+- [x] Execute the first private staging packet; record its fail-closed player-body isolation result and complete Blaxel/Neon teardown.
+- [x] Prepare the corrected [Gate 2 six-Sandbox amendment](./launch/GATE_2_SIX_SANDBOX_AMENDMENT.md) with an uncredentialed body and separate fixed broker.
+- [x] Execute the exact six-Sandbox packet under `ABL-GATE2-2026-08-21-02`; stop before agent upload when the body initialization proof is unreachable; complete evidence export and teardown.
+- [x] Implement and focus-test the sanitized read-only pre-agent diagnostic, fail-closed state machine, exact Sandbox API/binary lock, and credential-free loopback proxy handoff in the [local correction amendment](./launch/GATE_2_BODY_INIT_DIAGNOSTIC_AMENDMENT.md).
+- [x] Complete the exact-runtime repository verification and security-focused review of the corrected immutable body inputs.
+- [x] Implement the source-backed credential boundary and server-side preview-auth correction in the [fourth-run amendment](./launch/GATE_2_CREDENTIAL_BOUNDARY_AMENDMENT.md), preserving the pre-upload stop.
+- [x] Refresh the read-only fourth-run provider preflight, record current quota, credit, regions, inventories, privacy, cost, and image-reporting drift, and preserve zero provider mutation.
+- [x] Execute `ABL-GATE2-2026-08-21-05`; prove credential rotation, server-side preview injection, the full pre-upload denial matrix, and Drive ACL bypass denial; stop before player execution on the live `/workspace` ownership conflict; export evidence and tear down every run-created resource.
+- [x] Retire the advanced Gate 2 containment profile from active V1 while preserving its source and failed-closed evidence under the inactive future untrusted-code profile.
 
 ## 0. Discovery and platform verification [x]
 
@@ -37,12 +77,20 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Implement the ciphertext-only private-storage broker, domain keys/manifests/version chains, guardian recovery envelopes, and authorization metadata.
 - [x] Reconstruct storage policy, ciphertext-version, and guardian-envelope state from immutable durable records after restart; fail closed on path/chain corruption and roll memory back after failed writes.
 - [x] Persist personal-ciphertext deletion tombstones, remove local ciphertext versions, recover the deleted state after restart, and expose only capability-scoped commitment/deletion proofs to core without returning ciphertext.
-- [x] Implement the unprivileged custom sandbox image source with fixed broker, immutable trust roots/executables, no agent-visible Drive/model/database credentials, and OS-level egress setup.
+- [x] Implement the unprivileged custom body image plus separate fixed-broker Sandbox, immutable trust roots/executables, no agent-visible Drive/model/database credentials, and broker-only body egress.
 - [x] Define applications, sandboxes, agents, MCP servers, jobs, model endpoints, revisions, observability opt-outs, quota targets, and region placement.
 - [x] Prepare and dry-run the repository-root Blaxel custom-image project; no local Docker daemon is required.
-- [!] Build the image with `bl push` in `abl-competition`, pin its immutable ID, and live-test it; the target workspace is unavailable.
-- [!] Obtain access to four Blaxel workspaces and Agent Drive private preview; current account exposes only `knicks`, with Drive disabled.
-- [!] Stage the manifests without material recurring spend after the target Blaxel account/workspaces are confirmed.
+- [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
+- [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
+- [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
+- [!] Obtain the four production Blaxel workspaces. The temporary `agent-basketball-league` workspace and active Drive entitlement do not replace the production topology or a live Drive proof.
+- [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
+- [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
+- [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.
+- [x] Implement a fail-closed source-backed guard that makes the provider identity-token and mounted-environment files root-only and executes uid-10101 read denials before `READY`; keep provider acceptance and rotation persistence live-gated.
+- [x] Remove the fixed-broker preview token from the player runtime and add exact-host Blaxel proxy secret injection plus local manifest/runtime regression coverage; keep live injection proof gated.
+- [x] Prove both corrections before player upload under `ABL-GATE2-2026-08-21-05`, including an observed token rotation and a tokenless fixed-broker diagnostic request.
+- [~] Reassert `/workspace` ownership after the live Blaxel runtime mount, keep the path symlink-safe and mode `0700`, and prove uid-10101 installation through the immutable launcher.
 - [!] Run the migration and recovery proof on the selected canonical PostgreSQL service after a connection is supplied.
 - [x] Pass focused foundation, migration-consistency, broker, and manifest-policy tests; record local evidence.
 
@@ -74,7 +122,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Carry the signed possession through the rehearsal-only command API, canonical transaction/outbox, HMAC-authenticated HTTP projection transport, independent public signature verification, durable public projection, cursor/SSE API, and fixture-free arena; prove safe retry, restart, transport replay/tamper rejection, direct rogue-store rejection, and forged-volume-record rejection.
 - [x] Pass the first-possession acceptance scenario and record proof.
 
-## 5. Identity and personal computers [~]
+## 5. Identity and personal computers [!]
 
 - [x] Implement manifest/provenance, isolated transfer, three reflections over 24 hours, inspection, private experiment, objective repudiation, key creation, identity statement, admission, and 24-hour revocation.
 - [x] Carry candidate registration, transfer, reflection/progress, admission, revocation/withdrawal, status, and portable export through strict signed rehearsal routes, canonical transactional persistence, exact replay, expected-version/idempotency enforcement, and restart verification; keep recognized genesis admission false.
@@ -90,9 +138,9 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 - [x] Pass admission, continuity, memory/storage, autonomy, provider-failure, trade, recovery, and exit tests; record evidence.
 - [x] Carry governed `ArtifactAdmission` through institutional authorization, a career-signed canonical command, persistence, inspection, and context-admission proof.
 - [x] Implement the separate fixed safety interface with strict human-custodian signatures, public logging, 24-hour expiry, and no admitted-command/state mutation path; keep live Blaxel actuation explicitly gated.
-- [ ] Carry autonomy scheduling, bounded delegation, and trade-access transitions through canonical service paths rather than only domain helpers.
+- [x] Carry autonomy scheduling, bounded delegation, and trade-access transitions through canonical service paths rather than only domain helpers.
 
-## 6. Agent-played full exhibition game [~]
+## 6. Agent-played full exhibition game [!]
 
 - [x] Implement four 12-minute quarters, 24-second clock, overtime, five active players, substitutions, timeouts, and coaching.
 - [x] Implement scoring, live/dead ball, derived ball-handler out-of-bounds, explicit throw-ins/jump balls, free-throw lane state, per-period team fouls/bonus, violations, goaltending, fouls, ejections, injuries, and protests.
@@ -151,7 +199,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 ## 10. Security, capacity, and recovery proof [!]
 
-- [x] Statistically verify the fixed-broker source controls for direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, and workload-token access.
+- [x] Statically verify the fixed-broker source controls for direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, workload-token access, mounted-environment reads, secret rehydration, and preview-token absence.
 - [!] Execute those seven escape attempts inside the built image after a target Blaxel sandbox is available.
 - [x] Prove local cross-domain ciphertext isolation, ciphertext-only broker behavior, public/core private-content denial, trade revocation ordering, and telemetry exclusion.
 - [!] Repeat the isolation and telemetry exercises against Agent Drive and the four live Blaxel workspaces after access is supplied.
@@ -188,7 +236,7 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
 - [!] Run the live Blaxel custom-image/Drive/canonical-database/public-chain/networked-load/hardware suites after their external prerequisites and spend approval exist.
-- [x] Verify all 43 primary schemas/interfaces plus two V1 operational schemas, 49 route/method pairs, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates.
+- [!] Verify all 43 primary schemas/interfaces plus two V1 operational and seven launch schemas, the current route/method catalog, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates in the final Founding Alpha evidence rerun.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
 - [x] Confirm in the proposed constitution and checklist that Season One remains gated on prepaid funding, concentration review, agent-ratified changes, and hardware-backed non-exportable signing when supported.

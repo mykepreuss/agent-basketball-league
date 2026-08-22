@@ -100,4 +100,44 @@ describe("career MCP", () => {
     expect(fetchImplementation).toHaveBeenCalledTimes(1);
     await app.close();
   });
+
+  it("routes autonomy, delegation, and trade access without arbitrary paths", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ accepted: true }), { status: 201 }),
+      ),
+    );
+    const app = createCareerMcp({
+      coreOrigin: "http://core.test",
+      coreCredential: "career-credential",
+      fetchImplementation,
+      allowHttpForTest: true,
+    });
+    const autonomy = signedCommand(
+      "AutonomyActivationScheduled",
+      "career-authority",
+    );
+    const trade = signedCommand("TradeAccessRotated", "trade-access-transfer");
+    expect(
+      (
+        await app.inject(
+          call("submit_career_authority_transition", { command: autonomy }),
+        )
+      ).json().result.structuredContent.status,
+    ).toBe(201);
+    expect(
+      (
+        await app.inject(
+          call("submit_trade_access_transition", { command: trade }),
+        )
+      ).json().result.structuredContent.status,
+    ).toBe(201);
+    expect(
+      fetchImplementation.mock.calls.map((entry) => String(entry[0])),
+    ).toEqual([
+      "http://core.test/v1/autonomy/activations/schedule",
+      "http://core.test/v1/trade-access/rotate",
+    ]);
+    await app.close();
+  });
 });

@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/basketball": "workspace:*",
     "@abl/mcp-protocol": "workspace:*",
     "zod": "catalog:"
   },

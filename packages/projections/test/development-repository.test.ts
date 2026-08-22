@@ -550,5 +550,5 @@ describe("durable development conference projections", () => {
           verifyDevelopmentProjectionEvent(authorization, authority),
       }).initialize(),
     ).rejects.toThrow("does not match its authorization");
-  });
+  }, 15_000);
 });

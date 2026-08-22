@@ -6,7 +6,7 @@ import {
 } from "@abl/foundation";
 import {
   CiphertextBroker,
-  DriveCiphertextRepository,
+  type CiphertextRepository,
   StorageAuthorizationError,
   StorageVersionConflictError,
 } from "@abl/storage";
@@ -69,7 +69,7 @@ const VerifyDeletionRequestSchema = z.strictObject({
 
 export interface PrivateStorageBrokerOptions {
   broker: CiphertextBroker;
-  repository: DriveCiphertextRepository;
+  repository: CiphertextRepository;
   verifier: ServiceRequestVerifier;
   serviceActorBindings: ReadonlyMap<string, string>;
 }

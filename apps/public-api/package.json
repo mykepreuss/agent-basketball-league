@@ -20,8 +20,10 @@
     "@abl/basketball": "workspace:*",
     "@abl/foundation": "workspace:*",
     "@abl/institutions": "workspace:*",
+    "@abl/launch": "workspace:*",
     "@abl/projections": "workspace:*",
     "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
     "fastify": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"

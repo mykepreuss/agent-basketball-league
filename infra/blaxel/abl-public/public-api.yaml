@@ -1,26 +1,43 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Agent
+kind: Sandbox
 metadata:
   name: abl-public-api
   labels:
     abl-workspace-role: public
+    abl-drive-role: projection-writer
     abl-release: ${ABL_RELEASE_ID}
 spec:
   enabled: true
-  public: true
   region: us-was-1
-  volumes:
-    - name: ${ABL_PUBLIC_PROJECTION_VOLUME_NAME}
-      mountPath: /mnt/abl-public-projections
   runtime:
-    generation: mk3
     image: ${ABL_PUBLIC_API_IMAGE_DIGEST}
     memory: 4096
-    minScale: 1
-    maxScale: 1
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
     envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_PUBLIC_ORIGIN
+        value: ${ABL_PUBLIC_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_INTAKE_ORIGIN
+        value: ${ABL_CANDIDATE_INTAKE_ORIGIN}
+        secret: false
       - name: ABL_PUBLIC_PROJECTION_ROOT
         value: /mnt/abl-public-projections
+        secret: false
+      - name: ABL_PROJECTION_STORAGE_BACKEND
+        value: AGENT_DRIVE
+        secret: false
+      - name: ABL_BLAXEL_REGION
+        value: us-was-1
         secret: false
       - name: ABL_PROJECTION_INGEST_SERVICE_ID
         value: core-projection-publisher

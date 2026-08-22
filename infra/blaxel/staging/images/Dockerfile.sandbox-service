@@ -1,0 +1,18 @@
+FROM ghcr.io/blaxel-ai/sandbox@sha256:3bbf1ce15194f5aff6557d5b48a5a7c32b17b84b9bd94000a952130e08000ccb AS sandbox-runtime
+FROM node:24.18.0-alpine3.24@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd
+
+ENV NODE_ENV=production \
+  HOST=0.0.0.0 \
+  PORT=3000 \
+  DO_NOT_TRACK=1 \
+  BL_ENABLE_OPENTELEMETRY=false \
+  ABL_LOG_CONTENT=false
+WORKDIR /opt/abl
+COPY --from=sandbox-runtime /sandbox-api /usr/local/bin/sandbox-api
+COPY --chown=node:node app/ /opt/abl/
+COPY sandbox-service-entrypoint /usr/local/sbin/sandbox-service-entrypoint
+RUN chmod 0555 /usr/local/sbin/sandbox-service-entrypoint
+
+# The operator mounts the approved Drive path before starting the application
+# through the Sandbox process API. Every managed process runs as the node user.
+ENTRYPOINT ["/usr/local/sbin/sandbox-service-entrypoint"]

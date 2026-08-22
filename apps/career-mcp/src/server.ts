@@ -61,6 +61,40 @@ const exitRoutes: Record<(typeof exitEventTypes)[number], string> = {
   ExitDeletionAttested: "/v1/exit/attest-deletion",
   ExitInspected: "/v1/exit/inspect",
 } as const;
+const careerAuthorityEventTypes = [
+  "AutonomyWeekOpened",
+  "AutonomyActivationScheduled",
+  "AutonomyOverloadApplied",
+  "AutonomyActivationDelayed",
+  "DelegationGranted",
+  "DelegationUsed",
+  "DelegationRevoked",
+] as const;
+const careerAuthorityRoutes: Record<
+  (typeof careerAuthorityEventTypes)[number],
+  string
+> = {
+  AutonomyWeekOpened: "/v1/autonomy/weeks/open",
+  AutonomyActivationScheduled: "/v1/autonomy/activations/schedule",
+  AutonomyOverloadApplied: "/v1/autonomy/overload/apply",
+  AutonomyActivationDelayed: "/v1/autonomy/activations/delay",
+  DelegationGranted: "/v1/delegations/grant",
+  DelegationUsed: "/v1/delegations/use",
+  DelegationRevoked: "/v1/delegations/revoke",
+};
+const tradeAccessEventTypes = [
+  "TradeAccessRevoked",
+  "TradeAccessRotated",
+  "TradeAccessGranted",
+] as const;
+const tradeAccessRoutes: Record<
+  (typeof tradeAccessEventTypes)[number],
+  string
+> = {
+  TradeAccessRevoked: "/v1/trade-access/revoke",
+  TradeAccessRotated: "/v1/trade-access/rotate",
+  TradeAccessGranted: "/v1/trade-access/grant",
+};
 
 const EmptyInputSchema = z.strictObject({});
 const CandidateDidInputSchema = z.strictObject({ candidateDid: DidSchema });
@@ -75,6 +109,14 @@ const ContinuityCommandInputSchema = commandInputSchema(
 const ExitCommandInputSchema = commandInputSchema(
   "portable-career-exit",
   exitEventTypes,
+);
+const CareerAuthorityCommandInputSchema = commandInputSchema(
+  "career-authority",
+  careerAuthorityEventTypes,
+);
+const TradeAccessCommandInputSchema = commandInputSchema(
+  "trade-access-transfer",
+  tradeAccessEventTypes,
 );
 
 function commandInputSchema<TEventType extends string>(
@@ -94,6 +136,7 @@ function commandInputSchema<TEventType extends string>(
 export interface CareerMcpOptions {
   coreOrigin: string;
   coreCredential: string;
+  previewToken?: string;
   allowedOrigins?: ReadonlySet<string>;
   fetchImplementation?: typeof fetch;
   allowHttpForTest?: boolean;
@@ -105,6 +148,9 @@ export function createCareerMcp(
   const requestCore = createFixedUpstream({
     origin: options.coreOrigin,
     credential: options.coreCredential,
+    ...(options.previewToken === undefined
+      ? {}
+      : { previewToken: options.previewToken }),
     ...(options.fetchImplementation === undefined
       ? {}
       : { fetchImplementation: options.fetchImplementation }),
@@ -120,6 +166,30 @@ export function createCareerMcp(
       inputSchema: EmptyInputSchema,
       execute: () =>
         requestCore({ method: "GET", path: "/v1/candidates/provenance" }),
+    }),
+    defineMcpTool({
+      name: "submit_career_authority_transition",
+      description:
+        "Forward an admitted-career signed autonomy or bounded-delegation transition to its fixed canonical route.",
+      inputSchema: CareerAuthorityCommandInputSchema,
+      execute: ({ command }) =>
+        requestCore({
+          method: "POST",
+          path: careerAuthorityRoutes[command.event.eventType],
+          body: command,
+        }),
+    }),
+    defineMcpTool({
+      name: "submit_trade_access_transition",
+      description:
+        "Forward one agent-signed revoke, rotate, or grant trade-access transition in constitutional order.",
+      inputSchema: TradeAccessCommandInputSchema,
+      execute: ({ command }) =>
+        requestCore({
+          method: "POST",
+          path: tradeAccessRoutes[command.event.eventType],
+          body: command,
+        }),
     }),
     defineMcpTool({
       name: "request_candidate_challenge",

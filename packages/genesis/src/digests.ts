@@ -97,8 +97,8 @@ export async function prepareGenesisArtifactDigests(
     ".blaxelignore",
     "Dockerfile",
     "blaxel.toml",
-    "infra/sandbox/abl-sandbox-init",
-    "infra/sandbox/agent-runtime",
+    "infra/sandbox/abl-reviewed-body-init",
+    "infra/sandbox/reviewed-agent-runtime",
     "infra/sandbox/apk-packages.lock",
   ];
   const runtimePaths = [".node-version", ".nvmrc", ".npmrc"];

@@ -7,8 +7,11 @@ import { fileURLToPath } from "node:url";
 import { format } from "prettier";
 
 import { CORE_ROUTE_CATALOG } from "../apps/core-api/src/server.js";
+import { CANDIDATE_EDGE_ROUTE_CATALOG } from "../apps/candidate-edge/src/server.js";
+import { CANDIDATE_PROVISIONER_ROUTE_CATALOG } from "../apps/candidate-provisioner/src/server.js";
 import { PUBLIC_ROUTE_CATALOG } from "../apps/public-api/src/server.js";
 import { SAFETY_ROUTE_CATALOG } from "../apps/safety-gateway/src/server.js";
+import { generateLaunchLedger } from "./generate-launch-ledger.js";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const ansiPattern = new RegExp("\\u001b\\[[0-9;]*m", "g");
@@ -78,6 +81,10 @@ async function runSuite(
     clean,
     /^(?!ABL Test Files).*Test Files\s+(\d+) passed/gm,
   );
+  const outputLines = clean.trim().split("\n");
+  const failureLines = outputLines.filter((line) =>
+    /FAIL|failed|timed out|Error:/i.test(line),
+  );
   return {
     name,
     command: `pnpm ${commandArguments.join(" ")}`,
@@ -96,7 +103,10 @@ async function runSuite(
     totalTasks:
       taskMatch === null ? null : Number.parseInt(taskMatch[2] ?? "0", 10),
     outputSha256: sha256(clean),
-    outputTail: clean.trim().split("\n").slice(-20),
+    outputTail:
+      output.code === 0
+        ? outputLines.slice(-20)
+        : [...failureLines, ...outputLines.slice(-20)].slice(-60),
   };
 }
 
@@ -112,6 +122,18 @@ async function main(): Promise<void> {
       ...CORE_ROUTE_CATALOG.map((route) => ({
         ...route,
         service: "abl-core-api",
+      })),
+      ...CANDIDATE_EDGE_ROUTE_CATALOG.map(([method, path]) => ({
+        method,
+        path,
+        authority: "CANDIDATE_NONCANONICAL",
+        service: "abl-candidate-edge",
+      })),
+      ...CANDIDATE_PROVISIONER_ROUTE_CATALOG.map(([method, path]) => ({
+        method,
+        path,
+        authority: "PRIVATE_PROVISIONER",
+        service: "abl-candidate-provisioner",
       })),
       ...SAFETY_ROUTE_CATALOG.map((route) => ({
         ...route,
@@ -137,16 +159,19 @@ async function main(): Promise<void> {
   const suiteSpecs = [
     ["format", ["format:check"]],
     ["tooling-typecheck", ["check:tools"]],
-    ["typecheck", ["turbo", "run", "check", "--force"]],
+    ["typecheck", ["turbo", "run", "check", "--force", "--concurrency=1"]],
     [
       "unit-integration-property-contract-migration-api",
-      ["turbo", "run", "test", "--force"],
+      ["turbo", "run", "test", "--force", "--concurrency=1"],
     ],
     ["acceptance-replay-load-recovery", ["test:acceptance"]],
     ["adversarial-security", ["test:adversarial"]],
     ["loopback-network-load", ["test:load"]],
     ["browser", ["test:browser"]],
-    ["production-build", ["turbo", "run", "build", "--force"]],
+    [
+      "production-build",
+      ["turbo", "run", "build", "--force", "--concurrency=1"],
+    ],
   ] as const;
   const suites: SuiteResult[] = [];
   for (const [name, commandArguments] of suiteSpecs) {
@@ -187,10 +212,11 @@ async function main(): Promise<void> {
     routeCount: routeCatalog.routes.length,
     rawResults: suites,
     limitations: [
-      "Live escape execution in the Blaxel custom-image sandbox is unavailable.",
+      "The active Founding Alpha topology, candidate flow, and reviewed Sandbox body are locally implemented but have not yet completed one digest-bound live private-slice proof; historical Gate 2 containment runs were torn down and do not define the active runtime.",
+      "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
       "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
-      "Four target Blaxel workspaces and Agent Drive are unavailable.",
-      "Live recovery against the selected canonical database provider lacks project credentials.",
+      "The four target production Blaxel workspaces are not yet verified as provisioned; a prior temporary Agent Drive passed ACL readback and cross-path denial but was torn down before restart, restore, concurrent-write, and broader recovery proof.",
+      "Prior temporary Neon PostgreSQL 17 projects passed migration and transaction probes and were permanently deleted; an active selected-provider project and live recovery proof are absent.",
       "Base finality lacks a ratified deployment and credentials.",
       "Remote capacity reservations and provider costs were not requested.",
       "Founding-agent decisions and signatures do not exist.",
@@ -201,8 +227,10 @@ async function main(): Promise<void> {
     join(repositoryRoot, "docs/evidence/final-local-results.json"),
     report,
   );
+  const launchLedgerDigest = await generateLaunchLedger();
   if (!allPassed) throw new Error("One or more final local suites failed");
   process.stdout.write(`stable result digest: ${stableResultDigest}\n`);
+  process.stdout.write(`launch ledger digest: ${launchLedgerDigest}\n`);
 }
 
 void main().catch((error: unknown) => {

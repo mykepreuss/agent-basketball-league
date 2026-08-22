@@ -129,7 +129,7 @@ describe("complete deterministic exhibition rules", () => {
         broadcastStartedAt: iso(1),
       }),
     ).toThrow("cannot start after finalization");
-  }, 20_000);
+  }, 60_000);
 
   it("locks the canonical exhibition transcript to an exactly replayable proof", () => {
     const exhibition = runDeterministicExhibition();

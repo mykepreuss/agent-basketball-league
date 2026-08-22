@@ -23,6 +23,7 @@ import {
   HttpProjectionEventSink,
   PublicProjectionWorker,
 } from "@abl/projections";
+import { readFile } from "node:fs/promises";
 import { sha256Commitment } from "@abl/recognition";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
@@ -165,6 +166,7 @@ const operatingProfile = z
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
     "PRODUCTION_V1_PRE_GENESIS",
+    "PRODUCTION_GENESIS",
   ])
   .parse(
     process.env.ABL_OPERATING_PROFILE ??
@@ -180,6 +182,15 @@ const app =
   liveOperatingProfile !== null
     ? await (async () => {
         const activeOperatingProfile = liveOperatingProfile;
+        const genesisStartupEvidence =
+          activeOperatingProfile === "PRODUCTION_GENESIS"
+            ? JSON.parse(
+                await readFile(
+                  required("ABL_GENESIS_STARTUP_EVIDENCE_PATH"),
+                  "utf8",
+                ),
+              )
+            : undefined;
         const authority = rehearsalAuthority();
         const contractClubGovernors = ContractClubGovernorsSchema.parse(
           JSON.parse(required("ABL_CONTRACT_CLUB_GOVERNORS_JSON")),
@@ -311,6 +322,11 @@ const app =
         closeStore = async () => store.close();
         const privateStorageVerifier = new HttpMemoryStorageVerifier({
           origin: required("ABL_PRIVATE_STORAGE_URL"),
+          ...(process.env.ABL_PRIVATE_STORAGE_PREVIEW_TOKEN === undefined
+            ? {}
+            : {
+                previewToken: process.env.ABL_PRIVATE_STORAGE_PREVIEW_TOKEN,
+              }),
           identity: {
             serviceId: required("ABL_PRIVATE_STORAGE_SERVICE_ID"),
             secret: secret("ABL_PRIVATE_STORAGE_HMAC_BASE64"),
@@ -325,6 +341,11 @@ const app =
         const economyId = `${competitionId}:${seasonId}`;
         const projectionSink = new HttpProjectionEventSink({
           origin: required("ABL_PUBLIC_PROJECTION_URL"),
+          ...(process.env.ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN === undefined
+            ? {}
+            : {
+                previewToken: process.env.ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN,
+              }),
           identity: {
             serviceId: required("ABL_PROJECTION_SERVICE_ID"),
             secret: secret("ABL_PROJECTION_HMAC_BASE64"),
@@ -388,6 +409,9 @@ const app =
         projectionTimer.unref();
         return createLiveCoreApi({
           operatingProfile: activeOperatingProfile,
+          ...(genesisStartupEvidence === undefined
+            ? {}
+            : { genesisStartupEvidence }),
           store,
           ...authority,
           competitionId,
@@ -435,6 +459,11 @@ const app =
           exit: {
             portabilityVerifier: new HttpExitPackagePortabilityVerifier({
               origin: required("ABL_EXIT_PORTABILITY_VERIFIER_URL"),
+              ...(process.env.ABL_PRIVATE_STORAGE_PREVIEW_TOKEN === undefined
+                ? {}
+                : {
+                    previewToken: process.env.ABL_PRIVATE_STORAGE_PREVIEW_TOKEN,
+                  }),
               identity: {
                 serviceId: required("ABL_EXIT_PORTABILITY_SERVICE_ID"),
                 secret: secret("ABL_EXIT_PORTABILITY_HMAC_BASE64"),

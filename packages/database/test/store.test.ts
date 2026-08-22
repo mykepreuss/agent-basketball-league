@@ -168,6 +168,9 @@ describe("Postgres migration", () => {
     );
     expect(sql).toContain('PARTITION BY RANGE ("occurred_at")');
     expect(sql).toContain('PARTITION BY HASH ("competition_id", "season_id")');
+    expect(sql).toContain(
+      'PRIMARY KEY ("occurred_at", "competition_id", "season_id", "event_id")',
+    );
     expect(sql).toContain('CREATE TABLE "canonical_outbox"');
     expect(sql).toContain('CREATE TABLE "command_idempotency"');
     expect(sql).toContain('CREATE TABLE "actor_nonces"');

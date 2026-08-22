@@ -10,6 +10,7 @@ import {
   DriveCiphertextRepository,
   StorageAuthorizationError,
   StorageVersionConflictError,
+  createCiphertextRepository,
   decryptContent,
   encryptContent,
   generateDomainKey,
@@ -141,6 +142,82 @@ describe("fixed-client encryption and ciphertext-only broker", () => {
 });
 
 describe("ciphertext-only Agent Drive layout", () => {
+  it("keeps local, Blaxel Volume V1, and Agent Drive repository contracts in parity", async () => {
+    const profiles = [
+      {
+        backend: "LOCAL_REHEARSAL" as const,
+        brokerOnly: true,
+        region: null,
+        permissionsConfigured: false,
+        liveProof: "NOT_APPLICABLE" as const,
+      },
+      {
+        backend: "BLAXEL_VOLUME_V1" as const,
+        brokerOnly: true,
+        region: "us-was-1",
+        permissionsConfigured: true,
+        liveProof: "LIVE_PROOF_REQUIRED" as const,
+      },
+      {
+        backend: "AGENT_DRIVE" as const,
+        brokerOnly: true,
+        region: "us-was-1",
+        permissionsConfigured: true,
+        liveProof: "LIVE_PROOF_REQUIRED" as const,
+      },
+    ];
+    for (const profile of profiles) {
+      const root = await mkdtemp(
+        join(tmpdir(), `abl-${profile.backend.toLowerCase()}-`),
+      );
+      const repository = createCiphertextRepository({ ...profile, root });
+      await repository.initialize();
+      const domainPolicy = policy();
+      await repository.putPolicy(domainPolicy);
+      const blob = await encryptContent({
+        key: await generateDomainKey(),
+        objectId: "backend-parity",
+        domainId: domainPolicy.domainId,
+        version: 1,
+        previousVersionCommitment: null,
+        contentType: "application/octet-stream",
+        plaintext: new TextEncoder().encode("opaque"),
+        createdAt,
+      });
+      await repository.putCiphertext(blob);
+      const restarted = CiphertextBroker.restore(await repository.loadState());
+      expect(
+        restarted.get(
+          "did:abl:agent-a",
+          domainPolicy.domainId,
+          blob.objectId,
+          1,
+        ),
+        profile.backend,
+      ).toEqual(blob);
+    }
+  });
+
+  it("rejects Agent Drive without broker-only us-was-1 permissions", () => {
+    const base = {
+      backend: "AGENT_DRIVE" as const,
+      root: "/tmp/abl-agent-drive-contract-test",
+      brokerOnly: true,
+      region: "us-was-1",
+      permissionsConfigured: true,
+      liveProof: "LIVE_PROOF_REQUIRED" as const,
+    };
+    expect(() =>
+      createCiphertextRepository({ ...base, brokerOnly: false }),
+    ).toThrow("broker-only");
+    expect(() =>
+      createCiphertextRepository({ ...base, region: "us-pdx-1" }),
+    ).toThrow("us-was-1");
+    expect(() =>
+      createCiphertextRepository({ ...base, permissionsConfigured: false }),
+    ).toThrow("permissions");
+  });
+
   it("uses hashed paths, immutable versions, and persists no plaintext or domain key", async () => {
     const root = await mkdtemp(join(tmpdir(), "abl-drive-emulator-"));
     const repository = new DriveCiphertextRepository(root);

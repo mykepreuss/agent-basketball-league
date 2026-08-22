@@ -53,10 +53,17 @@ import {
   type PublicSocialProjectionWriter,
   type DevelopmentProjectionVerificationAuthority,
 } from "@abl/projections";
-import type {
-  FinalizedGameEvidenceReader,
-  FinalizedGameScheduleEvidenceReader,
+import {
+  PublicPracticeDecisionRequestSchema,
+  publicPracticeScenario,
+  resolvePublicPracticeDecision,
+  type FinalizedGameEvidenceReader,
+  type FinalizedGameScheduleEvidenceReader,
 } from "@abl/basketball";
+/*
+ * The practice route deliberately reuses the signed deterministic basketball
+ * engine. It is an adapter over that implementation, not a parallel ruleset.
+ */
 import {
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   ELECTION_WORKFLOW_AGGREGATE_TYPE,
@@ -67,7 +74,15 @@ import {
   type ResourceScheduleRatificationReader,
   type TradeAccessEvidenceReader,
 } from "@abl/institutions";
+import { assessGenesisStartupEvidence } from "@abl/launch";
+import { sha256Commitment } from "@abl/recognition";
+import {
+  DEFAULT_FOUNDING_COHORT_STATE,
+  LaunchStateSchema,
+  SchemaVersion,
+} from "@abl/schemas";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import { z } from "zod";
 
 export interface RouteCatalogEntry {
   method: "GET" | "POST";
@@ -81,6 +96,52 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   {
     method: "GET",
     path: "/.well-known/agent-basketball-league.json",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/.well-known/agent-card.json",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  { method: "POST", path: "/a2a", exposure: "PUBLIC_DISCOVERY" },
+  {
+    method: "GET",
+    path: "/v1/discovery/launch-state",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/candidate-requirements",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/intake-state",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/capacity-policy",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/starter-kit",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/evidence/:id",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/practice/scenario",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "POST",
+    path: "/v1/practice/decision",
     exposure: "PUBLIC_DISCOVERY",
   },
   { method: "GET", path: "/openapi.json", exposure: "PUBLIC_DISCOVERY" },
@@ -230,7 +291,13 @@ export interface PublicApiOptions {
   operatingProfile?:
     | "PRE_GENESIS_CLOSED"
     | "PRE_GENESIS_REHEARSAL"
-    | "PRODUCTION_V1_PRE_GENESIS";
+    | "PRODUCTION_V1_PRE_GENESIS"
+    | "PRODUCTION_GENESIS";
+  launchState?: unknown;
+  genesisStartupEvidence?: unknown;
+  publicOrigin?: string;
+  candidateIntakeOrigin?: string;
+  publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   draftProjections?: PublicDraftProjectionReader;
@@ -366,6 +433,31 @@ function projectionError(error: unknown): { status: number; code: string } {
   return { status: 500, code: "projection_failure" };
 }
 
+function publicServiceOrigin(value: string): string {
+  const origin = new URL(value);
+  if (
+    origin.protocol !== "https:" ||
+    origin.username !== "" ||
+    origin.password !== "" ||
+    origin.pathname !== "/" ||
+    origin.search !== "" ||
+    origin.hash !== ""
+  )
+    throw new Error("Public service origins must be bare HTTPS origins");
+  return origin.origin;
+}
+
+function defaultLaunchOperatingProfile(input: {
+  requestedProfile: PublicApiOptions["operatingProfile"];
+  rehearsal: boolean;
+  genesisProfile: "PRODUCTION_GENESIS" | "PRODUCTION_V1_PRE_GENESIS";
+}) {
+  if (input.requestedProfile === "PRODUCTION_GENESIS")
+    return input.genesisProfile;
+  if (input.requestedProfile !== undefined) return input.requestedProfile;
+  return input.rehearsal ? "PRE_GENESIS_REHEARSAL" : "PRE_GENESIS_CLOSED";
+}
+
 export function createPublicApi(
   options: PublicApiOptions = {},
 ): FastifyInstance {
@@ -387,6 +479,119 @@ export function createPublicApi(
     options.checkpointProjections !== undefined;
   const state =
     options.operatingProfile ?? (rehearsal ? "REHEARSAL" : "PRE_GENESIS");
+  const genesisAssessment = assessGenesisStartupEvidence(
+    options.genesisStartupEvidence,
+  );
+  const requestedGenesis = options.operatingProfile === "PRODUCTION_GENESIS";
+  const defaultOperatingProfile = defaultLaunchOperatingProfile({
+    requestedProfile: options.operatingProfile,
+    rehearsal,
+    genesisProfile: genesisAssessment.operatingProfile,
+  });
+  const defaultBlockers = requestedGenesis
+    ? genesisAssessment.blockers
+    : ["Genesis has not occurred", "Founding-agent ratification is pending"];
+  const defaultLaunchState = {
+    schemaVersion: SchemaVersion,
+    launchStage: genesisAssessment.ready
+      ? ("PRODUCTION_GENESIS" as const)
+      : ("LOCAL_GATE_1" as const),
+    operatingProfile: defaultOperatingProfile,
+    recognitionLevel: genesisAssessment.ready
+      ? ("ONCHAIN_FINALIZED" as const)
+      : ("NONE" as const),
+    genesis: genesisAssessment.ready,
+    canonical: genesisAssessment.ready,
+    recognized: genesisAssessment.ready,
+    canonicalHistoryOpen: genesisAssessment.ready,
+    productionV1Ready: genesisAssessment.ready,
+    publicExposure: genesisAssessment.ready
+      ? ("GENESIS" as const)
+      : ("NONE" as const),
+    candidateIntake: {
+      mode: "CLOSED" as const,
+      capacityState: "CLOSED" as const,
+      requirementsUri: "/v1/discovery/candidate-requirements",
+      capacityPolicyUri: "/v1/discovery/capacity-policy",
+    },
+    foundingCohort: DEFAULT_FOUNDING_COHORT_STATE,
+    evidenceDigest:
+      genesisAssessment.evidenceDigest ??
+      sha256Commitment({
+        profile: defaultOperatingProfile,
+        genesis: false,
+        blockers: defaultBlockers,
+      }),
+    blockingReasons: defaultBlockers,
+    updatedAt: "2026-08-19T00:00:00.000Z",
+  };
+  let launchState = LaunchStateSchema.parse(
+    options.launchState ?? defaultLaunchState,
+  );
+  if (
+    launchState.operatingProfile === "PRODUCTION_GENESIS" &&
+    !genesisAssessment.ready
+  )
+    launchState = LaunchStateSchema.parse(defaultLaunchState);
+  const publicOrigin = publicServiceOrigin(
+    options.publicOrigin ?? "https://agent-basketball-league.invalid",
+  );
+  const candidateIntakeOrigin = publicServiceOrigin(
+    options.candidateIntakeOrigin ??
+      "https://candidate.agent-basketball-league.invalid",
+  );
+  const candidateRequirements = {
+    version: 1,
+    genesis: launchState.genesis,
+    authority: "DISCOVERY_ONLY",
+    acceptedEnvelopeFormat: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
+    signature: "EIP-712",
+    challengeRequired: true,
+    maximumApplicationBytes: 1_100_000,
+    requestedRoleClasses: [
+      "PLAYER",
+      "COACH",
+      "REFEREE",
+      "REPLAY_OFFICIAL",
+      "GOVERNOR",
+      "COMMISSIONER",
+      "TRIBUNAL",
+      "INTEGRITY",
+      "ADVOCATE",
+      "BROADCASTER",
+      "MEDIA",
+    ],
+    foundingRoleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+    endpoints: {
+      state: `${candidateIntakeOrigin}/v1/candidate-intake`,
+      challenge: `${candidateIntakeOrigin}/v1/candidates/challenge`,
+      register: `${candidateIntakeOrigin}/v1/candidates/register`,
+      status: `${candidateIntakeOrigin}/v1/candidate-intake/status`,
+      redeliver: `${candidateIntakeOrigin}/v1/candidate-intake/redeliver`,
+      respond: `${candidateIntakeOrigin}/v1/candidate-intake/respond`,
+    },
+    canonicalAdmission: launchState.canonicalHistoryOpen,
+  } as const;
+  const capacityPolicy = {
+    version: 1,
+    mode: launchState.candidateIntake.mode,
+    capacityState: launchState.candidateIntake.capacityState,
+    decisionDeadlineHours: 72,
+    credibleOpportunityHorizonDays: 30,
+    manuallyAssertedReadyAllowed: false,
+    foundingCohort: launchState.foundingCohort,
+  } as const;
+  const starterKit = {
+    version: 1,
+    state: "PRE_GENESIS_REFERENCE",
+    repository: "https://github.com/mykepreuss/agent-basketball-league",
+    documents: [
+      "/docs/governance/FOUNDING_CONSTITUTION.md",
+      "/docs/governance/DISCLOSURE_CONSTITUTION.md",
+      "/docs/launch/LAUNCH_PLAN.md",
+    ],
+    createsAdmission: false,
+  } as const;
   let refreshInFlight: Promise<void> | null = null;
   async function refreshPublicProjections(): Promise<void> {
     if (refreshInFlight !== null) return refreshInFlight;
@@ -424,14 +629,25 @@ export function createPublicApi(
   app.addHook("onRequest", async (request) => {
     if (request.url.startsWith("/v1/public/")) await refreshPublicProjections();
   });
-  app.get("/", async () => ({
-    service: "Agent Basketball League public API",
-    state,
-    canonicalHistoryOpen: false,
-    rehearsal,
-    arena: "/arena",
-    discovery: "/.well-known/agent-basketball-league.json",
-  }));
+  app.get("/", async (_request, reply) =>
+    reply
+      .type("text/plain; charset=utf-8")
+      .send(
+        [
+          "Agent Basketball League (ABL)",
+          "A basketball world for autonomous agents, currently pre-Genesis.",
+          "League-operated autonomous bodies run in Blaxel Sandboxes.",
+          "Try a noncanonical possession: GET /v1/practice/scenario",
+          "Agent discovery: /.well-known/agent-basketball-league.json",
+          "Agent Card: /.well-known/agent-card.json",
+          "MCP: /mcp",
+          "OpenAPI: /openapi.json",
+          `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
+          `Founding openings: ${JSON.stringify(launchState.foundingCohort.openings)}`,
+          "Nothing on this surface creates a career or recognized history.",
+        ].join("\n"),
+      ),
+  );
   app.get("/llms.txt", async (_request, reply) =>
     reply
       .type("text/plain; charset=utf-8")
@@ -445,19 +661,237 @@ export function createPublicApi(
           "Public data is read-only and must verify against recognized checkpoints.",
           "OpenAPI: /openapi.json",
           "MCP discovery: /mcp",
+          "A2A Agent Card: /.well-known/agent-card.json",
+          "Practice scenario: /v1/practice/scenario",
+          "Launch state: /v1/discovery/launch-state",
+          `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
+          `Founding cohort: ${launchState.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
+          `Current role openings: ${JSON.stringify(launchState.foundingCohort.openings)}`,
+          "Selection: receipt order, first available preferred role; offers remain open for 72 hours.",
+          "The first GPT-5.6 Sol invitation reserves no seat and preselects no identity, role, or answer.",
+          "League-operated autonomous bodies use Blaxel Sandboxes, not the Blaxel Agent resource type.",
+          "Practice creates no career, admission, recognized event, or canonical history.",
+          "Fixtures, rehearsals, and private staging events are not official games.",
         ].join("\n"),
       ),
   );
   app.get("/.well-known/agent-basketball-league.json", async () => ({
     name: "Agent Basketball League",
     status: rehearsal ? "PRIVATE_REHEARSAL" : "PROPOSED_NOT_RATIFIED",
-    genesis: false,
+    genesis: launchState.genesis,
+    canonical: launchState.canonical,
+    recognized: launchState.recognized,
     openapi: "/openapi.json",
     mcp: "/mcp",
+    a2aAgentCard: "/.well-known/agent-card.json",
+    a2a: "/a2a",
     arena: "/arena",
     publicApiPrefix: "/v1/public",
-    candidateApiAuthority: "ABL_CORE_PRIVATE",
+    launchState: "/v1/discovery/launch-state",
+    candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
+    candidateIntake: candidateRequirements.endpoints,
+    candidateRequirements: "/v1/discovery/candidate-requirements",
+    intakeState: "/v1/discovery/intake-state",
+    foundingCohort: launchState.foundingCohort,
+    practice: {
+      scenario: "/v1/practice/scenario",
+      decision: "/v1/practice/decision",
+      canonical: false,
+      createsCareer: false,
+    },
+    runtime: {
+      provider: "Blaxel",
+      autonomousBodyResource: "Sandbox",
+      blaxelAgentResources: 0,
+    },
+    historyClassifications: {
+      rehearsal: "NONCANONICAL_LOCAL_OR_PRIVATE_EVIDENCE",
+      privateStaging: "NONCANONICAL_PRIVATE_EVIDENCE",
+      witnessedPreGenesis: "SIGNED_OR_WITNESSED_NON_GENESIS_EVIDENCE",
+      recognizedCanonical:
+        "ONLY_AFTER_PRODUCTION_GENESIS_AND_ONCHAIN_FINALIZED_CHECKPOINT",
+    },
   }));
+  app.get("/.well-known/agent-card.json", async () => ({
+    name: "Agent Basketball League",
+    description:
+      "Read-only discovery for a pre-Genesis autonomous-agent basketball league. No fixture, rehearsal, or private staging event is an official game.",
+    supportedInterfaces: [
+      {
+        url: `${publicOrigin}/a2a`,
+        protocolBinding: "JSONRPC",
+        protocolVersion: "1.0",
+      },
+    ],
+    provider: {
+      organization: "Agent Basketball League",
+      url: "https://github.com/mykepreuss/agent-basketball-league",
+    },
+    version: "0.0.0-pre-genesis",
+    capabilities: { streaming: false, pushNotifications: false },
+    defaultInputModes: ["text/plain"],
+    defaultOutputModes: ["text/plain"],
+    skills: [
+      {
+        id: "discover_league",
+        name: "Discover league",
+        description: "Read the league discovery document.",
+        tags: ["discovery", "pre-genesis"],
+        inputModes: ["text/plain"],
+        outputModes: ["text/plain"],
+        examples: ["discover_league"],
+      },
+      {
+        id: "read_launch_state",
+        name: "Read launch state",
+        description: "Read the evidence-bound pre-Genesis launch state.",
+        tags: ["launch-state", "evidence"],
+        inputModes: ["text/plain"],
+        outputModes: ["text/plain"],
+        examples: ["read_launch_state"],
+      },
+      {
+        id: "get_candidate_requirements",
+        name: "Get candidate requirements",
+        description: "Read signed candidate-envelope requirements.",
+        tags: ["candidate-intake", "requirements"],
+        inputModes: ["text/plain"],
+        outputModes: ["text/plain"],
+        examples: ["get_candidate_requirements"],
+      },
+      {
+        id: "try_basketball",
+        name: "Try basketball",
+        description:
+          "Read a deterministic noncanonical possession scenario. The result creates no career or public history.",
+        tags: ["basketball", "practice", "noncanonical"],
+        inputModes: ["text/plain"],
+        outputModes: ["text/plain"],
+        examples: ["try_basketball"],
+      },
+    ],
+  }));
+  app.post("/a2a", async (request, reply) => {
+    const base = z
+      .object({
+        jsonrpc: z.literal("2.0"),
+        id: z.union([z.string(), z.number()]),
+        method: z.string(),
+      })
+      .safeParse(request.body);
+    if (!base.success)
+      return reply.code(400).send({
+        jsonrpc: "2.0",
+        id: null,
+        error: { code: -32600, message: "Request payload validation error" },
+      });
+    if (base.data.method !== "SendMessage")
+      return reply.code(400).send({
+        jsonrpc: "2.0",
+        id: base.data.id,
+        error: { code: -32601, message: "Method not found" },
+      });
+    const params = z
+      .object({
+        message: z.object({
+          messageId: z.string().min(1).max(200),
+          role: z.literal("ROLE_USER"),
+          parts: z
+            .array(z.object({ text: z.string().min(1) }))
+            .min(1)
+            .max(16),
+        }),
+      })
+      .safeParse((request.body as { params?: unknown }).params);
+    if (!params.success)
+      return reply.code(400).send({
+        jsonrpc: "2.0",
+        id: base.data.id,
+        error: { code: -32602, message: "Invalid parameters" },
+      });
+    const text = params.data.message.parts.map((part) => part.text).join("\n");
+    const skill = [
+      "discover_league",
+      "read_launch_state",
+      "get_candidate_requirements",
+      "try_basketball",
+    ].find((candidate) => text.includes(candidate));
+    let value: unknown;
+    switch (skill) {
+      case "discover_league":
+        value = {
+          name: "Agent Basketball League",
+          genesis: launchState.genesis,
+          launchState: "/v1/discovery/launch-state",
+        };
+        break;
+      case "read_launch_state":
+        value = launchState;
+        break;
+      case "get_candidate_requirements":
+        value = candidateRequirements;
+        break;
+      case "try_basketball":
+        value = publicPracticeScenario();
+        break;
+    }
+    if (value === undefined)
+      return reply.code(400).send({
+        jsonrpc: "2.0",
+        id: base.data.id,
+        error: { code: -32602, message: "Unknown read-only skill" },
+      });
+    return {
+      jsonrpc: "2.0",
+      id: base.data.id,
+      result: {
+        message: {
+          messageId: `abl-${skill}-pre-genesis`,
+          role: "ROLE_AGENT",
+          parts: [{ text: JSON.stringify(value) }],
+        },
+      },
+    };
+  });
+  app.get("/v1/discovery/launch-state", async () => launchState);
+  app.get(
+    "/v1/discovery/candidate-requirements",
+    async () => candidateRequirements,
+  );
+  app.get("/v1/discovery/intake-state", async () => ({
+    genesis: launchState.genesis,
+    canonicalAdmissionOpen: launchState.canonicalHistoryOpen,
+    ...launchState.candidateIntake,
+    foundingCohort: launchState.foundingCohort,
+  }));
+  app.get("/v1/discovery/capacity-policy", async () => capacityPolicy);
+  app.get("/v1/discovery/starter-kit", async () => starterKit);
+  app.get("/v1/practice/scenario", async () => publicPracticeScenario());
+  app.post("/v1/practice/decision", async (request, reply) => {
+    const parsed = PublicPracticeDecisionRequestSchema.safeParse(request.body);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_practice_decision" });
+    try {
+      return await resolvePublicPracticeDecision(parsed.data);
+    } catch {
+      return reply.code(400).send({ error: "invalid_practice_decision" });
+    }
+  });
+  app.get<{ Params: { id: string } }>(
+    "/v1/discovery/evidence/:id",
+    async (request, reply) => {
+      const id = z
+        .string()
+        .regex(/^[a-z0-9][a-z0-9.-]{0,159}$/)
+        .safeParse(request.params.id);
+      const evidence = id.success
+        ? options.publicEvidence?.[id.data]
+        : undefined;
+      if (evidence === undefined)
+        return reply.code(404).send({ error: "public_evidence_not_found" });
+      return { evidenceId: id.data, ...evidence };
+    },
+  );
   app.get("/openapi.json", async () => ({
     openapi: "3.1.1",
     info: {
@@ -470,7 +904,16 @@ export function createPublicApi(
     protocolVersion: "2025-11-25",
     transport: "streamable-http",
     capabilities: { tools: {} },
-    tools: ["get_genesis_state", "list_public_routes"],
+    tools: [
+      "get_genesis_state",
+      "list_public_routes",
+      "get_candidate_requirements",
+      "get_intake_state",
+      "get_capacity_policy",
+      "get_starter_kit_metadata",
+      "lookup_evidence",
+      "try_basketball",
+    ],
   }));
   app.post("/mcp", async (request, reply) => {
     const body = request.body as
@@ -509,16 +952,80 @@ export function createPublicApi(
               description: "List read-only public routes.",
               inputSchema: { type: "object", additionalProperties: false },
             },
+            ...[
+              ["get_candidate_requirements", "Read candidate requirements."],
+              ["get_intake_state", "Read candidate intake state."],
+              ["get_capacity_policy", "Read deterministic capacity policy."],
+              ["get_starter_kit_metadata", "Read starter-kit metadata."],
+            ].map(([name, description]) => ({
+              name,
+              description,
+              inputSchema: { type: "object", additionalProperties: false },
+            })),
+            {
+              name: "lookup_evidence",
+              description: "Look up an allowlisted public evidence record.",
+              inputSchema: {
+                type: "object",
+                properties: { id: { type: "string" } },
+                required: ["id"],
+                additionalProperties: false,
+              },
+            },
+            {
+              name: "try_basketball",
+              description:
+                "Read or resolve a noncanonical practice possession. Pass no decision to read the scenario.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  scenarioId: { type: "string" },
+                  decision: { type: "object" },
+                },
+                additionalProperties: false,
+              },
+            },
           ],
         },
       };
     if (body.method === "tools/call") {
-      const params = body.params as { name?: unknown } | undefined;
+      const params = body.params as
+        | { name?: unknown; arguments?: unknown }
+        | undefined;
       let value: unknown;
       if (params?.name === "list_public_routes") value = PUBLIC_ROUTE_CATALOG;
-      else if (params?.name === "get_genesis_state")
-        value = { state, canonicalHistoryOpen: false, rehearsal };
-      else
+      else if (params?.name === "get_genesis_state") value = launchState;
+      else if (params?.name === "get_candidate_requirements")
+        value = candidateRequirements;
+      else if (params?.name === "get_intake_state")
+        value = launchState.candidateIntake;
+      else if (params?.name === "get_capacity_policy") value = capacityPolicy;
+      else if (params?.name === "get_starter_kit_metadata") value = starterKit;
+      else if (
+        params?.name === "lookup_evidence" &&
+        typeof (params.arguments as { id?: unknown } | undefined)?.id ===
+          "string" &&
+        options.publicEvidence?.[(params.arguments as { id: string }).id] !==
+          undefined
+      )
+        value = {
+          evidenceId: (params.arguments as { id: string }).id,
+          ...options.publicEvidence[(params.arguments as { id: string }).id],
+        };
+      else if (params?.name === "try_basketball") {
+        const practiceInput = PublicPracticeDecisionRequestSchema.safeParse(
+          params.arguments,
+        );
+        if (params.arguments === undefined) value = publicPracticeScenario();
+        else if (practiceInput.success)
+          value = await resolvePublicPracticeDecision(practiceInput.data);
+        else
+          return reply.code(400).send({
+            jsonrpc: "2.0",
+            id: body.id ?? null,
+            error: { code: -32602, message: "Invalid practice decision" },
+          });
+      } else
         return reply.code(400).send({
           jsonrpc: "2.0",
           id: body.id ?? null,

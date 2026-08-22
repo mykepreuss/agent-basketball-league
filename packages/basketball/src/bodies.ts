@@ -119,4 +119,8 @@ export class PersistentPlayerBody {
   public decisionVersion(): bigint {
     return this.#version;
   }
+
+  public get signerAddress(): `0x${string}` {
+    return this.signingIdentity.address;
+  }
 }

@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+if [ ! -f /workspace/agent/main.mjs ]; then
+  printf '%s\n' 'No reviewed ABL body program is installed at /workspace/agent/main.mjs' >&2
+  exit 66
+fi
+
+broker_capability_token=$(cat /run/abl-body-capability/body-token)
+exec env -i \
+  HOME=/home/abl-agent \
+  PATH=/usr/local/bin:/usr/bin:/bin \
+  NODE_ENV=production \
+  ABL_RUNTIME_RESOURCE_TYPE=SANDBOX \
+  ABL_FIXED_BROKER_ORIGIN="${ABL_FIXED_BROKER_ORIGIN:?}" \
+  ABL_FIXED_BROKER_CAPABILITY_TOKEN="$broker_capability_token" \
+  ABL_FIXED_BROKER_PREVIEW_TOKEN="${ABL_FIXED_BROKER_PREVIEW_TOKEN:-}" \
+  ABL_AGENT_DID="${ABL_AGENT_DID:?}" \
+  ABL_AGENT_SIGNER_ADDRESS="${ABL_AGENT_SIGNER_ADDRESS:?}" \
+  DO_NOT_TRACK=1 \
+  BL_ENABLE_OPENTELEMETRY=false \
+  TELEMETRY_ENABLED=false \
+  ABL_LOG_CONTENT=false \
+  /usr/local/bin/node --disable-proto=throw --frozen-intrinsics /workspace/agent/main.mjs

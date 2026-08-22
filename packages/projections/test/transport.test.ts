@@ -51,11 +51,15 @@ describe("projection transport", () => {
     const sink = new HttpProjectionEventSink({
       origin: "https://run.blaxel.ai/abl-public/agents/abl-public-api/",
       identity,
+      previewToken: "projection-preview-token",
       now: () => now,
       createNonce: () => "projection-request-1",
       fetchImplementation: async (input, init) => {
         deliveredUrl = String(input);
         const headers = new Headers(init?.headers);
+        expect(headers.get("x-blaxel-preview-token")).toBe(
+          "projection-preview-token",
+        );
         verifier.verify(
           {
             "x-abl-service-id": headers.get("x-abl-service-id")!,

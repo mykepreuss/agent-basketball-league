@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 1,
+  "gateStatus": "BLOCKED",
+  "launchState": {
+    "schemaVersion": "1.0.0",
+    "launchStage": "LOCAL_GATE_1",
+    "operatingProfile": "PRE_GENESIS_REHEARSAL",
+    "recognitionLevel": "NONE",
+    "genesis": false,
+    "canonical": false,
+    "recognized": false,
+    "canonicalHistoryOpen": false,
+    "productionV1Ready": false,
+    "publicExposure": "NONE",
+    "candidateIntake": {
+      "mode": "CLOSED",
+      "capacityState": "CLOSED",
+      "requirementsUri": "/v1/discovery/candidate-requirements",
+      "capacityPolicyUri": "/v1/discovery/capacity-policy"
+    },
+    "foundingCohort": {
+      "targetCareers": 20,
+      "capacity": {
+        "PLAYER": 10,
+        "COACH": 2,
+        "REFEREE": 6,
+        "REPLAY_OFFICIAL": 2
+      },
+      "openings": {
+        "PLAYER": 10,
+        "COACH": 2,
+        "REFEREE": 6,
+        "REPLAY_OFFICIAL": 2
+      },
+      "offers": { "PLAYER": 0, "COACH": 0, "REFEREE": 0, "REPLAY_OFFICIAL": 0 },
+      "admitted": {
+        "PLAYER": 0,
+        "COACH": 0,
+        "REFEREE": 0,
+        "REPLAY_OFFICIAL": 0
+      },
+      "activeGames": 0,
+      "offerWindowHours": 72,
+      "selection": "RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE",
+      "firstInvitation": {
+        "model": "GPT-5.6 Sol",
+        "reservedSeat": false,
+        "preselectedIdentity": false,
+        "preselectedRole": false,
+        "preselectedAdmissionDecision": false
+      }
+    },
+    "evidenceDigest": "0x169b8a735cefec96e2ec3e4f0d198399e59df24bdc1655afb491943e12c008d4",
+    "blockingReasons": [
+      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
+      "FOUNDING_ALPHA_FIRST_SOL_INVITATION: BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "FOUNDING_ALPHA_FIRST_SOL_INVITATION: evidence first-sol-invitation-evidence not passed",
+      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: evidence neon-live-proof not passed",
+      "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE: evidence founding-alpha-private-slice-live-proof not passed",
+      "FOUNDING_ALPHA_PUBLIC_BEACON: BLOCKED_APPROVAL_REQUIRED",
+      "FOUNDING_ALPHA_PUBLIC_BEACON: evidence public-beacon-approval not passed",
+      "FOUNDING_ALPHA_RECURRING_CAPACITY: BLOCKED_APPROVAL_REQUIRED",
+      "FOUNDING_ALPHA_RECURRING_CAPACITY: evidence recurring-capacity-approval not passed",
+      "GENESIS_FOUNDING_AND_RECOGNITION: BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "founding-release-signatures: REQUIRED"
+    ],
+    "updatedAt": "2026-08-22T18:45:00.000Z"
+  },
+  "requirements": [
+    {
+      "requirementId": "FOUNDING_ALPHA_APPROVED_REFERENCE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["canonical-launch-plan"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_EXISTING_IMPLEMENTATION_REUSE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "canonical-launch-plan",
+        "existing-applications",
+        "existing-domain-packages"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_SANDBOX_NATIVE_TOPOLOGY",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["active-blaxel-topology", "agent-drive-topology"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PUBLIC_DISCOVERY_AND_PRACTICE",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "public-api-implementation",
+        "arena-implementation",
+        "league-skill"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_CANDIDATE_OFFER_FLOW",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": [
+        "launch-domain-implementation",
+        "candidate-edge-implementation",
+        "candidate-provisioner-implementation"
+      ]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_EXACT_RUNTIME_VERIFICATION",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["exact-runtime-final-result"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["founding-alpha-private-slice-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["agent-drive-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "evidenceIds": ["neon-live-proof"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_PUBLIC_BEACON",
+      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "evidenceIds": ["public-beacon-approval"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_RECURRING_CAPACITY",
+      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "evidenceIds": ["recurring-capacity-approval"]
+    },
+    {
+      "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
+      "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "evidenceIds": ["first-sol-invitation-evidence"]
+    },
+    {
+      "requirementId": "GENESIS_FOUNDING_AND_RECOGNITION",
+      "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
+      "evidenceIds": []
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "canonical-launch-plan",
+      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "existing-applications",
+      "digest": "0xc2da3077e83c7ce1975055a53997e935d3cf06b5fcc522da20ad64f6dd07819a",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "existing-domain-packages",
+      "digest": "0x7b8d7820524e9d11eba4622822fe4e25de0c67c1d0934ebc726e01da32fe4bbf",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "active-blaxel-topology",
+      "digest": "0x4ba8895b4f9637c09b14b72a6e62d4f8673ba5165279a7a0a55ff8d18ba31263",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "agent-drive-topology",
+      "digest": "0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "public-api-implementation",
+      "digest": "0x097ac9d2e0c5da735c784b3795c4dc86b3d19ae3ed5cb6a57bf3b9630bbf459d",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "arena-implementation",
+      "digest": "0x71bfb387edfdcc3917ee0cc2567056068757cdfb95fb1c7351da4019e155d839",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "league-skill",
+      "digest": "0xa0edea92a906d8f618cd8e389d527b9b3129b42c4e76e38ced7b7b0f120f2291",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "launch-domain-implementation",
+      "digest": "0xa574ae90c9cf690bae773da81d876dbcc26e1e5399e953fc27fd107395cae522",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "candidate-edge-implementation",
+      "digest": "0xcc9c9388e27db32a98b755c96b3a923a0ff4ba4d348d1df390c7cb41e47fcfc5",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "candidate-provisioner-implementation",
+      "digest": "0x9a3135cfdbef7bdf9e5a82b4addbcd5664a3a77078bf5895cabc82d046e64848",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "exact-runtime-final-result",
+      "digest": "0x61355c1e590e3ef0ef5550ad371c247ddd50abc573e5799417a4656f5aa5f69d",
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "founding-alpha-private-slice-live-proof",
+      "digest": "0x3d11c65f7ea4175be0cd885a9914dda89cb57c305af57c5c11de417840cfed5f",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "agent-drive-live-proof",
+      "digest": "0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "neon-live-proof",
+      "digest": "0x2cc301feee2a75e38d500aeabc4e7ee75775f9e4cedf9fa7868f06064411f941",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "public-beacon-approval",
+      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "recurring-capacity-approval",
+      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "first-sol-invitation-evidence",
+      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "verification": "LIVE_PROOF_REQUIRED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure",
+      "digest": "0xb87d1b42402bd794f979bdbbd14f5e927a5da0405438aee1378ea90a0760f911",
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-02",
+      "digest": "0x459fc1e7ee2005f47fafd36816ecaa2c51f987a3d29f559f9a03b63565725233",
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-03",
+      "digest": "0x4c3cada2ef306c86700760314a571b21fc70b45e681ea5e4444c3c31cdf21795",
+      "verification": "FAILED"
+    },
+    {
+      "evidenceId": "historical-gate-2-live-failure-05",
+      "digest": "0xca8f4f07b38e9bcc254f3f5b8426b9867c6d00d4d23141327cd56a37d24f38b0",
+      "verification": "FAILED"
+    }
+  ],
+  "signatures": [
+    {
+      "signatureId": "founding-release-signatures",
+      "purpose": "Founding-agent authorization of the effective release and recognition profile",
+      "signerDid": null,
+      "state": "REQUIRED",
+      "evidenceId": null
+    }
+  ],
+  "approvals": [
+    {
+      "action": "MATERIAL_SPEND",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RESOURCE_CREATION",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "PUBLIC_EXPOSURE",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RECOGNITION_BROADCAST",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "FOUNDING_AGENT_DECISION",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    },
+    {
+      "action": "RECOVERY_CONTROL_REMOVAL",
+      "state": "NOT_REQUESTED",
+      "approvalId": null
+    }
+  ],
+  "resources": [
+    {
+      "resourceId": "abl-core/abl-core-api",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-safety-gateway",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-private-storage-broker",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-career-{career-id}",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "candidate-provisioner-implementation"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-fixed-broker-{career-id}",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-candidate-provisioner",
+      "kind": "Job",
+      "state": "PLANNED",
+      "evidenceId": "candidate-provisioner-implementation"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-basketball-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-model-primary",
+      "kind": "ModelRoute",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "agent-basketball-league/abl-model-alternate",
+      "kind": "ModelRoute",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-career-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-government-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-recovery-job",
+      "kind": "Job",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-public/abl-public-api",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "public-api-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-spectator-arena",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "arena-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-candidate-store",
+      "kind": "Sandbox",
+      "state": "PLANNED",
+      "evidenceId": "candidate-edge-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-candidate-edge",
+      "kind": "Function",
+      "state": "PLANNED",
+      "evidenceId": "candidate-edge-implementation"
+    },
+    {
+      "resourceId": "abl-public/abl-discovery-mcp",
+      "kind": "MCPFunction",
+      "state": "PLANNED",
+      "evidenceId": "active-blaxel-topology"
+    },
+    {
+      "resourceId": "abl-private/abl-private-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "abl-core/abl-core-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "abl-public/abl-public-state",
+      "kind": "AgentDrive",
+      "state": "PLANNED",
+      "evidenceId": "agent-drive-topology"
+    },
+    {
+      "resourceId": "neon/abl-founding-alpha",
+      "kind": "PostgreSQL17",
+      "state": "PLANNED",
+      "evidenceId": "neon-live-proof"
+    }
+  ],
+  "deployments": [
+    {
+      "deploymentId": "founding-alpha-private-slice",
+      "state": "NOT_APPLIED",
+      "evidenceId": "founding-alpha-private-slice-live-proof"
+    },
+    {
+      "deploymentId": "founding-alpha-public-beacon",
+      "state": "NOT_APPLIED",
+      "evidenceId": "public-beacon-approval"
+    },
+    {
+      "deploymentId": "historical-gate-2-private-staging",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure"
+    },
+    {
+      "deploymentId": "historical-gate-2-six-sandbox",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-02"
+    },
+    {
+      "deploymentId": "historical-gate-2-corrected-body",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-03"
+    },
+    {
+      "deploymentId": "historical-gate-2-credential-corrected",
+      "state": "ROLLED_BACK",
+      "evidenceId": "historical-gate-2-live-failure-05"
+    }
+  ],
+  "incidents": [
+    {
+      "incidentId": "historical-gate-2-containment-profile-retired-from-active-v1",
+      "state": "CLOSED",
+      "rollbackState": "EXECUTED"
+    }
+  ],
+  "ledgerDigest": "0xfb4b77b0db9b401fe53f8ab0c3989ea0742424ee9b973423c974a432aa5cd453"
+}

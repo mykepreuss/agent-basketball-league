@@ -19,6 +19,7 @@ import {
   type CanonicalStore,
 } from "@abl/database";
 import { validatePossessionResolvedPayload } from "@abl/projections";
+import { assessGenesisStartupEvidence } from "@abl/launch";
 import {
   recoverCanonicalEventSigner,
   sha256Commitment,
@@ -40,6 +41,7 @@ import {
   installCaseRehearsalRoutes,
   type CaseRehearsalOptions,
 } from "./cases.js";
+import { installCareerAuthorityRoutes } from "./career-authority.js";
 import {
   SignedCanonicalCommandSchema,
   materializeCanonicalEvent,
@@ -129,6 +131,9 @@ export const CORE_ROUTE_CATALOG: readonly CoreRouteCatalogEntry[] = [
   { method: "POST", path: "/v1/cases/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/continuity/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/exit/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/autonomy/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/delegations/*", authority: "ADMITTED_AGENT" },
+  { method: "POST", path: "/v1/trade-access/*", authority: "ADMITTED_AGENT" },
 ] as const;
 
 const CandidateChallengeSchema = z.strictObject({
@@ -142,10 +147,12 @@ export interface AdmittedAgentAuthority {
 
 export type LiveCoreOperatingProfile =
   | "PRE_GENESIS_REHEARSAL"
-  | "PRODUCTION_V1_PRE_GENESIS";
+  | "PRODUCTION_V1_PRE_GENESIS"
+  | "PRODUCTION_GENESIS";
 
 export interface LiveCoreApiOptions {
   operatingProfile?: LiveCoreOperatingProfile;
+  genesisStartupEvidence?: unknown;
   store: CanonicalStore;
   domain: TypedDataDomain;
   admittedAgents: ReadonlyMap<string, AdmittedAgentAuthority>;
@@ -313,8 +320,21 @@ export function createLiveCoreApi(
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
   const now = options.now ?? Date.now;
-  const operatingProfile = options.operatingProfile ?? "PRE_GENESIS_REHEARSAL";
+  const requestedOperatingProfile =
+    options.operatingProfile ?? "PRE_GENESIS_REHEARSAL";
+  const genesisAssessment = assessGenesisStartupEvidence(
+    options.genesisStartupEvidence,
+  );
+  if (
+    requestedOperatingProfile === "PRODUCTION_GENESIS" &&
+    !genesisAssessment.ready
+  )
+    throw new Error(
+      `PRODUCTION_GENESIS evidence rejected: ${genesisAssessment.blockers.join("; ")}`,
+    );
+  const operatingProfile = requestedOperatingProfile;
   const rehearsal = operatingProfile === "PRE_GENESIS_REHEARSAL";
+  const genesis = operatingProfile === "PRODUCTION_GENESIS";
   const {
     artifacts,
     candidateAdmission,
@@ -342,6 +362,7 @@ export function createLiveCoreApi(
           scheduleEvidence: options.finalizedGames.scheduleEvidence,
         };
   const candidateRoutesEnabled = candidateAdmission !== undefined;
+  const careerAuthorityRoutesEnabled = candidateRoutesEnabled;
   const artifactRoutesEnabled =
     candidateRoutesEnabled &&
     governance !== undefined &&
@@ -375,14 +396,14 @@ export function createLiveCoreApi(
     candidateRoutesEnabled && governanceRoutesEnabled && releases !== undefined;
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
-    reply.header("x-abl-genesis-state", "PRE_GENESIS");
+    reply.header("x-abl-genesis-state", genesis ? "GENESIS" : "PRE_GENESIS");
     reply.header("x-abl-operating-profile", operatingProfile);
     return payload;
   });
   app.get("/health", async () => ({
     status: "ok",
     service: "abl-core-api",
-    genesis: false,
+    genesis,
     operatingProfile,
     rehearsal,
     productionV1: !rehearsal,
@@ -771,6 +792,16 @@ export function createLiveCoreApi(
       verifierResults: releases.verifierResults,
     });
   }
+  if (candidateAdmission !== undefined) {
+    installCareerAuthorityRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+    });
+  }
   for (const route of CORE_ROUTE_CATALOG.filter(
     (entry) =>
       entry.path !== "/v1/commands" &&
@@ -792,7 +823,13 @@ export function createLiveCoreApi(
       ) &&
       !(resourceRoutesEnabled && entry.path === "/v1/resources/*") &&
       !(releaseRoutesEnabled && entry.path === "/v1/releases/*") &&
-      !(caseRoutesEnabled && entry.path === "/v1/cases/*"),
+      !(caseRoutesEnabled && entry.path === "/v1/cases/*") &&
+      !(
+        careerAuthorityRoutesEnabled &&
+        ["/v1/autonomy/*", "/v1/delegations/*", "/v1/trade-access/*"].includes(
+          entry.path,
+        )
+      ),
   )) {
     app.route({
       method: route.method,

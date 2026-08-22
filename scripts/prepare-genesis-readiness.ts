@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { format } from "prettier";
 
 import {
   assessGenesisReadiness,
@@ -15,13 +16,8 @@ import {
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 async function writeJson(path: string, value: unknown): Promise<void> {
-  await writeFile(
-    join(repositoryRoot, path),
-    `${JSON.stringify(value, null, 2)}\n`,
-    {
-      mode: 0o600,
-    },
-  );
+  const output = await format(JSON.stringify(value), { parser: "json" });
+  await writeFile(join(repositoryRoot, path), output, { mode: 0o600 });
 }
 
 async function main(): Promise<void> {

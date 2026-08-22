@@ -42,12 +42,14 @@ export class HttpExitPackagePortabilityVerifier
 {
   readonly #origin: string;
   readonly #identity: ServiceRequestIdentity;
+  readonly #previewToken: string | undefined;
   readonly #now: () => number;
   readonly #fetch: typeof fetch;
 
   public constructor(options: {
     origin: string;
     identity: ServiceRequestIdentity;
+    previewToken?: string;
     now?: () => number;
     fetch?: typeof fetch;
   }) {
@@ -66,6 +68,7 @@ export class HttpExitPackagePortabilityVerifier
       throw new Error("Exit portability verifier identity lacks capability");
     this.#origin = origin.origin;
     this.#identity = options.identity;
+    this.#previewToken = options.previewToken;
     this.#now = options.now ?? Date.now;
     this.#fetch = options.fetch ?? fetch;
   }
@@ -103,7 +106,13 @@ export class HttpExitPackagePortabilityVerifier
     });
     const response = await this.#fetch(`${this.#origin}${path}`, {
       method: "POST",
-      headers: { ...headers, "content-type": "application/json" },
+      headers: {
+        ...headers,
+        "content-type": "application/json",
+        ...(this.#previewToken === undefined
+          ? {}
+          : { "x-blaxel-preview-token": this.#previewToken }),
+      },
       body: bodyBytes,
       redirect: "error",
       signal: AbortSignal.timeout(10_000),

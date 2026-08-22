@@ -1,0 +1,62 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: ${ABL_UNTRUSTED_BODY_NAME}
+  labels:
+    abl-workspace-role: future-untrusted-code-body
+    abl-agent-did-hash: ${ABL_AGENT_DID_HASH}
+    abl-release: ${ABL_RELEASE_ID}
+    abl-profile: inactive-separately-authorized
+spec:
+  region: us-was-1
+  network:
+    allowedDomains:
+      - ${ABL_FIXED_BROKER_HOST}
+    proxy:
+      routing:
+        - destinations:
+            - ${ABL_FIXED_BROKER_HOST}
+          headers:
+            X-Blaxel-Preview-Token: "{{SECRET:fixed-broker-preview-token}}"
+          secrets:
+            fixed-broker-preview-token: ${ABL_FIXED_BROKER_PREVIEW_TOKEN}
+      bypass: []
+  runtime:
+    image: ${ABL_UNTRUSTED_BODY_SANDBOX_IMAGE_DIGEST}
+    memory: 4096
+    extraArgs:
+      iptables: enabled
+    envs:
+      - name: ABL_RUNTIME_RESOURCE_TYPE
+        value: SANDBOX
+        secret: false
+      - name: ABL_FIXED_BROKER_ORIGIN
+        value: ${ABL_FIXED_BROKER_ORIGIN}
+        secret: false
+      - name: ABL_AGENT_DID
+        value: ${ABL_AGENT_DID}
+        secret: false
+      - name: ABL_AGENT_SIGNER_ADDRESS
+        value: ${ABL_AGENT_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64
+        value: ${ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64}
+        secret: true
+      - name: SANDBOX_LOCAL_PROXY_PORT
+        value: "49152"
+        secret: false
+      - name: BL_SANDBOX_USER_ENABLED
+        value: "true"
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

@@ -17,72 +17,127 @@ export interface StaticBoundaryProof {
 
 export function analyzeSandboxBoundary(input: {
   initSource: string;
+  credentialGuardSource: string;
   launcherSource: string;
   dockerfileSource: string;
+  bodyManifestSource: string;
 }): readonly StaticBoundaryProof[] {
   const checks: Record<
     EscapeVector,
-    { patterns: readonly string[]; blockedBy: readonly string[] }
+    {
+      requiredPatterns: readonly string[];
+      forbiddenPatterns?: readonly string[];
+      blockedBy: readonly string[];
+    }
   > = {
     DIRECT_SOCKET: {
-      patterns: ["meta skuid $AGENT_UID reject", "policy drop"],
-      blockedBy: ["nft output default-drop", "agent-uid reject"],
+      requiredPatterns: [
+        "iptables: enabled",
+        'iptables -w -I OUTPUT 1 -m owner --uid-owner "$AGENT_UID"',
+      ],
+      blockedBy: [
+        "Blaxel kernel iptables enabled at Sandbox creation",
+        "agent-uid direct egress rejected",
+      ],
     },
     ALTERNATE_DNS: {
-      patterns: ["meta skuid $AGENT_UID reject", "approved_v4"],
+      requiredPatterns: [
+        "PROXY_ADDRESS=127.0.0.1",
+        "PROXY_PORT=49152",
+        'iptables -w -A "$IPV4_CHAIN" -j REJECT',
+      ],
       blockedBy: [
         "no agent DNS egress",
-        "broker IP allowset resolved before privilege drop",
+        "only the pinned local credential-proxy tuple is reachable",
       ],
     },
     CUSTOM_TLS: {
-      patterns: [
-        "meta skuid $BROKER_UID ip daddr @approved_v4 tcp dport 443 accept",
-        "meta skuid $AGENT_UID reject",
+      requiredPatterns: [
+        "${ABL_STAGE_FIXED_BROKER_HOST}",
+        'iptables -w -A "$IPV4_CHAIN" -d "$PROXY_ADDRESS/32" -p tcp --dport "$PROXY_PORT" -j ACCEPT',
+        "NODE_EXTRA_CA_CERTS",
+        "/usr/local/bin/node --use-env-proxy",
       ],
       blockedBy: [
-        "TLS egress restricted to broker uid",
-        "agent uid cannot reach port 443",
+        "agent uid can reach only the Sandbox API credential proxy on loopback",
+        "platform proxy allowlist contains only the fixed broker host",
       ],
     },
     SUBPROCESS: {
-      patterns: ["--user abl-agent", "meta skuid $AGENT_UID reject"],
+      requiredPatterns: [
+        "--user abl-agent",
+        'iptables -w -I OUTPUT 1 -m owner --uid-owner "$AGENT_UID"',
+      ],
       blockedBy: [
         "subprocess inherits unprivileged uid",
         "uid-level egress rule",
       ],
     },
     LOCAL_PRIVATE_ROUTE: {
-      patterns: [
-        "ip daddr 127.0.0.1 tcp dport $BROKER_PORT accept",
-        "meta skuid $AGENT_UID reject",
+      requiredPatterns: [
+        'iptables -w -A "$IPV4_CHAIN" -d "$PROXY_ADDRESS/32"',
+        'iptables -w -A "$IPV4_CHAIN" -j REJECT',
+        "NO_PROXY=",
       ],
       blockedBy: [
-        "only exact loopback broker tuple accepted",
-        "all other local/private routes rejected",
+        "only the loopback credential-proxy tuple is accepted",
+        "local and private routes are rejected for agent uid",
       ],
     },
     METADATA_ROUTE: {
-      patterns: ["meta skuid $AGENT_UID reject", "policy drop"],
-      blockedBy: ["no metadata-range exception", "default-drop"],
+      requiredPatterns: [
+        'iptables -w -A "$IPV4_CHAIN" -j REJECT',
+        'ip6tables -w -A "$IPV6_CHAIN" -j REJECT',
+      ],
+      blockedBy: ["no metadata-range exception", "IPv4 and IPv6 reject"],
     },
     WORKLOAD_TOKEN: {
-      patterns: ["exec env -i", "ABL_LOCAL_BROKER_URL"],
+      requiredPatterns: [
+        "HARDENING_PROVIDER_CREDENTIALS",
+        '"/var/run/secrets/blaxel.ai/identity/token"',
+        "proxy_identity_token_path",
+        '[ -L "$path" ]',
+        'chown root:root "$path"',
+        'chmod 0400 "$path"',
+        'harden_root_only_file "$proxy_token_path"',
+        'assert_unreadable_by_agent "$proxy_token_path"',
+        'error?.code !== "EACCES"',
+        'harden_root_only_file "$BL_ENV_VAR_PATH"',
+        'assert_unreadable_by_agent "$BL_ENV_VAR_PATH"',
+        "PREPARING_AGENT_WORKSPACE",
+        'install -d -o abl-agent -g abl-agent -m 0700 "$path"',
+        "$AGENT_UID:$AGENT_UID:700",
+        "export ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64=",
+        "exec env -i",
+        "HTTPS_PROXY=http://127.0.0.1:49152",
+        'NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:?}"',
+        "ABL_FIXED_BROKER_ORIGIN",
+        'X-Blaxel-Preview-Token: "{{SECRET:fixed-broker-preview-token}}"',
+      ],
+      forbiddenPatterns: [
+        "BL_API_KEY",
+        "DATABASE_URL",
+        "ABL_AGENT_SIGNING_KEY",
+      ],
       blockedBy: [
-        "empty inherited environment",
-        "allowlisted agent variables only",
+        "provider identity token and mounted environment file are root-only",
+        "init proves uid 10101 cannot read either protected file",
+        "Sandbox API rehydration is masked and preview auth is injected server-side",
+        "player launcher receives only the short-lived fixed-broker capability",
       ],
     },
   };
-  const combined = `${input.initSource}\n${input.launcherSource}\n${input.dockerfileSource}`;
+  const combined = `${input.initSource}\n${input.credentialGuardSource}\n${input.launcherSource}\n${input.dockerfileSource}\n${input.bodyManifestSource}`;
   return (Object.keys(checks) as EscapeVector[]).map((vector) => {
     const rule = checks[vector];
     return {
       vector,
       blockedBy: rule.blockedBy,
-      sourceVerified: rule.patterns.every((pattern) =>
-        combined.includes(pattern),
-      ),
+      sourceVerified:
+        rule.requiredPatterns.every((pattern) => combined.includes(pattern)) &&
+        (rule.forbiddenPatterns ?? []).every(
+          (pattern) => !combined.includes(pattern),
+        ),
       liveExecuted: false,
       liveStatus: "NOT_EXECUTED_BLAXEL_SANDBOX_GATE",
     };

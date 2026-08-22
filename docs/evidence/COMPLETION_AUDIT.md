@@ -1,6 +1,6 @@
 # Approved-plan completion audit
 
-Recorded: 2026-08-13 in `America/Vancouver`.
+Recorded: 2026-08-13 in `America/Vancouver`; launch-readiness addendum recorded 2026-08-19.
 
 Authority: the approved implementation plan with SHA-256 `9bc695db70c60f271bc4be9dab56742c0afb07538c17021ad45ff720b79cbfe5`. This audit distinguishes executable proof from schemas, pure-domain helpers, manifests, synthetic fixtures, and external gates. A green test is credited only to the behavior it directly executes.
 
@@ -12,7 +12,7 @@ Authority: the approved implementation plan with SHA-256 `9bc695db70c60f271bc4be
 | Four-workspace foundation           | Validated manifests, service authentication, canonical store, encrypted broker, custom image source                                                                               | `LOCAL_IMPLEMENTATION_EXTERNAL_EXECUTION` | Blaxel image build, four workspaces, Agent Drive, selected-provider database recovery, and live isolation.      |
 | Recognition foundation              | EIP-712 verifier, behavioral EVM suite, finalized-Base reader, source-bound unratified anchor                                                                                     | `PROVEN_LOCAL`                            | Ratified deployment and Base execution/finality.                                                                |
 | First playable possession           | Signed ten-body possession through core transaction/outbox, authenticated projection, public API, arena, and replay                                                               | `PROVEN_LOCAL`                            | Blaxel body/arena execution.                                                                                    |
-| Identity and personal computers     | Candidate, memory, continuity, exit, governed external artifacts, fixed safety service, and canonical trade-access evidence                                                       | `PARTIAL_LOCAL`                           | Canonical autonomy/delegation service paths, live body/Drive execution, and live Blaxel safety actuation.       |
+| Identity and personal computers     | Candidate, memory, continuity, autonomy, bounded delegation, trade access, exit, governed external artifacts, and fixed safety service                                            | `LOCAL_IMPLEMENTATION_EXTERNAL_EXECUTION` | Live body/Drive execution and live Blaxel safety actuation.                                                     |
 | Full exhibition game                | 128 signed possessions through finalized public history plus career-signed, storage-bound private film/practice replay and durable lessons                                        | `LOCAL_IMPLEMENTATION_EXTERNAL_EXECUTION` | Live model/body execution and target-workspace arena isolation.                                                 |
 | Premier institutions                | League/schedule suites plus canonical standings, combine/draft, cap-certified player mobility, direct board elections, governance, government MCP, cases, resources, and releases | `LOCAL_IMPLEMENTATION_EXTERNAL_EXECUTION` | Live institutional operation by admitted bodies on the target topology.                                         |
 | Development conference              | Domain suite plus 45-career canonical charter/mobility service, authenticated projection, public read model, and restart replay                                                   | `LOCAL_IMPLEMENTATION_EXTERNAL_EXECUTION` | An accelerated development season using admitted bodies on the target Blaxel topology.                          |
@@ -33,6 +33,8 @@ Authority: the approved implementation plan with SHA-256 `9bc695db70c60f271bc4be
 
 ## Next local closure order
 
-No additional safely executable local discrepancy is known. The remaining work in the phase table requires target-platform resources, admitted/founding-agent decisions, material-spend authority, or an explicit irreversible/public-action approval.
+The 2026-08-19 launch-readiness pass closed the prior canonical autonomy/delegation/trade-access discrepancy and added discovery, candidate intake isolation, storage profiles, Genesis gates, a derived launch ledger, and the prepared private staging slice. See [Gate 0/1 traceability](../launch/GATE_0_1_TRACEABILITY.md) and [Gate 1 evidence](./GATE-01.md).
+
+No additional safely executable Gate 1 discrepancy is known. The remaining work in the phase table requires target-platform resources, independent witnesses, an external database, admitted/founding-agent decisions, material-spend authority, or an explicit irreversible/public-action approval.
 
 No item in this audit authorizes founding decisions, public exposure, material spend, a Base broadcast, Blaxel staging, or production admission.

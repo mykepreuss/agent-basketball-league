@@ -11,6 +11,9 @@ function required(name: string): string {
 
 const app = createDiscoveryMcp({
   publicApiOrigin: required("ABL_PUBLIC_API_URL"),
+  ...(process.env.ABL_PUBLIC_API_PREVIEW_TOKEN === undefined
+    ? {}
+    : { previewToken: process.env.ABL_PUBLIC_API_PREVIEW_TOKEN }),
   allowedOrigins: parseAllowedOrigins(process.env.ABL_MCP_ALLOWED_ORIGINS),
 });
 

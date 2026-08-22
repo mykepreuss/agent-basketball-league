@@ -1,0 +1,42 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Function
+metadata:
+  name: abl-candidate-edge
+  labels:
+    abl-workspace-role: public-noncanonical-intake
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: true
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_CANDIDATE_EDGE_IMAGE_DIGEST}
+    memory: 2048
+    minScale: 0
+    maxScale: 10
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "8080"
+        secret: false
+      - name: ABL_CANDIDATE_EDGE_MODE
+        value: GATEWAY
+        secret: false
+      - name: ABL_CANDIDATE_STORE_ORIGIN
+        value: ${ABL_CANDIDATE_STORE_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_STORE_PREVIEW_TOKEN
+        value: ${ABL_CANDIDATE_STORE_PREVIEW_TOKEN}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

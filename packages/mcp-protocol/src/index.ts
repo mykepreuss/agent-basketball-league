@@ -283,6 +283,7 @@ export function parseAllowedOrigins(value: string | undefined): Set<string> {
 export interface FixedUpstreamOptions {
   origin: string;
   credential?: string;
+  previewToken?: string;
   fetchImplementation?: typeof fetch;
   allowHttpForTest?: boolean;
 }
@@ -328,6 +329,11 @@ export function createFixedUpstream(options: FixedUpstreamOptions) {
     (options.credential === "" || /[\r\n]/.test(options.credential))
   )
     throw new Error("MCP upstream credential is malformed");
+  if (
+    options.previewToken !== undefined &&
+    (options.previewToken === "" || /[\r\n]/.test(options.previewToken))
+  )
+    throw new Error("MCP upstream preview token is malformed");
 
   return async function request(input: {
     method: "GET" | "POST";
@@ -342,6 +348,8 @@ export function createFixedUpstream(options: FixedUpstreamOptions) {
     if (input.method === "POST") headers["content-type"] = "application/json";
     if (options.credential !== undefined)
       headers.authorization = `Bearer ${options.credential}`;
+    if (options.previewToken !== undefined)
+      headers["x-blaxel-preview-token"] = options.previewToken;
     const response = await fetchImplementation(target, {
       method: input.method,
       headers,

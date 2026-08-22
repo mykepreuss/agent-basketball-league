@@ -1,0 +1,45 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: abl-stage-arena
+  labels:
+    abl-stage: private-gate-2
+    abl-authority: spectator-read-only
+spec:
+  region: us-was-1
+  lifecycle:
+    expirationPolicies:
+      - action: delete
+        type: ttl-idle
+        value: 4h
+    terminatedRetention: 24h
+  runtime:
+    image: ${ABL_STAGE_ARENA_IMAGE_DIGEST}
+    memory: 1024
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_PUBLIC_API_URL
+        value: ${ABL_STAGE_PRIVATE_PUBLIC_API_ORIGIN}
+        secret: false
+      - name: ABL_PUBLIC_API_PREVIEW_TOKEN
+        value: ${ABL_STAGE_PUBLIC_API_PREVIEW_TOKEN}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

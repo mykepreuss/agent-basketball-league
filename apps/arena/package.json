@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@abl/projections": "workspace:*",
+    "@abl/schemas": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"

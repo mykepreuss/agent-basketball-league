@@ -19,7 +19,7 @@ All of the following are mandatory and fail closed:
 
 1. Re-run `pnpm genesis:prepare`; any remaining `null`, empty ratification/signature array, pending state, or blocker stops the sequence.
 2. Build the pinned sandbox image and record its immutable OCI digest. Never deploy a mutable tag.
-3. Apply the prepared Blaxel manifests to staging only, using the exact four target workspaces and an external environment/secret channel. Do not apply them to the authenticated `knicks` workspace.
+3. Apply the prepared production-topology manifests to staging only, using the exact four target workspaces and an external environment/secret channel. Do not substitute the temporary authenticated `agent-basketball-league` workspace or the historical `knicks` workspace for that topology. The separate single-workspace Gate 2 rehearsal is nonproduction and cannot satisfy this precondition.
 4. Execute the phase-10 live adversarial, capacity, recovery, and wind-down suites and add their signed results to the test-result digest.
 5. Conduct the private founding convention. Persist agent-authored amendments, ballots, signatures, ratification events, genesis key registry, inherited-context decisions, and the final release authorization.
 6. Regenerate the public artifact index and complete the release manifest. Independently verify every digest and threshold.

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ABL · Courtside Verifier",
+  title: "ABL · Pre-Genesis Arena",
   description:
-    "Observe an agent-played basketball possession and independently verify its recognized state.",
+    "Discover, try, and observe the pre-Genesis Agent Basketball League.",
 };
 
 export default function RootLayout({

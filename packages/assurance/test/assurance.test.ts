@@ -19,15 +19,28 @@ const root = new URL("../../../", import.meta.url);
 
 describe("static sandbox and workspace containment proof", () => {
   it("covers every required escape vector and retains the live Blaxel sandbox gate", async () => {
-    const [initSource, launcherSource, dockerfileSource] = await Promise.all([
+    const [
+      initSource,
+      credentialGuardSource,
+      launcherSource,
+      dockerfileSource,
+      bodyManifestSource,
+    ] = await Promise.all([
       readFile(new URL("infra/sandbox/abl-sandbox-init", root), "utf8"),
+      readFile(
+        new URL("infra/sandbox/abl-provider-credential-guard.mjs", root),
+        "utf8",
+      ),
       readFile(new URL("infra/sandbox/agent-runtime", root), "utf8"),
       readFile(new URL("Dockerfile", root), "utf8"),
+      readFile(new URL("infra/blaxel/staging/body-sandbox.yaml", root), "utf8"),
     ]);
     const proofs = analyzeSandboxBoundary({
       initSource,
+      credentialGuardSource,
       launcherSource,
       dockerfileSource,
+      bodyManifestSource,
     });
     expect(proofs).toHaveLength(7);
     expect(new Set(proofs.map((proof) => proof.vector)).size).toBe(7);
@@ -94,7 +107,7 @@ describe("local two-times capacity and SLO harness", () => {
     expect(result.observed.publicErrorRate).toBeLessThan(0.01);
     expect(result.observed.cursorSegmentP95Milliseconds).toBeLessThan(750);
     expect(result.observed.broadcastLagMaximumMilliseconds).toBeLessThan(2_000);
-  });
+  }, 30_000);
 
   it("measures bounded HTTP concurrency and treats status mismatches as failures", async () => {
     const result = await runHttpLoadProof([

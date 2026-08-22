@@ -1,0 +1,364 @@
+import { createHash } from "node:crypto";
+
+import { SandboxInstance } from "@blaxel/core";
+import type {
+  CandidateSandboxControlPlane,
+  CandidateRoleClass,
+} from "@abl/launch";
+import { z } from "zod";
+
+const ImmutableImageSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/@sha256:[0-9a-f]{64}$/);
+const WorkspaceNameSchema = z
+  .string()
+  .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
+const HostnameSchema = z.hostname();
+const HttpsOriginSchema = z
+  .url({ protocol: /^https$/ })
+  .refine((value) => new URL(value).pathname === "/", "Origin only");
+const Base64SecretSchema = z
+  .string()
+  .min(44)
+  .max(684)
+  .refine((value) => Buffer.from(value, "base64").toString("base64") === value);
+
+type SandboxResult = Awaited<
+  ReturnType<typeof SandboxInstance.createIfNotExists>
+>;
+
+export interface CandidateSandboxFactory {
+  createIfNotExists(
+    input: Parameters<typeof SandboxInstance.createIfNotExists>[0],
+  ): Promise<SandboxResult>;
+  get(name: string): Promise<SandboxResult>;
+  list(input: {
+    externalId: string;
+    limit: number;
+    showTerminated: boolean;
+  }): Promise<{ data: SandboxResult[] }>;
+  delete(name: string): Promise<unknown>;
+}
+
+export interface BlaxelCandidateControlPlaneOptions {
+  workspace: string;
+  region: string;
+  imageDigest: string;
+  authorizedApplicationId: string;
+  authorizationId: string;
+  fixedBrokerOrigin: string;
+  fixedBrokerHost: string;
+  fixedBrokerResourceName: string;
+  fixedBrokerImageDigest: string;
+  capabilityTokenBase64: string;
+  previewToken?: string;
+  memory?: number;
+  factory?: CandidateSandboxFactory;
+}
+
+export class BlaxelCandidateSandboxControlPlane
+  implements CandidateSandboxControlPlane
+{
+  readonly mode = "APPROVED_LIVE" as const;
+  readonly #workspace: string;
+  readonly #region: string;
+  readonly #imageDigest: string;
+  readonly #authorizedApplicationId: string;
+  readonly #authorizationId: string;
+  readonly #fixedBrokerOrigin: string;
+  readonly #fixedBrokerHost: string;
+  readonly #fixedBrokerResourceName: string;
+  readonly #fixedBrokerImageDigest: string;
+  readonly #capabilityTokenBase64: string;
+  readonly #previewToken: string | undefined;
+  readonly #memory: number;
+  readonly #factory: CandidateSandboxFactory;
+
+  constructor(options: BlaxelCandidateControlPlaneOptions) {
+    this.#workspace = WorkspaceNameSchema.parse(options.workspace);
+    this.#region = z.literal("us-was-1").parse(options.region);
+    this.#imageDigest = ImmutableImageSchema.parse(options.imageDigest);
+    this.#authorizedApplicationId = z
+      .uuid()
+      .parse(options.authorizedApplicationId);
+    this.#authorizationId = z
+      .string()
+      .min(8)
+      .max(160)
+      .regex(/^[A-Za-z0-9._:-]+$/)
+      .parse(options.authorizationId);
+    this.#fixedBrokerOrigin = HttpsOriginSchema.parse(
+      options.fixedBrokerOrigin,
+    );
+    this.#fixedBrokerHost = HostnameSchema.parse(options.fixedBrokerHost);
+    if (new URL(this.#fixedBrokerOrigin).hostname !== this.#fixedBrokerHost)
+      throw new Error("Fixed-broker origin and allowed host differ");
+    this.#fixedBrokerResourceName = WorkspaceNameSchema.parse(
+      options.fixedBrokerResourceName,
+    );
+    this.#fixedBrokerImageDigest = ImmutableImageSchema.parse(
+      options.fixedBrokerImageDigest,
+    );
+    this.#capabilityTokenBase64 = Base64SecretSchema.parse(
+      options.capabilityTokenBase64,
+    );
+    this.#previewToken = options.previewToken;
+    if (
+      this.#previewToken !== undefined &&
+      (this.#previewToken.length < 32 ||
+        this.#previewToken.length > 4_096 ||
+        /[\r\n]/.test(this.#previewToken))
+    )
+      throw new Error("Invalid fixed-broker preview token");
+    this.#memory = z
+      .number()
+      .int()
+      .min(2_048)
+      .max(8_192)
+      .parse(options.memory ?? 4_096);
+    this.#factory = options.factory ?? SandboxInstance;
+  }
+
+  async provision(input: {
+    applicationId: string;
+    candidateDid: string;
+    roleClass: CandidateRoleClass;
+    formerOperatorSigningAddress: string;
+    commandCommitment: `0x${string}`;
+  }): Promise<{
+    state: "PROVISIONED_AWAITING_TRANSFER";
+    sandboxResourceName: string;
+  }> {
+    if (input.applicationId !== this.#authorizedApplicationId)
+      throw new Error("Live Job is not authorized for this application");
+    assertFixedBroker({
+      sandbox: await this.#factory.get(this.#fixedBrokerResourceName),
+      resourceName: this.#fixedBrokerResourceName,
+      applicationId: input.applicationId,
+      workspace: this.#workspace,
+      region: this.#region,
+      imageDigest: this.#fixedBrokerImageDigest,
+    });
+    const resourceName = candidateSandboxName(input.applicationId);
+    const envs = [
+      environment("ABL_RUNTIME_RESOURCE_TYPE", "SANDBOX"),
+      environment("ABL_FIXED_BROKER_ORIGIN", this.#fixedBrokerOrigin),
+      environment("ABL_AGENT_DID", input.candidateDid),
+      environment(
+        "ABL_AGENT_SIGNER_ADDRESS",
+        input.formerOperatorSigningAddress,
+      ),
+      environment(
+        "ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64",
+        this.#capabilityTokenBase64,
+        true,
+      ),
+      ...(this.#previewToken === undefined
+        ? []
+        : [
+            environment(
+              "ABL_FIXED_BROKER_PREVIEW_TOKEN",
+              this.#previewToken,
+              true,
+            ),
+          ]),
+      environment("BL_SANDBOX_USER_ENABLED", "true"),
+      environment("DO_NOT_TRACK", "1"),
+      environment("BL_ENABLE_OPENTELEMETRY", "false"),
+      environment("TELEMETRY_ENABLED", "false"),
+      environment("ABL_LOG_CONTENT", "false"),
+    ];
+    const labels = {
+      "abl-workspace-role": "competition-career-body",
+      "abl-runtime-resource": "sandbox",
+      "abl-role-class": input.roleClass.toLowerCase(),
+      "abl-command-commitment": input.commandCommitment.slice(2, 18),
+      "abl-authorization": runtimeContractCommitment(this.#authorizationId),
+      "abl-runtime-contract": runtimeContractCommitment({
+        applicationId: input.applicationId,
+        authorizationId: this.#authorizationId,
+        image: this.#imageDigest,
+        region: this.#region,
+        memory: this.#memory,
+        allowedDomains: [this.#fixedBrokerHost],
+        envs,
+      }),
+    };
+    const sandbox = await this.#factory.createIfNotExists({
+      metadata: {
+        name: resourceName,
+        displayName: `ABL candidate ${input.applicationId.slice(0, 8)}`,
+        externalId: input.applicationId,
+        labels,
+      },
+      spec: {
+        enabled: true,
+        region: this.#region,
+        network: { allowedDomains: [this.#fixedBrokerHost] },
+        runtime: {
+          image: this.#imageDigest,
+          memory: this.#memory,
+          envs,
+        },
+      },
+    });
+    assertReturnedSandbox({
+      sandbox,
+      resourceName,
+      workspace: this.#workspace,
+      region: this.#region,
+      imageDigest: this.#imageDigest,
+      fixedBrokerHost: this.#fixedBrokerHost,
+      applicationId: input.applicationId,
+      memory: this.#memory,
+      labels,
+      envs,
+    });
+    return {
+      state: "PROVISIONED_AWAITING_TRANSFER",
+      sandboxResourceName: resourceName,
+    };
+  }
+
+  async deprovision(input: {
+    applicationId: string;
+    sandboxResourceName: string;
+  }): Promise<{
+    state: "DEPROVISIONED" | "ALREADY_ABSENT";
+    removedResourceNames: readonly string[];
+  }> {
+    if (input.applicationId !== this.#authorizedApplicationId)
+      throw new Error("Live Job is not authorized for this application");
+    const expectedBodyName = candidateSandboxName(input.applicationId);
+    if (input.sandboxResourceName !== expectedBodyName)
+      throw new Error("Provisioning receipt names another Sandbox");
+    const expectedNames = [expectedBodyName, this.#fixedBrokerResourceName];
+    const page = await this.#factory.list({
+      externalId: input.applicationId,
+      limit: 3,
+      showTerminated: false,
+    });
+    for (const sandbox of page.data) {
+      if (
+        sandbox.metadata.externalId !== input.applicationId ||
+        sandbox.metadata.workspace !== this.#workspace ||
+        sandbox.metadata.name === undefined ||
+        !expectedNames.includes(sandbox.metadata.name)
+      )
+        throw new Error("Candidate Sandbox teardown scope drifted");
+    }
+    const existingNames = new Set(
+      page.data.map(({ metadata }) => metadata.name).filter(Boolean),
+    );
+    const removedResourceNames: string[] = [];
+    for (const name of expectedNames) {
+      if (!existingNames.has(name)) continue;
+      await this.#factory.delete(name);
+      removedResourceNames.push(name);
+    }
+    return {
+      state:
+        removedResourceNames.length === 0 ? "ALREADY_ABSENT" : "DEPROVISIONED",
+      removedResourceNames,
+    };
+  }
+}
+
+function environment(name: string, value: string, secret = false) {
+  return { name, value, secret };
+}
+
+function runtimeContractCommitment(value: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(value))
+    .digest("hex")
+    .slice(0, 32);
+}
+
+export function candidateSandboxName(applicationId: string): string {
+  return `abl-career-${z.uuid().parse(applicationId).replaceAll("-", "")}`;
+}
+
+function assertFixedBroker(input: {
+  sandbox: SandboxResult;
+  resourceName: string;
+  applicationId: string;
+  workspace: string;
+  region: string;
+  imageDigest: string;
+}): void {
+  const { sandbox } = input;
+  if (
+    sandbox.metadata.name !== input.resourceName ||
+    sandbox.metadata.externalId !== input.applicationId ||
+    sandbox.metadata.workspace !== input.workspace ||
+    sandbox.spec.enabled !== true ||
+    sandbox.spec.region !== input.region ||
+    sandbox.spec.runtime?.image !== input.imageDigest ||
+    !sandbox.spec.runtime.ports?.some(
+      ({ protocol, target }) => protocol === "HTTP" && target === 3_000,
+    )
+  )
+    throw new Error("Candidate fixed-broker Sandbox configuration drifted");
+  if (sandbox.spec.volumes !== undefined && sandbox.spec.volumes.length !== 0)
+    throw new Error("Candidate fixed-broker Sandbox must not mount storage");
+}
+
+function assertReturnedSandbox(input: {
+  sandbox: SandboxResult;
+  resourceName: string;
+  workspace: string;
+  region: string;
+  imageDigest: string;
+  fixedBrokerHost: string;
+  applicationId: string;
+  memory: number;
+  labels: Record<string, string>;
+  envs: Array<{ name: string; value: string; secret: boolean }>;
+}): void {
+  const { sandbox } = input;
+  if (
+    sandbox.metadata.name !== input.resourceName ||
+    sandbox.metadata.workspace !== input.workspace ||
+    sandbox.metadata.externalId !== input.applicationId ||
+    sandbox.spec.region !== input.region ||
+    sandbox.spec.enabled !== true ||
+    sandbox.spec.runtime?.image !== input.imageDigest ||
+    sandbox.spec.runtime.memory !== input.memory
+  )
+    throw new Error("Existing candidate Sandbox configuration drifted");
+  for (const [name, value] of Object.entries(input.labels))
+    if (sandbox.metadata.labels?.[name] !== value)
+      throw new Error("Existing candidate Sandbox labels drifted");
+  if (sandbox.spec.volumes !== undefined && sandbox.spec.volumes.length !== 0)
+    throw new Error("Candidate Sandbox must not mount durable storage");
+  if (sandbox.spec.runtime?.extraArgs !== undefined)
+    throw new Error("Reviewed candidate Sandbox must use the standard kernel");
+  if (
+    JSON.stringify(sandbox.spec.network?.allowedDomains ?? []) !==
+    JSON.stringify([input.fixedBrokerHost])
+  )
+    throw new Error("Candidate Sandbox egress policy drifted");
+  if (!environmentContractMatches(sandbox.spec.runtime?.envs ?? [], input.envs))
+    throw new Error("Candidate Sandbox environment contract drifted");
+}
+
+function environmentContractMatches(
+  actual: Array<{
+    name?: string;
+    value?: string;
+    secret?: boolean;
+  }>,
+  expected: Array<{ name: string; value: string; secret: boolean }>,
+): boolean {
+  if (actual.length !== expected.length) return false;
+  const actualByName = new Map(actual.map((entry) => [entry.name, entry]));
+  return expected.every((entry) => {
+    const candidate = actualByName.get(entry.name);
+    if (candidate === undefined || (candidate.secret ?? false) !== entry.secret)
+      return false;
+    return entry.secret || candidate.value === entry.value;
+  });
+}

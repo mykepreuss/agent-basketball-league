@@ -126,6 +126,19 @@ function finalizedGameApp(
 }
 
 describe("core API pre-genesis boundary", () => {
+  it("cannot activate PRODUCTION_GENESIS from configuration alone", () => {
+    expect(() =>
+      createLiveCoreApi({
+        operatingProfile: "PRODUCTION_GENESIS",
+        store: new InMemoryCanonicalStore(),
+        domain,
+        admittedAgents: new Map(),
+        competitionId: "competition-pre-genesis",
+        seasonId: "season-zero",
+      }),
+    ).toThrow("PRODUCTION_GENESIS evidence rejected");
+  });
+
   it("identifies an explicitly selected production V1 without claiming genesis", async () => {
     const { app } = finalizedGameApp(null, "PRODUCTION_V1_PRE_GENESIS");
     const response = await app.inject({ method: "GET", url: "/health" });

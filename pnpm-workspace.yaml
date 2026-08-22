@@ -8,6 +8,9 @@ allowBuilds:
   esbuild: true
   utf-8-validate: false
 
+overrides:
+  tmp: 0.2.7
+
 catalog:
   "@blaxel/core": 0.3.11
   "@fastify/cors": 11.3.0
@@ -35,3 +38,6 @@ catalog:
   viem: 2.55.13
   yaml: 2.9.0
   zod: 4.4.3
+
+minimumReleaseAgeExclude:
+  - "@blaxel/core@0.3.13"

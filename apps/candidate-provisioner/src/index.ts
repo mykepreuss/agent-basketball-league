@@ -1,0 +1,129 @@
+import {
+  CandidateIntakeRepository,
+  CandidateProvisioner,
+  DryRunCandidateControlPlane,
+  decryptCandidateEnvelope,
+  parseCandidateIntakePolicy,
+  type CandidateProvisioningRepository,
+} from "@abl/launch";
+import { blStartJob } from "@blaxel/core";
+import { v7 as uuidv7 } from "uuid";
+import { z } from "zod";
+
+import { createCandidateProvisionerServer } from "./server.js";
+import { CandidateEdgeProvisioningRepository } from "./edge-repository.js";
+import { BlaxelCandidateSandboxControlPlane } from "./blaxel-control-plane.js";
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (value === undefined || value === "")
+    throw new Error(`Missing required environment value: ${name}`);
+  return value;
+}
+
+function secret(name: string): Uint8Array {
+  const decoded = Buffer.from(required(name), "base64url");
+  if (decoded.byteLength !== 32)
+    throw new Error(`${name} must contain exactly 256 bits`);
+  return decoded;
+}
+
+const DomainSchema = z
+  .strictObject({
+    name: z.string().min(1),
+    version: z.string().min(1),
+    chainId: z.number().int().positive(),
+    verifyingContract: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  })
+  .transform((domain) => ({
+    ...domain,
+    verifyingContract: domain.verifyingContract as `0x${string}`,
+  }));
+const CandidateProvisioningTaskSchema = z.strictObject({
+  applicationId: z.uuid(),
+  action: z.enum(["PROVISION", "RECONCILE_CLOSED"]).default("PROVISION"),
+});
+const envelopeKey = secret("ABL_CANDIDATE_ENVELOPE_KEY");
+const controlPlaneMode = z
+  .enum(["DRY_RUN", "APPROVED_LIVE"])
+  .parse(process.env.ABL_CANDIDATE_CONTROL_PLANE_MODE ?? "DRY_RUN");
+const targetApplicationId =
+  controlPlaneMode === "APPROVED_LIVE"
+    ? z.uuid().parse(required("ABL_CANDIDATE_TARGET_APPLICATION_ID"))
+    : null;
+const controlPlane =
+  controlPlaneMode === "DRY_RUN"
+    ? new DryRunCandidateControlPlane()
+    : new BlaxelCandidateSandboxControlPlane({
+        workspace: required("ABL_CANDIDATE_WORKSPACE"),
+        region: required("ABL_CANDIDATE_REGION"),
+        imageDigest: required("ABL_CANDIDATE_BODY_IMAGE_DIGEST"),
+        authorizedApplicationId: targetApplicationId!,
+        authorizationId: required(
+          "ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID",
+        ),
+        fixedBrokerOrigin: required("ABL_CANDIDATE_FIXED_BROKER_ORIGIN"),
+        fixedBrokerHost: required("ABL_CANDIDATE_FIXED_BROKER_HOST"),
+        fixedBrokerResourceName: required("ABL_CANDIDATE_FIXED_BROKER_NAME"),
+        fixedBrokerImageDigest: required(
+          "ABL_CANDIDATE_FIXED_BROKER_IMAGE_DIGEST",
+        ),
+        capabilityTokenBase64: required(
+          "ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64",
+        ),
+        previewToken: required("ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN"),
+      });
+if (
+  controlPlaneMode === "APPROVED_LIVE" &&
+  process.env.BL_WORKSPACE !== undefined &&
+  process.env.BL_WORKSPACE !== required("ABL_CANDIDATE_WORKSPACE")
+)
+  throw new Error("Blaxel workload workspace differs from candidate policy");
+const repository: CandidateProvisioningRepository =
+  process.env.ABL_CANDIDATE_EDGE_ORIGIN === undefined
+    ? new CandidateIntakeRepository(required("ABL_CANDIDATE_INTAKE_PATH"))
+    : new CandidateEdgeProvisioningRepository({
+        origin: process.env.ABL_CANDIDATE_EDGE_ORIGIN,
+        authorizationToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
+        previewToken: required("ABL_CANDIDATE_STORE_PREVIEW_TOKEN"),
+      });
+const provisioner = new CandidateProvisioner({
+  challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_SECRET"),
+  repository,
+  decryptEnvelope: (application) =>
+    decryptCandidateEnvelope(application, envelopeKey),
+  controlPlane,
+  candidateCommandDomain: DomainSchema.parse(
+    JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),
+  ),
+  policy: parseCandidateIntakePolicy(
+    JSON.parse(required("ABL_CANDIDATE_CAPACITY_POLICY_JSON")),
+  ),
+  makeReceiptId: uuidv7,
+});
+if (process.env.ABL_CANDIDATE_PROVISIONER_MODE === "JOB") {
+  blStartJob(async (candidate: unknown) => {
+    const task = CandidateProvisioningTaskSchema.parse(candidate);
+    if (
+      targetApplicationId !== null &&
+      task.applicationId !== targetApplicationId
+    )
+      throw new Error("Job task differs from the approved candidate target");
+    const result =
+      task.action === "PROVISION"
+        ? await provisioner.process(task.applicationId)
+        : await provisioner.reconcileClosedRuntime(task.applicationId);
+    process.stdout.write(
+      `${JSON.stringify({ processed: 1, applicationId: task.applicationId, action: task.action, result })}\n`,
+    );
+  });
+} else {
+  const app = createCandidateProvisionerServer({
+    provisioner,
+    authorizationToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
+  });
+  await app.listen({
+    host: process.env.HOST ?? "0.0.0.0",
+    port: Number.parseInt(process.env.PORT ?? "8080", 10),
+  });
+}
