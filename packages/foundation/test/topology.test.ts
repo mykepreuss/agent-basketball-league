@@ -1254,6 +1254,7 @@ describe("hardened sandbox image policy", () => {
     expect(stagingGenerator).toContain("imageSourceDigests");
     expect(stagingGenerator).toContain('"abl-alpha-r01"');
     expect(stagingGenerator).toContain('"node_modules/.modules.yaml"');
+    expect(stagingGenerator).toContain('"node_modules/.pnpm/lock.yaml"');
     expect(stagingGenerator).toContain(
       '"node_modules/.pnpm-workspace-state-v1.json"',
     );

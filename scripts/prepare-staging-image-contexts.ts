@@ -109,6 +109,7 @@ const developmentEntries = [
 ] as const;
 const volatileRuntimeMetadata = [
   "node_modules/.modules.yaml",
+  "node_modules/.pnpm/lock.yaml",
   "node_modules/.pnpm-workspace-state-v1.json",
 ] as const;
 const ignoredBodyInputNames = new Set([

@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-22T20:55:00.416Z`
+> Recorded: `2026-08-22T21:25:18.343Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
 > Stable result digest: `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5`
-> Implementation source digest: `0x0dc96e69d12042effa21aa2d044c962737474174d797e8511c1c39560e879c38`
-> Launch-ledger digest: `0x5d006f4b4e71f3560f066c2a82ee2de74b70e47871e5650f3a1c745eee33f1a3`
+> Implementation source digest: `0x5da38ce9f97ffbd101179e9c3f84a860ee31e66dd9e44cfedc8b32ea48c40cf4`
+> Launch-ledger digest: `0xb8839479d92d85975eb7a690766b23b043132de3a8a82d12ce4cf0004c658450`
 
 ## Outcome
 
@@ -20,8 +20,8 @@ The result proves local implementation readiness only. The derived launch ledger
 | ---------------------------- | -------------------------------------------------------------------- | ------ |
 | Canonical launch plan        | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` | Passed |
 | Existing applications        | `0x00b077bfbf635377ea3f8213e147947cdbdf45338ebc24b29e01e7b4f676f312` | Passed |
-| Existing domain packages     | `0x7b8d7820524e9d11eba4622822fe4e25de0c67c1d0934ebc726e01da32fe4bbf` | Passed |
-| Active Blaxel topology       | `0x4ba8895b4f9637c09b14b72a6e62d4f8673ba5165279a7a0a55ff8d18ba31263` | Passed |
+| Existing domain packages     | `0xbb04218c6524eafec2c18540a0bfe2282d95cd76d78f8cd4c5713f6ee75b9db1` | Passed |
+| Active Blaxel topology       | `0x57bdc6a8b24b99b433e445b87f9f0cfa63adddc6ce7656d87b2ec88a670f41c8` | Passed |
 | Agent Drive topology         | `0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245` | Passed |
 | Founding Alpha launch domain | `0xa574ae90c9cf690bae773da81d876dbcc26e1e5399e953fc27fd107395cae522` | Passed |
 | Candidate provisioner        | `0x9a3135cfdbef7bdf9e5a82b4addbcd5664a3a77078bf5895cabc82d046e64848` | Passed |
@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use the refreshed read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md), then repeat its drift checks immediately before the first mutation.
+1. Use the refreshed read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md), then repeat its drift checks immediately before the first mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.
