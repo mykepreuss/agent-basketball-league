@@ -20,14 +20,14 @@ The `agent-basketball-league` workspace contains no live ABL workload or storage
 | Artifact                        | Verified value                                                                        |
 | ------------------------------- | ------------------------------------------------------------------------------------- |
 | Baseline commit                 | `943fb734e43f880d86eb352e7aacf795d44914d5`                                            |
-| Existing implementation source  | `0x4d2aa7436cc21abda3d55a06ac3b449b7ab5c4c9654d244707d2cc08dca09ec8` across 428 files |
+| Existing implementation source  | `0x0dc96e69d12042effa21aa2d044c962737474174d797e8511c1c39560e879c38` across 428 files |
 | Launch plan                     | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`                  |
-| Exact Node 24.18.0 local result | `0x61355c1e590e3ef0ef5550ad371c247ddd50abc573e5799417a4656f5aa5f69d`                  |
+| Exact Node 24.18.0 local result | `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5`                  |
 | Image-source set                | `0x2a49f2ead328fc3fe39979ede40b701d74a7428807e369e98345f14e8f16a9e6`                  |
 | Rendered manifest set           | `0xe53d58cea4490fc3090132fad6bf8634b02d2b0fd65398cb8c55f8b645a792f7`                  |
 | Reviewed body image source      | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642`                  |
 | Reviewed body archive           | `0x5142588fa09bb4036e2ab08eb656cdb03960593873816fc9b11026c9d8f162ef`                  |
-| Launch ledger                   | `0xfb4b77b0db9b401fe53f8ab0c3989ea0742424ee9b973423c974a432aa5cd453`                  |
+| Launch ledger                   | `0x5d006f4b4e71f3560f066c2a82ee2de74b70e47871e5650f3a1c745eee33f1a3`                  |
 
 The image packet references the existing core API, public API, arena, storage broker, fixed body broker, career body, candidate edge/store, candidate provisioner, and four MCP applications. The resource packet derives from their existing active Blaxel manifests. This is a deployment and integration proof of the codebase already built, not a replacement implementation.
 
