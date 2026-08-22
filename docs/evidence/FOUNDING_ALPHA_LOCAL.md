@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use the refreshed read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md), then repeat its drift checks immediately before the first mutation.
+1. Use the post-correction read-only Blaxel and Neon preflight in [`FOUNDING_ALPHA_PREFLIGHT_03.md`](./FOUNDING_ALPHA_PREFLIGHT_03.md), then repeat its drift checks immediately before the first mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.
