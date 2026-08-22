@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-22T20:42:27.518Z`
+> Recorded: `2026-08-22T20:55:00.416Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0x61355c1e590e3ef0ef5550ad371c247ddd50abc573e5799417a4656f5aa5f69d`
-> Implementation source digest: `0x4d2aa7436cc21abda3d55a06ac3b449b7ab5c4c9654d244707d2cc08dca09ec8`
-> Launch-ledger digest: `0xfb4b77b0db9b401fe53f8ab0c3989ea0742424ee9b973423c974a432aa5cd453`
+> Stable result digest: `0xd78013109d9fdc59bebe09023373263a15fe72408d5793621af21f2a304addd5`
+> Implementation source digest: `0x0dc96e69d12042effa21aa2d044c962737474174d797e8511c1c39560e879c38`
+> Launch-ledger digest: `0x5d006f4b4e71f3560f066c2a82ee2de74b70e47871e5650f3a1c745eee33f1a3`
 
 ## Outcome
 
@@ -19,7 +19,7 @@ The result proves local implementation readiness only. The derived launch ledger
 | Evidence group               | SHA-256 digest                                                       | Result |
 | ---------------------------- | -------------------------------------------------------------------- | ------ |
 | Canonical launch plan        | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` | Passed |
-| Existing applications        | `0xc2da3077e83c7ce1975055a53997e935d3cf06b5fcc522da20ad64f6dd07819a` | Passed |
+| Existing applications        | `0x00b077bfbf635377ea3f8213e147947cdbdf45338ebc24b29e01e7b4f676f312` | Passed |
 | Existing domain packages     | `0x7b8d7820524e9d11eba4622822fe4e25de0c67c1d0934ebc726e01da32fe4bbf` | Passed |
 | Active Blaxel topology       | `0x4ba8895b4f9637c09b14b72a6e62d4f8673ba5165279a7a0a55ff8d18ba31263` | Passed |
 | Agent Drive topology         | `0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245` | Passed |
@@ -42,13 +42,13 @@ PATH=/private/tmp/abl-node-24.18.0-runtime/bin:$PATH pnpm evidence
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 42 of 42 Turbo tasks                                                         |
 | Uncached unit/integration/property/contract/migration/API | Pass   | 323 assertions across 68 files; 42 of 42 Turbo tasks                         |
-| Acceptance/replay/load/recovery                           | Pass   | 17 assertions across 3 files                                                 |
+| Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 29 of 29 Turbo tasks                                                         |
 
-Total executable assertions: **353 across 74 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
+Total executable assertions: **354 across 75 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 

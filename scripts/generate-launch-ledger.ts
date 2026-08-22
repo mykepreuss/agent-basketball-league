@@ -14,11 +14,15 @@ const sourcePath = join(
 const outputPath = join(repositoryRoot, "docs/evidence/launch-ledger.json");
 const sha256Pattern = /^0x[0-9a-f]{64}$/;
 const ignoredDirectoryNames = new Set([
+  ".next",
   ".turbo",
   "coverage",
   "dist",
   "node_modules",
+  "playwright-report",
+  "test-results",
 ]);
+const ignoredFileNames = new Set([".DS_Store"]);
 
 interface EvidenceSource {
   evidenceId: string;
@@ -49,14 +53,14 @@ function repositoryPath(candidate: unknown): string {
   return resolved;
 }
 
-async function directoryDigest(path: string): Promise<`0x${string}`> {
+export async function directoryDigest(path: string): Promise<`0x${string}`> {
   const entries: Array<{ path: string; digest: `0x${string}` }> = [];
   async function walk(directory: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const absolutePath = join(directory, entry.name);
       if (entry.isDirectory() && !ignoredDirectoryNames.has(entry.name))
         await walk(absolutePath);
-      else if (entry.isFile())
+      else if (entry.isFile() && !ignoredFileNames.has(entry.name))
         entries.push({
           path: relative(path, absolutePath),
           digest: digest(await readFile(absolutePath)),

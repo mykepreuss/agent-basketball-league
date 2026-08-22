@@ -1,6 +1,6 @@
 {
   "resultVersion": "1.0.0",
-  "recordedAt": "2026-08-22T20:41:53.666Z",
+  "recordedAt": "2026-08-22T20:54:26.454Z",
   "mode": "LOCAL_LOOPBACK_HTTP",
   "workloads": [
     {
@@ -9,8 +9,8 @@
       "completed": 20000,
       "failures": 0,
       "errorRate": 0,
-      "responseP95Milliseconds": 23.977750000000015,
-      "responseMaximumMilliseconds": 79.05241699999988
+      "responseP95Milliseconds": 20.175582999999733,
+      "responseMaximumMilliseconds": 95.13370799999984
     },
     {
       "name": "candidate-challenges",
@@ -18,8 +18,8 @@
       "completed": 2000,
       "failures": 0,
       "errorRate": 0,
-      "responseP95Milliseconds": 14.78400000000056,
-      "responseMaximumMilliseconds": 81.99241700000039
+      "responseP95Milliseconds": 13.407583000000159,
+      "responseMaximumMilliseconds": 78.89033299999937
     }
   ],
   "observed": {
@@ -27,7 +27,7 @@
     "completed": 22000,
     "failures": 0,
     "errorRate": 0,
-    "responseP95Milliseconds": 23.977750000000015
+    "responseP95Milliseconds": 20.175582999999733
   },
   "passed": true,
   "remoteCapacity": {
