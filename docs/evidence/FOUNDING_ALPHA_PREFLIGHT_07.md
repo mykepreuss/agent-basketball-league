@@ -1,6 +1,6 @@
 # Founding Alpha immutable-revision replacement preflight
 
-> Status: `READ_ONLY_COMPLETE_R01_05_AUTHORIZATION_REQUIRED`
+> Status: `HISTORICAL_CONSUMED_R01_05_INVALIDATED_BEFORE_MUTATION`
 > Recorded: `2026-08-22T19:28:51-07:00` in `America/Vancouver`
 > Consumed authorization: `ABL-FOUNDING-ALPHA-R01-04`
 > Workspace: `agent-basketball-league`
@@ -22,7 +22,7 @@ The correction is now merged without substituting any ABL implementation:
 
 The complete exact Node 24.18.0 pipeline passed after the correction. Two independent image-context generations reproduced the same thirteen-image set and byte-identical body archive. Two independent manifest renders remained byte-identical. The bounded private Founding Alpha envelope still fits the observed Blaxel and Neon state, and its conservative four-hour projection remains USD 6.00 against a USD 10.00 hard ceiling.
 
-R01-04 is consumed and cannot be reused. No new provider mutation is authorized. A replacement `ABL-FOUNDING-ALPHA-R01-05` authorization must bind the merged evidence commit, this file's final digest, and every current binding below before the first mutation.
+R01-04 and R01-05 are consumed and cannot be reused. R01-05 failed closed before provider mutation because the R01-04 evidence-file digest recorded below preceded that file's final edit in the same evidence change. Preflight 08 must calculate all dependent digests from a separately merged final tree before replacement authorization.
 
 ## Current repository and artifact bindings
 
@@ -146,7 +146,7 @@ USD 6.00 remains below the USD 10.00 hard ceiling and the current USD 18.54 bala
 
 ## Next gate
 
-Do not mutate under R01-04 or any earlier authorization. After this preflight is merged, obtain one fresh `ABL-FOUNDING-ALPHA-R01-05` authorization that:
+This section is retained as historical evidence of the superseded R01-05 gate. Do not mutate under R01-05 or any earlier authorization. Preflight 08 must replace it using final-tree digest ordering before a new authorization is prepared. The superseded R01-05 requirements were:
 
 1. binds the resulting merged evidence commit, this Preflight 07 file digest, the R01-04 result file digest, and every current digest in this record;
 2. binds synthetic application UUID `0198e000-0000-7000-8000-000000000001` and exact provisioner-derived body name `abl-career-0198e000000070008000000000000001`;
