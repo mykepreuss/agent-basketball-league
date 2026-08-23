@@ -1,6 +1,6 @@
 # Founding Alpha private slice runbook
 
-> Status: `PREFLIGHT_COMPLETE_AWAITING_DIGEST_BOUND_AUTHORIZATION`
+> Status: `R01_09_CORRECTION_ASSURED_MERGE_AND_PREFLIGHT_REQUIRED`
 > Run ID: `ABL-FOUNDING-ALPHA-R01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
@@ -12,10 +12,13 @@
 
 This document is an execution packet, not execution authority. It does not authorize image pushes, secrets, resource creation, spend, public exposure, model calls, founding-agent decisions, recognition broadcast, recurring capacity, recovery-control removal, or Genesis. A new approval must quote the final digests and exact resource envelope below.
 
-The latest provider baseline is read-only
-[`FOUNDING_ALPHA_PREFLIGHT_11.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_11.md).
-Preflight 11 and every earlier authorization remain non-execution authority until
-its final file digest and merge commit are bound into a fresh approval.
+R01-09 consumed read-only
+[`FOUNDING_ALPHA_PREFLIGHT_11.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_11.md),
+then failed closed at the candidate-store application port boundary and completed
+exact teardown. The result is recorded in
+[`FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md`](../evidence/FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md).
+The local correction is not execution authority. A new read-only preflight and
+fresh digest-bound approval are required before another provider mutation.
 
 ## Existing implementation is the launch foundation
 
@@ -36,7 +39,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 434 implementation files to `0xd7824237f640524f6c0c853457a894c1f7a3b0bf5fc0c27eb08c462e3866b5a0`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 435 implementation files to `0xb90a8a5cc6779e8adee2aef080c5863f6d3da2d16a5faf000497b44ccccd9c5e`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -60,16 +63,16 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0xd7824237f640524f6c0c853457a894c1f7a3b0bf5fc0c27eb08c462e3866b5a0` |
-| Exact-runtime local result    | `0x5a7f7096fe7d8177143df775ff30c021b4ff9da5a9ef8c43fa6c3aced8604843` |
+| Implementation source         | `0xb90a8a5cc6779e8adee2aef080c5863f6d3da2d16a5faf000497b44ccccd9c5e` |
+| Exact-runtime local result    | `0xe0a155fb02ca565e3472268d2c8efa29a8a3adeec26ec179b0826b0706186ca8` |
 | Thirteen-image source set     | `0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f` |
-| Thirteen rendered manifests   | `0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828` |
+| Thirteen rendered manifests   | `0xbf1d11fa9750ec8bdff4c517c460c998c8f7a6382788f7a985b0705c3551a164` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
 | Reviewed body program archive | `0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c` |
 | Image-sources file            | `0x55d7c73993d8b059ea78ae4e74ff6afae5eabd4a45c6b5ba29ba5a75ae5918a5` |
-| Private resource-plan file    | `0x84047edc77a6ec36b1cdaadbb4017cc86deadd6ee066583e9f821c4a4df9cb81` |
+| Private resource-plan file    | `0xe75bf99c04f1408c6eb29ff52bde4f5ee4f1d7b0aca513d2f2a4e1f449ead958` |
 | Drive-access file             | `0x732685da9b40433d5f1ef4a5fbf84de0da713fb3e228e92339f050edfc8956d3` |
-| Launch ledger                 | `0xfc71e3e1bacd83c7113e1a6d6b190239df867e4b6578030063764a560809ca99` |
+| Launch ledger                 | `0x5b139008153fe06b188dec545350492cdf781619c831445b9c6ab81552d25282` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -95,7 +98,7 @@ If and only if the digest-bound authorization is granted:
 3. Before any Blaxel image push, read the exact project back by its new ID and prove its name, PostgreSQL version, region, Free plan, and empty user schema. Any missing or mismatched field requires permanent deletion of that exact project ID, verified absence, and a failed-closed stop before the first image push. If the readback passes, install the existing Drizzle migrations over a direct connection and provide pooled application access only through Blaxel-managed secrets. Never write credentials to the repository or a career body.
 4. Push only the 13 exact run-scoped images, sequentially, with `ABL_ALPHA_AUTHORIZATION_ID` set to the active authorization and `pnpm founding-alpha:push-image <external-image-root> <external-evidence-root> <ordinal>`. The helper recomputes the bound source digest, changes the child process working directory to the exact context root, omits the ambiguous `--directory`/`-d` flag, refuses parallel execution, and requires the preceding ordinal's passing receipt. After each push it reads that exact image back and records its exact name, nonzero size, `BUILT` status, attributable linux/amd64 build evidence, Dockerfile digest, and provider-generated immutable revision. The accepted readback forms are Blaxel's documented 12-character revision and the 21-hex revision observed by R01-04; OCI inputs may instead use an exact `@sha256:<64-hex-digest>`. Mutable tags such as `latest`, operator-selected labels, shortened revisions, invented digests, and direct `bl push -d ...` invocations are prohibited. Any missing Dockerfile, source drift, configuration warning, reused unattributable build, missing architecture evidence, readback mismatch, or sequence error fails the run closed before another push or workload creation.
 5. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
-6. Generate the candidate policy timestamp once, record it in the external run evidence, and set `ABL_CANDIDATE_CAPACITY_POLICY_JSON` to the exact resource-plan policy with `credibleOpportunityAt.PLAYER` equal to that instant plus 24 hours. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process, create its private preview and token, and prove cross-path denial.
+6. Generate the candidate policy timestamp once, record it in the external run evidence, and put `ABL_CANDIDATE_CAPACITY_POLICY_JSON` and the candidate-store's other exact values in a new external mode-`0600` environment file. Resolve the rendered candidate-store manifest with `pnpm founding-alpha:resolve-manifest <external-rendered-manifest> <external-env-file> <new-external-output-directory>`. Require a redacted passing receipt, apply only that resolved mode-`0600` manifest, and do not use shell interpolation or `bl apply -e` for structured JSON. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process on port 3000, create its private preview and token, and prove cross-path denial.
 7. Deploy the existing candidate-edge Function privately in gateway mode. Invoke its challenge route through authenticated Blaxel control-plane access; this is not public ingress.
 8. Use `pnpm founding-alpha:prepare-candidate application` outside the repository with the live challenge, immutable body image revision, and reviewed body archive digest. The result supplies the exact signed encrypted registration plus ephemeral candidate secrets without printing them. Register through candidate-edge, then use the preparer's `accept` mode to sign and submit the returned offer.
 9. Create storage-broker, public-api, core-api, arena, and fixed-broker in dependency order from the rendered manifests. Mount only the permitted Drive paths into storage-broker and public-api; supply the storage bootstrap only as a Blaxel-managed secret; create the remaining five private previews and tokens; read every preview back as `public:false`. The candidate signing key is supplied only to fixed-broker, never to the body.

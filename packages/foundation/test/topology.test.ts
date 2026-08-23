@@ -6,6 +6,7 @@ import {
   readFile,
   readdir,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -27,6 +28,7 @@ import {
   validateImageReadback,
 } from "../../../scripts/push-founding-alpha-image.js";
 import { renderFoundingAlphaManifests } from "../../../scripts/render-founding-alpha-manifests.js";
+import { resolveFoundingAlphaManifest } from "../../../scripts/resolve-founding-alpha-manifest.js";
 
 import {
   assertImmutableImageReference,
@@ -575,6 +577,11 @@ describe("four-workspace topology", () => {
     ).toMatchObject({
       kind: "Sandbox",
       metadata: { labels: { "abl-drive-role": "candidate-intake-writer" } },
+      spec: {
+        runtime: {
+          ports: [{ name: "http", protocol: "HTTP", target: 3000 }],
+        },
+      },
     });
     expect(
       competitionResources.find(
@@ -694,7 +701,9 @@ describe("four-workspace topology", () => {
     );
     expect(driveApplicator).toContain('required("BL_WORKSPACE") !== workspace');
     expect(driveApplicator).toContain("permissions: drivePolicy.permissions");
-    expect(driveApplicator).toContain("JSON.stringify(drive.permissions)");
+    expect(driveApplicator).toContain(
+      "isDeepStrictEqual(drive.permissions, drivePolicy.permissions)",
+    );
     expect(driveApplicator).not.toMatch(/\.delete\s*\(/);
   });
 });
@@ -987,6 +996,14 @@ describe("Founding Alpha private slice", () => {
         readbackPolicy: string;
         mismatchAction: string;
       };
+      manifestResolution: {
+        command: string;
+        substitutionPolicy: string;
+        inputPolicy: string;
+        outputPolicy: string;
+        evidencePolicy: string;
+        mismatchAction: string;
+      };
       sandboxProcesses: Record<
         string,
         {
@@ -1052,6 +1069,15 @@ describe("Founding Alpha private slice", () => {
       sourcePolicy: "RECOMPUTE_BOUND_DIGEST_BEFORE_EACH_PUSH",
       readbackPolicy: "EXACT_NAME_SIZE_BUILT_REVISION_LINUX_AMD64",
       mismatchAction: "FAIL_CLOSED_AND_TEARDOWN_BEFORE_NEXT_PUSH_OR_WORKLOAD",
+    });
+    expect(plan.manifestResolution).toEqual({
+      command:
+        "pnpm founding-alpha:resolve-manifest <external-rendered-manifest> <external-env-file> <new-external-output-directory>",
+      substitutionPolicy: "WHOLE_VALUE_PLACEHOLDERS_ONLY",
+      inputPolicy: "EXTERNAL_MODE_0600_ENVIRONMENT_FILE",
+      outputPolicy: "NEW_EXTERNAL_MODE_0700_DIRECTORY_MODE_0600_FILES",
+      evidencePolicy: "REDACT_VALUES_RECORD_NAMES_AND_DIGESTS",
+      mismatchAction: "FAIL_CLOSED_BEFORE_RESOURCE_APPLY",
     });
     expect(plan.resources.sandboxes).toContain(
       plan.syntheticCandidate.bodySandboxName,
@@ -1367,6 +1393,108 @@ describe("Founding Alpha private slice", () => {
       ).toBe("${ABL_CANDIDATE_STORE_ORIGIN}");
     } finally {
       await rm(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves whole manifest values outside the repository without disclosing them", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-alpha-resolve-"));
+    const renderedRoot = join(root, "rendered");
+    const outputRoot = join(root, "resolved");
+    const environmentPath = join(root, "manifest.env");
+    const secret = "candidate-secret-not-for-receipts";
+    const policy = JSON.stringify({
+      mode: "CAPPED_PUBLIC",
+      roleCapacity: { PLAYER: 1 },
+    });
+    try {
+      await mkdir(renderedRoot, { mode: 0o700 });
+      const manifestPath = join(
+        renderedRoot,
+        "abl-alpha-r01-candidate-store.yaml",
+      );
+      await writeFile(
+        manifestPath,
+        [
+          "apiVersion: blaxel.ai/v1alpha1",
+          "kind: Sandbox",
+          "metadata:",
+          "  name: abl-alpha-r01-candidate-store",
+          "  labels:",
+          "    abl-run: founding-alpha-r01",
+          "spec:",
+          "  runtime:",
+          "    image: ${ABL_ALPHA_CANDIDATE_STORE_IMAGE_ID}",
+          "    envs:",
+          "      - name: ABL_CANDIDATE_CAPACITY_POLICY_JSON",
+          "        value: ${ABL_CANDIDATE_CAPACITY_POLICY_JSON}",
+          "        secret: false",
+          "      - name: ABL_CANDIDATE_CHALLENGE_SECRET",
+          "        value: ${ABL_CANDIDATE_CHALLENGE_SECRET}",
+          "        secret: true",
+          "",
+        ].join("\n"),
+        { mode: 0o600 },
+      );
+      await writeFile(
+        environmentPath,
+        [
+          "ABL_ALPHA_CANDIDATE_STORE_IMAGE_ID=sandbox/example:0123456789ab",
+          `ABL_CANDIDATE_CAPACITY_POLICY_JSON='${policy}'`,
+          `ABL_CANDIDATE_CHALLENGE_SECRET=${secret}`,
+          "",
+        ].join("\n"),
+        { mode: 0o600 },
+      );
+
+      const receipt = await resolveFoundingAlphaManifest(
+        manifestPath,
+        environmentPath,
+        outputRoot,
+      );
+      expect(receipt.environmentNames).toEqual([
+        "ABL_ALPHA_CANDIDATE_STORE_IMAGE_ID",
+        "ABL_CANDIDATE_CAPACITY_POLICY_JSON",
+        "ABL_CANDIDATE_CHALLENGE_SECRET",
+      ]);
+      expect(JSON.stringify(receipt)).not.toContain(secret);
+      expect(JSON.stringify(receipt)).not.toContain(policy);
+
+      const resolved = parse(
+        await readFile(
+          join(outputRoot, "abl-alpha-r01-candidate-store.yaml"),
+          "utf8",
+        ),
+      ) as {
+        spec: {
+          runtime: {
+            image: string;
+            envs: Array<{ name: string; value: string }>;
+          };
+        };
+      };
+      expect(resolved.spec.runtime.image).toBe("sandbox/example:0123456789ab");
+      expect(
+        new Map(
+          resolved.spec.runtime.envs.map(({ name, value }) => [name, value]),
+        ),
+      ).toEqual(
+        new Map([
+          ["ABL_CANDIDATE_CAPACITY_POLICY_JSON", policy],
+          ["ABL_CANDIDATE_CHALLENGE_SECRET", secret],
+        ]),
+      );
+      expect(
+        (await stat(join(outputRoot, "abl-alpha-r01-candidate-store.yaml")))
+          .mode & 0o777,
+      ).toBe(0o600);
+      const redactedReceipt = await readFile(
+        join(outputRoot, "manifest-resolution-receipt.json"),
+        "utf8",
+      );
+      expect(redactedReceipt).not.toContain(secret);
+      expect(redactedReceipt).not.toContain(policy);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });

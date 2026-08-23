@@ -212,10 +212,10 @@ async function main(): Promise<void> {
     routeCount: routeCatalog.routes.length,
     rawResults: suites,
     limitations: [
-      "The active Founding Alpha topology, candidate flow, and reviewed Sandbox body are locally implemented but have not yet completed one digest-bound live private-slice proof; historical Gate 2 containment runs were torn down and do not define the active runtime.",
+      "R01-09 live-proved PostgreSQL 17 migration, all thirteen sequential image sources, atomic Agent Drive ACL creation, a candidate-intake mount/write, cross-path denial, and private-preview posture before failing closed at the candidate-store port collision; the corrected private slice has not yet completed end to end.",
       "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
       "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
-      "The four target production Blaxel workspaces are not yet verified as provisioned; a prior temporary Agent Drive passed ACL readback and cross-path denial but was torn down before restart, restore, concurrent-write, and broader recovery proof.",
+      "The four target production Blaxel workspaces are not yet verified as provisioned; the temporary R01-09 Agent Drive passed semantic ACL readback, one matching mount/write, and sibling-path denial but was torn down before restart, restore, direct-API label enforcement, concurrent-write, and broader recovery proof.",
       "Prior temporary Neon PostgreSQL 17 projects passed migration and transaction probes and were permanently deleted; an active selected-provider project and live recovery proof are absent.",
       "Base finality lacks a ratified deployment and credentials.",
       "Remote capacity reservations and provider costs were not requested.",

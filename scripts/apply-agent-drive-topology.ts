@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import { DriveInstance, SandboxInstance } from "@blaxel/core";
 import { z } from "zod";
@@ -107,7 +108,7 @@ if (
   drive.name !== drivePolicy.name ||
   drive.region !== drivePolicy.region ||
   drive.metadata.workspace !== workspace ||
-  JSON.stringify(drive.permissions) !== JSON.stringify(drivePolicy.permissions)
+  !isDeepStrictEqual(drive.permissions, drivePolicy.permissions)
 )
   throw new Error("Existing Agent Drive configuration drifted");
 
