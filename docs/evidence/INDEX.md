@@ -9,7 +9,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                                | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 | Founding Alpha implementation source freeze | 433 existing and launch-layer implementation files frozen                          | `founding-alpha-source-freeze.json`                                                |
 | Founding Alpha private-run packet           | Ready for digest-bound authorization; live proof remains gated                     | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
-| Founding Alpha provider preflight           | R01-06 baseline consumed; final-tree Preflight 09 required                         | `FOUNDING_ALPHA_PREFLIGHT_08.md`                                                   |
+| Founding Alpha provider preflight           | Final-tree read-only refresh; R01-07 authorization required                        | `FOUNDING_ALPHA_PREFLIGHT_09.md`                                                   |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally    | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-03 execution gate        | Failed closed before provider mutation; runtime contradictions corrected locally   | `FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-04 execution gate        | Failed closed after image push; exact teardown complete; revision correction local | `FOUNDING-ALPHA-R01-04-FAILED-CLOSED.md`                                           |
@@ -84,6 +84,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha R01-04 failed-closed result: [`FOUNDING-ALPHA-R01-04-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-04-FAILED-CLOSED.md)
 - Founding Alpha R01-05 failed-closed result: [`FOUNDING-ALPHA-R01-05-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-05-FAILED-CLOSED.md)
 - Founding Alpha R01-06 failed-closed result: [`FOUNDING-ALPHA-R01-06-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-06-FAILED-CLOSED.md)
+- Founding Alpha Preflight 09: [`FOUNDING_ALPHA_PREFLIGHT_09.md`](./FOUNDING_ALPHA_PREFLIGHT_09.md)
 - Earlier replacement preflight: [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md)
 - Earlier Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md)
 - Gate 0/1 traceability: [`GATE_0_1_TRACEABILITY.md`](../launch/GATE_0_1_TRACEABILITY.md)

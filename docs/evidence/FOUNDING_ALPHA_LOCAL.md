@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Treat [`FOUNDING_ALPHA_PREFLIGHT_08.md`](./FOUNDING_ALPHA_PREFLIGHT_08.md) as the consumed R01-06 baseline; calculate a final-tree Preflight 09 after the R01-06 result and archive correction merge.
+1. Use [`FOUNDING_ALPHA_PREFLIGHT_09.md`](./FOUNDING_ALPHA_PREFLIGHT_09.md) as the current merged-tree read-only baseline and repeat its drift checks immediately before the first authorized mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.
