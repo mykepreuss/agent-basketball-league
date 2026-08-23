@@ -32,7 +32,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Centralize immutable Blaxel revision handling, require sequential image push/readback, rerun exact-runtime and artifact verification, and merge the correction.
 - [x] Record the refreshed read-only Blaxel and Neon state in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_07.md`, merge it, and obtain `ABL-FOUNDING-ALPHA-R01-05`.
 - [x] Fail R01-05 closed before provider mutation when its R01-04 evidence-file digest differs from final merged `main`; verify that all Blaxel and Neon target inventories remain unchanged.
-- [~] Merge the R01-05 result, calculate every dependent digest from the final merged tree, then record and merge Preflight 08 without modifying a bound dependency before obtaining replacement authorization.
+- [x] Merge the R01-05 result and calculate every dependent digest from the final merged tree.
+- [~] Record and merge Preflight 08 without modifying any bound dependency, then calculate its post-merge digest and obtain replacement authorization.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
