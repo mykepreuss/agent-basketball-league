@@ -50,7 +50,7 @@
         "preselectedAdmissionDecision": false
       }
     },
-    "evidenceDigest": "0xbf6fc0334514f668123a4fa4f9a03738b87203a080a1f000c62aae6bcbe1e76d",
+    "evidenceDigest": "0xc7caaae59e7ebb7b973ef78dd9c10d0fb2da4a80d19f274c57ce6b4916d0670e",
     "blockingReasons": [
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
@@ -156,17 +156,17 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x6ac1fea77b138ca23afe915bb2140b5c8e9f77280d7d2a551cf9fa7dfd93d066",
+      "digest": "0xa7e7340d7a1d5f1bbf8ad0108c7065124d53dd840117ca62fa236473278488b4",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x1f9e5d3ab3f5d833421ba71c1dc93c1fa5857fce7309309fb1f5f03fb423a01f",
+      "digest": "0xabbe5b3b31b93befffcf6d04b98be65b6206c90f15438e0aede68b408396f614",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xcd2f8aac5c02643748cfe820635ca46644ac9fbaf31cc14797a8f83e3410e00c",
+      "digest": "0x4b95b635d5054f625bdf614206b5d86a4128dcf36b5ddb6f0761b06f60a5f122",
       "verification": "PASSED"
     },
     {
@@ -201,17 +201,17 @@
     },
     {
       "evidenceId": "candidate-provisioner-implementation",
-      "digest": "0xf6a8906fca34153aaf75d60c47da8c2460c910a8be124013fb985762e013d931",
+      "digest": "0x5a0b1600376b244db3259bc10a5fca35044bc71fa4d964b693bf88449220bc75",
       "verification": "PASSED"
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x04b2ea099dc44dce30ca0888fe895a31d573a710231a7a755ddcc0d36fb46fe4",
+      "digest": "0x7e14b3cfc056eb0426305b7b0b72f78c55606a76d89f2b40ecc6989e4a693912",
       "verification": "PASSED"
     },
     {
       "evidenceId": "founding-alpha-private-slice-live-proof",
-      "digest": "0x4bfb188cffb803a6e13f2fb3dc1421302dfe3ea16a97c0d548566c3e4faf479a",
+      "digest": "0x030198870e05b5a1684b5f2f7f4a8c02233e741827f558c15adab027b7054299",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -468,5 +468,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xdd66dc98c811c3ef0d278cf897554745767492398053f679b95b2e85b1956e7a"
+  "ledgerDigest": "0xc8d004a1deeba88746630253e0640508dddb0afc1b07af3c1861c2842e747675"
 }

@@ -20,7 +20,7 @@ spec:
         value: JOB
         secret: false
       - name: ABL_CANDIDATE_EDGE_ORIGIN
-        value: ${ABL_CANDIDATE_EDGE_PRIVATE_ORIGIN}
+        value: ${ABL_CANDIDATE_STORE_ORIGIN}
         secret: false
       - name: ABL_CANDIDATE_PROVISIONER_TOKEN
         value: ${ABL_CANDIDATE_PROVISIONER_TOKEN}

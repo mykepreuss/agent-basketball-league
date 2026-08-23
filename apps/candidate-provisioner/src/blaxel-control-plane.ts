@@ -38,6 +38,15 @@ type SandboxResult = Awaited<
   ReturnType<typeof SandboxInstance.createIfNotExists>
 >;
 
+function candidateSandboxLifecycle() {
+  return {
+    expirationPolicies: [
+      { action: "delete" as const, type: "ttl-max-age" as const, value: "4h" },
+    ],
+    terminatedRetention: "24h",
+  };
+}
+
 export interface CandidateSandboxFactory {
   createIfNotExists(
     input: Parameters<typeof SandboxInstance.createIfNotExists>[0],
@@ -207,6 +216,7 @@ export class BlaxelCandidateSandboxControlPlane
       spec: {
         enabled: true,
         region: this.#region,
+        lifecycle: candidateSandboxLifecycle(),
         network: { allowedDomains: [this.#fixedBrokerHost] },
         runtime: {
           image: this.#imageReference,
@@ -345,6 +355,11 @@ function assertReturnedSandbox(input: {
       throw new Error("Existing candidate Sandbox labels drifted");
   if (sandbox.spec.volumes !== undefined && sandbox.spec.volumes.length !== 0)
     throw new Error("Candidate Sandbox must not mount durable storage");
+  if (
+    JSON.stringify(sandbox.spec.lifecycle) !==
+    JSON.stringify(candidateSandboxLifecycle())
+  )
+    throw new Error("Candidate Sandbox lifecycle drifted");
   if (sandbox.spec.runtime?.extraArgs !== undefined)
     throw new Error("Reviewed candidate Sandbox must use the standard kernel");
   if (

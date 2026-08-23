@@ -31,7 +31,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 429 implementation files to `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 431 implementation files to `0x7d2225c11b0d6e93f1769c6613bea696fd6cf2bd8b455a23d01876280dd3e993`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -47,7 +47,7 @@ The machine-readable source of truth is [`resource-plan.json`](../../infra/blaxe
 
 The run creates zero Blaxel `Agent`, Application, or Volume resources. The existing `sandbox-openai` model route is out of scope and must not be called.
 
-The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`. The existing candidate provisioner derives the corresponding body name `abl-career-0198e000000070008000000000000001`; both bindings are recorded in the resource plan. This keeps the live Job's rule-based naming path intact while making the bounded teardown target exact before mutation.
+The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`. The existing candidate provisioner derives the corresponding body name `abl-career-0198e000000070008000000000000001`; both bindings are recorded in the resource plan. The candidate-store policy is also fixed there: `CAPPED_PUBLIC`, one PLAYER opening, no invitations, zero capacity for unlisted roles, and a PLAYER opportunity exactly 24 hours after policy generation. This keeps the live Job's rule-based naming path intact while making the bounded teardown target exact before mutation.
 
 ## Frozen local artifacts
 
@@ -55,13 +55,13 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0x0861fdf09bc8c97a0499ddd6f191144673162702074936277780f0f9d87f4655` |
-| Exact-runtime local result    | `0x04b2ea099dc44dce30ca0888fe895a31d573a710231a7a755ddcc0d36fb46fe4` |
-| Thirteen-image source set     | `0x9072d771bb75ebfb0181334179caa89608f84bfb553c478fc9ebc31bcf32660a` |
-| Thirteen rendered manifests   | `0x31598bba8e517d0d43fd23f385833cb3a701034ec02656a35dc81a6bb15b6013` |
+| Implementation source         | `0x7d2225c11b0d6e93f1769c6613bea696fd6cf2bd8b455a23d01876280dd3e993` |
+| Exact-runtime local result    | `0x7e14b3cfc056eb0426305b7b0b72f78c55606a76d89f2b40ecc6989e4a693912` |
+| Thirteen-image source set     | `0x4165da91cba6abe18f50317aabc826635d62aefc724747f6349ac32084cb2e3b` |
+| Thirteen rendered manifests   | `0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
-| Reviewed body program archive | `0x6bf97a5d0e0652ffa40a3b4277dca925c010eab9979d6144fd0e4eea39609557` |
-| Launch ledger                 | `0xdd66dc98c811c3ef0d278cf897554745767492398053f679b95b2e85b1956e7a` |
+| Reviewed body program archive | `0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569` |
+| Launch ledger                 | `0xc8d004a1deeba88746630253e0640508dddb0afc1b07af3c1861c2842e747675` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -86,16 +86,66 @@ If and only if the digest-bound authorization is granted:
 2. Push only the 13 exact run-scoped images; record each provider-generated immutable revision in the form returned by Blaxel (`sandbox/<image-name>:<12-character-revision>`) and verify every image architecture/runtime identity before resource creation. Mutable tags such as `latest` or operator-selected labels are prohibited.
 3. Create the single Neon project, record its new project ID, install the existing Drizzle migrations over a direct connection, then provide pooled application access through Blaxel-managed secrets. Never write credentials to the repository or a career body.
 4. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
-5. Create the candidate-store, storage-broker, core-api, public-api, arena, and fixed-broker Sandboxes from the rendered manifests; create their six private previews and short-lived preview tokens; read every preview back as `public:false`.
-6. Mount only the permitted Drive path into candidate-store, storage-broker, and public-api. Prove cross-path denial and prove the career body has no mount.
-7. Deploy the five existing MCP/Function packages privately and the deterministic candidate-provisioner Job. Verify that no Blaxel Agent, Application, Volume, custom domain, or public preview appeared.
-8. Prove service health, signed-command rejection, database capability checks, transaction/outbox behavior, projection delivery, SSE cursor delivery, encrypted storage, and arena rendering through the existing implementations.
-9. Restart candidate-store, storage-broker, core-api, public-api, and arena individually. Prove durable intake, ciphertext metadata, canonical events/outbox, projections, cursors, and spectator state recover without fixtures or in-memory-only assumptions.
-10. Use the existing candidate flow with the frozen synthetic application ID to create the fixed broker first, then invoke the existing provisioner for `abl-career-0198e000000070008000000000000001`. Pass only the exact provider-generated body and fixed-broker image revisions read back after their pushes. Verify the provisioner-derived name, application binding, immutable image revisions, workspace/region, port, no-Drive posture, and no model access before body start.
-11. Upload only the reviewed body archive, start the existing body runtime, and run one noncanonical signed practice possession through the existing basketball engine, core validation boundary, database transaction, projection transport, public stream, arena, and recognition verifier. The result must remain labeled `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
-12. Prove unsigned, human-authored, wrong-career, wrong-role, replayed, stale, malformed, and direct-service mutation attempts cannot create accepted history.
-13. Export redacted logs, manifests, immutable IDs, readbacks, restart results, signed envelopes, event/projection hashes, recognition output, cost, and final inventory. Export no credentials or preview-token values.
-14. Teardown immediately after success, failure, timeout, balance breach, cost drift, privacy drift, or any stop condition.
+5. Generate the candidate policy timestamp once, record it in the external run evidence, and set `ABL_CANDIDATE_CAPACITY_POLICY_JSON` to the exact resource-plan policy with `credibleOpportunityAt.PLAYER` equal to that instant plus 24 hours. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process, create its private preview and token, and prove cross-path denial.
+6. Deploy the existing candidate-edge Function privately in gateway mode. Invoke its challenge route through authenticated Blaxel control-plane access; this is not public ingress.
+7. Use `pnpm founding-alpha:prepare-candidate application` outside the repository with the live challenge, immutable body image revision, and reviewed body archive digest. The result supplies the exact signed encrypted registration plus ephemeral candidate secrets without printing them. Register through candidate-edge, then use the preparer's `accept` mode to sign and submit the returned offer.
+8. Create storage-broker, public-api, core-api, arena, and fixed-broker in dependency order from the rendered manifests. Mount only the permitted Drive paths into storage-broker and public-api; supply the storage bootstrap only as a Blaxel-managed secret; create the remaining five private previews and tokens; read every preview back as `public:false`. The candidate signing key is supplied only to fixed-broker, never to the body.
+9. Deploy the other four existing MCP/Function packages privately and the deterministic candidate-provisioner Job. Verify that no Blaxel Agent, Application, Volume, custom domain, or public preview appeared.
+10. Prove service health, signed-command rejection, database capability checks, transaction/outbox behavior, projection delivery, SSE cursor delivery, encrypted storage, and arena rendering through the existing implementations.
+11. Restart candidate-store, storage-broker, core-api, public-api, and arena individually. Prove durable intake, ciphertext metadata, canonical events/outbox, projections, cursors, and spectator state recover without fixtures or in-memory-only assumptions.
+12. Confirm the fixed broker exists first, then invoke the existing provisioner Job with the preparer's exact one-task batch for `abl-career-0198e000000070008000000000000001`. Pass only the exact provider-generated body and fixed-broker image revisions read back after their pushes. Verify the provisioner-derived name, application binding, immutable image revisions, four-hour lifecycle, workspace/region, no-Drive posture, and no model access before body start.
+13. Upload only the reviewed body archive, start the existing body runtime, and run one fresh noncanonical signed practice possession through the existing basketball engine, core validation boundary, database transaction, projection transport, public stream, arena, and recognition verifier. The result must remain labeled `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
+14. Prove unsigned, human-authored, wrong-career, wrong-role, replayed, stale, malformed, and direct-service mutation attempts cannot create accepted history.
+15. Export redacted logs, manifests, immutable IDs, readbacks, restart results, signed envelopes, event/projection hashes, recognition output, cost, and final inventory. Export no credentials or preview-token values.
+16. Teardown immediately after success, failure, timeout, balance breach, cost drift, privacy drift, or any stop condition.
+
+### Synthetic candidate commands
+
+All files below stay in the external mode-`0700` run directory. The image reference is the provider-generated immutable `sandbox/abl-alpha-r01-body-image:<12-character-revision>` read back after the authorized push.
+
+```sh
+bl run function abl-alpha-r01-candidate-edge \
+  --method POST \
+  --path /v1/candidates/challenge \
+  --data '{"candidateDid":"did:abl:founding-alpha-player-001"}' \
+  --output json \
+  --workspace agent-basketball-league \
+  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json"
+
+pnpm founding-alpha:prepare-candidate application \
+  "$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json" \
+  "$ABL_ALPHA_BODY_IMAGE_REFERENCE" \
+  0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569 \
+  "$ABL_ALPHA_RUN_DIRECTORY/candidate"
+
+bl run function abl-alpha-r01-candidate-edge \
+  --method POST \
+  --path /v1/candidates/register \
+  --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-registration.json" \
+  --output json \
+  --workspace agent-basketball-league \
+  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-registration-response.json"
+
+pnpm founding-alpha:prepare-candidate accept \
+  "$ABL_ALPHA_RUN_DIRECTORY/candidate-registration-response.json" \
+  "$ABL_ALPHA_RUN_DIRECTORY/candidate"
+
+bl run function abl-alpha-r01-candidate-edge \
+  --method POST \
+  --path /v1/candidate-intake/respond \
+  --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-acceptance.json" \
+  --output json \
+  --workspace agent-basketball-league \
+  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-acceptance-response.json"
+
+bl run job abl-alpha-r01-candidate-provisioner \
+  --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-provisioner-batch.json" \
+  --output json \
+  --workspace agent-basketball-league \
+  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-provisioning-response.json"
+```
+
+The challenge, registration, and acceptance must complete inside their signed time windows. The preparer refuses repository-local output and mutable image tags. Its `candidate-secrets.env` is supplied only to the fixed-broker and candidate-provisioner manifests, is never printed or committed, and is destroyed during teardown.
 
 ## Acceptance boundary
 

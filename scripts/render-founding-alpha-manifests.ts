@@ -132,7 +132,9 @@ function makePrivateAndBounded(manifest: Manifest): void {
   }
   if (manifest.kind === "Sandbox")
     manifest.spec.lifecycle = {
-      expirationPolicies: [{ action: "delete", type: "ttl-idle", value: "4h" }],
+      expirationPolicies: [
+        { action: "delete", type: "ttl-max-age", value: "4h" },
+      ],
       terminatedRetention: "24h",
     };
 }

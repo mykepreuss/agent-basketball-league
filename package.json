@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
     "founding-alpha:freeze": "tsx scripts/freeze-founding-alpha-source.ts",
+    "founding-alpha:prepare-candidate": "tsx scripts/prepare-founding-alpha-candidate.ts",
     "genesis:prepare": "tsx scripts/prepare-genesis-readiness.ts",
     "launch:ledger": "tsx scripts/generate-launch-ledger.ts",
     "platform:apply-drives": "tsx scripts/apply-agent-drive-topology.ts",

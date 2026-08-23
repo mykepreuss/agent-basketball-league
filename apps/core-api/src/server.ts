@@ -465,6 +465,10 @@ export function createLiveCoreApi(
       }
       let outboxTopic = "public.game";
       if (possessionCommand) {
+        if (Math.abs(now() - occurredAt) > 60_000)
+          throw commandValidationError(
+            "Possession timestamp is outside the accepted window",
+          );
         try {
           validatePossessionResolvedPayload(
             event.payload,
