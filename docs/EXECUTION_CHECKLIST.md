@@ -38,7 +38,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Merge the canonical tar-metadata correction and R01-06 result, then calculate all bindings from final `main`.
 - [x] Record and merge read-only Preflight 09 without modifying a bound dependency, calculate its final file digest, and obtain replacement authorization.
 - [x] Execute R01-07 through thirteen sequential exact-image readbacks, fail closed when the new Neon project returns PostgreSQL 18 instead of the authorized PostgreSQL 17, and complete exact image/project teardown.
-- [~] Review and freeze a Neon project-creation path that can request and prove PostgreSQL 17, or separately review PostgreSQL 18 compatibility, before a new preflight or execution authorization.
+- [x] Review and freeze the signed-in Neon Console path that explicitly selects PostgreSQL 17, `aws-us-east-1`, Free plan, and Neon Auth off; require exact project readback and deletion-on-mismatch as the first provider mutation before any Blaxel image push.
+- [~] Rerun exact-runtime verification, merge the PostgreSQL 17 creation-order correction, and record a fresh read-only Founding Alpha preflight before requesting replacement execution authorization.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]

@@ -57,7 +57,20 @@
     "temporaryNeonProject": {
       "name": "abl-founding-alpha-r01",
       "postgresVersion": 17,
+      "region": "aws-us-east-1",
       "plan": "free",
+      "neonAuth": false,
+      "creationSurface": "NEON_CONSOLE_EXPLICIT_SELECTION",
+      "creationOrder": "FIRST_PROVIDER_MUTATION_BEFORE_IMAGE_PUSHES",
+      "readbackRequired": [
+        "projectId",
+        "name",
+        "postgresVersion",
+        "region",
+        "plan",
+        "emptyUserSchema"
+      ],
+      "mismatchAction": "DELETE_EXACT_PROJECT_AND_STOP_BEFORE_IMAGE_PUSHES",
       "projectId": null
     }
   },
