@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-23T02:21:38.206Z`
+> Recorded: `2026-08-23T03:01:02.770Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0x634a83574414aeb51d408edca78bd7675fd0399512c502e7e566c59ac3a9d266`
-> Implementation source digest: `0xa4bc419dafa7f6e1cec25cf2b79848f892d7200b367ae89c4994212df64a05cf`
-> Launch-ledger digest: `0x76500b91a0b4484998d5d51545c5ac1fc4f1a58eeacf895c93be778668962df1`
+> Stable result digest: `0x88134695f20cb36c758328ae0d4f754255214945a1e386ece84c15109eea2acd`
+> Implementation source digest: `0xf341e4ded56f7993e93b269c267f88fde104b296532227b10126c513d1a02e2b`
+> Launch-ledger digest: `0x3caeba115db15ec5b1ac7187b3af5e868ed9df887afd80d9e0841e77be12cda1`
 
 ## Outcome
 
@@ -41,14 +41,14 @@ PATH=/tmp/abl-alpha-r01-02-runtime.blB5pI/node_modules/node/bin:$PATH corepack p
 | Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 42 of 42 Turbo tasks                                                         |
-| Uncached unit/integration/property/contract/migration/API | Pass   | 334 assertions across 71 files; 42 of 42 Turbo tasks                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 335 assertions across 71 files; 42 of 42 Turbo tasks                         |
 | Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 29 of 29 Turbo tasks                                                         |
 
-Total executable assertions: **365 across 78 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
+Total executable assertions: **366 across 78 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 
@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use [`FOUNDING_ALPHA_PREFLIGHT_08.md`](./FOUNDING_ALPHA_PREFLIGHT_08.md) as the current final-tree read-only baseline and repeat its drift checks immediately before the first mutation.
+1. Treat [`FOUNDING_ALPHA_PREFLIGHT_08.md`](./FOUNDING_ALPHA_PREFLIGHT_08.md) as the consumed R01-06 baseline; calculate a final-tree Preflight 09 after the R01-06 result and archive correction merge.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.

@@ -50,6 +50,83 @@ function readOctal(buffer: Buffer, offset: number, length: number): number {
   return Number.parseInt(value, 8);
 }
 
+function writeOctal(
+  buffer: Buffer,
+  offset: number,
+  length: number,
+  value: number,
+): void {
+  const octal = value.toString(8);
+  if (octal.length > length - 1)
+    throw new Error(`Tar numeric field exceeds ${length} bytes: ${value}`);
+  buffer.fill(0, offset, offset + length);
+  buffer.write(octal.padStart(length - 1, "0"), offset, "ascii");
+}
+
+function writeString(
+  buffer: Buffer,
+  offset: number,
+  length: number,
+  value: string,
+): void {
+  if (Buffer.byteLength(value) >= length)
+    throw new Error(`Tar text field exceeds ${length} bytes: ${value}`);
+  buffer.fill(0, offset, offset + length);
+  buffer.write(value, offset, "utf8");
+}
+
+function canonicalMode(path: string, type: string, sourceMode: number): number {
+  if (path === "agent/main.mjs") return 0o600;
+  if (type === "5") return 0o755;
+  if (type === "2") return 0o777;
+  return (sourceMode & 0o111) === 0 ? 0o644 : 0o755;
+}
+
+function canonicalizeTarHeaders(tar: Buffer): Buffer {
+  const canonical = Buffer.from(tar);
+  let offset = 0;
+  while (offset + 512 <= canonical.length) {
+    const header = canonical.subarray(offset, offset + 512);
+    if (header.every((byte) => byte === 0)) {
+      offset += 512;
+      continue;
+    }
+    const name = readField(header, 0, 100);
+    const prefix = readField(header, 345, 155);
+    const path = prefix.length > 0 ? `${prefix}/${name}` : name;
+    const size = readOctal(header, 124, 12);
+    const sourceMode = readOctal(header, 100, 8);
+    const typeByte = header[156];
+    const type =
+      typeByte === undefined || typeByte === 0
+        ? "0"
+        : String.fromCharCode(typeByte);
+
+    writeOctal(
+      header,
+      100,
+      8,
+      canonicalMode(path.replace(/\/$/u, ""), type, sourceMode),
+    );
+    writeOctal(header, 108, 8, 0);
+    writeOctal(header, 116, 8, 0);
+    writeOctal(header, 136, 12, 0);
+    writeString(header, 265, 32, "root");
+    writeString(header, 297, 32, "root");
+    header.fill(0x20, 148, 156);
+    const checksum = header.reduce((sum, byte) => sum + byte, 0);
+    const checksumText = checksum.toString(8).padStart(6, "0");
+    if (checksumText.length !== 6)
+      throw new Error(`Tar checksum exceeds six octal digits: ${checksum}`);
+    header.write(checksumText, 148, "ascii");
+    header[154] = 0;
+    header[155] = 0x20;
+
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+  return canonical;
+}
+
 function parsePaxAttributes(buffer: Buffer): ReadonlyMap<string, string> {
   const attributes = new Map<string, string>();
   let offset = 0;
@@ -261,9 +338,10 @@ export async function packageStagingBody(
         stdio: "pipe",
       },
     );
-    await writeFile(destination, gzipSync(await readFile(rawArchivePath)), {
-      mode: 0o600,
-    });
+    const canonicalArchive = canonicalizeTarHeaders(
+      await readFile(rawArchivePath),
+    );
+    await writeFile(destination, gzipSync(canonicalArchive), { mode: 0o600 });
   } finally {
     await Promise.all([
       rm(rawArchivePath, { force: true }),
