@@ -31,7 +31,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 431 implementation files to `0x7d2225c11b0d6e93f1769c6613bea696fd6cf2bd8b455a23d01876280dd3e993`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 433 implementation files to `0xa4bc419dafa7f6e1cec25cf2b79848f892d7200b367ae89c4994212df64a05cf`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -55,13 +55,13 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0x7d2225c11b0d6e93f1769c6613bea696fd6cf2bd8b455a23d01876280dd3e993` |
-| Exact-runtime local result    | `0x7e14b3cfc056eb0426305b7b0b72f78c55606a76d89f2b40ecc6989e4a693912` |
-| Thirteen-image source set     | `0x4165da91cba6abe18f50317aabc826635d62aefc724747f6349ac32084cb2e3b` |
+| Implementation source         | `0xa4bc419dafa7f6e1cec25cf2b79848f892d7200b367ae89c4994212df64a05cf` |
+| Exact-runtime local result    | `0x634a83574414aeb51d408edca78bd7675fd0399512c502e7e566c59ac3a9d266` |
+| Thirteen-image source set     | `0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f` |
 | Thirteen rendered manifests   | `0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
 | Reviewed body program archive | `0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569` |
-| Launch ledger                 | `0xc8d004a1deeba88746630253e0640508dddb0afc1b07af3c1861c2842e747675` |
+| Launch ledger                 | `0x76500b91a0b4484998d5d51545c5ac1fc4f1a58eeacf895c93be778668962df1` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -83,7 +83,7 @@ Any drift stops the run before mutation and requires a new authorization.
 If and only if the digest-bound authorization is granted:
 
 1. Produce the 13 source-minimal image contexts outside the repository and reproduce the recorded image-set and body-archive digests.
-2. Push only the 13 exact run-scoped images; record each provider-generated immutable revision in the form returned by Blaxel (`sandbox/<image-name>:<12-character-revision>`) and verify every image architecture/runtime identity before resource creation. Mutable tags such as `latest` or operator-selected labels are prohibited.
+2. Push only the 13 exact run-scoped images, sequentially. After each push, read that exact image back before starting the next push and record its exact name, nonzero size, `BUILT` status, architecture evidence, and provider-generated immutable revision. The accepted readback forms are Blaxel's documented 12-character revision and the 21-hex revision observed by R01-04; OCI inputs may instead use an exact `@sha256:<64-hex-digest>`. Mutable tags such as `latest`, operator-selected labels, shortened revisions, and invented digests are prohibited.
 3. Create the single Neon project, record its new project ID, install the existing Drizzle migrations over a direct connection, then provide pooled application access through Blaxel-managed secrets. Never write credentials to the repository or a career body.
 4. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
 5. Generate the candidate policy timestamp once, record it in the external run evidence, and set `ABL_CANDIDATE_CAPACITY_POLICY_JSON` to the exact resource-plan policy with `credibleOpportunityAt.PLAYER` equal to that instant plus 24 hours. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process, create its private preview and token, and prove cross-path denial.
@@ -101,7 +101,7 @@ If and only if the digest-bound authorization is granted:
 
 ### Synthetic candidate commands
 
-All files below stay in the external mode-`0700` run directory. The image reference is the provider-generated immutable `sandbox/abl-alpha-r01-body-image:<12-character-revision>` read back after the authorized push.
+All files below stay in the external mode-`0700` run directory. The image reference is the exact provider-generated immutable `sandbox/abl-alpha-r01-body-image:<provider-revision>` read back after its authorized sequential push.
 
 ```sh
 bl run function abl-alpha-r01-candidate-edge \

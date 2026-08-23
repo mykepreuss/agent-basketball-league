@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-22T23:58:18.792Z`
+> Recorded: `2026-08-23T02:21:38.206Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0x7e14b3cfc056eb0426305b7b0b72f78c55606a76d89f2b40ecc6989e4a693912`
-> Implementation source digest: `0x7d2225c11b0d6e93f1769c6613bea696fd6cf2bd8b455a23d01876280dd3e993`
-> Launch-ledger digest: `0xc8d004a1deeba88746630253e0640508dddb0afc1b07af3c1861c2842e747675`
+> Stable result digest: `0x634a83574414aeb51d408edca78bd7675fd0399512c502e7e566c59ac3a9d266`
+> Implementation source digest: `0xa4bc419dafa7f6e1cec25cf2b79848f892d7200b367ae89c4994212df64a05cf`
+> Launch-ledger digest: `0x76500b91a0b4484998d5d51545c5ac1fc4f1a58eeacf895c93be778668962df1`
 
 ## Outcome
 
@@ -19,7 +19,7 @@ The result proves local implementation readiness only. The derived launch ledger
 | Evidence group               | Current evidence source                                   | Result |
 | ---------------------------- | --------------------------------------------------------- | ------ |
 | Canonical launch plan        | `docs/launch/LAUNCH_PLAN.md`                              | Passed |
-| Existing applications        | 431-file implementation source freeze                     | Passed |
+| Existing applications        | 433-file implementation source freeze                     | Passed |
 | Existing domain packages     | Uncached package unit/integration suites                  | Passed |
 | Active Blaxel topology       | Founding Alpha topology suite and rendered manifest set   | Passed |
 | Agent Drive topology         | `drive-access.json` and topology invariants               | Passed |
@@ -33,7 +33,7 @@ The authoritative application and package mapping is in [Preserve and Use the Ex
 The command was:
 
 ```sh
-PATH=/private/tmp/abl-node-24.18.0-runtime/bin:$PATH pnpm evidence
+PATH=/tmp/abl-alpha-r01-02-runtime.blB5pI/node_modules/node/bin:$PATH corepack pnpm evidence
 ```
 
 | Suite                                                     | Result | Coverage                                                                     |
@@ -41,14 +41,14 @@ PATH=/private/tmp/abl-node-24.18.0-runtime/bin:$PATH pnpm evidence
 | Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 42 of 42 Turbo tasks                                                         |
-| Uncached unit/integration/property/contract/migration/API | Pass   | 327 assertions across 70 files; 42 of 42 Turbo tasks                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 334 assertions across 71 files; 42 of 42 Turbo tasks                         |
 | Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 29 of 29 Turbo tasks                                                         |
 
-Total executable assertions: **358 across 77 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
+Total executable assertions: **365 across 78 test files**. Total uncached Turbo tasks: **113**. The generated route catalog contains **70 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 
@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Use [`FOUNDING_ALPHA_PREFLIGHT_06.md`](./FOUNDING_ALPHA_PREFLIGHT_06.md) as the current post-live-path read-only baseline and repeat its drift checks immediately before the first mutation.
+1. Treat [`FOUNDING_ALPHA_PREFLIGHT_06.md`](./FOUNDING_ALPHA_PREFLIGHT_06.md) as the consumed R01-04 baseline; a fresh post-correction read-only preflight is required before replacement authorization.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.

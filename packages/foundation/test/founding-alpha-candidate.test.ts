@@ -41,7 +41,8 @@ describe("Founding Alpha synthetic candidate preparation", () => {
       const candidateDirectory = join(root, "candidate");
       const prepared = await prepareFoundingAlphaCandidateApplication({
         challengePath,
-        bodyImageReference: "sandbox/abl-alpha-r01-body-image:a1b2c3d4e5f6",
+        bodyImageReference:
+          "sandbox/abl-alpha-r01-body-image:b05103ad9158991c22153",
         bodyProgramArchiveDigest: `0x${"a".repeat(64)}`,
         outputDirectory: candidateDirectory,
         now: () => now + 1_000,
