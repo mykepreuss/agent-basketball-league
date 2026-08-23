@@ -7,9 +7,9 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Canonical launch reference                  | Approved reference; execution approval gated                                      | `docs/launch/LAUNCH_PLAN.md`                                                       |
 | Existing implementation reuse map           | Authoritative launch foundation; no rewrite                                       | `docs/launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation`      |
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                               | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
-| Founding Alpha implementation source freeze | 429 existing and launch-layer implementation files frozen                         | `founding-alpha-source-freeze.json`                                                |
+| Founding Alpha implementation source freeze | 431 existing and launch-layer implementation files frozen                         | `founding-alpha-source-freeze.json`                                                |
 | Founding Alpha private-run packet           | Ready for digest-bound authorization; live proof remains gated                    | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
-| Founding Alpha provider preflight           | Post-execution-boundary read-only refresh; R01-04 authorization required          | `FOUNDING_ALPHA_PREFLIGHT_05.md`                                                   |
+| Founding Alpha provider preflight           | Post-live-path read-only refresh; R01-04 authorization required                   | `FOUNDING_ALPHA_PREFLIGHT_06.md`                                                   |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally   | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-03 execution gate        | Failed closed before provider mutation; runtime contradictions corrected locally  | `FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`                                           |
 | Sandbox-native active topology              | Local manifests and invariants implemented                                        | `infra/blaxel/README.md`, `@abl/foundation` topology suite                         |
@@ -50,7 +50,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                    | `PHASE-05.md`, continuity/exit tests                                               |
 | Founding convention                         | Packet ready; live-agent gate                                                     | `PHASE-11.md`, blank decision packet                                               |
 | Genesis readiness                           | Local bundle ready; gated                                                         | `PHASE-11.md`, release/deployment/cost/risk bundle                                 |
-| Final local acceptance                      | 357 assertions across 76 files; 113 uncached tasks pass                           | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
+| Final local acceptance                      | 358 assertions across 77 files; 113 uncached tasks pass                           | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 
 ## Known limitations and external dependencies
 
@@ -58,7 +58,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 2. Agent Drive entitlement/API access was active at the last inspection, but no Drive remained after teardown. The active architecture now defines separate workspace-scoped `abl-private-state`, `abl-core-state`, and `abl-public-state` Drives and an approval-gated applicator. Live mount readback, restart, restore, concurrent-write, and recovery proof remain outstanding.
 3. No canonical database project credentials are supplied; database behavior is exercised through portable PostgreSQL migrations and local/in-memory adapters. Docker is not required for the local proof.
 4. No funded Base test wallet or mainnet authority is supplied. Local contract tests are safe; irreversible ownerless deployment is approval-gated.
-5. Tier 6 quota and account credit were refreshed on `2026-08-22`: USD 19.07, no configured payment method, automatic top-up unconfigured/off, and low-balance alert at USD 5.00. Region availability, image metering, private-preview behavior, balance, and the USD 6.00 projected four-hour cost must still be reverified before any mutation. The minimum-balance policy is USD 5.00 and recurring capacity remains a separate material-spend gate.
+5. Tier 6 quota and account credit were refreshed on `2026-08-22`: USD 18.80, no configured payment method, automatic top-up unconfigured/off, and low-balance alert at USD 5.00. Region availability, Agent Drive ACL behavior, image metering, private-preview behavior, balance, and the USD 6.00 projected four-hour cost must still be reverified before any mutation. The minimum-balance policy is USD 5.00 and recurring capacity remains a separate material-spend gate.
 6. Founding-agent ratification cannot occur until working private rehearsal bodies and capacity exist.
 7. The signed projection transport crosses a real local HTTP boundary, re-verifies agent authority in the public service, and persists restart-verifiable source envelopes. Its deployment between `abl-core` and `abl-public`, Agent Drive behavior, private-preview transport, and live isolation still cannot be proven until those workspaces and storage resources are available.
 8. Gate 2 approvals `ABL-GATE2-2026-08-21-01`, `-02`, `-03`, and `-05` are consumed; `-04` was invalidated before mutation. All four mutating runs failed closed and completed teardown. Their proxy, iptables, CA, credential-interception, and upload experiments are preserved as historical evidence under the inactive future untrusted-code profile and are not prerequisites for ordinary Founding Alpha development.
@@ -70,7 +70,8 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha local evidence: [`FOUNDING_ALPHA_LOCAL.md`](./FOUNDING_ALPHA_LOCAL.md)
 - Founding Alpha source freeze: [`founding-alpha-source-freeze.json`](./founding-alpha-source-freeze.json)
 - Founding Alpha private slice: [`FOUNDING_ALPHA_PRIVATE_SLICE.md`](../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md)
-- Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_05.md`](./FOUNDING_ALPHA_PREFLIGHT_05.md)
+- Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_06.md`](./FOUNDING_ALPHA_PREFLIGHT_06.md)
+- Earlier execution-boundary preflight: [`FOUNDING_ALPHA_PREFLIGHT_05.md`](./FOUNDING_ALPHA_PREFLIGHT_05.md)
 - Earlier post-name-contract preflight: [`FOUNDING_ALPHA_PREFLIGHT_04.md`](./FOUNDING_ALPHA_PREFLIGHT_04.md)
 - Earlier post-packaging preflight: [`FOUNDING_ALPHA_PREFLIGHT_03.md`](./FOUNDING_ALPHA_PREFLIGHT_03.md)
 - Founding Alpha R01-02 failed-closed result: [`FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md)
