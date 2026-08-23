@@ -43,7 +43,8 @@ describe("candidate provisioner private boundary", () => {
 
   it("creates and narrowly tears down the authorized candidate Sandboxes", async () => {
     const applicationId = "0198e000-0000-7000-8000-000000000001";
-    const imageReference = "sandbox/abl-alpha-r01-body-image:a1b2c3d4e5f6";
+    const imageReference =
+      "sandbox/abl-alpha-r01-body-image:b05103ad9158991c22153";
     let requested:
       | Parameters<CandidateSandboxFactory["createIfNotExists"]>[0]
       | null = null;
@@ -61,7 +62,8 @@ describe("candidate provisioner private boundary", () => {
         enabled: true,
         region: "us-was-1",
         runtime: {
-          image: "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
+          image:
+            "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
           ports: [{ name: "http", protocol: "HTTP", target: 3_000 }],
         },
       },
@@ -101,7 +103,7 @@ describe("candidate provisioner private boundary", () => {
       fixedBrokerHost: "broker.example",
       fixedBrokerResourceName: "abl-fixed-broker-candidate-one",
       fixedBrokerImageReference:
-        "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
+        "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
       capabilityTokenBase64: Buffer.alloc(32, 7).toString("base64"),
       previewToken: "preview-token-with-at-least-32-bytes",
       factory,
@@ -197,7 +199,7 @@ describe("candidate provisioner private boundary", () => {
       fixedBrokerHost: "broker.example",
       fixedBrokerResourceName: "abl-fixed-broker-candidate-three",
       fixedBrokerImageReference:
-        "sandbox/abl-alpha-r01-fixed-broker-image:f6e5d4c3b2a1",
+        "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
       capabilityTokenBase64: Buffer.alloc(32, 7).toString("base64"),
     };
     expect(() => new BlaxelCandidateSandboxControlPlane(options)).toThrow();
@@ -206,6 +208,14 @@ describe("candidate provisioner private boundary", () => {
         new BlaxelCandidateSandboxControlPlane({
           ...options,
           imageReference: "sandbox/abl-alpha-r01-body-image:operator-tag",
+        }),
+    ).toThrow();
+    expect(
+      () =>
+        new BlaxelCandidateSandboxControlPlane({
+          ...options,
+          imageReference:
+            "sandbox/abl-alpha-r01-body-image:b05103ad9158991c2215g",
         }),
     ).toThrow();
   });

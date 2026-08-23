@@ -10,6 +10,7 @@ import {
   CandidateOpportunityResponseTypes,
   encryptCandidateEnvelope,
 } from "../packages/launch/src/candidate-intake.js";
+import { ImmutableSandboxImageReferenceSchema } from "../packages/launch/src/image-reference.js";
 import {
   createCanonicalEvent,
   createSigningIdentity,
@@ -33,12 +34,6 @@ const applicationId = "0198e000-0000-7000-8000-000000000001";
 const candidateDid = "did:abl:founding-alpha-player-001";
 const recipientKeyId = "abl-alpha-r01-candidate-provisioner";
 const sha256 = z.string().regex(/^0x[0-9a-f]{64}$/);
-const immutableImageReference = z.union([
-  z.string().regex(/@sha256:[0-9a-f]{64}$/),
-  z
-    .string()
-    .regex(/^sandbox\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?:[a-z0-9]{12}$/),
-]);
 const ChallengeSchema = z.strictObject({
   version: z.literal(1),
   challengeId: z.uuid(),
@@ -54,7 +49,7 @@ const PublicStateSchema = z.strictObject({
   applicationId: z.literal(applicationId),
   candidateDid: z.literal(candidateDid),
   signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  bodyImageReference: immutableImageReference,
+  bodyImageReference: ImmutableSandboxImageReferenceSchema,
   bodyProgramArchiveDigest: sha256,
   commandDomain: z.strictObject({
     name: z.string(),
@@ -107,7 +102,7 @@ export async function prepareFoundingAlphaCandidateApplication(input: {
   const challenge = ChallengeSchema.parse(
     unwrapObject(JSON.parse(await readFile(challengePath, "utf8"))),
   );
-  const bodyImageReference = immutableImageReference.parse(
+  const bodyImageReference = ImmutableSandboxImageReferenceSchema.parse(
     input.bodyImageReference,
   );
   const bodyProgramArchiveDigest = sha256.parse(input.bodyProgramArchiveDigest);

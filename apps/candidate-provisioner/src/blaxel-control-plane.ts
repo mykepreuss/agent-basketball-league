@@ -1,26 +1,13 @@
 import { createHash } from "node:crypto";
 
 import { SandboxInstance } from "@blaxel/core";
-import type {
-  CandidateSandboxControlPlane,
-  CandidateRoleClass,
+import {
+  ImmutableSandboxImageReferenceSchema,
+  type CandidateRoleClass,
+  type CandidateSandboxControlPlane,
 } from "@abl/launch";
 import { z } from "zod";
 
-const OciDigestImageReferenceSchema = z
-  .string()
-  .min(1)
-  .max(500)
-  .regex(/@sha256:[0-9a-f]{64}$/);
-const BlaxelRevisionImageReferenceSchema = z
-  .string()
-  .min(1)
-  .max(500)
-  .regex(/^sandbox\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?:[a-z0-9]{12}$/);
-const ImmutableImageReferenceSchema = z.union([
-  OciDigestImageReferenceSchema,
-  BlaxelRevisionImageReferenceSchema,
-]);
 const WorkspaceNameSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
@@ -97,7 +84,7 @@ export class BlaxelCandidateSandboxControlPlane
   constructor(options: BlaxelCandidateControlPlaneOptions) {
     this.#workspace = WorkspaceNameSchema.parse(options.workspace);
     this.#region = z.literal("us-was-1").parse(options.region);
-    this.#imageReference = ImmutableImageReferenceSchema.parse(
+    this.#imageReference = ImmutableSandboxImageReferenceSchema.parse(
       options.imageReference,
     );
     this.#authorizedApplicationId = z
@@ -118,9 +105,10 @@ export class BlaxelCandidateSandboxControlPlane
     this.#fixedBrokerResourceName = WorkspaceNameSchema.parse(
       options.fixedBrokerResourceName,
     );
-    this.#fixedBrokerImageReference = ImmutableImageReferenceSchema.parse(
-      options.fixedBrokerImageReference,
-    );
+    this.#fixedBrokerImageReference =
+      ImmutableSandboxImageReferenceSchema.parse(
+        options.fixedBrokerImageReference,
+      );
     this.#capabilityTokenBase64 = Base64SecretSchema.parse(
       options.capabilityTokenBase64,
     );

@@ -50,7 +50,7 @@
         "preselectedAdmissionDecision": false
       }
     },
-    "evidenceDigest": "0xc7caaae59e7ebb7b973ef78dd9c10d0fb2da4a80d19f274c57ce6b4916d0670e",
+    "evidenceDigest": "0xe2b79f82ea856514ae5c0d3cf7ab4333271fe3afa996f2ea78ebc1c379ca553a",
     "blockingReasons": [
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
@@ -156,17 +156,17 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0xa7e7340d7a1d5f1bbf8ad0108c7065124d53dd840117ca62fa236473278488b4",
+      "digest": "0x56cd7713c8787d339785ffedd64b9d64581017f619339d5b82dd13d73d3f3d61",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0xabbe5b3b31b93befffcf6d04b98be65b6206c90f15438e0aede68b408396f614",
+      "digest": "0xb86bb91f5e36d5c8992553e445d855d59d352d4a4e0631421bd28509d2a44183",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0x4b95b635d5054f625bdf614206b5d86a4128dcf36b5ddb6f0761b06f60a5f122",
+      "digest": "0xb0dc6c7f118c178cf0f977994b786c62f22599bc668144e51afaf3d74e1c7f84",
       "verification": "PASSED"
     },
     {
@@ -191,7 +191,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0xa574ae90c9cf690bae773da81d876dbcc26e1e5399e953fc27fd107395cae522",
+      "digest": "0xebbf20424f3fd44e84579ee31400a1459f955495513aeb659f66618cc5e32465",
       "verification": "PASSED"
     },
     {
@@ -201,17 +201,17 @@
     },
     {
       "evidenceId": "candidate-provisioner-implementation",
-      "digest": "0x5a0b1600376b244db3259bc10a5fca35044bc71fa4d964b693bf88449220bc75",
+      "digest": "0x7368a622fc303d1e2f6c5c493ab8753fc3826c3b57abcc76aa823f87cf6cdf48",
       "verification": "PASSED"
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x7e14b3cfc056eb0426305b7b0b72f78c55606a76d89f2b40ecc6989e4a693912",
+      "digest": "0x634a83574414aeb51d408edca78bd7675fd0399512c502e7e566c59ac3a9d266",
       "verification": "PASSED"
     },
     {
       "evidenceId": "founding-alpha-private-slice-live-proof",
-      "digest": "0x030198870e05b5a1684b5f2f7f4a8c02233e741827f558c15adab027b7054299",
+      "digest": "0x9ac57ac77ce635512203960e618973773e3e6d32ea8f52c7f4a80d0c039eb758",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -468,5 +468,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xc8d004a1deeba88746630253e0640508dddb0afc1b07af3c1861c2842e747675"
+  "ledgerDigest": "0x76500b91a0b4484998d5d51545c5ac1fc4f1a58eeacf895c93be778668962df1"
 }
