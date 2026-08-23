@@ -956,6 +956,18 @@ describe("Founding Alpha private slice", () => {
         privatePreviews: string[];
         images: string[];
         modelsUsed: string[];
+        temporaryNeonProject: {
+          name: string;
+          postgresVersion: number;
+          region: string;
+          plan: string;
+          neonAuth: boolean;
+          creationSurface: string;
+          creationOrder: string;
+          readbackRequired: string[];
+          mismatchAction: string;
+          projectId: null;
+        };
       };
       syntheticCandidate: {
         applicationId: string;
@@ -1023,6 +1035,25 @@ describe("Founding Alpha private slice", () => {
     expect(plan.resources.functions).toHaveLength(5);
     expect(plan.resources.privatePreviews).toHaveLength(6);
     expect(plan.resources.images).toHaveLength(13);
+    expect(plan.resources.temporaryNeonProject).toEqual({
+      name: "abl-founding-alpha-r01",
+      postgresVersion: 17,
+      region: "aws-us-east-1",
+      plan: "free",
+      neonAuth: false,
+      creationSurface: "NEON_CONSOLE_EXPLICIT_SELECTION",
+      creationOrder: "FIRST_PROVIDER_MUTATION_BEFORE_IMAGE_PUSHES",
+      readbackRequired: [
+        "projectId",
+        "name",
+        "postgresVersion",
+        "region",
+        "plan",
+        "emptyUserSchema",
+      ],
+      mismatchAction: "DELETE_EXACT_PROJECT_AND_STOP_BEFORE_IMAGE_PUSHES",
+      projectId: null,
+    });
     expect(Object.keys(imageSources.imageSourceDigests).sort()).toEqual(
       plan.resources.images.toSorted(),
     );
