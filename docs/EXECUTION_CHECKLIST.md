@@ -46,7 +46,9 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Record read-only Preflight 11 against merged `main`, clean target inventories, current quota/privacy/ACL contracts, the remaining Neon PostgreSQL 17 path, and the unchanged USD 6.00 projection.
 - [x] Merge Preflight 11, calculate its final file digest and merge commit, and obtain replacement `ABL-FOUNDING-ALPHA-R01-09` authorization before any provider mutation.
 - [x] Execute R01-09 through exact PostgreSQL 17 migration, all thirteen attributable image pushes, atomic three-rule Agent Drive creation, and candidate-intake mount; fail closed at the candidate-store port-8080 collision and complete exact provider teardown.
-- [~] Merge the R01-09 result and the reviewed port, semantic ACL-readback, and external manifest-resolution corrections; refresh exact-runtime evidence and artifact digests; then perform a new read-only preflight before requesting replacement authorization.
+- [x] Merge the R01-09 result and the reviewed port, semantic ACL-readback, and external manifest-resolution corrections; refresh exact-runtime evidence and artifact digests.
+- [x] Record read-only Preflight 12 against merged `main`, clean target inventories, current quota/privacy/ACL contracts, the explicit Neon PostgreSQL 17 path, and the unchanged USD 6.00 projection.
+- [~] Merge Preflight 12, calculate its final file digest and merge commit, and obtain replacement `ABL-FOUNDING-ALPHA-R01-10` authorization before any provider mutation.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]

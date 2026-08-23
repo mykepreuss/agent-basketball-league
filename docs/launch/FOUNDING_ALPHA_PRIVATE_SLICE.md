@@ -1,6 +1,6 @@
 # Founding Alpha private slice runbook
 
-> Status: `R01_09_CORRECTION_ASSURED_MERGE_AND_PREFLIGHT_REQUIRED`
+> Status: `PREFLIGHT_12_COMPLETE_R01_10_AUTHORIZATION_REQUIRED`
 > Run ID: `ABL-FOUNDING-ALPHA-R01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
@@ -17,8 +17,11 @@ R01-09 consumed read-only
 then failed closed at the candidate-store application port boundary and completed
 exact teardown. The result is recorded in
 [`FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md`](../evidence/FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md).
-The local correction is not execution authority. A new read-only preflight and
-fresh digest-bound approval are required before another provider mutation.
+The correction is merged and its exact assurance is complete. Read-only
+[`FOUNDING_ALPHA_PREFLIGHT_12.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_12.md)
+records the clean provider inventories and current bindings. Its final file
+digest and merge commit must be bound by a fresh R01-10 approval before another
+provider mutation.
 
 ## Existing implementation is the launch foundation
 
