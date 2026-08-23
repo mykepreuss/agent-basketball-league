@@ -6,6 +6,7 @@ import {
   readFile,
   readdir,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -1639,6 +1640,53 @@ describe("hardened sandbox image policy", () => {
       expect(() => inspectStagingBodyArchive(duplicateArchive)).toThrow(
         "Duplicate staging-body archive member",
       );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("canonicalizes staging-body permissions across equivalent trees", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "abl-body-modes-"));
+    try {
+      const archives: Buffer[] = [];
+      for (const [name, directoryMode, fileMode] of [
+        ["private", 0o700, 0o600],
+        ["shared", 0o755, 0o644],
+      ] as const) {
+        const bodyProgram = join(directory, name);
+        const agent = join(bodyProgram, "agent");
+        await mkdir(join(agent, "config"), {
+          recursive: true,
+          mode: directoryMode,
+        });
+        await writeFile(join(agent, "main.mjs"), "export {};\n", {
+          mode: 0o600,
+        });
+        await writeFile(join(agent, "config/settings.json"), "{}\n", {
+          mode: fileMode,
+        });
+        await writeFile(join(agent, "runner"), "#!/bin/sh\n", {
+          mode: fileMode | 0o111,
+        });
+        await symlink("runner", join(agent, "run"));
+        const archivePath = join(directory, `${name}.tgz`);
+        await packageStagingBody(bodyProgram, archivePath);
+        archives.push(await readFile(archivePath));
+      }
+
+      expect(archives[1]).toEqual(archives[0]);
+      expect(
+        inspectStagingBodyArchive(archives[0] ?? Buffer.alloc(0)).map(
+          ({ mode, path }) => [path.replace(/\/$/u, ""), mode],
+        ),
+      ).toEqual([
+        ["agent", 0o755],
+        ["agent/config", 0o755],
+        ["agent/config/settings.json", 0o644],
+        ["agent/main.mjs", 0o600],
+        ["agent/run", 0o777],
+        ["agent/runner", 0o755],
+      ]);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

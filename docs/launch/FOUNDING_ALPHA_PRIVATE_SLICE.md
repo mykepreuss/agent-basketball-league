@@ -55,13 +55,13 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0xa4bc419dafa7f6e1cec25cf2b79848f892d7200b367ae89c4994212df64a05cf` |
-| Exact-runtime local result    | `0x634a83574414aeb51d408edca78bd7675fd0399512c502e7e566c59ac3a9d266` |
+| Implementation source         | `0xf341e4ded56f7993e93b269c267f88fde104b296532227b10126c513d1a02e2b` |
+| Exact-runtime local result    | `0x88134695f20cb36c758328ae0d4f754255214945a1e386ece84c15109eea2acd` |
 | Thirteen-image source set     | `0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f` |
 | Thirteen rendered manifests   | `0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
-| Reviewed body program archive | `0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569` |
-| Launch ledger                 | `0x76500b91a0b4484998d5d51545c5ac1fc4f1a58eeacf895c93be778668962df1` |
+| Reviewed body program archive | `0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c` |
+| Launch ledger                 | `0x3caeba115db15ec5b1ac7187b3af5e868ed9df887afd80d9e0841e77be12cda1` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -115,7 +115,7 @@ bl run function abl-alpha-r01-candidate-edge \
 pnpm founding-alpha:prepare-candidate application \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json" \
   "$ABL_ALPHA_BODY_IMAGE_REFERENCE" \
-  0x43d9373baaa2bee8d0affe80aaa7e394d1c2af01f47102b66edfbeb2306d5569 \
+  0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate"
 
 bl run function abl-alpha-r01-candidate-edge \
