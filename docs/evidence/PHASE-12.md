@@ -4,7 +4,7 @@ Recorded: 2026-08-18; refreshed 2026-08-22 in `America/Vancouver`.
 
 ## Result
 
-The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x5a7f7096fe7d8177143df775ff30c021b4ff9da5a9ef8c43fa6c3aced8604843`.
+The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0xe0a155fb02ca565e3472268d2c8efa29a8a3adeec26ec179b0826b0706186ca8`.
 
 The evidence runner executed from a clean command boundary:
 
@@ -13,14 +13,14 @@ The evidence runner executed from a clean command boundary:
 | Repository formatting                                                        | Pass                                        |
 | Root harness/configuration TypeScript                                        | Pass                                        |
 | Workspace TypeScript checks                                                  | 42/42 uncached tasks                        |
-| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 336/336 assertions in 71 files; 42/42 tasks |
+| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 337/337 assertions in 71 files; 42/42 tasks |
 | Cross-domain acceptance, replay, synthetic load, and recovery                | 18/18 assertions in 4 files                 |
 | Adversarial security                                                         | 9/9 assertions in 1 file                    |
 | Populated-game loopback HTTP load                                            | 2/2 workload assertions; 22,000 requests    |
 | Production desktop/mobile Chromium                                           | 2/2 assertions in 1 browser file            |
 | Production build                                                             | 29/29 uncached tasks                        |
 
-That is 367 passing assertions across 78 test files and 113/113 uncached type-check, test, and production-build tasks under exact Node `24.18.0` and pnpm `11.21.0`. The pending release candidate still references an older local-result digest and remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are absent; this local refresh does not promote it.
+That is 368 passing assertions across 78 test files and 113/113 uncached type-check, test, and production-build tasks under exact Node `24.18.0` and pnpm `11.21.0`. The pending release candidate still references an older local-result digest and remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are absent; this local refresh does not promote it.
 
 ## Interface and route closure
 

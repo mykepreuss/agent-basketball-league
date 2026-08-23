@@ -94,6 +94,14 @@
     "readbackPolicy": "EXACT_NAME_SIZE_BUILT_REVISION_LINUX_AMD64",
     "mismatchAction": "FAIL_CLOSED_AND_TEARDOWN_BEFORE_NEXT_PUSH_OR_WORKLOAD"
   },
+  "manifestResolution": {
+    "command": "pnpm founding-alpha:resolve-manifest <external-rendered-manifest> <external-env-file> <new-external-output-directory>",
+    "substitutionPolicy": "WHOLE_VALUE_PLACEHOLDERS_ONLY",
+    "inputPolicy": "EXTERNAL_MODE_0600_ENVIRONMENT_FILE",
+    "outputPolicy": "NEW_EXTERNAL_MODE_0700_DIRECTORY_MODE_0600_FILES",
+    "evidencePolicy": "REDACT_VALUES_RECORD_NAMES_AND_DIGESTS",
+    "mismatchAction": "FAIL_CLOSED_BEFORE_RESOURCE_APPLY"
+  },
   "sandboxProcesses": {
     "abl-alpha-r01-arena": {
       "command": ["node", "server.js"],
@@ -149,7 +157,7 @@
   ],
   "localArtifacts": {
     "imageSetDigest": "0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f",
-    "manifestSetDigest": "0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828",
+    "manifestSetDigest": "0xbf1d11fa9750ec8bdff4c517c460c998c8f7a6382788f7a985b0705c3551a164",
     "bodyProgramArchiveDigest": "0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c"
   },
   "limits": {

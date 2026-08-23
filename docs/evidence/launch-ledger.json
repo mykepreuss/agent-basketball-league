@@ -50,7 +50,7 @@
         "preselectedAdmissionDecision": false
       }
     },
-    "evidenceDigest": "0x602e85c4c15fd29b534b119bb0cf5159e03303a6934cd4df5138219f6c3481ff",
+    "evidenceDigest": "0x8b9fe39d8fdb2af3ed00dcbe0684c1c13514201553550ef7da823211a3d8fead",
     "blockingReasons": [
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
@@ -161,12 +161,12 @@
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x960fc3619891e37841d53e3a6993d2ec7cb53a42f7e366f2d4476334d3b48927",
+      "digest": "0xce2bc407f14d9cea08a6c895023bc079a923cc3dd8d89ad23665408fb5206fe6",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xc9d1d94423123b5fb5bc0453eaf4546ffe088d59cec6451fbecc8917b56f837c",
+      "digest": "0xc8aad27a56971a7629eef3003651cbafcc0955e093c66b359d6a376e6c6569b4",
       "verification": "PASSED"
     },
     {
@@ -206,12 +206,12 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x5a7f7096fe7d8177143df775ff30c021b4ff9da5a9ef8c43fa6c3aced8604843",
+      "digest": "0xe0a155fb02ca565e3472268d2c8efa29a8a3adeec26ec179b0826b0706186ca8",
       "verification": "PASSED"
     },
     {
       "evidenceId": "founding-alpha-private-slice-live-proof",
-      "digest": "0x84047edc77a6ec36b1cdaadbb4017cc86deadd6ee066583e9f821c4a4df9cb81",
+      "digest": "0xe75bf99c04f1408c6eb29ff52bde4f5ee4f1d7b0aca513d2f2a4e1f449ead958",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -468,5 +468,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xfc71e3e1bacd83c7113e1a6d6b190239df867e4b6578030063764a560809ca99"
+  "ledgerDigest": "0x5b139008153fe06b188dec545350492cdf781619c831445b9c6ab81552d25282"
 }

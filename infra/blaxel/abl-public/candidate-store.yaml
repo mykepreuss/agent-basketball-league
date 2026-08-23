@@ -15,14 +15,14 @@ spec:
     ports:
       - name: http
         protocol: HTTP
-        target: 8080
+        target: 3000
     terminationGracePeriodSeconds: 30
     envs:
       - name: HOST
         value: "0.0.0.0"
         secret: false
       - name: PORT
-        value: "8080"
+        value: "3000"
         secret: false
       - name: ABL_CANDIDATE_EDGE_MODE
         value: STORE

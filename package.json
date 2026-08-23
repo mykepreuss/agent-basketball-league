@@ -27,6 +27,7 @@
     "launch:ledger": "tsx scripts/generate-launch-ledger.ts",
     "platform:apply-drives": "tsx scripts/apply-agent-drive-topology.ts",
     "founding-alpha:render-manifests": "tsx scripts/render-founding-alpha-manifests.ts",
+    "founding-alpha:resolve-manifest": "tsx scripts/resolve-founding-alpha-manifest.ts",
     "staging:prepare-checkpoint": "tsx scripts/prepare-staging-checkpoint.ts",
     "staging:package-body": "tsx scripts/package-staging-body.ts",
     "staging:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
