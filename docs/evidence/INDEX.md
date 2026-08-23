@@ -8,8 +8,8 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Existing implementation reuse map           | Authoritative launch foundation; no rewrite                                        | `docs/launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation`      |
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                                | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 | Founding Alpha implementation source freeze | 434 existing and launch-layer implementation files frozen                          | `founding-alpha-source-freeze.json`                                                |
-| Founding Alpha private-run packet           | R01-08 result recorded; context-bound image correction under verification          | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
-| Founding Alpha provider preflight           | Preflight 10 consumed by R01-08; refreshed preflight required                      | `FOUNDING_ALPHA_PREFLIGHT_10.md`                                                   |
+| Founding Alpha private-run packet           | R01-08 correction merged; Preflight 11 awaits final merge binding                  | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
+| Founding Alpha provider preflight           | Read-only Preflight 11 complete; R01-09 authorization required                     | `FOUNDING_ALPHA_PREFLIGHT_11.md`                                                   |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally    | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-03 execution gate        | Failed closed before provider mutation; runtime contradictions corrected locally   | `FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-04 execution gate        | Failed closed after image push; exact teardown complete; revision correction local | `FOUNDING-ALPHA-R01-04-FAILED-CLOSED.md`                                           |
@@ -90,6 +90,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha R01-06 failed-closed result: [`FOUNDING-ALPHA-R01-06-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-06-FAILED-CLOSED.md)
 - Founding Alpha R01-07 failed-closed result: [`FOUNDING-ALPHA-R01-07-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-07-FAILED-CLOSED.md)
 - Founding Alpha R01-08 failed-closed result: [`FOUNDING-ALPHA-R01-08-FAILED-CLOSED.md`](./FOUNDING-ALPHA-R01-08-FAILED-CLOSED.md)
+- Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_11.md`](./FOUNDING_ALPHA_PREFLIGHT_11.md)
 - Earlier replacement preflight: [`FOUNDING_ALPHA_PREFLIGHT_02.md`](./FOUNDING_ALPHA_PREFLIGHT_02.md)
 - Earlier Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_01.md`](./FOUNDING_ALPHA_PREFLIGHT_01.md)
 - Gate 0/1 traceability: [`GATE_0_1_TRACEABILITY.md`](../launch/GATE_0_1_TRACEABILITY.md)
