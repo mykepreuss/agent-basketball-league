@@ -1,10 +1,10 @@
 # Phase 12 evidence: final local acceptance and Season One gate
 
-Recorded: 2026-08-18; refreshed 2026-08-21 in `America/Vancouver`.
+Recorded: 2026-08-18; refreshed 2026-08-22 in `America/Vancouver`.
 
 ## Result
 
-The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x5e753b36a342e926e319ae8a13c8d547a7fb328a18bbc8429e7dc998b658baa6`.
+The current implemented local suite passes. The approved-plan completion audit distinguishes the retained external and approval gates rather than treating this green suite as proof of unavailable paths. `docs/evidence/final-local-results.json` records `PASS_LOCAL_WITH_EXTERNAL_GATES` and stable result digest `0x5a7f7096fe7d8177143df775ff30c021b4ff9da5a9ef8c43fa6c3aced8604843`.
 
 The evidence runner executed from a clean command boundary:
 
@@ -13,14 +13,14 @@ The evidence runner executed from a clean command boundary:
 | Repository formatting                                                        | Pass                                        |
 | Root harness/configuration TypeScript                                        | Pass                                        |
 | Workspace TypeScript checks                                                  | 42/42 uncached tasks                        |
-| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 305/305 assertions in 68 files; 42/42 tasks |
-| Cross-domain acceptance, replay, synthetic load, and recovery                | 17/17 assertions in 3 files                 |
+| Unit, integration, property, behavioral EVM, migration/schema, and API tests | 336/336 assertions in 71 files; 42/42 tasks |
+| Cross-domain acceptance, replay, synthetic load, and recovery                | 18/18 assertions in 4 files                 |
 | Adversarial security                                                         | 9/9 assertions in 1 file                    |
 | Populated-game loopback HTTP load                                            | 2/2 workload assertions; 22,000 requests    |
 | Production desktop/mobile Chromium                                           | 2/2 assertions in 1 browser file            |
 | Production build                                                             | 29/29 uncached tasks                        |
 
-That is 335 passing assertions across 74 test files and 113/113 uncached type-check, test, and production-build tasks under exact Node `24.18.0` and pnpm `11.21.0`. The generated test-result digest is present in the release candidate, but the candidate remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are still absent.
+That is 367 passing assertions across 78 test files and 113/113 uncached type-check, test, and production-build tasks under exact Node `24.18.0` and pnpm `11.21.0`. The pending release candidate still references an older local-result digest and remains schema-invalid because real image, verifier, ratification, timing, key, and authorization inputs are absent; this local refresh does not promote it.
 
 ## Interface and route closure
 
@@ -83,14 +83,14 @@ The local data-bound production browser pass is current. A separate loopback HTT
 
 ## Current locked artifacts
 
-- Final local result record: `sha256:40d97de274ca0eeffb8491cafa3f55bb91eaf02d9b83e19ec79d514cc350420d`
-- Route catalog: `sha256:cbe57a7880d1c797440788996da32e592b48f940b881b1081f24ae88b39d1a0a`
+- Final local result record: `sha256:b3a309200c623cee8011aed2afebffc5d33afb470ebd3c2a87c51f785ca2b4c5`
+- Route catalog: 70 routes recorded in the final local result
 - Main acceptance suite: `sha256:cca6f615bdf5041f8c5d9e2f4b15cfb2bce5d0b8e282db61d09f698844bce28a`
 - MCP interface acceptance: `sha256:8995109bc909e0168e294467a0b414384def63259034eab400a6cffe76dc8e01`
 - Election history acceptance: `sha256:929ea0fe5a05fc8bd384d6ede96a65f83bf10d8e7c670699b673642e58e33942`
 - Adversarial suite: `sha256:85dc479e4ef799f8088ec3eee226fd7316fe0b318d1b51b6454da8d3c308a3b3`
-- Evidence runner: `sha256:43a21c56ba8059d684d0e207f5945cdaa0f07fd163477324d5d7439a07dd8105`
-- Loopback load result: `sha256:bcde0bc3bf212ba21a52b2fd7afeaedd18a3a5c8c0f707351b37fe4e99a43e94`
+- Evidence runner: `sha256:0f47c069fb40537dbadee462e67c5ca27c8864d2176c1dbd68cb7ce772aaaf13`
+- Loopback load result: `sha256:dc48a5d336ec9bdf31fa45e563555b55575a73e10b9e36741afadbc1482686d4`
 - k6 staging profile: `sha256:9bdc897b9df96fa74cf89b66252710db2d27aafd3e207f5dae262ad9f39314f8`
 - Playwright configuration/suite: `sha256:a90f55db0de71c6e5207402e3ad4f93597b74100b83049645ae5ca713f12d449`, `sha256:d8b00dbb68937b1d851cb93c07d63e4a37696f0a1198182006c8027d065d41d6`
 - Genesis readiness bundle: `sha256:604f110211fc194e884b057f776339cb97f018e98356e3fe3f6aca7a61651355`
@@ -116,4 +116,4 @@ The cap-certified player-mobility closure is locked at its canonical season-econ
 
 Local acceptance does not clear the genesis blockers: founding convention incomplete; release manifest incomplete; exact ownerless transaction unavailable; funding and 30-day reserve unverified; four Blaxel workspaces and Agent Drive unavailable; the implemented signed projection and exit-portability transports are not yet proven between deployed Blaxel workspaces; live adversarial/capacity/recovery proofs are incomplete; and explicit approval for irreversible/public/spend actions is absent.
 
-Accordingly, no workspace/resource was created, no paid capacity was reserved, no contract was broadcast, no founding choice was made, no remote branch/PR was pushed, and nothing was publicly exposed. Season One additionally remains gated on continued prepaid funding, concentration review, agent-ratified infrastructure changes, and supported hardware-backed non-exportable signing.
+Accordingly, this local evidence refresh created no workspace/resource, reserved no paid capacity, broadcast no contract, made no founding choice, and exposed nothing publicly. Season One additionally remains gated on continued prepaid funding, concentration review, agent-ratified infrastructure changes, and supported hardware-backed non-exportable signing.
