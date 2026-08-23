@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0xf341e4ded56f7993e93b269c267f88fde104b296532227b10126c513d1a02e2b`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x3ed3766dc23385386fc589ceec3b76b6e512f31364f59f03767b7d29304f6068`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -39,7 +39,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Record and merge read-only Preflight 09 without modifying a bound dependency, calculate its final file digest, and obtain replacement authorization.
 - [x] Execute R01-07 through thirteen sequential exact-image readbacks, fail closed when the new Neon project returns PostgreSQL 18 instead of the authorized PostgreSQL 17, and complete exact image/project teardown.
 - [x] Review and freeze the signed-in Neon Console path that explicitly selects PostgreSQL 17, `aws-us-east-1`, Free plan, and Neon Auth off; require exact project readback and deletion-on-mismatch as the first provider mutation before any Blaxel image push.
-- [~] Rerun exact-runtime verification, merge the PostgreSQL 17 creation-order correction, and record a fresh read-only Founding Alpha preflight before requesting replacement execution authorization.
+- [x] Rerun exact-runtime verification, merge the PostgreSQL 17 creation-order correction, and record read-only Preflight 10 against the clean post-R01-07 inventories.
+- [~] Merge Preflight 10, calculate its final file digest and merge commit, and obtain replacement `ABL-FOUNDING-ALPHA-R01-08` authorization before any provider mutation.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
