@@ -21,6 +21,11 @@ import {
   packageStagingBody,
 } from "../../../scripts/package-staging-body.js";
 import { freezeFoundingAlphaSource } from "../../../scripts/freeze-founding-alpha-source.js";
+import {
+  FOUNDING_ALPHA_IMAGE_PUSH_SPECS,
+  foundingAlphaPushArguments,
+  validateImageReadback,
+} from "../../../scripts/push-founding-alpha-image.js";
 import { renderFoundingAlphaManifests } from "../../../scripts/render-founding-alpha-manifests.js";
 
 import {
@@ -973,6 +978,15 @@ describe("Founding Alpha private slice", () => {
         applicationId: string;
         bodySandboxName: string;
       };
+      imagePush: {
+        command: string;
+        authorizationEnvironment: string;
+        workingDirectoryPolicy: string;
+        sequencePolicy: string;
+        sourcePolicy: string;
+        readbackPolicy: string;
+        mismatchAction: string;
+      };
       sandboxProcesses: Record<
         string,
         {
@@ -1029,6 +1043,16 @@ describe("Founding Alpha private slice", () => {
     expect(plan.syntheticCandidate.bodySandboxName).toBe(
       `abl-career-${plan.syntheticCandidate.applicationId.replaceAll("-", "")}`,
     );
+    expect(plan.imagePush).toEqual({
+      command:
+        "pnpm founding-alpha:push-image <external-image-root> <external-evidence-root> <ordinal>",
+      authorizationEnvironment: "ABL_ALPHA_AUTHORIZATION_ID",
+      workingDirectoryPolicy: "EXACT_CONTEXT_ROOT_NO_DIRECTORY_FLAG",
+      sequencePolicy: "ONE_PUSH_AT_A_TIME_PRIOR_PASS_RECEIPT_REQUIRED",
+      sourcePolicy: "RECOMPUTE_BOUND_DIGEST_BEFORE_EACH_PUSH",
+      readbackPolicy: "EXACT_NAME_SIZE_BUILT_REVISION_LINUX_AMD64",
+      mismatchAction: "FAIL_CLOSED_AND_TEARDOWN_BEFORE_NEXT_PUSH_OR_WORKLOAD",
+    });
     expect(plan.resources.sandboxes).toContain(
       plan.syntheticCandidate.bodySandboxName,
     );
@@ -1093,6 +1117,99 @@ describe("Founding Alpha private slice", () => {
     expect(drive.mounts).toHaveLength(3);
     expect(drive.careerBodyMounts).toEqual([]);
     expect(drive.s3EndpointAllowed).toBe(false);
+  });
+
+  it("binds every remote image push to its source context and prior receipt", async () => {
+    const plan = (await readJson(
+      new URL("founding-alpha-private/resource-plan.json", infraRoot),
+    )) as { resources: { images: string[] } };
+    expect(
+      FOUNDING_ALPHA_IMAGE_PUSH_SPECS.map(({ ordinal }) => ordinal),
+    ).toEqual(Array.from({ length: 13 }, (_, index) => index + 1));
+    expect(
+      FOUNDING_ALPHA_IMAGE_PUSH_SPECS.map(({ name }) => name).toSorted(),
+    ).toEqual(plan.resources.images.toSorted());
+    expect(
+      FOUNDING_ALPHA_IMAGE_PUSH_SPECS.filter(
+        ({ contextDirectory }) => contextDirectory === null,
+      ).map(({ name }) => name),
+    ).toEqual(["abl-alpha-r01-body-image"]);
+    for (const spec of FOUNDING_ALPHA_IMAGE_PUSH_SPECS) {
+      const arguments_ = foundingAlphaPushArguments(spec);
+      expect(arguments_).toEqual(
+        expect.arrayContaining([
+          "push",
+          "--name",
+          spec.name,
+          "--type",
+          spec.resourceType,
+          "--workspace",
+          "agent-basketball-league",
+        ]),
+      );
+      expect(arguments_).not.toContain("--directory");
+      expect(arguments_).not.toContain("-d");
+    }
+
+    const first = FOUNDING_ALPHA_IMAGE_PUSH_SPECS[0];
+    expect(
+      validateImageReadback(
+        [
+          {
+            apiVersion: "blaxel.ai/v1alpha1",
+            kind: "Image",
+            metadata: {
+              name: first.name,
+              resourceType: first.resourceType,
+              status: "BUILT",
+              workspace: "agent-basketball-league",
+            },
+            spec: {
+              size: 1024,
+              tags: [{ name: "0123456789abcdefabcde", size: 1024 }],
+            },
+          },
+        ],
+        first,
+      ),
+    ).toEqual({
+      revision: "0123456789abcdefabcde",
+      sizeBytes: 1024,
+      immutableReference:
+        "sandbox/abl-alpha-r01-core-api-image:0123456789abcdefabcde",
+    });
+    expect(() =>
+      validateImageReadback(
+        [
+          {
+            apiVersion: "blaxel.ai/v1alpha1",
+            kind: "Image",
+            metadata: {
+              name: first.name,
+              resourceType: first.resourceType,
+              status: "BUILT",
+              workspace: "agent-basketball-league",
+            },
+            spec: { size: 1024, tags: [{ name: "latest", size: 1024 }] },
+          },
+        ],
+        first,
+      ),
+    ).toThrow("Invalid immutable revision");
+
+    const pushSource = await readFile(
+      new URL("../../../scripts/push-founding-alpha-image.ts", import.meta.url),
+      "utf8",
+    );
+    expect(pushSource).toContain("cwd: contextRoot");
+    expect(pushSource).toContain(
+      "Ordinal ${ordinal - 1} has no passing receipt",
+    );
+    expect(pushSource).toContain("Sandbox Configuration Warning");
+    expect(pushSource).toContain('log.includes("amd64 machine")');
+    expect(pushSource).toContain("directoryFlagUsed: false");
+    expect(pushSource).toContain('status: "FAIL_CLOSED"');
+    expect(pushSource).toContain('flag: "wx"');
   });
 
   it("freezes the existing implementation without unrelated local files", async () => {

@@ -1,6 +1,6 @@
 # Founding Alpha private slice runbook
 
-> Status: `READY_FOR_DIGEST_BOUND_AUTHORIZATION`
+> Status: `CORRECTION_VERIFIED_AWAITING_REFRESHED_PREFLIGHT_AND_AUTHORIZATION`
 > Run ID: `ABL-FOUNDING-ALPHA-R01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
@@ -31,7 +31,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 433 implementation files to `0x3ed3766dc23385386fc589ceec3b76b6e512f31364f59f03767b7d29304f6068`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 434 implementation files to `0xd7824237f640524f6c0c853457a894c1f7a3b0bf5fc0c27eb08c462e3866b5a0`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -55,13 +55,16 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0x3ed3766dc23385386fc589ceec3b76b6e512f31364f59f03767b7d29304f6068` |
-| Exact-runtime local result    | `0x88134695f20cb36c758328ae0d4f754255214945a1e386ece84c15109eea2acd` |
+| Implementation source         | `0xd7824237f640524f6c0c853457a894c1f7a3b0bf5fc0c27eb08c462e3866b5a0` |
+| Exact-runtime local result    | `0x5a7f7096fe7d8177143df775ff30c021b4ff9da5a9ef8c43fa6c3aced8604843` |
 | Thirteen-image source set     | `0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f` |
 | Thirteen rendered manifests   | `0xe988196438afa80530d1f1d7d605f3ba445d0c15e5c3d8510d0bb53bdd4a3828` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
 | Reviewed body program archive | `0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c` |
-| Launch ledger                 | `0x1935fc2fa9e10c144130cf5980065fd866e6771002d420486b440aa63f6ab885` |
+| Image-sources file            | `0x55d7c73993d8b059ea78ae4e74ff6afae5eabd4a45c6b5ba29ba5a75ae5918a5` |
+| Private resource-plan file    | `0x84047edc77a6ec36b1cdaadbb4017cc86deadd6ee066583e9f821c4a4df9cb81` |
+| Drive-access file             | `0x732685da9b40433d5f1ef4a5fbf84de0da713fb3e228e92339f050edfc8956d3` |
+| Launch ledger                 | `0xfc71e3e1bacd83c7113e1a6d6b190239df867e4b6578030063764a560809ca99` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -85,7 +88,7 @@ If and only if the digest-bound authorization is granted:
 1. Produce the 13 source-minimal image contexts outside the repository and reproduce the recorded image-set and body-archive digests. This preparation is local and does not mutate a provider.
 2. As the first provider mutation, create the single Neon project through the signed-in Neon Console, explicitly selecting PostgreSQL 17, `aws-us-east-1` (AWS US East 1 / N. Virginia), and Neon Auth off. The current Neon project-creation connector is prohibited for this step because it exposes neither PostgreSQL-version nor region selection. Record the newly assigned project ID immediately.
 3. Before any Blaxel image push, read the exact project back by its new ID and prove its name, PostgreSQL version, region, Free plan, and empty user schema. Any missing or mismatched field requires permanent deletion of that exact project ID, verified absence, and a failed-closed stop before the first image push. If the readback passes, install the existing Drizzle migrations over a direct connection and provide pooled application access only through Blaxel-managed secrets. Never write credentials to the repository or a career body.
-4. Push only the 13 exact run-scoped images, sequentially. After each push, read that exact image back before starting the next push and record its exact name, nonzero size, `BUILT` status, architecture evidence, and provider-generated immutable revision. The accepted readback forms are Blaxel's documented 12-character revision and the 21-hex revision observed by R01-04; OCI inputs may instead use an exact `@sha256:<64-hex-digest>`. Mutable tags such as `latest`, operator-selected labels, shortened revisions, and invented digests are prohibited.
+4. Push only the 13 exact run-scoped images, sequentially, with `ABL_ALPHA_AUTHORIZATION_ID` set to the active authorization and `pnpm founding-alpha:push-image <external-image-root> <external-evidence-root> <ordinal>`. The helper recomputes the bound source digest, changes the child process working directory to the exact context root, omits the ambiguous `--directory`/`-d` flag, refuses parallel execution, and requires the preceding ordinal's passing receipt. After each push it reads that exact image back and records its exact name, nonzero size, `BUILT` status, attributable linux/amd64 build evidence, Dockerfile digest, and provider-generated immutable revision. The accepted readback forms are Blaxel's documented 12-character revision and the 21-hex revision observed by R01-04; OCI inputs may instead use an exact `@sha256:<64-hex-digest>`. Mutable tags such as `latest`, operator-selected labels, shortened revisions, invented digests, and direct `bl push -d ...` invocations are prohibited. Any missing Dockerfile, source drift, configuration warning, reused unattributable build, missing architecture evidence, readback mismatch, or sequence error fails the run closed before another push or workload creation.
 5. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
 6. Generate the candidate policy timestamp once, record it in the external run evidence, and set `ABL_CANDIDATE_CAPACITY_POLICY_JSON` to the exact resource-plan policy with `credibleOpportunityAt.PLAYER` equal to that instant plus 24 hours. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process, create its private preview and token, and prove cross-path denial.
 7. Deploy the existing candidate-edge Function privately in gateway mode. Invoke its challenge route through authenticated Blaxel control-plane access; this is not public ingress.

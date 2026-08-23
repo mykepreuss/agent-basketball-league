@@ -85,6 +85,15 @@
       "unlistedRoleCapacity": 0
     }
   },
+  "imagePush": {
+    "command": "pnpm founding-alpha:push-image <external-image-root> <external-evidence-root> <ordinal>",
+    "authorizationEnvironment": "ABL_ALPHA_AUTHORIZATION_ID",
+    "workingDirectoryPolicy": "EXACT_CONTEXT_ROOT_NO_DIRECTORY_FLAG",
+    "sequencePolicy": "ONE_PUSH_AT_A_TIME_PRIOR_PASS_RECEIPT_REQUIRED",
+    "sourcePolicy": "RECOMPUTE_BOUND_DIGEST_BEFORE_EACH_PUSH",
+    "readbackPolicy": "EXACT_NAME_SIZE_BUILT_REVISION_LINUX_AMD64",
+    "mismatchAction": "FAIL_CLOSED_AND_TEARDOWN_BEFORE_NEXT_PUSH_OR_WORKLOAD"
+  },
   "sandboxProcesses": {
     "abl-alpha-r01-arena": {
       "command": ["node", "server.js"],
