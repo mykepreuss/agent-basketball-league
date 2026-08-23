@@ -9,7 +9,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                                | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                              |
 | Founding Alpha implementation source freeze | 433 existing and launch-layer implementation files frozen                          | `founding-alpha-source-freeze.json`                                                |
 | Founding Alpha private-run packet           | Ready for digest-bound authorization; live proof remains gated                     | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private` |
-| Founding Alpha provider preflight           | R01-05 baseline consumed; final-tree Preflight 08 required                         | `FOUNDING_ALPHA_PREFLIGHT_07.md`                                                   |
+| Founding Alpha provider preflight           | Final-tree read-only refresh; replacement authorization required                   | `FOUNDING_ALPHA_PREFLIGHT_08.md`                                                   |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally    | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-03 execution gate        | Failed closed before provider mutation; runtime contradictions corrected locally   | `FOUNDING-ALPHA-R01-03-FAILED-CLOSED.md`                                           |
 | Founding Alpha R01-04 execution gate        | Failed closed after image push; exact teardown complete; revision correction local | `FOUNDING-ALPHA-R01-04-FAILED-CLOSED.md`                                           |
@@ -72,6 +72,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha local evidence: [`FOUNDING_ALPHA_LOCAL.md`](./FOUNDING_ALPHA_LOCAL.md)
 - Founding Alpha source freeze: [`founding-alpha-source-freeze.json`](./founding-alpha-source-freeze.json)
 - Founding Alpha private slice: [`FOUNDING_ALPHA_PRIVATE_SLICE.md`](../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md)
+- Current Founding Alpha preflight: [`FOUNDING_ALPHA_PREFLIGHT_08.md`](./FOUNDING_ALPHA_PREFLIGHT_08.md)
 - Consumed R01-05 preflight: [`FOUNDING_ALPHA_PREFLIGHT_07.md`](./FOUNDING_ALPHA_PREFLIGHT_07.md)
 - Consumed R01-04 preflight: [`FOUNDING_ALPHA_PREFLIGHT_06.md`](./FOUNDING_ALPHA_PREFLIGHT_06.md)
 - Earlier execution-boundary preflight: [`FOUNDING_ALPHA_PREFLIGHT_05.md`](./FOUNDING_ALPHA_PREFLIGHT_05.md)
