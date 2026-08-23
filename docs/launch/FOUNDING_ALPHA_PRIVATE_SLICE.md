@@ -1,6 +1,6 @@
 # Founding Alpha private slice runbook
 
-> Status: `CORRECTION_VERIFIED_AWAITING_REFRESHED_PREFLIGHT_AND_AUTHORIZATION`
+> Status: `PREFLIGHT_COMPLETE_AWAITING_DIGEST_BOUND_AUTHORIZATION`
 > Run ID: `ABL-FOUNDING-ALPHA-R01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
@@ -11,6 +11,11 @@
 > Automatic top-up: off
 
 This document is an execution packet, not execution authority. It does not authorize image pushes, secrets, resource creation, spend, public exposure, model calls, founding-agent decisions, recognition broadcast, recurring capacity, recovery-control removal, or Genesis. A new approval must quote the final digests and exact resource envelope below.
+
+The latest provider baseline is read-only
+[`FOUNDING_ALPHA_PREFLIGHT_11.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_11.md).
+Preflight 11 and every earlier authorization remain non-execution authority until
+its final file digest and merge commit are bound into a fresh approval.
 
 ## Existing implementation is the launch foundation
 
