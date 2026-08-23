@@ -35,7 +35,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Merge the R01-05 result and calculate every dependent digest from the final merged tree.
 - [x] Record and merge Preflight 08 without modifying any bound dependency, calculate its post-merge digest, and obtain `ABL-FOUNDING-ALPHA-R01-06`.
 - [x] Fail R01-06 closed before provider mutation when a private preparation umask changes body-archive tar metadata; verify unchanged Blaxel and Neon inventories.
-- [~] Merge the canonical tar-metadata correction and R01-06 result, calculate all bindings from final `main`, then record a read-only Preflight 09 and obtain replacement authorization.
+- [x] Merge the canonical tar-metadata correction and R01-06 result, then calculate all bindings from final `main`.
+- [~] Record and merge read-only Preflight 09 without modifying a bound dependency, calculate its final file digest, and obtain replacement authorization.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
