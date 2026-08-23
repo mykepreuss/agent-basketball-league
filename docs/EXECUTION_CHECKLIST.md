@@ -29,7 +29,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Audit the complete live path, correct absolute lifecycle, candidate routing, secret handoff, command freshness, and synthetic candidate preparation, then reproduce and merge the 431-file implementation freeze.
 - [x] Reverify the empty target inventory, Agent Drive label/path ACL contract, Neon capacity, USD 18.80 balance, top-up/payment state, quotas, and USD 6.00 projection without provider mutation; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_06.md`.
 - [x] Consume `ABL-FOUNDING-ALPHA-R01-04`; pass its zero-mutation gate, push the thirteen exact images, fail closed on the live 21-character provider revision mismatch before Neon or workload creation, export redacted evidence, and restore the exact pre-run inventories.
-- [~] Centralize immutable Blaxel revision handling, require sequential image push/readback, rerun exact-runtime and artifact verification, merge the correction, and obtain a replacement digest-bound authorization before any new provider mutation.
+- [x] Centralize immutable Blaxel revision handling, require sequential image push/readback, rerun exact-runtime and artifact verification, and merge the correction.
+- [~] Record the refreshed read-only Blaxel and Neon state in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_07.md`, merge it, and obtain a replacement digest-bound authorization before any new provider mutation.
 - [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]

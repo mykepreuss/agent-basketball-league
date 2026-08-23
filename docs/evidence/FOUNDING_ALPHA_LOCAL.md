@@ -65,7 +65,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 
 ## External gates still open
 
-1. Treat [`FOUNDING_ALPHA_PREFLIGHT_06.md`](./FOUNDING_ALPHA_PREFLIGHT_06.md) as the consumed R01-04 baseline; a fresh post-correction read-only preflight is required before replacement authorization.
+1. Use [`FOUNDING_ALPHA_PREFLIGHT_07.md`](./FOUNDING_ALPHA_PREFLIGHT_07.md) as the current post-correction read-only baseline and repeat its drift checks immediately before the first mutation.
 2. Obtain a new authorization bound to the final source, image, manifest, body-archive, and launch-ledger digests before creating resources, pushing images, installing secrets, or incurring spend.
 3. Prove the smallest private Sandbox slice end to end, including Agent Drive restart/recovery and canonical PostgreSQL transaction/recovery behavior, then tear down only run-created resources.
 4. Obtain separate approval before public exposure or recurring capacity.
