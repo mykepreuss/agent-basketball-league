@@ -17,7 +17,8 @@ import { format } from "prettier";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const workspace = "agent-basketball-league";
-const authorizationPattern = /^ABL-FOUNDING-ALPHA-R01-\d{2}$/;
+const authorizationPattern =
+  /^(?:ABL-COMPLETION-01|ABL-FOUNDING-ALPHA-R01-\d{2})$/;
 const revisionPattern = /^(?:[a-z0-9]{12}|[0-9a-f]{21})$/;
 
 export interface FoundingAlphaImagePushSpec {

@@ -1,7 +1,7 @@
 # Founding Alpha private slice runbook
 
-> Status: `PREFLIGHT_12_COMPLETE_R01_10_AUTHORIZATION_REQUIRED`
-> Run ID: `ABL-FOUNDING-ALPHA-R01`
+> Status: `ACTIVE_PRIVATE_STAGING`
+> Run ID: `ABL-COMPLETION-01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
 > Maximum duration: four hours
@@ -10,18 +10,13 @@
 > Minimum pre-mutation Blaxel balance: USD 5.00
 > Automatic top-up: off
 
-This document is an execution packet, not execution authority. It does not authorize image pushes, secrets, resource creation, spend, public exposure, model calls, founding-agent decisions, recognition broadcast, recurring capacity, recovery-control removal, or Genesis. A new approval must quote the final digests and exact resource envelope below.
+This document is the private-stage runbook under [`ABL-COMPLETION-01`](./ABL_COMPLETION_01.md). It does not authorize public exposure, model calls, founding-agent decisions, recognition broadcast, recurring capacity, recovery-control removal, or Genesis.
 
-R01-09 consumed read-only
-[`FOUNDING_ALPHA_PREFLIGHT_11.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_11.md),
-then failed closed at the candidate-store application port boundary and completed
-exact teardown. The result is recorded in
-[`FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md`](../evidence/FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md).
-The correction is merged and its exact assurance is complete. Read-only
-[`FOUNDING_ALPHA_PREFLIGHT_12.md`](../evidence/FOUNDING_ALPHA_PREFLIGHT_12.md)
-records the clean provider inventories and current bindings. Its final file
-digest and merge commit must be bound by a fresh R01-10 approval before another
-provider mutation.
+The historical R01 attempts and preflights remain evidence rather than active
+launch blockers. The candidate-store port correction is merged, the provider
+inventories are clean, and ordinary private-stage corrections and retries stay
+inside the active completion program instead of creating another numbered
+authorization series.
 
 ## Existing implementation is the launch foundation
 
@@ -42,7 +37,7 @@ The private slice deploys the ABL already built in this repository. It does not 
 
 The immutable reuse rule is: wire, deploy, and prove these implementations. Do not introduce a parallel identity system, basketball engine, canonical ledger, projection protocol, storage protocol, governance system, verifier, or spectator application. Any necessary glue must remain thin, package-bound, and covered by the existing local suite.
 
-The source freeze binds 435 implementation files to `0xb90a8a5cc6779e8adee2aef080c5863f6d3da2d16a5faf000497b44ccccd9c5e`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
+The source freeze binds 435 implementation files to `0x590f5716b20820adfe0bae95cffca30092823471335556172456947ec3dc1cb2`. The exact freeze is recorded in [`founding-alpha-source-freeze.json`](../evidence/founding-alpha-source-freeze.json).
 
 ## Exact bounded resource envelope
 
@@ -66,16 +61,16 @@ The synthetic application ID is fixed to `0198e000-0000-7000-8000-000000000001`.
 | ----------------------------- | -------------------------------------------------------------------- |
 | Baseline commit               | `943fb734e43f880d86eb352e7aacf795d44914d5`                           |
 | Launch plan                   | `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4` |
-| Implementation source         | `0xb90a8a5cc6779e8adee2aef080c5863f6d3da2d16a5faf000497b44ccccd9c5e` |
-| Exact-runtime local result    | `0xe0a155fb02ca565e3472268d2c8efa29a8a3adeec26ec179b0826b0706186ca8` |
-| Thirteen-image source set     | `0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f` |
+| Implementation source         | `0x590f5716b20820adfe0bae95cffca30092823471335556172456947ec3dc1cb2` |
+| Exact-runtime local result    | `0x6d977ef32ce4a74cbb742d0bad14c8e0112a46c69417701673c7d9f112a2316c` |
+| Thirteen-image source set     | `0x213e1b24c2cf8061d43afabd8068d7b85b52feb512aa549ecbfaa02865a4368e` |
 | Thirteen rendered manifests   | `0xbf1d11fa9750ec8bdff4c517c460c998c8f7a6382788f7a985b0705c3551a164` |
 | Reviewed body image source    | `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642` |
-| Reviewed body program archive | `0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c` |
-| Image-sources file            | `0x55d7c73993d8b059ea78ae4e74ff6afae5eabd4a45c6b5ba29ba5a75ae5918a5` |
-| Private resource-plan file    | `0xe75bf99c04f1408c6eb29ff52bde4f5ee4f1d7b0aca513d2f2a4e1f449ead958` |
+| Reviewed body program archive | `0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3` |
+| Image-sources file            | `0x4268f460e0815f1fbe7a385726a1bbdca275ff12c1b0365aaf9eaa0dd545b70b` |
+| Private resource-plan file    | `0xaf51f7d9b664743700d6bd339ba2df751aa4c4f16f567c4f11aea52545905094` |
 | Drive-access file             | `0x732685da9b40433d5f1ef4a5fbf84de0da713fb3e228e92339f050edfc8956d3` |
-| Launch ledger                 | `0x5b139008153fe06b188dec545350492cdf781619c831445b9c6ab81552d25282` |
+| Launch ledger                 | `0x58678094a1d50918290c1cec2cc9c3d9d1b02ebb411edf25a35c9d387a88c9c6` |
 
 [`image-sources.json`](../../infra/blaxel/founding-alpha-private/image-sources.json) records every per-image source digest. Image IDs remain empty until an authorized push succeeds. The manifest renderer derives the bounded resources from the active production manifests and leaves all secret values unresolved.
 
@@ -90,11 +85,13 @@ Immediately before the first mutation, stop unless all of the following are true
 5. Neon organization `org-billowing-wind-64503405` remains Free plan, contains no `abl-founding-alpha-r01`, and still has capacity for one temporary project. The signed-in Neon Console must still expose explicit PostgreSQL 17 and `aws-us-east-1` selection with Neon Auth disabled. `Hummingbird` (`snowy-darkness-52052673`) remains untouched.
 6. Every preview manifest remains `public:false`; model routes remain disabled; the body still has no Drive mount, database credential, provider credential, or Blaxel control-plane authority.
 
-Any drift stops the run before mutation and requires a new authorization.
+Any drift that breaches the recorded resource, privacy, or budget boundary stops
+the run. Ordinary source or provider corrections are recorded and retried under
+the same completion program.
 
 ## Authorized-run sequence
 
-If and only if the digest-bound authorization is granted:
+Under the active private-stage completion program:
 
 1. Produce the 13 source-minimal image contexts outside the repository and reproduce the recorded image-set and body-archive digests. This preparation is local and does not mutate a provider.
 2. As the first provider mutation, create the single Neon project through the signed-in Neon Console, explicitly selecting PostgreSQL 17, `aws-us-east-1` (AWS US East 1 / N. Virginia), and Neon Auth off. The current Neon project-creation connector is prohibited for this step because it exposes neither PostgreSQL-version nor region selection. Record the newly assigned project ID immediately.
@@ -130,7 +127,7 @@ bl run function abl-alpha-r01-candidate-edge \
 pnpm founding-alpha:prepare-candidate application \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json" \
   "$ABL_ALPHA_BODY_IMAGE_REFERENCE" \
-  0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c \
+  0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3 \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate"
 
 bl run function abl-alpha-r01-candidate-edge \
