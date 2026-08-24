@@ -32,6 +32,7 @@
     "staging:package-body": "tsx scripts/package-staging-body.ts",
     "staging:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:prepare-runtime": "tsx scripts/prepare-private-staging-runtime.ts",
+    "stage-c:assess-soak": "tsx scripts/assess-persistent-soak.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
     "test": "turbo run test",

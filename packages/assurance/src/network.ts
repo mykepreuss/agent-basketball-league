@@ -160,7 +160,11 @@ export function provePublicCompromiseContainment(
   const publicOutbound = topology.allowedCalls.filter(
     (edge) => edge.from === "abl-public",
   );
-  const requiredDenials = ["abl-core", "abl-private", "abl-competition"];
+  const requiredDenials = [
+    "agent-basketball-league",
+    "abl-core",
+    "abl-private",
+  ];
   const forbidden = new Set(
     topology.explicitlyForbiddenCalls.map((edge) => `${edge.from}:${edge.to}`),
   );

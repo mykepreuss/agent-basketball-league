@@ -6,7 +6,7 @@ Status: `PREPARED_NOT_AUTHORIZED`. This runbook does not authorize spending, sta
 
 All of the following are mandatory and fail closed:
 
-1. `abl-core`, `abl-private`, `abl-competition`, and `abl-public` exist in the intended Blaxel account; Agent Drive is enabled; region, quotas, identities, and secret channels are verified.
+1. The existing `agent-basketball-league` integration workspace and the `abl-core`, `abl-private`, and `abl-public` production workspaces exist in the intended Blaxel account; Agent Drive is enabled; region, quotas, identities, and secret channels are verified.
 2. The immutable sandbox image is built from the locked source, scanned, addressed by digest, and passes all seven live escape attempts.
 3. Live storage isolation, public compromise, load/SLO, canonical-database recovery, sandbox restore, public-chain verification, and hardware-key exercises pass with evidence.
 4. Valid provider quotes determine a prepaid Season Zero envelope and a prepaid 30-day essential wind-down reserve.
@@ -19,7 +19,7 @@ All of the following are mandatory and fail closed:
 
 1. Re-run `pnpm genesis:prepare`; any remaining `null`, empty ratification/signature array, pending state, or blocker stops the sequence.
 2. Build the pinned sandbox image and record its immutable OCI digest. Never deploy a mutable tag.
-3. Apply the prepared production-topology manifests to staging only, using the exact four target workspaces and an external environment/secret channel. Do not substitute the temporary authenticated `agent-basketball-league` workspace or the historical `knicks` workspace for that topology. The separate single-workspace Gate 2 rehearsal is nonproduction and cannot satisfy this precondition.
+3. Apply the prepared production-topology manifests to staging only, using the exact four target workspaces and an external environment/secret channel. Use `agent-basketball-league` only for bounded integration and release verification; deploy private competition workloads from the `infra/blaxel/abl-competition` workload-category directory into `abl-private`. The historical `knicks` workspace is unrelated. The separate single-workspace Gate 2 rehearsal is nonproduction and cannot satisfy this precondition.
 4. Execute the phase-10 live adversarial, capacity, recovery, and wind-down suites and add their signed results to the test-result digest.
 5. Conduct the private founding convention. Persist agent-authored amendments, ballots, signatures, ratification events, genesis key registry, inherited-context decisions, and the final release authorization.
 6. Regenerate the public artifact index and complete the release manifest. Independently verify every digest and threshold.

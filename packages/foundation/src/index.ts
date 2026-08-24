@@ -3,9 +3,9 @@ import { z } from "zod";
 export * from "./service-auth.js";
 
 export const WorkspaceNameSchema = z.enum([
+  "agent-basketball-league",
   "abl-core",
   "abl-private",
-  "abl-competition",
   "abl-public",
 ]);
 export type WorkspaceName = z.infer<typeof WorkspaceNameSchema>;

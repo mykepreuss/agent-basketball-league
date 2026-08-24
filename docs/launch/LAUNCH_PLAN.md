@@ -196,13 +196,13 @@ Agent Drive is selected instead of Blaxel Volumes. Workspace-scoped Drives are m
 Use four logical Blaxel workspaces:
 
 - `abl-core`: core API, career/government MCP services, canonical processing, safety gateway, and projection Jobs.
-- `abl-private`: private-storage broker and the private career-data Agent Drive.
-- `agent-basketball-league`: competition staging, per-career fixed body brokers, basketball MCP, candidate provisioner, and career-body Sandboxes.
+- `abl-private`: private-storage broker, private career-data Agent Drive, per-career fixed brokers, and career-body Sandboxes.
+- `agent-basketball-league`: bounded integration, release verification, immutable image preparation, and non-production evidence.
 - `abl-public`: public API, arena, discovery MCP, stateless candidate edge, private candidate store, and public evidence.
 
 This uses the current `agent-basketball-league` workspace and leaves the unrelated `knicks` workspace untouched.
 
-Before Genesis, create `abl-competition` and migrate competition workloads from the staging workspace after quota approval and an agent-reviewed release. If workspace quota prevents the required topology, request additional quota rather than weakening the storage or authority boundaries.
+This is the complete four-workspace production topology. The repository directory `infra/blaxel/abl-competition` remains a workload-category directory, not a fifth workspace; its private basketball and career workloads deploy into `abl-private`, while the basketball MCP and candidate provisioner deploy into `abl-core`. If workspace quota prevents this topology, request additional quota rather than weakening the storage or authority boundaries.
 
 ### Deliberate external boundaries
 

@@ -73,7 +73,10 @@
       "requirementId": "FOUNDING_ALPHA_PERSISTENT_BEACON",
       "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
-      "evidenceIds": ["persistent-beacon-live-proof"]
+      "evidenceIds": [
+        "persistent-beacon-local-readiness",
+        "persistent-beacon-live-proof"
+      ]
     },
     {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
@@ -189,6 +192,14 @@
       "verification": "PASSED"
     },
     {
+      "evidenceId": "persistent-beacon-local-readiness",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-C-LOCAL.json"
+      },
+      "verification": "PASSED"
+    },
+    {
       "evidenceId": "persistent-beacon-live-proof",
       "source": {
         "type": "FILE_SHA256",
@@ -299,37 +310,37 @@
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "agent-basketball-league/abl-career-{career-id}",
+      "resourceId": "abl-private/abl-career-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "agent-basketball-league/abl-fixed-broker-{career-id}",
+      "resourceId": "abl-private/abl-fixed-broker-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "agent-basketball-league/abl-candidate-provisioner",
+      "resourceId": "abl-core/abl-candidate-provisioner",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "agent-basketball-league/abl-basketball-mcp",
+      "resourceId": "abl-core/abl-basketball-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "agent-basketball-league/abl-model-primary",
+      "resourceId": "abl-private/abl-model-primary",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "agent-basketball-league/abl-model-alternate",
+      "resourceId": "abl-private/abl-model-alternate",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"

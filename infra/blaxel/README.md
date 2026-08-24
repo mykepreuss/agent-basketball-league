@@ -1,6 +1,6 @@
 # Blaxel topology
 
-These are prepared pre-Genesis manifests for the four-workspace Founding Alpha topology. `abl-core`, `abl-private`, and `abl-public` remain creation gates; competition workloads begin in the existing `agent-basketball-league` workspace and move to `abl-competition` only before Genesis after quota approval and an agent-reviewed release. The historical `knicks` workspace is unrelated and must remain untouched. Every workspace must receive approved immutable image digests and Blaxel-managed variables/secrets through an external secret channel.
+These are prepared pre-Genesis manifests for the four-workspace Founding Alpha topology. The existing `agent-basketball-league` workspace remains the bounded integration and release-verification workspace; `abl-core`, `abl-private`, and `abl-public` are the three approval-gated persistent production workspaces. The `infra/blaxel/abl-competition` directory is a workload category retained for basketball and career manifests, not a fifth workspace: its fixed brokers, career bodies, and private game runtimes deploy into `abl-private`. The historical `knicks` workspace is unrelated and must remain untouched. Every workspace must receive approved immutable image digests and Blaxel-managed variables/secrets through an external secret channel.
 
 The first live proof is the separately bounded, single-workspace [`founding-alpha-private`](./founding-alpha-private/README.md) plan. It references these same application manifests and packages, adds no replacement service, and remains non-mutating until an exact digest-bound authorization is recorded.
 
@@ -71,7 +71,7 @@ Expected safe staging flow after access is granted:
 ```sh
 bl apply -w abl-core -f infra/blaxel/abl-core -R -e staging.env
 bl apply -w abl-private -f infra/blaxel/abl-private -R -e staging.env
-bl apply -w agent-basketball-league -f infra/blaxel/abl-competition -R -e staging.env
+bl apply -w abl-private -f infra/blaxel/abl-competition -R -e staging.env
 bl apply -w abl-public -f infra/blaxel/abl-public -R -e staging.env
 ```
 
