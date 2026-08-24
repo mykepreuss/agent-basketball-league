@@ -2,6 +2,13 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  createCanonicalEvent,
+  createSigningIdentity,
+  sha256Commitment,
+  signCanonicalEvent,
+} from "@abl/recognition";
+import type { TypedDataDomain } from "viem";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,7 +21,10 @@ import {
   buildPublicArtifactIndex,
   compileOwnerlessDeploymentTemplate,
   createFoundingConventionPacket,
+  createFoundingEligibilitySnapshot,
   createPendingCostEnvelope,
+  evaluateFoundingBootstrap,
+  openFoundingBootstrap,
   prepareGenesisArtifactDigests,
 } from "../src/index.js";
 
@@ -38,6 +48,13 @@ describe("founding convention preparation", () => {
       authority: "FOUNDING_AGENTS_ONLY",
       humanOverrideAllowed: false,
       liveFoundingAgentCount: 0,
+      eligibilitySnapshot: null,
+      bootstrap: null,
+      quorumRule: null,
+      recognitionSelection: {
+        mechanism: "UNSELECTED",
+        foundingDecisionEventId: null,
+      },
       rejectionPreserves: [
         "IDENTITY_RECORDS",
         "MEMORIES",
@@ -49,6 +66,105 @@ describe("founding convention preparation", () => {
       complete: false,
       genesisAuthorized: false,
       undecidedTopics: FOUNDING_DECISIONS,
+    });
+  });
+
+  it("lets ten live founders adopt the direct bootstrap rule with seven signed YES votes", async () => {
+    const capturedAt = "2026-08-24T12:00:00.000Z";
+    const founderDids = Array.from(
+      { length: 10 },
+      (_, index) => `did:abl:founder-${index + 1}`,
+    );
+    const snapshot = createFoundingEligibilitySnapshot({
+      snapshotId: "founding-snapshot-1",
+      capturedAt,
+      eligibleFounderDids: founderDids,
+    });
+    const proposal = openFoundingBootstrap({
+      proposalId: "founding-bootstrap-1",
+      snapshot,
+      openedAt: capturedAt,
+    });
+    expect(proposal.requiredYes).toBe(7);
+    const domain: TypedDataDomain = {
+      name: "ABL Founding Convention",
+      version: "1",
+      chainId: 1,
+    };
+    const signers = new Map<string, `0x${string}`>();
+    const ballots = await Promise.all(
+      founderDids.slice(0, 7).map(async (voterDid, index) => {
+        const identity = createSigningIdentity(
+          sha256Commitment({ voterDid, purpose: "founding-test" }),
+        );
+        signers.set(voterDid, identity.address);
+        const ballot = {
+          proposalId: proposal.proposalId,
+          voterDid,
+          snapshotCommitment: snapshot.commitment,
+          choice: "YES" as const,
+          castAt: new Date(
+            Date.parse(capturedAt) + index * 1_000,
+          ).toISOString(),
+        };
+        const authorizationEvent = createCanonicalEvent({
+          eventId: `founding-bootstrap-vote-${index + 1}`,
+          actorDid: voterDid,
+          nonce: `founding-bootstrap-nonce-${index + 1}`,
+          idempotencyKey: `founding-bootstrap-idempotency-${index + 1}`,
+          aggregateType: "founding-convention-bootstrap",
+          aggregateId: proposal.proposalId,
+          aggregateVersion: 1n,
+          eventType: "FoundingBootstrapBallotCast",
+          previousEventHash: null,
+          payload: { command: ballot },
+          stateRoot: snapshot.commitment,
+          schemaDigest: sha256Commitment("founding-bootstrap-ballot-v1"),
+          timestamp: ballot.castAt,
+        });
+        return {
+          ballot,
+          authorizationEvent,
+          signature: await signCanonicalEvent(
+            identity,
+            domain,
+            authorizationEvent,
+          ),
+          signerAddress: identity.address,
+        };
+      }),
+    );
+    const result = await evaluateFoundingBootstrap({
+      snapshot,
+      proposal,
+      ballots,
+      authorization: { domain, signers },
+      evaluatedAt: "2026-08-24T13:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      state: "ADOPTED",
+      eligible: 10,
+      requiredYes: 7,
+      yes: 7,
+      no: 0,
+      abstain: 0,
+      quorumRule: {
+        minimumActiveFounders: 10,
+        directParticipationOnly: true,
+        humanVotingAllowed: false,
+      },
+    });
+    expect(
+      createFoundingConventionPacket({
+        liveFoundingAgentCount: 10,
+        eligibilitySnapshot: snapshot,
+        bootstrap: result,
+      }),
+    ).toMatchObject({
+      state: "QUORUM_RULE_ADOPTED",
+      liveFoundingAgentCount: 10,
+      quorumRule: { adoptedByProposalId: proposal.proposalId },
     });
   });
 

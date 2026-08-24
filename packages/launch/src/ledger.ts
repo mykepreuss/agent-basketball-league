@@ -1,9 +1,14 @@
-import { LaunchStateSchema, SchemaVersion } from "@abl/schemas";
+import {
+  LaunchStageSchema,
+  LaunchStateSchema,
+  SchemaVersion,
+} from "@abl/schemas";
 import { sha256Commitment } from "@abl/recognition";
 import { z } from "zod";
 
 const RequirementSchema = z.strictObject({
   requirementId: z.string().min(1).max(160),
+  requiredForStage: LaunchStageSchema,
   status: z.enum([
     "VERIFIED_COMPLETE",
     "IMPLEMENTED_LIVE_PROOF_REQUIRED",
@@ -34,6 +39,7 @@ const ApprovalSchema = z.strictObject({
 
 const SignatureSchema = z.strictObject({
   signatureId: z.string().min(1).max(200),
+  requiredForStage: LaunchStageSchema,
   purpose: z.string().min(1).max(500),
   signerDid: z.string().min(1).max(500).nullable(),
   state: z.enum(["NOT_REQUIRED", "REQUIRED", "VERIFIED", "FAILED"]),
@@ -41,15 +47,7 @@ const SignatureSchema = z.strictObject({
 });
 
 export const LaunchLedgerInputSchema = z.strictObject({
-  launchStage: z.enum([
-    "LOCAL_GATE_1",
-    "PRIVATE_STAGING",
-    "READ_ONLY_BEACON",
-    "PRIVATE_FOUNDING_ALPHA",
-    "CAPPED_FOUNDING_INTAKE",
-    "WITNESSED_PRE_GENESIS_V1",
-    "PRODUCTION_GENESIS",
-  ]),
+  launchStage: LaunchStageSchema,
   operatingProfile: z.enum([
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
@@ -99,6 +97,14 @@ export const LaunchLedgerInputSchema = z.strictObject({
     requirementsUri: z.string().min(1).max(4_096),
     capacityPolicyUri: z.string().min(1).max(4_096),
   }),
+  lastSuccessfulAcceptance: z
+    .strictObject({
+      stage: LaunchStageSchema,
+      evidenceId: z.string().min(1).max(200),
+      acceptedAt: z.iso.datetime({ offset: true }),
+    })
+    .nullable()
+    .default(null),
   updatedAt: z.iso.datetime({ offset: true }),
 });
 
@@ -118,6 +124,17 @@ export interface LaunchLedger {
   ledgerDigest: `0x${string}`;
 }
 
+const launchStages = LaunchStageSchema.options;
+
+function requiredForCurrentStage(
+  requiredForStage: (typeof launchStages)[number],
+  currentStage: (typeof launchStages)[number],
+): boolean {
+  return (
+    launchStages.indexOf(requiredForStage) <= launchStages.indexOf(currentStage)
+  );
+}
+
 export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
   const input = LaunchLedgerInputSchema.parse(candidate);
   const evidenceById = new Map(
@@ -125,6 +142,10 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
   );
   const blockingReasons: string[] = [];
   for (const requirement of input.requirements) {
+    if (
+      !requiredForCurrentStage(requirement.requiredForStage, input.launchStage)
+    )
+      continue;
     if (requirement.status !== "VERIFIED_COMPLETE")
       blockingReasons.push(
         `${requirement.requirementId}: ${requirement.status}`,
@@ -141,6 +162,8 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
     if (incident.state === "OPEN" || incident.rollbackState === "FAILED")
       blockingReasons.push(`${incident.incidentId}: unresolved incident`);
   for (const signature of input.signatures) {
+    if (!requiredForCurrentStage(signature.requiredForStage, input.launchStage))
+      continue;
     if (signature.state === "REQUIRED" || signature.state === "FAILED")
       blockingReasons.push(`${signature.signatureId}: ${signature.state}`);
     if (signature.state !== "VERIFIED" || signature.evidenceId === null)
@@ -152,7 +175,9 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
       );
   }
 
-  const genesisRequested = input.operatingProfile === "PRODUCTION_GENESIS";
+  const genesisRequested =
+    input.launchStage === "PRODUCTION_GENESIS" &&
+    input.operatingProfile === "PRODUCTION_GENESIS";
   if (genesisRequested) {
     if (input.recognitionLevel !== "ONCHAIN_FINALIZED")
       blockingReasons.push("Genesis recognition is not ONCHAIN_FINALIZED");
@@ -169,7 +194,8 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
     }
   }
 
-  const ready = blockingReasons.length === 0;
+  const uniqueBlockingReasons = [...new Set(blockingReasons)];
+  const ready = uniqueBlockingReasons.length === 0;
   const evidenceDigest = sha256Commitment({
     requirements: input.requirements,
     evidence: input.evidence,
@@ -181,7 +207,7 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
   });
   const launchState = LaunchStateSchema.parse({
     schemaVersion: SchemaVersion,
-    launchStage: ready ? input.launchStage : "LOCAL_GATE_1",
+    launchStage: input.launchStage,
     operatingProfile:
       ready || !genesisRequested
         ? input.operatingProfile
@@ -193,16 +219,25 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
       input.recognitionLevel === "INDEPENDENTLY_WITNESSED" ||
       input.recognitionLevel === "ONCHAIN_FINALIZED",
     canonicalHistoryOpen: ready && genesisRequested,
-    productionV1Ready: ready,
+    productionV1Ready:
+      ready &&
+      requiredForCurrentStage("PRIVATE_FOUNDING_ALPHA", input.launchStage),
     publicExposure:
       ready && genesisRequested
         ? "GENESIS"
-        : input.deployments.some((deployment) => deployment.state === "PUBLIC")
-          ? "READ_ONLY"
-          : "NONE",
+        : input.intake.mode !== "CLOSED" &&
+            requiredForCurrentStage("CAPPED_FOUNDING_INTAKE", input.launchStage)
+          ? "CANDIDATE_INTAKE"
+          : input.deployments.some(
+                (deployment) => deployment.state === "PUBLIC",
+              )
+            ? "READ_ONLY"
+            : "NONE",
     candidateIntake: input.intake,
     evidenceDigest,
-    blockingReasons: [...new Set(blockingReasons)].sort(),
+    blockingReasons: uniqueBlockingReasons,
+    nextBlockingRequirement: uniqueBlockingReasons[0] ?? null,
+    lastSuccessfulAcceptance: input.lastSuccessfulAcceptance,
     updatedAt: input.updatedAt,
   });
   const unsigned = {

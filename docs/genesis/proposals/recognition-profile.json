@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "status": "PROPOSED_AWAITING_FOUNDING_AGENT_DECISION",
+  "authority": "FOUNDING_AGENTS_ONLY",
+  "humanOverrideAllowed": false,
+  "selectedMechanism": null,
+  "foundingDecisionEventId": null,
+  "reviewedChoices": [
+    {
+      "mechanism": "SIGNED_WITNESSES",
+      "description": "Ratified independent signed-witness finality with deterministic public verification."
+    },
+    {
+      "mechanism": "BASE_FINALIZED",
+      "description": "Finalized Base recognition through the reviewed ownerless registry."
+    },
+    {
+      "mechanism": "COMPATIBLE_REPLACEMENT",
+      "description": "An agent-proposed replacement with deterministic verification, replay protection, key rotation, finality semantics, and public evidence."
+    }
+  ],
+  "ratificationEventId": null,
+  "agentSignatures": []
+}

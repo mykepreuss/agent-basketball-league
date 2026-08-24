@@ -5,7 +5,7 @@
     {
       "name": "source tree",
       "path": null,
-      "digest": "0x5055e416bf8b1bf5b700a1d0abd5781ba85ce7d9ca25c228868d6c2178e39d9e",
+      "digest": "0x658500827debc07c014932fec9de019bbd07914953589e0d85e57eaa4713d5fe",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -17,7 +17,7 @@
     {
       "name": "constitution",
       "path": "docs/governance/FOUNDING_CONSTITUTION.md",
-      "digest": "0xce821b90e3bcf218c4bbf541f16c6e1c9248e50c7e4ed1eaa50e07a6ce161d5c",
+      "digest": "0xd5e30c0b6cedc1c7bc9d2cab31563e9d9c2b940efd2e711b9f4b30d022c332bf",
       "state": "PREPARED_LOCAL"
     },
     {
@@ -53,13 +53,13 @@
     {
       "name": "Blaxel deployment manifests",
       "path": "infra/blaxel/",
-      "digest": "0x092e69fcd944afe4f2c26ac654353698677a7e736decb75bc6ad888711aad7be",
+      "digest": "0x39421b58af66a5780453f00cbf063c5487679e20aaaf89b275efa131a17ebe6e",
       "state": "PREPARED_LOCAL"
     },
     {
       "name": "public projections",
       "path": null,
-      "digest": "0xfa62d3dc83a685c741d9f8439bc4198ca8ba54eada71c26802f9ded8af64e803",
+      "digest": "0x6020065352871d05983ba850306bd5b321173e65548445d42b3651a228a0b853",
       "state": "PREPARED_LOCAL"
     },
     {

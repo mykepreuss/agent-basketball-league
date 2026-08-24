@@ -6,16 +6,16 @@
     "version": null,
     "releaseClass": "IDENTITY_CONSTITUTIONAL",
     "changeClasses": ["IDENTITY", "RECOGNITION", "VERIFIER"],
-    "sourceDigest": "0x5055e416bf8b1bf5b700a1d0abd5781ba85ce7d9ca25c228868d6c2178e39d9e",
+    "sourceDigest": "0x658500827debc07c014932fec9de019bbd07914953589e0d85e57eaa4713d5fe",
     "containerDigests": [
-      "0x503657fbdc43039cca29aab7b050704cf5855497fcd68182697694590b6497e2"
+      "0x242828f18324b66d23c8809c1cf3042e74539dfee0c7ad200cfcf020e51a64d4"
     ],
     "imageDigests": [],
     "kernelDigest": "0xeaf339df717d07c5d04d059190ce798366107989dfa68c84f420f532bc81dbdf",
-    "toolDigest": "0xd6acc656a79c997392fa30f04eddae737cbacee702f9a54d55abda63d142859e",
-    "schemaDigest": "0xe4b47376a821647cc5e6345cfa0cafc78553764a2979c7ed6c9b9e40263a097d",
+    "toolDigest": "0x762f440abf123bac8796391ac4a6993e7203c95eced585d71118ba43f8ce8c02",
+    "schemaDigest": "0x955ed306de436daf2500ff061958e99abd38b670ca75844fe460c68a3b759d06",
     "migrationDigest": "0xe31724cb2b51027ecc0c1cf997674c85d9a44c268216b981e102f09183d7a889",
-    "testResultDigest": "0x5e753b36a342e926e319ae8a13c8d547a7fb328a18bbc8429e7dc998b658baa6",
+    "testResultDigest": "0x6d977ef32ce4a74cbb742d0bad14c8e0112a46c69417701673c7d9f112a2316c",
     "applicableLawEventIds": [],
     "ratificationEventIds": [],
     "compatibilityDeclaration": "Pre-genesis code has no recognized predecessor; continuity decisions remain mandatory for material runtime changes.",

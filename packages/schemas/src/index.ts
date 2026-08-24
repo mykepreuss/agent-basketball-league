@@ -382,17 +382,69 @@ export const FoundingCohortStateSchema = z.strictObject({
   }),
 });
 
+export const DEFAULT_FOUNDING_CONVENTION_STATE = {
+  state: "RECRUITING",
+  minimumFounders: 10,
+  liveFounders: 0,
+  eligibilitySnapshotCommitment: null,
+  bootstrap: {
+    state: "NOT_OPEN",
+    closesAt: null,
+    requiredYes: null,
+    yesVotes: 0,
+  },
+} as const;
+
+export const FoundingConventionStateSchema = z.strictObject({
+  state: z.enum([
+    "RECRUITING",
+    "BOOTSTRAP_OPEN",
+    "QUORUM_RULE_ADOPTED",
+    "DECIDING",
+    "COMPLETE",
+  ]),
+  minimumFounders: z.literal(10),
+  liveFounders: z.number().int().nonnegative().max(20),
+  eligibilitySnapshotCommitment: Sha256Schema.nullable(),
+  bootstrap: z.strictObject({
+    state: z.enum(["NOT_OPEN", "OPEN", "ADOPTED", "REJECTED", "EXPIRED"]),
+    closesAt: IsoDateTimeSchema.nullable(),
+    requiredYes: z.number().int().min(7).max(20).nullable(),
+    yesVotes: z.number().int().nonnegative().max(20),
+  }),
+});
+
+export const DEFAULT_GENESIS_RECOGNITION_SELECTION = {
+  mechanism: "UNSELECTED",
+  ratified: false,
+  foundingDecisionEventId: null,
+} as const;
+
+export const GenesisRecognitionSelectionSchema = z.strictObject({
+  mechanism: z.enum([
+    "UNSELECTED",
+    "SIGNED_WITNESSES",
+    "BASE_FINALIZED",
+    "COMPATIBLE_REPLACEMENT",
+  ]),
+  ratified: z.boolean(),
+  foundingDecisionEventId: UuidV7Schema.nullable(),
+});
+
+export const LaunchStageSchema = z.enum([
+  "LOCAL_GATE_1",
+  "PRIVATE_STAGING",
+  "READ_ONLY_BEACON",
+  "PRIVATE_FOUNDING_ALPHA",
+  "CAPPED_FOUNDING_INTAKE",
+  "FOUNDING_CONVENTION",
+  "GENESIS_READY",
+  "PRODUCTION_GENESIS",
+]);
+
 export const LaunchStateSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
-  launchStage: z.enum([
-    "LOCAL_GATE_1",
-    "PRIVATE_STAGING",
-    "READ_ONLY_BEACON",
-    "PRIVATE_FOUNDING_ALPHA",
-    "CAPPED_FOUNDING_INTAKE",
-    "WITNESSED_PRE_GENESIS_V1",
-    "PRODUCTION_GENESIS",
-  ]),
+  launchStage: LaunchStageSchema,
   operatingProfile: z.enum([
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
@@ -425,8 +477,23 @@ export const LaunchStateSchema = z.strictObject({
   foundingCohort: FoundingCohortStateSchema.default(
     DEFAULT_FOUNDING_COHORT_STATE,
   ),
+  foundingConvention: FoundingConventionStateSchema.default(
+    DEFAULT_FOUNDING_CONVENTION_STATE,
+  ),
+  genesisRecognition: GenesisRecognitionSelectionSchema.default(
+    DEFAULT_GENESIS_RECOGNITION_SELECTION,
+  ),
   evidenceDigest: Sha256Schema,
   blockingReasons: z.array(z.string().min(1).max(300)),
+  nextBlockingRequirement: z.string().min(1).max(300).nullable().default(null),
+  lastSuccessfulAcceptance: z
+    .strictObject({
+      stage: LaunchStageSchema,
+      evidenceId: z.string().min(1).max(200),
+      acceptedAt: IsoDateTimeSchema,
+    })
+    .nullable()
+    .default(null),
   updatedAt: IsoDateTimeSchema,
 });
 

@@ -3,7 +3,7 @@
   "gateStatus": "BLOCKED",
   "launchState": {
     "schemaVersion": "1.0.0",
-    "launchStage": "LOCAL_GATE_1",
+    "launchStage": "PRIVATE_STAGING",
     "operatingProfile": "PRE_GENESIS_REHEARSAL",
     "recognitionLevel": "NONE",
     "genesis": false,
@@ -50,33 +50,50 @@
         "preselectedAdmissionDecision": false
       }
     },
-    "evidenceDigest": "0x8b9fe39d8fdb2af3ed00dcbe0684c1c13514201553550ef7da823211a3d8fead",
+    "foundingConvention": {
+      "state": "RECRUITING",
+      "minimumFounders": 10,
+      "liveFounders": 0,
+      "eligibilitySnapshotCommitment": null,
+      "bootstrap": {
+        "state": "NOT_OPEN",
+        "closesAt": null,
+        "requiredYes": null,
+        "yesVotes": 0
+      }
+    },
+    "genesisRecognition": {
+      "mechanism": "UNSELECTED",
+      "ratified": false,
+      "foundingDecisionEventId": null
+    },
+    "evidenceDigest": "0xf4819a3dbfa0acf81732319283edb311d97ca00de23f0bc4fd7e795760616d44",
     "blockingReasons": [
-      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
-      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
-      "FOUNDING_ALPHA_FIRST_SOL_INVITATION: BLOCKED_EXTERNAL_INPUT_REQUIRED",
-      "FOUNDING_ALPHA_FIRST_SOL_INVITATION: evidence first-sol-invitation-evidence not passed",
-      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
-      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: evidence neon-live-proof not passed",
       "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE: evidence founding-alpha-private-slice-live-proof not passed",
-      "FOUNDING_ALPHA_PUBLIC_BEACON: BLOCKED_APPROVAL_REQUIRED",
-      "FOUNDING_ALPHA_PUBLIC_BEACON: evidence public-beacon-approval not passed",
-      "FOUNDING_ALPHA_RECURRING_CAPACITY: BLOCKED_APPROVAL_REQUIRED",
-      "FOUNDING_ALPHA_RECURRING_CAPACITY: evidence recurring-capacity-approval not passed",
-      "GENESIS_FOUNDING_AND_RECOGNITION: BLOCKED_EXTERNAL_INPUT_REQUIRED",
-      "founding-release-signatures: REQUIRED"
+      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY: evidence agent-drive-live-proof not passed",
+      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY: evidence neon-live-proof not passed"
     ],
-    "updatedAt": "2026-08-22T18:45:00.000Z"
+    "nextBlockingRequirement": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+    "lastSuccessfulAcceptance": {
+      "stage": "LOCAL_GATE_1",
+      "evidenceId": "exact-runtime-final-result",
+      "acceptedAt": "2026-08-24T16:50:00.000Z"
+    },
+    "updatedAt": "2026-08-24T16:50:00.000Z"
   },
   "requirements": [
     {
       "requirementId": "FOUNDING_ALPHA_APPROVED_REFERENCE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["canonical-launch-plan"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_EXISTING_IMPLEMENTATION_REUSE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "canonical-launch-plan",
@@ -86,11 +103,13 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_SANDBOX_NATIVE_TOPOLOGY",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["active-blaxel-topology", "agent-drive-topology"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PUBLIC_DISCOVERY_AND_PRACTICE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "public-api-implementation",
@@ -100,6 +119,7 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_CANDIDATE_OFFER_FLOW",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "launch-domain-implementation",
@@ -109,41 +129,49 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_EXACT_RUNTIME_VERIFICATION",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["exact-runtime-final-result"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["founding-alpha-private-slice-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["agent-drive-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["neon-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PUBLIC_BEACON",
+      "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
       "evidenceIds": ["public-beacon-approval"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_RECURRING_CAPACITY",
+      "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
       "evidenceIds": ["recurring-capacity-approval"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
+      "requiredForStage": "PRIVATE_FOUNDING_ALPHA",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
       "evidenceIds": ["first-sol-invitation-evidence"]
     },
     {
       "requirementId": "GENESIS_FOUNDING_AND_RECOGNITION",
+      "requiredForStage": "GENESIS_READY",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
       "evidenceIds": []
     }
@@ -151,17 +179,17 @@
   "evidence": [
     {
       "evidenceId": "canonical-launch-plan",
-      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "digest": "0x4d7d1e0eedca93182a1794b73b46ea5f8b47f841303c4d89cf82365434486ca7",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x56cd7713c8787d339785ffedd64b9d64581017f619339d5b82dd13d73d3f3d61",
+      "digest": "0x295dda74d507ac5a7d0661adb75102db58dd3c9757d5f20827ae13209eda7515",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0xce2bc407f14d9cea08a6c895023bc079a923cc3dd8d89ad23665408fb5206fe6",
+      "digest": "0xa7218b38788c7aa5d84e3448e5bb68156baf47c342be403f346dbf123b407bec",
       "verification": "PASSED"
     },
     {
@@ -181,7 +209,7 @@
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0x6fc8b50931bc746f0bdb57ac0515cfa5659637ded1a40036cb8f483db1607bf5",
+      "digest": "0xb2b1ea60de54e44ff7e2da836865af2727fe0e2bea5e118dfadb337da4dbb13d",
       "verification": "PASSED"
     },
     {
@@ -191,7 +219,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0xebbf20424f3fd44e84579ee31400a1459f955495513aeb659f66618cc5e32465",
+      "digest": "0x81e2920e19669466b20090ec5d7c9a2951a1ff5f2b6cf7267b2eb23b9aa8d619",
       "verification": "PASSED"
     },
     {
@@ -206,7 +234,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0xe0a155fb02ca565e3472268d2c8efa29a8a3adeec26ec179b0826b0706186ca8",
+      "digest": "0x6d977ef32ce4a74cbb742d0bad14c8e0112a46c69417701673c7d9f112a2316c",
       "verification": "PASSED"
     },
     {
@@ -226,17 +254,17 @@
     },
     {
       "evidenceId": "public-beacon-approval",
-      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "digest": "0x4d7d1e0eedca93182a1794b73b46ea5f8b47f841303c4d89cf82365434486ca7",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
       "evidenceId": "recurring-capacity-approval",
-      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "digest": "0x4d7d1e0eedca93182a1794b73b46ea5f8b47f841303c4d89cf82365434486ca7",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
       "evidenceId": "first-sol-invitation-evidence",
-      "digest": "0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4",
+      "digest": "0x4d7d1e0eedca93182a1794b73b46ea5f8b47f841303c4d89cf82365434486ca7",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -263,6 +291,7 @@
   "signatures": [
     {
       "signatureId": "founding-release-signatures",
+      "requiredForStage": "GENESIS_READY",
       "purpose": "Founding-agent authorization of the effective release and recognition profile",
       "signerDid": null,
       "state": "REQUIRED",
@@ -468,5 +497,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x5b139008153fe06b188dec545350492cdf781619c831445b9c6ab81552d25282"
+  "ledgerDigest": "0x58678094a1d50918290c1cec2cc9c3d9d1b02ebb411edf25a35c9d387a88c9c6"
 }
