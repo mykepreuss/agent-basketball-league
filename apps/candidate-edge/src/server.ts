@@ -105,6 +105,14 @@ export function createCandidateEdge(input: {
     reply.header("x-abl-genesis", "false");
   });
 
+  app.get("/health", async () => ({
+    status: "ok",
+    service: "abl-candidate-store",
+    mode: "STORE",
+    genesis: false,
+    canonicalAuthority: false,
+  }));
+
   app.get("/v1/candidate-intake", async () => input.intake.intakeState());
 
   app.post("/internal/v1/candidate-intake/snapshot", async (request, reply) => {

@@ -11,25 +11,25 @@
   "generator": "scripts/prepare-staging-image-contexts.ts",
   "command": "pnpm founding-alpha:prepare-images <external-directory>",
   "arenaBuild": {
-    "id": "abl-39fef29308cd11f8eea9c6297c071715",
-    "sourceDigest": "0x39fef29308cd11f8eea9c6297c071715f39d4b42e0603f07e92444067719d739"
+    "id": "abl-d8cad4c100c0bbc913b330f1d4f8c362",
+    "sourceDigest": "0xd8cad4c100c0bbc913b330f1d4f8c362a9ac9c761c6da0eff2c6e51f6c376dcf"
   },
   "imageSourceDigests": {
-    "abl-alpha-r01-arena-image": "0xef4ec8639add6519dc259157706b3b3eaef2a1ce9fcc92b67e398a03becb9531",
+    "abl-alpha-r01-arena-image": "0x37333fd0ebbec735620b60174a6e05dce6a52dd4e2c0a4c18467d0dd22d5b388",
     "abl-alpha-r01-basketball-mcp-image": "0x99a8bfd0c1a54db3e5bbfbc21d58fea1c80d389711fd2c204c5b04f0c72de2c1",
     "abl-alpha-r01-body-image": "0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642",
-    "abl-alpha-r01-candidate-edge-image": "0xef6e4494068a5c4f5df9005c0a5674f8286e0070a818d0c60f131f80035b55fa",
-    "abl-alpha-r01-candidate-provisioner-image": "0x6e1e31c98ddabde6d12bca4d237c161d888f36d21e6c79f9ddbf74ee9c63b348",
-    "abl-alpha-r01-candidate-store-image": "0xb701abc55b2bfa20caa405dc38a67c1948d95c3d350d67a37e9f035994eb50a7",
+    "abl-alpha-r01-candidate-edge-image": "0xbe23084eaba5c081c1f9d5a1a66cd5f096b9d204a33539b52d75da4fb8069251",
+    "abl-alpha-r01-candidate-provisioner-image": "0x99cd16b78353c9a9a9cde06b184cd0927f3211533ba8ab136b680767c576f1e3",
+    "abl-alpha-r01-candidate-store-image": "0x2a5f9d74e8176df2e5e2fa834feab1d51a4b4d5b0ac02fb6fe7114111f018786",
     "abl-alpha-r01-career-mcp-image": "0x69e28a270b44ec8e63893bce7c49ebc8105d243c7157c0887b1264d91885f0e7",
-    "abl-alpha-r01-core-api-image": "0xb654b7d99bad0d73b402f1c1bffca0125aaaaedbc2796c6c3c9bd0b9885d059d",
+    "abl-alpha-r01-core-api-image": "0x2d795b6b27f7af0127107c05d94472d7dbc39bc734b6e6e18bc043d10e7ae3b8",
     "abl-alpha-r01-discovery-mcp-image": "0xbf1c859f62e87684484808a666f717935dfd2b125ea7b328fcf591b334d63144",
-    "abl-alpha-r01-fixed-broker-image": "0xe2182274454ef9125e501e64543c80e78d5fe891b6f4bb497de3d97c742123f2",
+    "abl-alpha-r01-fixed-broker-image": "0x76d95b510bb4aad02286f96f0c07877e41b66f43d5528574841df2153c9d75c5",
     "abl-alpha-r01-government-mcp-image": "0xe86399d869368ab4b6601f71ae020f4f8c36fbcc7302b0c96a9091863f828cf8",
-    "abl-alpha-r01-public-api-image": "0x15eb989678e66d1536feb4e6717278f2a4bd3ddef5c99e353246c13650848bc6",
-    "abl-alpha-r01-storage-broker-image": "0x64d88b80a22373d3abb2cd6b84fc91e7b03a71793b221d90f80189caf99bc0a5"
+    "abl-alpha-r01-public-api-image": "0x4722a2fdc3370ee30b8b617e6331ccfd700a2713492fe6423e60f0aca6ad7639",
+    "abl-alpha-r01-storage-broker-image": "0x2dbbc241ca3faadda49a30d7f1bfb17804049d69e147898a49f02788e5d8fe4f"
   },
-  "imageSetDigest": "0xea121f6dea172d613518925828f3d2a4281fa01434eb835f597afd8dbd7731f7",
+  "imageSetDigest": "0x8f7bcb239c1f5e0c94df902420c5405309f6e78dffc5545efdd52673d61fa148",
   "bodyProgramArchive": {
     "sha256": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3",
     "sizeBytes": 15391340,

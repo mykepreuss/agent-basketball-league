@@ -584,6 +584,15 @@ export function createPublicApi(
     canonicalHistoryOpen
       ? "CANONICAL_GENESIS_HISTORY"
       : "PRE_GENESIS_EXPERIMENT";
+  app.get("/health", async () => ({
+    status: "ok",
+    service: "abl-public-api",
+    launchStage: launchState.launchStage,
+    operatingProfile: launchState.operatingProfile,
+    publicExposure: launchState.publicExposure,
+    genesis: launchState.genesis,
+    canonical: launchState.canonical,
+  }));
   const publicOrigin = publicServiceOrigin(
     options.publicOrigin ?? "https://agent-basketball-league.invalid",
   );

@@ -50,6 +50,20 @@ async function app(
 }
 
 describe("candidate edge", () => {
+  it("reports a noncanonical store health state", async () => {
+    const server = await app();
+    expect(
+      (await server.inject({ method: "GET", url: "/health" })).json(),
+    ).toEqual({
+      status: "ok",
+      service: "abl-candidate-store",
+      mode: "STORE",
+      genesis: false,
+      canonicalAuthority: false,
+    });
+    await server.close();
+  });
+
   it("exposes only the bounded noncanonical route catalog", async () => {
     const server = await app();
     await server.ready();
@@ -152,6 +166,15 @@ describe("candidate edge", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         );
       },
+    });
+    expect(
+      (await server.inject({ method: "GET", url: "/health" })).json(),
+    ).toEqual({
+      status: "ok",
+      service: "abl-candidate-edge",
+      mode: "GATEWAY",
+      genesis: false,
+      canonicalAuthority: false,
     });
     const response = await server.inject({
       method: "GET",

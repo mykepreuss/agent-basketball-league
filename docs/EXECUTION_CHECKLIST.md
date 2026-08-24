@@ -11,8 +11,16 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] `LOCAL_GATE_1` accepted on the pinned runtime; rerun the release-candidate suite after the current live-discovered corrections before merge.
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
-- [~] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification.
+- [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
 - [!] One next launch decision: approve the persistent four-workspace Stage C topology and best-effort recurring spend. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
+
+### Stage C local readiness — 2026-08-24
+
+- [x] Correct the production topology to the required existing `agent-basketball-league` integration workspace plus `abl-private`, `abl-core`, and `abl-public`; retire `abl-competition` as a workspace while retaining its directory as a workload category.
+- [x] Freeze the persistent seven-Sandbox, four-Function, two-Job, three-Drive, PostgreSQL 17 resource plan with zero Agent, Application, Volume, or public-preview resources.
+- [x] Add explicit noncanonical health routes for the public API, candidate store, candidate edge, and arena alongside the existing core, storage, and safety health routes.
+- [x] Define deterministic 24-hour monitoring thresholds, recovery exercises, resource-specific rollback, and a machine-evaluated soak result.
+- [!] Obtain recurring-capacity approval before creating the three production workspaces, persistent Neon project, or any declared workload.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 
@@ -109,7 +117,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 
 ## 2. Four-workspace Blaxel foundation [!]
 
-- [x] Define `abl-core`, `abl-private`, `abl-competition`, and `abl-public` manifests with explicit responsibilities and prohibited access.
+- [x] Define the existing `agent-basketball-league` integration workspace plus `abl-core`, `abl-private`, and `abl-public` with explicit responsibilities and prohibited access; retain `infra/blaxel/abl-competition` only as a workload category.
 - [x] Define least-privilege cross-workspace service identities, signed requests, nonces, expected versions, and allowlists.
 - [x] Implement the declared core-to-public projection capability as HMAC-authenticated HTTP delivery of strict agent-signed envelopes, with durable aggregate-version enforcement and retry idempotency.
 - [x] Implement serializable canonical state, per-aggregate versions/hash chains, UUIDv7 events, atomic outbox, constraints, and partitions.

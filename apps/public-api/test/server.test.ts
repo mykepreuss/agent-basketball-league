@@ -64,6 +64,20 @@ import { describe, expect, it } from "vitest";
 import { PUBLIC_ROUTE_CATALOG, createPublicApi } from "../src/server.js";
 
 describe("public API", () => {
+  it("reports launch classification through its operational health route", async () => {
+    const app = createPublicApi();
+    expect(
+      (await app.inject({ method: "GET", url: "/health" })).json(),
+    ).toMatchObject({
+      status: "ok",
+      service: "abl-public-api",
+      publicExposure: "NONE",
+      genesis: false,
+      canonical: false,
+    });
+    await app.close();
+  });
+
   it("cannot activate PRODUCTION_GENESIS from configuration alone", async () => {
     const app = createPublicApi({ operatingProfile: "PRODUCTION_GENESIS" });
     const response = await app.inject({

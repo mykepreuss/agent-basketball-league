@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "status": "LOCAL_PREPARED_RECURRING_CAPACITY_APPROVAL_REQUIRED",
+  "region": "us-was-1",
+  "publicExposure": "NONE",
+  "recognitionLevel": "SIGNED_VALID",
+  "canonical": false,
+  "genesis": false,
+  "providerMutation": false,
+  "workspaces": [
+    {
+      "name": "agent-basketball-league",
+      "operation": "REUSE_EXISTING",
+      "role": "bounded integration and release verification",
+      "resources": []
+    },
+    {
+      "name": "abl-private",
+      "operation": "CREATE_AFTER_APPROVAL",
+      "role": "candidate and career privacy boundary",
+      "resources": [
+        { "kind": "Sandbox", "name": "abl-private-storage-broker" },
+        { "kind": "Job", "name": "abl-private-recovery" },
+        { "kind": "Drive", "name": "abl-private-state" }
+      ]
+    },
+    {
+      "name": "abl-core",
+      "operation": "CREATE_AFTER_APPROVAL",
+      "role": "canonical command and institutional boundary",
+      "resources": [
+        { "kind": "Sandbox", "name": "abl-core-api" },
+        { "kind": "Sandbox", "name": "abl-safety-gateway" },
+        { "kind": "Function", "name": "abl-basketball-mcp" },
+        { "kind": "Function", "name": "abl-career-mcp" },
+        { "kind": "Function", "name": "abl-government-mcp" },
+        { "kind": "Job", "name": "abl-candidate-provisioner" },
+        { "kind": "Drive", "name": "abl-core-state" }
+      ]
+    },
+    {
+      "name": "abl-public",
+      "operation": "CREATE_AFTER_APPROVAL",
+      "role": "private-soak public-surface boundary",
+      "resources": [
+        { "kind": "Sandbox", "name": "abl-public-api" },
+        { "kind": "Sandbox", "name": "abl-spectator-arena" },
+        { "kind": "Sandbox", "name": "abl-candidate-store" },
+        { "kind": "Sandbox", "name": "abl-candidate-edge" },
+        { "kind": "Function", "name": "abl-discovery-mcp" },
+        { "kind": "Drive", "name": "abl-public-state" }
+      ]
+    }
+  ],
+  "externalDependencies": [
+    {
+      "provider": "Neon",
+      "kind": "PostgreSQL",
+      "version": 17,
+      "region": "aws-us-east-1",
+      "lifecycle": "PERSISTENT",
+      "operation": "CREATE_AFTER_APPROVAL"
+    }
+  ],
+  "resourceCounts": {
+    "sandboxes": 7,
+    "functions": 4,
+    "jobs": 2,
+    "agentDrives": 3,
+    "agents": 0,
+    "applications": 0,
+    "volumes": 0,
+    "privatePreviews": 11,
+    "publicPreviews": 0
+  },
+  "sandboxLifecycle": {
+    "automaticStandby": true,
+    "keepAlive": false,
+    "expirationPolicies": [],
+    "reason": "Persistent Sandboxes use Blaxel automatic standby and are retained without an automatic deletion TTL. Durable data remains in Agent Drive or PostgreSQL."
+  },
+  "budget": {
+    "currency": "USD",
+    "maximumProjectedMonthlyInfrastructure": 25,
+    "minimumBlaxelBalance": 5,
+    "automaticTopUp": false,
+    "approvalRequiredBeforeFirstMutation": true,
+    "failClosedIfProjectionExceedsMaximum": true
+  },
+  "storage": {
+    "driveAccessPlan": "infra/blaxel/agent-drive-access.json",
+    "careerBodyMounts": [],
+    "neonProfile": "infra/canonical-database/profile.example.json"
+  },
+  "monitoringPolicy": "infra/blaxel/persistent-pre-genesis/monitoring-policy.json",
+  "rollbackRunbook": "infra/blaxel/persistent-pre-genesis/ROLLBACK.md",
+  "prohibitions": [
+    "public ingress during Stage C",
+    "Blaxel Agent resources",
+    "Blaxel Applications",
+    "Blaxel Volumes",
+    "model calls",
+    "recognition broadcast",
+    "canonical-history claims",
+    "Genesis activation"
+  ]
+}

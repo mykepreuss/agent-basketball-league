@@ -3,8 +3,8 @@
   "version": "1.0.0-pre-genesis",
   "identities": [
     {
-      "idPattern": "competition-fixed-broker-{career-id}",
-      "workspace": "abl-competition",
+      "idPattern": "private-fixed-broker-{career-id}",
+      "workspace": "abl-private",
       "secretReference": "fixed-broker-{career-id}-core-hmac-v1",
       "allowedTargets": [
         { "workspace": "abl-core", "capabilities": ["core:command"] },
@@ -18,8 +18,8 @@
       ]
     },
     {
-      "idPattern": "competition-arena-{game-id}",
-      "workspace": "abl-competition",
+      "idPattern": "private-arena-{game-id}",
+      "workspace": "abl-private",
       "secretReference": "arena-{game-id}-core-hmac-v1",
       "allowedTargets": [
         { "workspace": "abl-core", "capabilities": ["core:game-command"] }

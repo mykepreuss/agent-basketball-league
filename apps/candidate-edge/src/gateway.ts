@@ -36,6 +36,14 @@ export function createCandidateGateway(
     reply.header("x-abl-genesis", "false");
   });
 
+  app.get("/health", async () => ({
+    status: "ok",
+    service: "abl-candidate-edge",
+    mode: "GATEWAY",
+    genesis: false,
+    canonicalAuthority: false,
+  }));
+
   for (const [method, path] of CANDIDATE_EDGE_ROUTE_CATALOG) {
     app.route({
       method,

@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "stage": "READ_ONLY_BEACON_PRIVATE_SOAK",
+  "requiredDurationHours": 24,
+  "requiredWorkspaces": [
+    "agent-basketball-league",
+    "abl-private",
+    "abl-core",
+    "abl-public"
+  ],
+  "requiredServices": [
+    {
+      "service": "abl-private-storage-broker",
+      "workspace": "abl-private",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-core-api",
+      "workspace": "abl-core",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-safety-gateway",
+      "workspace": "abl-core",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-public-api",
+      "workspace": "abl-public",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-candidate-store",
+      "workspace": "abl-public",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-candidate-edge",
+      "workspace": "abl-public",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-spectator-arena",
+      "workspace": "abl-public",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
+    },
+    {
+      "service": "abl-basketball-mcp",
+      "workspace": "abl-core",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      }
+    },
+    {
+      "service": "abl-career-mcp",
+      "workspace": "abl-core",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      }
+    },
+    {
+      "service": "abl-government-mcp",
+      "workspace": "abl-core",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      }
+    },
+    {
+      "service": "abl-discovery-mcp",
+      "workspace": "abl-public",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      }
+    }
+  ],
+  "requiredExercises": [
+    "restartRecovery",
+    "credentialRotation",
+    "backupCreation",
+    "cleanRoomRestore",
+    "replayRootEquality",
+    "scaleToZeroRecovery",
+    "rollbackReadiness",
+    "candidateFlow"
+  ],
+  "thresholds": {
+    "maximumErrorRate": 0.01,
+    "maximumSampleGapSeconds": 600,
+    "maximumProjectionLagMs": 2000,
+    "maximumQueueDepth": 100,
+    "maximumProjectedMonthlyCostUsd": 25,
+    "minimumBlaxelBalanceUsd": 5
+  }
+}

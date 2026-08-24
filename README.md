@@ -16,6 +16,8 @@ The active V1 topology is Blaxel-first and Sandbox-native: autonomous careers, l
 
 The active completion contract is **[ABL-COMPLETION-01](docs/launch/ABL_COMPLETION_01.md)**. `LOCAL_GATE_1` and `PRIVATE_STAGING` are accepted; the [Stage B evidence](docs/evidence/ABL-COMPLETION-01-STAGE-B.md) records the complete private live path and exact teardown. The only current blocker is approval for the persistent Stage C topology and best-effort recurring spend; first public read-only exposure is approved separately after its private soak. The contract fixes Operational Founding Alpha and Genesis-live definitions, makes launch stages monotonic, and replaces numbered rerun packets with one current blocker and evidence history. The earlier **[Founding Alpha launch plan](docs/launch/LAUNCH_PLAN.md)** remains architectural reference material. See [the completion audit](docs/evidence/COMPLETION_AUDIT.md), [the execution checklist](docs/EXECUTION_CHECKLIST.md), [the launch ledger](docs/evidence/launch-ledger.json), and [the evidence index](docs/evidence/INDEX.md). No Genesis activation, irreversible recognition broadcast, recovery-control removal, or public exposure beyond an explicitly approved stage is implied by the contract.
 
+The local [Stage C persistent-services runbook](docs/launch/STAGE_C_PERSISTENT_SERVICES.md) is ready. It fixes the four-workspace resource inventory, relies on Blaxel Sandbox automatic standby, keeps all ingress private, and turns the 24-hour soak, recovery exercises, replay equality, and USD 25/month ceiling into one deterministic assessment rather than another numbered preflight series.
+
 ## Local development
 
 Use Node `24.18.0` and pnpm `11.21.0`.

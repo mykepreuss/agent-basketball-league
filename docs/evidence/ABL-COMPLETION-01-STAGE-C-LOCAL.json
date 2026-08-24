@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "evidenceClass": "LOCAL_STAGE_READINESS",
+  "status": "PASS_LOCAL_RECURRING_CAPACITY_APPROVAL_REQUIRED",
+  "recordedAt": "2026-08-24T20:44:52Z",
+  "baselineCommit": "75eed725cc44e7e41632607f3c530c49eb746084",
+  "runtime": { "node": "24.18.0", "pnpm": "11.21.0" },
+  "verification": {
+    "assertions": 381,
+    "testFiles": 80,
+    "uncachedTasks": 113,
+    "stableResultDigest": "0x4b320d269586587eac3328963a6946ba088b6768432860924f63e245a8dbc123"
+  },
+  "packaging": {
+    "reproducibilityRuns": 2,
+    "byteIdentical": true,
+    "imageSetDigest": "0x8f7bcb239c1f5e0c94df902420c5405309f6e78dffc5545efdd52673d61fa148",
+    "bodyImageSourceDigest": "0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642",
+    "bodyProgramArchiveDigest": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3"
+  },
+  "topology": {
+    "workspaces": [
+      "agent-basketball-league",
+      "abl-private",
+      "abl-core",
+      "abl-public"
+    ],
+    "sandboxes": 7,
+    "functions": 4,
+    "jobs": 2,
+    "agentDrives": 3,
+    "privatePreviews": 11,
+    "publicPreviews": 0,
+    "agents": 0,
+    "applications": 0,
+    "volumes": 0,
+    "postgresVersion": 17
+  },
+  "preparedControls": [
+    "noncanonical health and protocol probes",
+    "deterministic 24-hour private-soak assessment",
+    "restart, rotation, backup, clean-room restore, replay, standby, rollback, and candidate-flow exercises",
+    "resource-specific rollback and exact-name deletion boundary",
+    "USD 25 monthly projection ceiling, USD 5 balance floor, and automatic top-up off"
+  ],
+  "codeSimplifier": {
+    "status": "PASS",
+    "behaviorChanged": false,
+    "result": "No additional structural refactor was warranted after consolidating the soak rules into one declarative evaluator."
+  },
+  "providerMutation": false,
+  "publicExposure": "NONE",
+  "canonical": false,
+  "genesis": false,
+  "nextApproval": "Persistent Stage C recurring capacity and private 24-hour soak"
+}

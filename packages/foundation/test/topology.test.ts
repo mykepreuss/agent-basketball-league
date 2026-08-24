@@ -121,12 +121,22 @@ describe("four-workspace topology", () => {
     );
     expect(
       topology.workspaces.map((workspace) => workspace.name).sort(),
-    ).toEqual(["abl-competition", "abl-core", "abl-private", "abl-public"]);
+    ).toEqual([
+      "abl-core",
+      "abl-private",
+      "abl-public",
+      "agent-basketball-league",
+    ]);
     expect(
       topology.allowedCalls.some(
         (edge) => edge.from === "abl-public" && edge.to !== "base",
       ),
     ).toBe(false);
+    expect(
+      topology.allowedCalls.some(
+        (edge) => edge.from === "abl-private" && edge.to === "abl-core",
+      ),
+    ).toBe(true);
   });
 
   it("uses no Blaxel Agent or Application resources in the active V1 topology", async () => {
@@ -235,13 +245,13 @@ describe("four-workspace topology", () => {
     )) as { identities: Array<{ idPattern: string; secretReference: string }> };
     expect(identities.identities).toContainEqual(
       expect.objectContaining({
-        idPattern: "competition-fixed-broker-{career-id}",
+        idPattern: "private-fixed-broker-{career-id}",
         secretReference: "fixed-broker-{career-id}-core-hmac-v1",
       }),
     );
     expect(
       identities.identities.some(
-        ({ idPattern }) => idPattern === "competition-body-{career-id}",
+        ({ idPattern }) => idPattern === "private-body-{career-id}",
       ),
     ).toBe(false);
   });
@@ -387,6 +397,12 @@ describe("four-workspace topology", () => {
       workspace: "abl-public",
       capabilities: ["projection:append"],
     });
+    expect(
+      identities.identities.find(
+        (identity) =>
+          identity.secretReference === "fixed-broker-{career-id}-core-hmac-v1",
+      ),
+    ).toMatchObject({ workspace: "abl-private" });
 
     const [coreApi] = (await readYamlDirectory("abl-core")).filter(
       (resource) =>
