@@ -44,6 +44,7 @@ const app =
           makeNonce: () => randomBytes(24).toString("base64url"),
         }),
         provisioningToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
+        authorityToken: required("ABL_CANDIDATE_AUTHORITY_TOKEN"),
       });
 
 await app.listen({

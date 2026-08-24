@@ -69,7 +69,13 @@ export const LaunchLedgerInputSchema = z.strictObject({
   deployments: z.array(
     z.strictObject({
       deploymentId: z.string().min(1).max(200),
-      state: z.enum(["NOT_APPLIED", "PRIVATE", "PUBLIC", "ROLLED_BACK"]),
+      state: z.enum([
+        "NOT_APPLIED",
+        "PRIVATE",
+        "PUBLIC",
+        "COMPLETED_TORN_DOWN",
+        "ROLLED_BACK",
+      ]),
       evidenceId: z.string().min(1).max(200).nullable(),
     }),
   ),

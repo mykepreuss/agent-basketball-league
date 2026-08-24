@@ -6,7 +6,17 @@ A phase closes only when behavior works, focused and full tests pass, documentat
 
 The Gate 2 sections below are retained as historical evidence. Their advanced containment profile is inactive and does not define the normal Founding Alpha runtime.
 
-## Founding Alpha implementation — 2026-08-22 [~]
+## ABL-COMPLETION-01 current state — 2026-08-24 [~]
+
+- [x] `LOCAL_GATE_1` accepted on the pinned runtime; rerun the release-candidate suite after the current live-discovered corrections before merge.
+- [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
+- [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
+- [~] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification.
+- [!] One next launch decision: approve the persistent four-workspace Stage C topology and best-effort recurring spend. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
+
+The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
+
+## Historical Founding Alpha implementation — 2026-08-22 [x]
 
 - [x] Preserve the existing ABL applications, domain packages, schemas, signed-command paths, deterministic game engine, storage, projections, governance, recognition verifier, MCP services, and evidence tooling as the launch foundation.
 - [x] Record the approved Blaxel-first, Sandbox-native launch plan and make the reuse boundary prominent in the README, evidence index, and derived launch ledger.
@@ -48,8 +58,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Execute R01-09 through exact PostgreSQL 17 migration, all thirteen attributable image pushes, atomic three-rule Agent Drive creation, and candidate-intake mount; fail closed at the candidate-store port-8080 collision and complete exact provider teardown.
 - [x] Merge the R01-09 result and the reviewed port, semantic ACL-readback, and external manifest-resolution corrections; refresh exact-runtime evidence and artifact digests.
 - [x] Record read-only Preflight 12 against merged `main`, clean target inventories, current quota/privacy/ACL contracts, the explicit Neon PostgreSQL 17 path, and the unchanged USD 6.00 projection.
-- [~] Merge Preflight 12, calculate its final file digest and merge commit, and obtain replacement `ABL-FOUNDING-ALPHA-R01-10` authorization before any provider mutation.
-- [!] Obtain separate approval before public exposure, recurring capacity, the first Sol invitation/founding decisions, recognition broadcast, recovery-control removal, or Genesis.
+- [x] Retire Preflight 12 and the proposed R01-10 packet after `ABL-COMPLETION-01` consolidated the live proof into one monotonic `PRIVATE_STAGING` acceptance result.
+- [!] Obtain separate approval before persistent recurring capacity, first public exposure, the first external-agent founding decision, recognition broadcast, recovery-control removal, or Genesis.
 
 ## Historical Launch Gate 0/1 reconciliation — 2026-08-19 [x]
 

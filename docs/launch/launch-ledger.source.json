@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "launchStage": "PRIVATE_STAGING",
+  "launchStage": "READ_ONLY_BEACON",
   "operatingProfile": "PRE_GENESIS_REHEARSAL",
   "requirements": [
     {
@@ -54,32 +54,26 @@
     {
       "requirementId": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE",
       "requiredForStage": "PRIVATE_STAGING",
-      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["founding-alpha-private-slice-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY",
       "requiredForStage": "PRIVATE_STAGING",
-      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["agent-drive-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY",
       "requiredForStage": "PRIVATE_STAGING",
-      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["neon-live-proof"]
     },
     {
-      "requirementId": "FOUNDING_ALPHA_PUBLIC_BEACON",
+      "requirementId": "FOUNDING_ALPHA_PERSISTENT_BEACON",
       "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
-      "evidenceIds": ["public-beacon-approval"]
-    },
-    {
-      "requirementId": "FOUNDING_ALPHA_RECURRING_CAPACITY",
-      "requiredForStage": "READ_ONLY_BEACON",
-      "status": "BLOCKED_APPROVAL_REQUIRED",
-      "evidenceIds": ["recurring-capacity-approval"]
+      "evidenceIds": ["persistent-beacon-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
@@ -174,36 +168,28 @@
       "evidenceId": "founding-alpha-private-slice-live-proof",
       "source": {
         "type": "FILE_SHA256",
-        "path": "infra/blaxel/founding-alpha-private/resource-plan.json"
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-B.json"
       },
-      "verification": "LIVE_PROOF_REQUIRED"
+      "verification": "PASSED"
     },
     {
       "evidenceId": "agent-drive-live-proof",
       "source": {
         "type": "FILE_SHA256",
-        "path": "infra/blaxel/agent-drive-access.json"
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-B.json"
       },
-      "verification": "LIVE_PROOF_REQUIRED"
+      "verification": "PASSED"
     },
     {
       "evidenceId": "neon-live-proof",
       "source": {
         "type": "FILE_SHA256",
-        "path": "packages/storage/src/repository-profiles.ts"
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-B.json"
       },
-      "verification": "LIVE_PROOF_REQUIRED"
+      "verification": "PASSED"
     },
     {
-      "evidenceId": "public-beacon-approval",
-      "source": {
-        "type": "FILE_SHA256",
-        "path": "docs/launch/ABL_COMPLETION_01.md"
-      },
-      "verification": "LIVE_PROOF_REQUIRED"
-    },
-    {
-      "evidenceId": "recurring-capacity-approval",
+      "evidenceId": "persistent-beacon-live-proof",
       "source": {
         "type": "FILE_SHA256",
         "path": "docs/launch/ABL_COMPLETION_01.md"
@@ -386,7 +372,7 @@
     },
     {
       "resourceId": "abl-public/abl-candidate-edge",
-      "kind": "Function",
+      "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-edge-implementation"
     },
@@ -424,13 +410,13 @@
   "deployments": [
     {
       "deploymentId": "founding-alpha-private-slice",
-      "state": "NOT_APPLIED",
+      "state": "COMPLETED_TORN_DOWN",
       "evidenceId": "founding-alpha-private-slice-live-proof"
     },
     {
       "deploymentId": "founding-alpha-public-beacon",
       "state": "NOT_APPLIED",
-      "evidenceId": "public-beacon-approval"
+      "evidenceId": "persistent-beacon-live-proof"
     },
     {
       "deploymentId": "historical-gate-2-private-staging",
@@ -460,7 +446,7 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "recognitionLevel": "NONE",
+  "recognitionLevel": "SIGNED_VALID",
   "intake": {
     "mode": "CLOSED",
     "capacityState": "CLOSED",
@@ -468,9 +454,9 @@
     "capacityPolicyUri": "/v1/discovery/capacity-policy"
   },
   "lastSuccessfulAcceptance": {
-    "stage": "LOCAL_GATE_1",
-    "evidenceId": "exact-runtime-final-result",
-    "acceptedAt": "2026-08-24T16:50:00.000Z"
+    "stage": "PRIVATE_STAGING",
+    "evidenceId": "founding-alpha-private-slice-live-proof",
+    "acceptedAt": "2026-08-24T19:52:21.000Z"
   },
-  "updatedAt": "2026-08-24T16:50:00.000Z"
+  "updatedAt": "2026-08-24T19:57:08.000Z"
 }

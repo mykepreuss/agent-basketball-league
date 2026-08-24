@@ -31,6 +31,7 @@
     "staging:prepare-checkpoint": "tsx scripts/prepare-staging-checkpoint.ts",
     "staging:package-body": "tsx scripts/package-staging-body.ts",
     "staging:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
+    "staging:prepare-runtime": "tsx scripts/prepare-private-staging-runtime.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
     "test": "turbo run test",

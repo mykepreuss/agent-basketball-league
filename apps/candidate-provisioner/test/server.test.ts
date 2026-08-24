@@ -61,6 +61,7 @@ describe("candidate provisioner private boundary", () => {
       spec: {
         enabled: true,
         region: "us-was-1",
+        volumes: null,
         runtime: {
           image:
             "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
@@ -80,7 +81,7 @@ describe("candidate provisioner private boundary", () => {
             ...resource.metadata,
             workspace: "agent-basketball-league",
           },
-          spec: resource.spec,
+          spec: { ...resource.spec, volumes: null },
         } as never;
         return createdBody;
       },

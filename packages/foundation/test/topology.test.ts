@@ -29,6 +29,7 @@ import {
 } from "../../../scripts/push-founding-alpha-image.js";
 import { renderFoundingAlphaManifests } from "../../../scripts/render-founding-alpha-manifests.js";
 import { resolveFoundingAlphaManifest } from "../../../scripts/resolve-founding-alpha-manifest.js";
+import { uploadSandboxFile } from "../../../scripts/upload-sandbox-file-multipart.js";
 
 import {
   assertImmutableImageReference,
@@ -435,6 +436,13 @@ describe("four-workspace topology", () => {
     expect(recognitionAnchorSource).toContain(
       "deployedRuntimeBytecodeKeccak256: null",
     );
+    const publicApiRuntimeSource = await readFile(
+      new URL("../../../apps/public-api/src/index.ts", import.meta.url),
+      "utf8",
+    );
+    expect(publicApiRuntimeSource).toContain(
+      "const CheckpointPoliciesSchema = z.partialRecord(",
+    );
     const coreSpec = coreApi!.spec as {
       runtime: { envs: Array<{ name: string; secret: boolean }> };
     };
@@ -553,7 +561,7 @@ describe("four-workspace topology", () => {
     });
   });
 
-  it("places candidate intake on a Function, provisioning on a Job, and durable files on Agent Drive", async () => {
+  it("places candidate intake on Sandboxes, provisioning on a Job, and durable files on Agent Drive", async () => {
     const publicResources = await readYamlDirectory("abl-public");
     const competitionResources = await readYamlDirectory("abl-competition");
     expect(
@@ -563,9 +571,14 @@ describe("four-workspace topology", () => {
           "abl-candidate-edge",
       ),
     ).toMatchObject({
-      kind: "Function",
+      kind: "Sandbox",
       metadata: {
         labels: { "abl-workspace-role": "public-noncanonical-intake" },
+      },
+      spec: {
+        runtime: {
+          ports: [{ name: "http", protocol: "HTTP", target: 3000 }],
+        },
       },
     });
     expect(
@@ -1051,7 +1064,8 @@ describe("Founding Alpha private slice", () => {
       drives: ["abl-alpha-r01-state"],
       modelsUsed: [],
     });
-    expect(plan.resources.sandboxes).toHaveLength(7);
+    expect(plan.resources.sandboxes).toHaveLength(8);
+    expect(plan.resources.sandboxes).toContain("abl-alpha-r01-candidate-edge");
     expect(plan.resources.sandboxes).toContain("abl-alpha-r01-candidate-store");
     expect(plan.syntheticCandidate).toMatchObject({
       applicationId: "0198e000-0000-7000-8000-000000000001",
@@ -1082,8 +1096,11 @@ describe("Founding Alpha private slice", () => {
     expect(plan.resources.sandboxes).toContain(
       plan.syntheticCandidate.bodySandboxName,
     );
-    expect(plan.resources.functions).toHaveLength(5);
-    expect(plan.resources.privatePreviews).toHaveLength(6);
+    expect(plan.resources.functions).toHaveLength(4);
+    expect(plan.resources.functions).not.toContain(
+      "abl-alpha-r01-candidate-edge",
+    );
+    expect(plan.resources.privatePreviews).toHaveLength(7);
     expect(plan.resources.images).toHaveLength(13);
     expect(plan.resources.temporaryNeonProject).toEqual({
       name: "abl-founding-alpha-r01",
@@ -1132,7 +1149,7 @@ describe("Founding Alpha private slice", () => {
       workingDirectory: "/workspace",
     });
     expect(plan.limits).toMatchObject({
-      publishedMaximumActiveComputeUsd: 4.9896,
+      publishedMaximumActiveComputeUsd: 5.1192,
       projectedAllInUsd: 6,
       hardCeilingUsd: 10,
       minimumBalanceUsd: 5,
@@ -1285,10 +1302,10 @@ describe("Founding Alpha private slice", () => {
       expect(result.rendered).toHaveLength(13);
       expect(
         result.rendered.filter(({ kind }) => kind === "Sandbox"),
-      ).toHaveLength(7);
+      ).toHaveLength(8);
       expect(
         result.rendered.filter(({ kind }) => kind === "Function"),
-      ).toHaveLength(5);
+      ).toHaveLength(4);
       expect(result.rendered.filter(({ kind }) => kind === "Job")).toHaveLength(
         1,
       );
@@ -1355,6 +1372,27 @@ describe("Founding Alpha private slice", () => {
         expect(manifest.spec.runtime.envs.map(({ name }) => name)).toContain(
           variable,
         );
+      }
+      for (const resource of [
+        "abl-alpha-r01-basketball-mcp",
+        "abl-alpha-r01-career-mcp",
+        "abl-alpha-r01-discovery-mcp",
+        "abl-alpha-r01-government-mcp",
+      ]) {
+        const manifest = parse(
+          await readFile(join(outputRoot, `${resource}.yaml`), "utf8"),
+        ) as {
+          spec: {
+            runtime: {
+              ports: Array<{ name: string; protocol: string; target: number }>;
+              transport: string;
+            };
+          };
+        };
+        expect(manifest.spec.runtime).toMatchObject({
+          transport: "http-stream",
+          ports: [{ name: "http", protocol: "HTTP", target: 8080 }],
+        });
       }
       const storageBroker = parse(
         await readFile(
@@ -1963,6 +2001,58 @@ describe("hardened sandbox image policy", () => {
         ["agent/run", 0o777],
         ["agent/runner", 0o755],
       ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("uploads reviewed body archives through the scoped Sandbox SDK", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "abl-body-upload-"));
+    try {
+      const bodyProgram = join(directory, "body-program");
+      const agent = join(bodyProgram, "agent");
+      const archivePath = join(directory, "body-program.tgz");
+      await mkdir(agent, { recursive: true, mode: 0o700 });
+      await writeFile(join(agent, "main.mjs"), "export {};\n", {
+        mode: 0o600,
+      });
+      await packageStagingBody(bodyProgram, archivePath);
+      let uploaded = Buffer.alloc(0);
+      const commands: string[] = [];
+      const evidence = await uploadSandboxFile(
+        archivePath,
+        "abl-career-test",
+        "agent-basketball-league",
+        "us-was-1",
+        "/tmp/body-program.tgz",
+        async () =>
+          ({
+            metadata: {
+              name: "abl-career-test",
+              workspace: "agent-basketball-league",
+            },
+            spec: { region: "us-was-1" },
+            fs: {
+              writeBinary: async (_path: string, value: Buffer) => {
+                uploaded = Buffer.from(value);
+              },
+              readBinary: async () => new Blob([uploaded]),
+            },
+            process: {
+              exec: async ({ command }: { command: string }) => {
+                commands.push(command);
+                return { status: "completed", exitCode: 0 };
+              },
+            },
+          }) as never,
+      );
+      expect(evidence).toMatchObject({
+        sandbox: "abl-career-test",
+        transport: "BLAXEL_SANDBOX_SDK",
+        workspace: "agent-basketball-league",
+      });
+      expect(evidence.archiveSha256).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(commands).toEqual(["chmod 0600 -- /tmp/body-program.tgz"]);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

@@ -43,11 +43,11 @@ The source freeze binds 435 implementation files to `0x590f5716b20820adfe0bae95c
 
 The machine-readable source of truth is [`resource-plan.json`](../../infra/blaxel/founding-alpha-private/resource-plan.json). The run may create only:
 
-- Seven Blaxel Sandboxes: `abl-alpha-r01-arena`, `abl-alpha-r01-candidate-store`, `abl-alpha-r01-core-api`, `abl-alpha-r01-fixed-broker`, `abl-alpha-r01-public-api`, `abl-alpha-r01-storage-broker`, and `abl-career-0198e000000070008000000000000001`.
-- Five private Blaxel Functions/MCP servers: `abl-alpha-r01-basketball-mcp`, `abl-alpha-r01-candidate-edge`, `abl-alpha-r01-career-mcp`, `abl-alpha-r01-discovery-mcp`, and `abl-alpha-r01-government-mcp`.
+- Eight Blaxel Sandboxes: `abl-alpha-r01-arena`, `abl-alpha-r01-candidate-edge`, `abl-alpha-r01-candidate-store`, `abl-alpha-r01-core-api`, `abl-alpha-r01-fixed-broker`, `abl-alpha-r01-public-api`, `abl-alpha-r01-storage-broker`, and `abl-career-0198e000000070008000000000000001`.
+- Four private Blaxel Functions/MCP servers: `abl-alpha-r01-basketball-mcp`, `abl-alpha-r01-career-mcp`, `abl-alpha-r01-discovery-mcp`, and `abl-alpha-r01-government-mcp`.
 - One Blaxel Job: `abl-alpha-r01-candidate-provisioner`.
 - One Blaxel Agent Drive: `abl-alpha-r01-state`, with only the three rules in [`drive-access.json`](../../infra/blaxel/founding-alpha-private/drive-access.json).
-- Six token-protected `public:false` Sandbox previews, exactly as named in the resource plan. The career body receives no preview and no Drive mount.
+- Seven token-protected `public:false` Sandbox previews, exactly as named in the resource plan. The career body receives no preview and no Drive mount.
 - Thirteen new run-scoped Blaxel image records, exactly as named in the resource plan. Seven historical image records remain untouched.
 - One new empty temporary Neon PostgreSQL 17 Free-plan project named `abl-founding-alpha-r01` in `aws-us-east-1` (AWS US East 1 / N. Virginia), with Neon Auth disabled; its newly assigned project ID becomes the sole teardown target.
 
@@ -99,7 +99,7 @@ Under the active private-stage completion program:
 4. Push only the 13 exact run-scoped images, sequentially, with `ABL_ALPHA_AUTHORIZATION_ID` set to the active authorization and `pnpm founding-alpha:push-image <external-image-root> <external-evidence-root> <ordinal>`. The helper recomputes the bound source digest, changes the child process working directory to the exact context root, omits the ambiguous `--directory`/`-d` flag, refuses parallel execution, and requires the preceding ordinal's passing receipt. After each push it reads that exact image back and records its exact name, nonzero size, `BUILT` status, attributable linux/amd64 build evidence, Dockerfile digest, and provider-generated immutable revision. The accepted readback forms are Blaxel's documented 12-character revision and the 21-hex revision observed by R01-04; OCI inputs may instead use an exact `@sha256:<64-hex-digest>`. Mutable tags such as `latest`, operator-selected labels, shortened revisions, invented digests, and direct `bl push -d ...` invocations are prohibited. Any missing Dockerfile, source drift, configuration warning, reused unattributable build, missing architecture evidence, readback mismatch, or sequence error fails the run closed before another push or workload creation.
 5. Create `abl-alpha-r01-state` atomically with the reviewed `/ciphertext`, `/projections`, and `/candidate-intake` label/path permissions. Verify exact rule equality before any mount.
 6. Generate the candidate policy timestamp once, record it in the external run evidence, and put `ABL_CANDIDATE_CAPACITY_POLICY_JSON` and the candidate-store's other exact values in a new external mode-`0600` environment file. Resolve the rendered candidate-store manifest with `pnpm founding-alpha:resolve-manifest <external-rendered-manifest> <external-env-file> <new-external-output-directory>`. Require a redacted passing receipt, apply only that resolved mode-`0600` manifest, and do not use shell interpolation or `bl apply -e` for structured JSON. Create only candidate-store first, mount its permitted `/candidate-intake` Drive path, start the existing store process on port 3000, create its private preview and token, and prove cross-path denial.
-7. Deploy the existing candidate-edge Function privately in gateway mode. Invoke its challenge route through authenticated Blaxel control-plane access; this is not public ingress.
+7. Deploy the existing candidate-edge Sandbox privately in gateway mode. Invoke its challenge route through a token-protected private preview; this is not public ingress.
 8. Use `pnpm founding-alpha:prepare-candidate application` outside the repository with the live challenge, immutable body image revision, and reviewed body archive digest. The result supplies the exact signed encrypted registration plus ephemeral candidate secrets without printing them. Register through candidate-edge, then use the preparer's `accept` mode to sign and submit the returned offer.
 9. Create storage-broker, public-api, core-api, arena, and fixed-broker in dependency order from the rendered manifests. Mount only the permitted Drive paths into storage-broker and public-api; supply the storage bootstrap only as a Blaxel-managed secret; create the remaining five private previews and tokens; read every preview back as `public:false`. The candidate signing key is supplied only to fixed-broker, never to the body.
 10. Deploy the other four existing MCP/Function packages privately and the deterministic candidate-provisioner Job. Verify that no Blaxel Agent, Application, Volume, custom domain, or public preview appeared.
@@ -111,45 +111,31 @@ Under the active private-stage completion program:
 16. Export redacted logs, manifests, immutable IDs, readbacks, restart results, signed envelopes, event/projection hashes, recognition output, cost, and final inventory. Export no credentials or preview-token values.
 17. Teardown immediately after success, failure, timeout, balance breach, cost drift, privacy drift, or any stop condition.
 
-### Synthetic candidate commands
+### Synthetic candidate flow
 
 All files below stay in the external mode-`0700` run directory. The image reference is the exact provider-generated immutable `sandbox/abl-alpha-r01-body-image:<provider-revision>` read back after its authorized sequential push.
 
-```sh
-bl run function abl-alpha-r01-candidate-edge \
-  --method POST \
-  --path /v1/candidates/challenge \
-  --data '{"candidateDid":"did:abl:founding-alpha-player-001"}' \
-  --output json \
-  --workspace agent-basketball-league \
-  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json"
+Use a secret-aware HTTPS client to call the candidate-edge Sandbox's private preview. Read its preview token from the external mode-`0600` environment file and never place the value on a command line. Call `POST /v1/candidates/challenge`, write the response to `$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json`, and then prepare the signed application:
 
+```sh
 pnpm founding-alpha:prepare-candidate application \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate-challenge.json" \
   "$ABL_ALPHA_BODY_IMAGE_REFERENCE" \
   0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3 \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate"
+```
 
-bl run function abl-alpha-r01-candidate-edge \
-  --method POST \
-  --path /v1/candidates/register \
-  --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-registration.json" \
-  --output json \
-  --workspace agent-basketball-league \
-  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-registration-response.json"
+Submit the resulting `candidate-registration.json` to `POST /v1/candidates/register` through the same preview and write its response to `candidate-registration-response.json`. Prepare the signed acceptance:
 
+```sh
 pnpm founding-alpha:prepare-candidate accept \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate-registration-response.json" \
   "$ABL_ALPHA_RUN_DIRECTORY/candidate"
+```
 
-bl run function abl-alpha-r01-candidate-edge \
-  --method POST \
-  --path /v1/candidate-intake/respond \
-  --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-acceptance.json" \
-  --output json \
-  --workspace agent-basketball-league \
-  >"$ABL_ALPHA_RUN_DIRECTORY/candidate-acceptance-response.json"
+Submit `candidate-acceptance.json` to `POST /v1/candidate-intake/respond` through the same preview and write its response to `candidate-acceptance-response.json`. Then invoke the reviewed Job:
 
+```sh
 bl run job abl-alpha-r01-candidate-provisioner \
   --file "$ABL_ALPHA_RUN_DIRECTORY/candidate/candidate-provisioner-batch.json" \
   --output json \
@@ -165,6 +151,6 @@ Passing the private slice proves that one small piece of the league can live fro
 
 ## Mandatory teardown
 
-Delete only the run-created six previews and tokens, seven Sandboxes, five Functions, one Job, one Agent Drive, 13 image records, Blaxel run-scoped secrets/variables, and the exact newly assigned Neon project ID. Destroy temporary local secret-bearing material and externally generated image/manifest contexts. Then re-list every resource class and verify that only the seven historical Blaxel images, unrelated `sandbox-openai` model route, unrelated Neon Hummingbird project, and all pre-existing account resources remain.
+Delete only the run-created seven previews and tokens, eight Sandboxes, four Functions, one Job, one Agent Drive, 13 image records, Blaxel run-scoped secrets/variables, and the exact newly assigned Neon project ID. Destroy temporary local secret-bearing material and externally generated image/manifest contexts. Then re-list every resource class and verify that only the seven historical Blaxel images, unrelated `sandbox-openai` model route, unrelated Neon Hummingbird project, and all pre-existing account resources remain.
 
 Do not use broad cleanup, workspace deletion, wildcard deletion, or name inference. If an exact created identifier was not recorded, stop and resolve it read-only before teardown.

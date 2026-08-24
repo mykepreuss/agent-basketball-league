@@ -11,6 +11,10 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 
 const ChallengeRequestSchema = z.strictObject({ candidateDid: DidSchema });
+const AuthorityQuerySchema = z.strictObject({
+  candidateDid: DidSchema,
+  signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+});
 const RegistrationSchema = z.strictObject({
   application: CandidateIntakeApplicationSchema,
   challengeToken: z.string().min(1).max(4_096),
@@ -34,6 +38,7 @@ export const CANDIDATE_EDGE_ROUTE_CATALOG = [
 export const CANDIDATE_EDGE_INTERNAL_ROUTE_CATALOG = [
   ["POST", "/internal/v1/candidate-intake/snapshot"],
   ["POST", "/internal/v1/candidate-intake/receipt"],
+  ["POST", "/internal/v1/candidate-intake/authority"],
 ] as const;
 
 const forbiddenEnvironmentNames = [
@@ -70,18 +75,23 @@ function failClosed(reply: {
 export function createCandidateEdge(input: {
   intake: CandidateIntakeService;
   provisioningToken?: string;
+  authorityToken?: string;
 }): FastifyInstance {
-  if (
-    input.provisioningToken !== undefined &&
-    Buffer.byteLength(input.provisioningToken) < 32
-  )
-    throw new Error("Candidate provisioning token is too short");
+  for (const [name, token] of [
+    ["provisioning", input.provisioningToken],
+    ["authority", input.authorityToken],
+  ] as const)
+    if (token !== undefined && Buffer.byteLength(token) < 32)
+      throw new Error(`Candidate ${name} token is too short`);
   const app = Fastify({ logger: false, bodyLimit: 1_200_000 });
 
-  function isProvisioner(authorization: string | undefined): boolean {
-    if (input.provisioningToken === undefined || authorization === undefined)
+  function hasToken(
+    expectedToken: string | undefined,
+    authorization: string | undefined,
+  ): boolean {
+    if (expectedToken === undefined || authorization === undefined)
       return false;
-    const expected = Buffer.from(`Bearer ${input.provisioningToken}`);
+    const expected = Buffer.from(`Bearer ${expectedToken}`);
     const supplied = Buffer.from(authorization);
     return (
       expected.byteLength === supplied.byteLength &&
@@ -98,18 +108,49 @@ export function createCandidateEdge(input: {
   app.get("/v1/candidate-intake", async () => input.intake.intakeState());
 
   app.post("/internal/v1/candidate-intake/snapshot", async (request, reply) => {
-    if (!isProvisioner(request.headers.authorization))
+    if (!hasToken(input.provisioningToken, request.headers.authorization))
       return reply.code(404).send({ error: "not_found" });
     return { records: await input.intake.provisioningSnapshot() };
   });
   app.post("/internal/v1/candidate-intake/receipt", async (request, reply) => {
-    if (!isProvisioner(request.headers.authorization))
+    if (!hasToken(input.provisioningToken, request.headers.authorization))
       return reply.code(404).send({ error: "not_found" });
     const receipt = CandidateProvisioningReceiptSchema.safeParse(request.body);
     if (!receipt.success)
       return reply.code(400).send({ error: "invalid_provisioning_receipt" });
     return input.intake.recordProvisioningReceipt(receipt.data);
   });
+  app.post(
+    "/internal/v1/candidate-intake/authority",
+    async (request, reply) => {
+      if (!hasToken(input.authorityToken, request.headers.authorization))
+        return reply.code(404).send({ error: "not_found" });
+      const query = AuthorityQuerySchema.safeParse(request.body);
+      if (!query.success) return failClosed(reply);
+      const record = (await input.intake.provisioningSnapshot()).find(
+        ({ application }) =>
+          application.candidateDid === query.data.candidateDid,
+      );
+      const receipt = record?.provisioningReceipt;
+      if (
+        record === undefined ||
+        record.application.formerOperatorSigningAddress.toLowerCase() !==
+          query.data.signerAddress.toLowerCase() ||
+        record.status.state !== "PROVISIONED" ||
+        receipt?.state !== "PROVISIONED_AWAITING_TRANSFER" ||
+        receipt.sandboxResourceName === null
+      )
+        return reply.code(403).send({ error: "candidate_not_operational" });
+      return {
+        operational: true,
+        applicationId: record.application.applicationId,
+        candidateDid: record.application.candidateDid,
+        signerAddress: record.application.formerOperatorSigningAddress,
+        roleClass: record.decision.roleClass,
+        sandboxResourceName: receipt.sandboxResourceName,
+      };
+    },
+  );
 
   app.post("/v1/candidates/challenge", async (request, reply) => {
     const parsed = ChallengeRequestSchema.safeParse(request.body);

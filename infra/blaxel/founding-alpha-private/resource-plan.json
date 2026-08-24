@@ -13,6 +13,7 @@
     "volumes": [],
     "sandboxes": [
       "abl-alpha-r01-arena",
+      "abl-alpha-r01-candidate-edge",
       "abl-alpha-r01-candidate-store",
       "abl-alpha-r01-core-api",
       "abl-alpha-r01-fixed-broker",
@@ -22,7 +23,6 @@
     ],
     "functions": [
       "abl-alpha-r01-basketball-mcp",
-      "abl-alpha-r01-candidate-edge",
       "abl-alpha-r01-career-mcp",
       "abl-alpha-r01-discovery-mcp",
       "abl-alpha-r01-government-mcp"
@@ -31,6 +31,7 @@
     "drives": ["abl-alpha-r01-state"],
     "privatePreviews": [
       "abl-alpha-r01-arena-private",
+      "abl-alpha-r01-candidate-edge-private",
       "abl-alpha-r01-candidate-store-private",
       "abl-alpha-r01-core-api-private",
       "abl-alpha-r01-fixed-broker-private",
@@ -108,6 +109,11 @@
       "workingDirectory": "/opt/abl",
       "keepAlive": true
     },
+    "abl-alpha-r01-candidate-edge": {
+      "command": ["node", "dist/index.js"],
+      "workingDirectory": "/opt/abl",
+      "keepAlive": true
+    },
     "abl-alpha-r01-candidate-store": {
       "command": ["node", "dist/index.js"],
       "workingDirectory": "/opt/abl",
@@ -156,13 +162,14 @@
     "infra/blaxel/abl-public/discovery-mcp.yaml"
   ],
   "localArtifacts": {
-    "imageSetDigest": "0x213e1b24c2cf8061d43afabd8068d7b85b52feb512aa549ecbfaa02865a4368e",
-    "manifestSetDigest": "0xbf1d11fa9750ec8bdff4c517c460c998c8f7a6382788f7a985b0705c3551a164",
+    "imageSetDigest": "0xea121f6dea172d613518925828f3d2a4281fa01434eb835f597afd8dbd7731f7",
+    "manifestSetDigest": "0xbb5b3da4834ff2a4a7147e8b51a01e76035c0963d1fd4f46daba3a4df2db164b",
     "bodyProgramArchiveDigest": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3"
   },
   "limits": {
     "memoryMiBBySandbox": {
       "abl-alpha-r01-arena": 4096,
+      "abl-alpha-r01-candidate-edge": 2048,
       "abl-alpha-r01-candidate-store": 2048,
       "abl-alpha-r01-core-api": 4096,
       "abl-alpha-r01-fixed-broker": 1024,
@@ -172,8 +179,8 @@
     },
     "memoryMiBPerFunction": 2048,
     "jobMemoryMiB": 2048,
-    "aggregateSandboxMemoryMiB": 23552,
-    "aggregateFunctionMemoryMiB": 10240,
+    "aggregateSandboxMemoryMiB": 25600,
+    "aggregateFunctionMemoryMiB": 8192,
     "maximumRunHours": 4,
     "sandboxLifecycle": {
       "expirationPolicy": {
@@ -183,8 +190,8 @@
       },
       "terminatedRetention": "24h"
     },
-    "publishedMaximumActiveComputeUsd": 4.9896,
-    "transientStorageAndMeteringBufferUsd": 1.0104,
+    "publishedMaximumActiveComputeUsd": 5.1192,
+    "transientStorageAndMeteringBufferUsd": 0.8808,
     "projectedAllInUsd": 6,
     "hardCeilingUsd": 10,
     "minimumBalanceUsd": 5,

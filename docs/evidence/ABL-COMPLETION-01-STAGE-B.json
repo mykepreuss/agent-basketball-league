@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "programId": "ABL-COMPLETION-01",
+  "stage": "PRIVATE_STAGING",
+  "result": "PASSED",
+  "acceptedAt": "2026-08-24T19:52:21.000Z",
+  "classification": {
+    "operatingProfile": "PRE_GENESIS_REHEARSAL",
+    "publicExposure": "NONE",
+    "recognitionLevel": "SIGNED_VALID",
+    "canonical": false,
+    "genesis": false
+  },
+  "source": {
+    "deployedCommit": "ef822cfe0fdbe7f2d0d1c33f705d283921317c19",
+    "workspace": "agent-basketball-league",
+    "region": "us-was-1",
+    "correctionsRemainWithinProgram": true
+  },
+  "releaseValidation": {
+    "node": "24.18.0",
+    "pnpm": "11.21.0",
+    "suiteCount": 9,
+    "assertionCount": 376,
+    "testFileCount": 79,
+    "successfulUncachedTasks": 113,
+    "stableResultDigest": "0xaaea87477ab10b0c24322e0091e3e82a2dfd623cdddc9669703a28f07cf7ed4a",
+    "imageSetDigest": "0xea121f6dea172d613518925828f3d2a4281fa01434eb835f597afd8dbd7731f7",
+    "manifestSetDigest": "0xbb5b3da4834ff2a4a7147e8b51a01e76035c0963d1fd4f46daba3a4df2db164b"
+  },
+  "attempts": [
+    {
+      "attemptId": "private-runtime-initial",
+      "startedAt": "2026-08-24T19:02:56.000Z",
+      "completedAt": "2026-08-24T19:18:32.000Z",
+      "result": "RETRYABLE_CONFIGURATION_FAILURE",
+      "criterion": "consistent private service credentials and runtime configuration"
+    },
+    {
+      "attemptId": "private-integrated-proof",
+      "startedAt": "2026-08-24T19:18:33.000Z",
+      "completedAt": "2026-08-24T19:34:42.000Z",
+      "result": "PASSED",
+      "criterion": "signed career action through recognized public rehearsal history"
+    }
+  ],
+  "database": {
+    "provider": "Neon",
+    "projectId": "snowy-surf-53293706",
+    "projectName": "abl-founding-alpha-r01",
+    "branchId": "br-dark-fog-awjd80a7",
+    "postgresVersion": 17,
+    "serverVersionNumber": 170011,
+    "region": "aws-us-east-1",
+    "plan": "free",
+    "neonAuth": false,
+    "publicTableCount": 23,
+    "recognizedEventCount": 1,
+    "canonicalOutboxTotal": 1,
+    "canonicalOutboxPublished": 1,
+    "canonicalOutboxPending": 0,
+    "actorNonceCount": 1,
+    "aggregateHeadCount": 1
+  },
+  "resources": {
+    "sandboxes": [
+      {
+        "name": "abl-alpha-r01-arena",
+        "image": "sandbox/abl-alpha-r01-arena-image:xukija0iem15"
+      },
+      {
+        "name": "abl-alpha-r01-candidate-store",
+        "image": "sandbox/abl-alpha-r01-candidate-store-image:f2f4i7kvf3wf"
+      },
+      {
+        "name": "abl-alpha-r01-core-api",
+        "image": "sandbox/abl-alpha-r01-core-api-image:u7kimo51ixzc"
+      },
+      {
+        "name": "abl-alpha-r01-fixed-broker",
+        "image": "sandbox/abl-alpha-r01-fixed-broker-image:n54ta6jez3v5"
+      },
+      {
+        "name": "abl-alpha-r01-public-api",
+        "image": "sandbox/abl-alpha-r01-public-api-image:ckm1oshvpciu"
+      },
+      {
+        "name": "abl-alpha-r01-storage-broker",
+        "image": "sandbox/abl-alpha-r01-storage-broker-image:vr5gqxzsux9p"
+      },
+      {
+        "name": "abl-career-0198e000000070008000000000000001",
+        "image": "sandbox/abl-alpha-r01-body-image:b8b5707bbb04f7e37658a"
+      }
+    ],
+    "functions": [
+      {
+        "name": "abl-alpha-r01-basketball-mcp",
+        "image": "function/abl-alpha-r01-basketball-mcp-image:foys7r3gwa7k",
+        "activeRevision": "aaabiyjpsutfrsbn"
+      },
+      {
+        "name": "abl-alpha-r01-career-mcp",
+        "image": "function/abl-alpha-r01-career-mcp-image:oazzlj0gxw0o",
+        "activeRevision": "aaabwefav6ucbnnd"
+      },
+      {
+        "name": "abl-alpha-r01-discovery-mcp",
+        "image": "function/abl-alpha-r01-discovery-mcp-image:zewkjsilgoxr",
+        "activeRevision": "aaabt1v8i56v2wb0"
+      },
+      {
+        "name": "abl-alpha-r01-government-mcp",
+        "image": "function/abl-alpha-r01-government-mcp-image:n9x3cy6nf27s",
+        "activeRevision": "aaab00af88basue1"
+      }
+    ],
+    "job": {
+      "name": "abl-alpha-r01-candidate-provisioner",
+      "image": "job/abl-alpha-r01-candidate-provisioner-image:him7t4cpga4n"
+    },
+    "agentDrive": "abl-alpha-r01-state",
+    "privatePreviewCount": 6,
+    "imageRecordCount": 13,
+    "agents": 0,
+    "applications": 0,
+    "volumes": 0,
+    "modelCalls": 0
+  },
+  "acceptedPath": {
+    "applicationId": "0198e000-0000-7000-8000-000000000001",
+    "careerDid": "did:abl:founding-alpha-player-001",
+    "gameId": "0198a000-0000-7000-8000-000000000201",
+    "eventId": "0198a000-0000-7000-8000-000000000301",
+    "eventHash": "0x4aef1717e75c2fbc847024e4e28e0f1687d353babae6e3216928459b1e018394",
+    "stateRoot": "0x387bbc5e486e85446297c0bbd8e9f8a0f77f1135a0a017592d4a976ce25884f4",
+    "basketballEventRoot": "0xc9b2aad8b84ea80924699136f59cd87d6c5ff16556dc186790628def946a9ccf",
+    "inferenceInvocations": 0,
+    "publicGameCount": 1,
+    "publicSegmentCount": 6,
+    "latestSegment": 5,
+    "sseVerified": true,
+    "arenaVerifiedAfterRestart": true
+  },
+  "storage": {
+    "objectId": "alpha-r01-restart-proof",
+    "version": 1,
+    "commitment": "0x0682c2e4ff8ab7536f714db784cb1ae4cbc013100bedba6d083ed742fa54a65b",
+    "ciphertextDurableAfterRestart": true,
+    "plaintextFoundOnDrive": false,
+    "permissions": [
+      {
+        "path": "/ciphertext",
+        "role": "ciphertext-broker",
+        "mode": "read-write"
+      },
+      {
+        "path": "/projections",
+        "role": "projection-writer",
+        "mode": "read-write"
+      },
+      {
+        "path": "/candidate-intake",
+        "role": "candidate-intake-writer",
+        "mode": "read-write"
+      }
+    ],
+    "careerDriveMountCount": 0
+  },
+  "recognition": {
+    "checkpointManifestDigest": "0xfc9cf98091a16567523a9883b02da6e5017cf4c8c1dab87e9c77dc8b5066d857",
+    "checkpointRoot": "0x01ad13de9f5429699b55a14de40985dc2a4991743cd4fb4274285ac03e3d8c07",
+    "authorizationVerified": true,
+    "verification": "UNVERIFIABLE",
+    "reason": "compiled recognition anchor remains PRE_GENESIS_UNRATIFIED",
+    "recognitionLevel": "SIGNED_VALID",
+    "canonical": false,
+    "recognized": false,
+    "baseTransaction": false
+  },
+  "rejections": {
+    "unsignedDirect": 400,
+    "malformed": 400,
+    "humanAuthored": 403,
+    "wrongRole": 403,
+    "wrongSigner": 403,
+    "stale": 400,
+    "nonceReplay": 409,
+    "wrongCareer": 403,
+    "duplicateIdempotency": 409,
+    "versionGap": 409,
+    "eventCountAfterMatrix": 1
+  },
+  "cost": {
+    "currency": "USD",
+    "accountWideSixHourUpperBound": 1.92,
+    "snapshotAt": "2026-08-24T19:52:21.000Z",
+    "balanceAtSnapshot": 1016.69,
+    "automaticTopUp": false,
+    "paymentMethodConfigured": false,
+    "note": "The console added unrelated promotional credits during the run, so balance movement is not an attributable cost measure. The six-hour account-wide expense is the conservative upper bound."
+  },
+  "teardown": {
+    "completedAt": "2026-08-24T19:57:08.000Z",
+    "deleted": {
+      "previewTokens": 6,
+      "previews": 6,
+      "sandboxes": 7,
+      "functions": 4,
+      "jobs": 1,
+      "agentDrives": 1,
+      "imageRecords": 13,
+      "neonProjectId": "snowy-surf-53293706",
+      "temporarySecretDirectories": 5
+    },
+    "finalBlaxelInventory": {
+      "agents": 0,
+      "applications": 0,
+      "sandboxes": 0,
+      "functions": 0,
+      "jobs": 0,
+      "agentDrives": 0,
+      "volumes": 0,
+      "models": ["sandbox-openai"],
+      "historicalImageRecordCount": 7,
+      "runScopedImageRecordCount": 0
+    },
+    "finalNeonProjects": [
+      {
+        "id": "snowy-darkness-52052673",
+        "name": "Hummingbird",
+        "postgresVersion": 17,
+        "region": "aws-us-east-1"
+      }
+    ],
+    "temporaryProjectPresent": false,
+    "temporarySecretMaterialDestroyed": true
+  },
+  "limits": [
+    "The private proof used discovery plus the private candidate-store challenge route; the corrected public candidate-edge Sandbox remains a Stage C deployment item.",
+    "Database clean-room restore, credential rotation, monitoring, and the 24-hour soak remain Stage C acceptance work.",
+    "The career Sandbox had no database, Drive, model, or Blaxel control-plane credential. Network reachability alone was not treated as an advanced egress-containment requirement.",
+    "No public ingress, public candidate intake, founding decision, recognition broadcast, canonical claim, or Genesis activation occurred."
+  ]
+}

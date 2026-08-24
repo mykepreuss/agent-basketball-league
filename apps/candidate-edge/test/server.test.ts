@@ -19,7 +19,12 @@ afterEach(async () => {
   );
 });
 
-async function app(provisioningToken?: string) {
+async function app(
+  input: {
+    provisioningToken?: string;
+    authorityToken?: string;
+  } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "abl-edge-"));
   roots.push(root);
   const policyBody = {
@@ -40,7 +45,7 @@ async function app(provisioningToken?: string) {
       makeNonce: () => "nonce-0123456789abcdef",
       now: () => Date.parse("2026-08-19T12:00:00.000Z"),
     }),
-    ...(provisioningToken === undefined ? {} : { provisioningToken }),
+    ...input,
   });
 }
 
@@ -94,7 +99,7 @@ describe("candidate edge", () => {
 
   it("exposes encrypted queue records only to the private provisioner", async () => {
     const token = "candidate-provisioner-token-with-32-bytes";
-    const server = await app(token);
+    const server = await app({ provisioningToken: token });
     const concealed = await server.inject({
       method: "POST",
       url: "/internal/v1/candidate-intake/snapshot",
@@ -110,7 +115,32 @@ describe("candidate edge", () => {
     await server.close();
   });
 
-  it("keeps the public Function stateless and forwards only intake routes", async () => {
+  it("keeps operational career authority separate and fail-closed", async () => {
+    const authorityToken = "candidate-authority-token-with-32-bytes";
+    const server = await app({ authorityToken });
+    const path = "/internal/v1/candidate-intake/authority";
+    const body = {
+      candidateDid: "did:abl:unprovisioned",
+      signerAddress: `0x${"1".repeat(40)}`,
+    };
+    expect(
+      (await server.inject({ method: "POST", url: path, payload: body }))
+        .statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: path,
+          headers: { authorization: `Bearer ${authorityToken}` },
+          payload: body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    await server.close();
+  });
+
+  it("keeps the public gateway stateless and forwards only intake routes", async () => {
     const calls: Array<{ url: string; headers: Headers }> = [];
     const server = createCandidateGateway({
       storeOrigin: "https://candidate-store.example",
