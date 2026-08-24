@@ -1,0 +1,71 @@
+{
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "status": "READ_ONLY_PASS_EXECUTION_APPROVAL_AND_CLI_LOGIN_REQUIRED",
+  "recordedAt": "2026-08-24T20:55:03Z",
+  "observedCommit": "eecdeba378b240e05092cc60df68ace6a1d72f46",
+  "providerMutation": false,
+  "blaxel": {
+    "workspace": "agent-basketball-league",
+    "region": "us-was-1",
+    "cliVersion": "0.1.108",
+    "cliAuthentication": "EXPIRED_401_INTERACTIVE_LOGIN_REQUIRED",
+    "accountWorkspaces": ["agent-basketball-league", "marketing"],
+    "targetWorkspacesAbsent": ["abl-private", "abl-core", "abl-public"],
+    "workspaceQuota": { "used": 2, "maximum": 5, "remaining": 3 },
+    "tier": 6,
+    "balanceUsd": 1016.27,
+    "minimumBalanceUsd": 5,
+    "automaticTopUp": false,
+    "monthlyTopUp": false,
+    "paymentMethodConfigured": false,
+    "lowBalanceAlertUsd": 5,
+    "targetWorkspaceInventory": {
+      "sandboxes": 0,
+      "volumes": 0,
+      "agentDrives": 0,
+      "jobs": 0,
+      "mcpServers": 0,
+      "customDomains": 0,
+      "policies": 0,
+      "historicalImages": 7,
+      "existingModelApiRoutes": 1
+    },
+    "quotas": {
+      "sandboxes": 10000,
+      "privatePreviewUrls": 20000,
+      "mcpServers": 500,
+      "jobs": 500,
+      "memoryMiBPerInstance": 32768
+    }
+  },
+  "neon": {
+    "organizationId": "org-billowing-wind-64503405",
+    "plan": "free",
+    "projects": [
+      {
+        "id": "snowy-darkness-52052673",
+        "name": "Hummingbird",
+        "postgresqlVersion": 17,
+        "region": "aws-us-east-1",
+        "scope": "UNRELATED_DO_NOT_TOUCH"
+      }
+    ],
+    "stageCProjectAbsent": true,
+    "freePlanCaps": { "storageGiB": 0.5, "computeCuHoursPerMonth": 100 }
+  },
+  "cost": {
+    "envelope": "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
+    "projectedMonthlyUsd": 21.9084,
+    "maximumMonthlyUsd": 25,
+    "remainingContingencyUsd": 3.0916,
+    "result": "PASS"
+  },
+  "nextRequirements": [
+    "recurring-capacity approval",
+    "interactive Blaxel CLI login refresh",
+    "immediate pre-mutation drift check",
+    "private persistent deployment",
+    "continuous 24-hour Stage C soak"
+  ]
+}
