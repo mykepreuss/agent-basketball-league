@@ -20,6 +20,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Freeze the persistent seven-Sandbox, four-Function, two-Job, three-Drive, PostgreSQL 17 resource plan with zero Agent, Application, Volume, or public-preview resources.
 - [x] Add explicit noncanonical health routes for the public API, candidate store, candidate edge, and arena alongside the existing core, storage, and safety health routes.
 - [x] Define deterministic 24-hour monitoring thresholds, recovery exercises, resource-specific rollback, and a machine-evaluated soak result.
+- [x] Refresh the read-only Blaxel and Neon provider state and freeze a measurable USD 21.9084/month cost envelope with USD 3.0916 contingency.
 - [!] Obtain recurring-capacity approval before creating the three production workspaces, persistent Neon project, or any declared workload.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.

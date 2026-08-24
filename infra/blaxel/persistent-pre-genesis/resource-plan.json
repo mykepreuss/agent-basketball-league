@@ -95,6 +95,7 @@
     "neonProfile": "infra/canonical-database/profile.example.json"
   },
   "monitoringPolicy": "infra/blaxel/persistent-pre-genesis/monitoring-policy.json",
+  "costEnvelope": "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
   "rollbackRunbook": "infra/blaxel/persistent-pre-genesis/ROLLBACK.md",
   "prohibitions": [
     "public ingress during Stage C",

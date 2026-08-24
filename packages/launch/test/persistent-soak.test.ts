@@ -157,6 +157,7 @@ describe("persistent private soak", () => {
         expirationPolicies: unknown[];
         reason: string;
       };
+      costEnvelope: string;
       publicExposure: string;
     };
     expect(plan.workspaces.map(({ name }) => name)).toEqual(
@@ -180,7 +181,99 @@ describe("persistent private soak", () => {
       reason:
         "Persistent Sandboxes use Blaxel automatic standby and are retained without an automatic deletion TTL. Durable data remains in Agent Drive or PostgreSQL.",
     });
+    expect(plan.costEnvelope).toBe(
+      "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
+    );
     expect(plan.publicExposure).toBe("NONE");
+  });
+
+  it("keeps the recurring cost projection beneath the Stage C ceiling", async () => {
+    const repositoryRoot = new URL("../../../", import.meta.url);
+    const envelope = JSON.parse(
+      await readFile(
+        new URL(
+          "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
+          repositoryRoot,
+        ),
+        "utf8",
+      ),
+    ) as {
+      monthDays: number;
+      maximumProjectedMonthlyCost: number;
+      publishedRates: {
+        sandboxActiveGiBSecond: number;
+        sandboxSnapshotGiBMonth: number;
+        imageGiBMonth: number;
+        mcpActiveGiBSecond: number;
+        jobActiveGiBSecond: number;
+      };
+      usageCaps: {
+        sandboxAllocatedGiB: number;
+        sandboxProbeIntervalSeconds: number;
+        maximumSandboxActiveSecondsPerProbe: number;
+        sandboxSnapshotGiB: number;
+        imageGiB: number;
+        mcpAllocatedGiB: number;
+        maximumMcpActiveSecondsPerProbe: number;
+        jobAllocatedGiB: number;
+        maximumMonthlyJobActiveSeconds: number;
+      };
+      monthlyProjection: {
+        sandboxActiveCompute: number;
+        sandboxSnapshotStorage: number;
+        imageStorage: number;
+        mcpActiveCompute: number;
+        jobActiveCompute: number;
+        agentDrive: number;
+        neonPostgresql17: number;
+        total: number;
+        remainingContingency: number;
+      };
+    };
+    const { total, remainingContingency, ...components } =
+      envelope.monthlyProjection;
+    const probesPerMonth =
+      (envelope.monthDays * 24 * 60 * 60) /
+      envelope.usageCaps.sandboxProbeIntervalSeconds;
+    const expectedComponents = {
+      sandboxActiveCompute:
+        envelope.usageCaps.sandboxAllocatedGiB *
+        envelope.usageCaps.maximumSandboxActiveSecondsPerProbe *
+        probesPerMonth *
+        envelope.publishedRates.sandboxActiveGiBSecond,
+      sandboxSnapshotStorage:
+        envelope.usageCaps.sandboxSnapshotGiB *
+        envelope.publishedRates.sandboxSnapshotGiBMonth,
+      imageStorage:
+        envelope.usageCaps.imageGiB * envelope.publishedRates.imageGiBMonth,
+      mcpActiveCompute:
+        envelope.usageCaps.mcpAllocatedGiB *
+        envelope.usageCaps.maximumMcpActiveSecondsPerProbe *
+        probesPerMonth *
+        envelope.publishedRates.mcpActiveGiBSecond,
+      jobActiveCompute:
+        envelope.usageCaps.jobAllocatedGiB *
+        envelope.usageCaps.maximumMonthlyJobActiveSeconds *
+        envelope.publishedRates.jobActiveGiBSecond,
+      agentDrive: 0,
+      neonPostgresql17: 0,
+    };
+    const calculatedTotal = Object.values(components).reduce(
+      (sum, component) => sum + component,
+      0,
+    );
+
+    for (const [component, expected] of Object.entries(
+      expectedComponents,
+    ) as Array<[keyof typeof components, number]>) {
+      expect(components[component]).toBeCloseTo(expected, 8);
+    }
+    expect(calculatedTotal).toBeCloseTo(total, 8);
+    expect(total + remainingContingency).toBeCloseTo(
+      envelope.maximumProjectedMonthlyCost,
+      8,
+    );
+    expect(total).toBeLessThan(envelope.maximumProjectedMonthlyCost);
   });
 
   it("passes one complete bounded 24-hour observation", () => {

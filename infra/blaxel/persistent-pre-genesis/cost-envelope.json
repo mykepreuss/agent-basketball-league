@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "recordedAt": "2026-08-24T20:55:03Z",
+  "currency": "USD",
+  "monthDays": 30,
+  "maximumProjectedMonthlyCost": 25,
+  "publishedRates": {
+    "sandboxActiveGiBSecond": 0.0000115,
+    "sandboxSnapshotGiBMonth": 0.2,
+    "imageGiBMonth": 0.045,
+    "mcpActiveGiBSecond": 0.000007,
+    "jobActiveGiBSecond": 0.000006,
+    "agentDrive": "FREE_DURING_BETA",
+    "neonPostgresql17": "FREE_PLAN_ALLOWANCE"
+  },
+  "usageCaps": {
+    "sandboxAllocatedGiB": 21,
+    "sandboxProbeIntervalSeconds": 600,
+    "maximumSandboxActiveSecondsPerProbe": 15,
+    "sandboxSnapshotGiB": 21,
+    "imageGiB": 16,
+    "mcpAllocatedGiB": 8,
+    "maximumMcpActiveSecondsPerProbe": 5,
+    "jobAllocatedGiB": 6,
+    "maximumMonthlyJobActiveSeconds": 3600,
+    "neonStorageGiB": 0.5,
+    "neonComputeCuHours": 100
+  },
+  "monthlyProjection": {
+    "sandboxActiveCompute": 15.6492,
+    "sandboxSnapshotStorage": 4.2,
+    "imageStorage": 0.72,
+    "mcpActiveCompute": 1.2096,
+    "jobActiveCompute": 0.1296,
+    "agentDrive": 0,
+    "neonPostgresql17": 0,
+    "total": 21.9084,
+    "remainingContingency": 3.0916
+  },
+  "acceptance": {
+    "method": "Replace every projected component with the greater of its declared cap projection or the first 24 hours of measured usage annualized to 30 days.",
+    "passWhen": "The recalculated total is no greater than USD 25, the Blaxel balance is at least USD 5, automatic top-up remains off, and Neon remains within its Free allowance.",
+    "failClosedOn": [
+      "published unit-price increase",
+      "measured usage above a declared usage cap",
+      "Neon paid-plan requirement",
+      "Agent Drive beta pricing change",
+      "automatic top-up enabled",
+      "Blaxel balance below USD 5",
+      "recalculated total above USD 25"
+    ]
+  },
+  "sources": [
+    "https://blaxel.ai/pricing",
+    "https://docs.blaxel.ai/Sandboxes/Overview",
+    "https://neon.com/pricing"
+  ]
+}
