@@ -8,29 +8,24 @@ import {
 } from "../src/persistent-soak.js";
 
 const requiredServices = [
-  ["abl-private-storage-broker", "abl-private", "GET", "/health"],
-  ["abl-core-api", "abl-core", "GET", "/health"],
-  ["abl-safety-gateway", "abl-core", "GET", "/health"],
-  ["abl-public-api", "abl-public", "GET", "/health"],
-  ["abl-candidate-store", "abl-public", "GET", "/health"],
-  ["abl-candidate-edge", "abl-public", "GET", "/health"],
-  ["abl-spectator-arena", "abl-public", "GET", "/health"],
-  ["abl-basketball-mcp", "abl-core", "POST", "/mcp"],
-  ["abl-career-mcp", "abl-core", "POST", "/mcp"],
-  ["abl-government-mcp", "abl-core", "POST", "/mcp"],
-  ["abl-discovery-mcp", "abl-public", "POST", "/mcp"],
+  ["abl-private-storage-broker", "agent-basketball-league", "GET", "/health"],
+  ["abl-core-api", "agent-basketball-league", "GET", "/health"],
+  ["abl-safety-gateway", "agent-basketball-league", "GET", "/health"],
+  ["abl-public-api", "agent-basketball-league", "GET", "/health"],
+  ["abl-candidate-store", "agent-basketball-league", "GET", "/health"],
+  ["abl-candidate-edge", "agent-basketball-league", "GET", "/health"],
+  ["abl-spectator-arena", "agent-basketball-league", "GET", "/health"],
+  ["abl-basketball-mcp", "agent-basketball-league", "POST", "/mcp"],
+  ["abl-career-mcp", "agent-basketball-league", "POST", "/mcp"],
+  ["abl-government-mcp", "agent-basketball-league", "POST", "/mcp"],
+  ["abl-discovery-mcp", "agent-basketball-league", "POST", "/mcp"],
 ] as const;
 
 const policy = {
   version: 1,
   stage: "READ_ONLY_BEACON_PRIVATE_SOAK",
   requiredDurationHours: 24,
-  requiredWorkspaces: [
-    "agent-basketball-league",
-    "abl-private",
-    "abl-core",
-    "abl-public",
-  ],
+  requiredWorkspaces: ["agent-basketball-league"],
   requiredServices: requiredServices.map(
     ([service, workspace, method, path]) => ({
       service,
@@ -125,7 +120,7 @@ function evidence() {
 }
 
 describe("persistent private soak", () => {
-  it("keeps the checked-in policy and resource plan on the fixed four-workspace boundary", async () => {
+  it("keeps the checked-in policy and resource plan on the single-workspace boundary", async () => {
     const repositoryRoot = new URL("../../../", import.meta.url);
     const policyFile = PersistentSoakPolicySchema.parse(
       JSON.parse(

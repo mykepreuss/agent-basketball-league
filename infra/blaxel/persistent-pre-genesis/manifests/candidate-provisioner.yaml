@@ -50,7 +50,7 @@ spec:
         value: ${ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID}
         secret: false
       - name: ABL_CANDIDATE_WORKSPACE
-        value: abl-private
+        value: agent-basketball-league
         secret: false
       - name: ABL_CANDIDATE_REGION
         value: us-was-1

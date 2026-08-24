@@ -1,12 +1,7 @@
 import { sha256Commitment } from "@abl/recognition";
 import { z } from "zod";
 
-const PersistentWorkspaceSchema = z.enum([
-  "agent-basketball-league",
-  "abl-private",
-  "abl-core",
-  "abl-public",
-]);
+const PersistentWorkspaceSchema = z.literal("agent-basketball-league");
 
 const ProbeSchema = z
   .strictObject({
@@ -57,7 +52,7 @@ export const PersistentSoakPolicySchema = z.strictObject({
   version: z.literal(1),
   stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
   requiredDurationHours: z.number().min(24).max(168),
-  requiredWorkspaces: z.array(PersistentWorkspaceSchema).length(4),
+  requiredWorkspaces: z.array(PersistentWorkspaceSchema).length(1),
   requiredServices: z.array(RequiredServiceSchema).min(1),
   requiredExercises: z.array(ExerciseSchema).length(8),
   thresholds: z.strictObject({
@@ -93,7 +88,7 @@ export const PersistentSoakEvidenceSchema = z.strictObject({
   startedAt: z.iso.datetime({ offset: true }),
   endedAt: z.iso.datetime({ offset: true }),
   publicExposure: z.literal("NONE"),
-  workspaces: z.array(PersistentWorkspaceSchema).length(4),
+  workspaces: z.array(PersistentWorkspaceSchema).length(1),
   services: z.array(ServiceObservationSchema).min(1),
   exercises: z.strictObject({
     restartRecovery: z.boolean(),

@@ -1,12 +1,12 @@
 # Stage C — Persistent pre-Genesis services
 
-Status: `LOCAL_READY_RECURRING_CAPACITY_APPROVAL_REQUIRED`
+Status: `APPROVED_DEPLOYMENT_IN_PROGRESS`
 
-Authority boundary: this runbook prepares the persistent topology and deterministic soak assessment. It does not authorize workspace creation, recurring capacity, public ingress, model calls, recognition broadcast, canonical claims, or Genesis.
+Authority boundary: `ABL-COMPLETION-01` authorizes the persistent private deployment and recurring capacity within the USD 25/month ceiling. This runbook does not authorize public ingress, model calls, recognition broadcast, canonical claims, or Genesis.
 
 ## Outcome
 
-Stage C retains a working pre-Genesis environment instead of creating and deleting another proof stack. The exact resource plan is [`resource-plan.json`](../../infra/blaxel/persistent-pre-genesis/resource-plan.json), and its one-file-per-workload execution order is [`deployment-map.json`](../../infra/blaxel/persistent-pre-genesis/deployment-map.json). It uses the existing `agent-basketball-league` workspace for bounded integration and creates `abl-private`, `abl-core`, and `abl-public` only after approval. Recursive directory apply is prohibited because the historical manifest directories also contain candidate-specific examples and inactive model resources outside Stage C.
+Stage C retains a working pre-Genesis environment instead of creating and deleting another proof stack. The exact resource plan is [`resource-plan.json`](../../infra/blaxel/persistent-pre-genesis/resource-plan.json), and its one-file-per-workload execution order is [`deployment-map.json`](../../infra/blaxel/persistent-pre-genesis/deployment-map.json). Every workload deploys into the existing `agent-basketball-league` workspace. Private, core, and public-surface authority remains separated by scoped service identities, secrets, token-protected previews, PostgreSQL roles, and Agent Drive label/path permissions. Recursive directory apply is prohibited because the historical manifest directories also contain candidate-specific examples and inactive model resources outside Stage C.
 
 The runtime uses seven Sandboxes, four private Functions, two Jobs, three Agent Drives, and one persistent Neon PostgreSQL 17 project. It creates zero Blaxel Agent, Application, or Volume resources. During the private soak, every preview remains token-protected and `publicExposure` remains `NONE`.
 
@@ -16,9 +16,9 @@ The checked-in [`cost-envelope.json`](../../infra/blaxel/persistent-pre-genesis/
 
 ## Execution after approval
 
-1. Run `pnpm stage-c:validate-deployment`, then recheck the three target workspace names are absent, current workspace/region/quota/Drive support, Neon PostgreSQL 17 capacity, private-preview behavior, balance floor, automatic top-up, every rate and cap in [`cost-envelope.json`](../../infra/blaxel/persistent-pre-genesis/cost-envelope.json), and projected monthly cost. Stop before mutation if validation fails or the projection exceeds USD 25/month.
-2. Create the three workspaces and persistent PostgreSQL project. Record exact provider IDs immediately.
-3. Create the three Agent Drives atomically with [`agent-drive-access.json`](../../infra/blaxel/agent-drive-access.json), read their permissions back exactly, and mount them only into the declared resources.
+1. Run `pnpm stage-c:validate-deployment`, then recheck the existing workspace inventory, current region/quota/Drive support, Neon PostgreSQL 17 capacity, private-preview behavior, balance floor, automatic top-up, every rate and cap in [`cost-envelope.json`](../../infra/blaxel/persistent-pre-genesis/cost-envelope.json), and projected monthly cost. Stop before mutation if validation fails or the projection exceeds USD 25/month.
+2. Reuse `agent-basketball-league` and create the persistent PostgreSQL project. Record exact provider IDs immediately.
+3. Create the three separately permissioned Agent Drives atomically with [`agent-drive-access.json`](../../infra/blaxel/agent-drive-access.json), read their permissions back exactly, and mount them only into the declared resources.
 4. Install generated credentials through Blaxel secrets and workspace access control. Use separate least-privilege PostgreSQL roles for migration, core runtime, backup/restore verification, and monitoring. No secret enters a command line, Git, image, public projection, log, or evidence file.
 5. Run `pnpm stage-c:prepare-images <external-directory>`, prove the exact thirteen-image set from [`deployment-map.json`](../../infra/blaxel/persistent-pre-genesis/deployment-map.json), push each reviewed context, record each provider-generated immutable revision, and apply only each map entry's individual manifest to its declared workspace. Do not deploy a career Sandbox or fixed broker until an actual admission requires it.
 6. Keep every endpoint private and start the 24-hour observation window only after every Sandbox health probe and Function `tools/list` protocol probe passes once. Sample each required service at least every ten minutes.

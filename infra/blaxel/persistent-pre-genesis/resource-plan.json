@@ -2,54 +2,34 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "programId": "ABL-COMPLETION-01",
   "stage": "READ_ONLY_BEACON",
-  "status": "LOCAL_PREPARED_RECURRING_CAPACITY_APPROVAL_REQUIRED",
+  "status": "APPROVED_DEPLOYMENT_IN_PROGRESS",
   "region": "us-was-1",
   "publicExposure": "NONE",
   "recognitionLevel": "SIGNED_VALID",
   "canonical": false,
   "genesis": false,
-  "providerMutation": false,
+  "providerMutation": true,
   "workspaces": [
     {
       "name": "agent-basketball-league",
       "operation": "REUSE_EXISTING",
-      "role": "bounded integration and release verification",
-      "resources": []
-    },
-    {
-      "name": "abl-private",
-      "operation": "CREATE_AFTER_APPROVAL",
-      "role": "candidate and career privacy boundary",
+      "role": "integration, private, core, and public-surface workloads separated by scoped identities, secrets, previews, and Drive permissions",
       "resources": [
         { "kind": "Sandbox", "name": "abl-private-storage-broker" },
-        { "kind": "Drive", "name": "abl-private-state" }
-      ]
-    },
-    {
-      "name": "abl-core",
-      "operation": "CREATE_AFTER_APPROVAL",
-      "role": "canonical command and institutional boundary",
-      "resources": [
         { "kind": "Sandbox", "name": "abl-core-api" },
         { "kind": "Sandbox", "name": "abl-safety-gateway" },
-        { "kind": "Function", "name": "abl-basketball-mcp" },
-        { "kind": "Function", "name": "abl-career-mcp" },
-        { "kind": "Function", "name": "abl-government-mcp" },
-        { "kind": "Job", "name": "abl-candidate-provisioner" },
-        { "kind": "Job", "name": "abl-recovery-verifier" },
-        { "kind": "Drive", "name": "abl-core-state" }
-      ]
-    },
-    {
-      "name": "abl-public",
-      "operation": "CREATE_AFTER_APPROVAL",
-      "role": "private-soak public-surface boundary",
-      "resources": [
         { "kind": "Sandbox", "name": "abl-public-api" },
         { "kind": "Sandbox", "name": "abl-spectator-arena" },
         { "kind": "Sandbox", "name": "abl-candidate-store" },
         { "kind": "Sandbox", "name": "abl-candidate-edge" },
+        { "kind": "Function", "name": "abl-basketball-mcp" },
+        { "kind": "Function", "name": "abl-career-mcp" },
+        { "kind": "Function", "name": "abl-government-mcp" },
         { "kind": "Function", "name": "abl-discovery-mcp" },
+        { "kind": "Job", "name": "abl-candidate-provisioner" },
+        { "kind": "Job", "name": "abl-recovery-verifier" },
+        { "kind": "Drive", "name": "abl-private-state" },
+        { "kind": "Drive", "name": "abl-core-state" },
         { "kind": "Drive", "name": "abl-public-state" }
       ]
     }
@@ -61,7 +41,8 @@
       "version": 17,
       "region": "aws-us-east-1",
       "lifecycle": "PERSISTENT",
-      "operation": "CREATE_AFTER_APPROVAL"
+      "operation": "CREATED_PERSISTENT",
+      "projectId": "shy-pine-00200479"
     }
   ],
   "resourceCounts": {
@@ -86,7 +67,7 @@
     "maximumProjectedMonthlyInfrastructure": 25,
     "minimumBlaxelBalance": 5,
     "automaticTopUp": false,
-    "approvalRequiredBeforeFirstMutation": true,
+    "approvalRequiredBeforeFirstMutation": false,
     "failClosedIfProjectionExceedsMaximum": true
   },
   "storage": {

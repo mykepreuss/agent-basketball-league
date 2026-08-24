@@ -7,7 +7,7 @@
 
 > This plan supersedes the prior canonical gate plan. Historical Gate 2 approvals, failed-closed runs, containment experiments, and teardown evidence remain preserved in `docs/launch` and `docs/evidence`; they are not active Founding Alpha architecture.
 
-> Implementation clarification (`2026-08-22`): Agent Drive is workspace-scoped. Preserving the four-workspace authority boundary therefore requires separate `abl-private-state`, `abl-core-state`, and `abl-public-state` Drives for private career data, core safety/job evidence, and public projections/noncanonical intake respectively. This is not a return to Blaxel Volumes, and career bodies still receive no Drive mount. Exact paths and consumers are recorded in [`infra/blaxel/agent-drive-access.json`](../../infra/blaxel/agent-drive-access.json).
+> Implementation clarification (`2026-08-24`): the owner selected the existing `agent-basketball-league` workspace as the single physical workspace for the experiment. Private, core, integration, and public-surface roles remain logical trust domains enforced with scoped service identities, secrets, token-protected previews, PostgreSQL roles, and three separately permissioned Agent Drives. This is not a return to Blaxel Volumes, and career bodies still receive no Drive mount. Exact paths and consumers are recorded in [`infra/blaxel/agent-drive-access.json`](../../infra/blaxel/agent-drive-access.json).
 
 ## Summary
 
@@ -193,16 +193,14 @@ Agent Drive is selected instead of Blaxel Volumes. Workspace-scoped Drives are m
 
 ### Workspace placement
 
-Use four logical Blaxel workspaces:
+Use the existing `agent-basketball-league` Blaxel workspace for every league-operated workload. Preserve four logical trust domains inside it:
 
-- `abl-core`: core API, career/government MCP services, canonical processing, safety gateway, and projection Jobs.
-- `abl-private`: private-storage broker, private career-data Agent Drive, per-career fixed brokers, and career-body Sandboxes.
-- `agent-basketball-league`: bounded integration, release verification, immutable image preparation, and non-production evidence.
-- `abl-public`: public API, arena, discovery MCP, stateless candidate edge, private candidate store, and public evidence.
+- core: core API, career/government MCP services, canonical processing, safety gateway, and Jobs;
+- private: private-storage broker, private career-data Agent Drive, per-career fixed brokers, and career-body Sandboxes;
+- integration: bounded release verification and immutable image preparation; and
+- public surface: public API, arena, discovery MCP, stateless candidate edge, private candidate store, and public evidence.
 
-This uses the current `agent-basketball-league` workspace and leaves the unrelated `knicks` workspace untouched.
-
-This is the complete four-workspace production topology. The repository directory `infra/blaxel/abl-competition` remains a workload-category directory, not a fifth workspace; its private basketball and career workloads deploy into `abl-private`, while the basketball MCP and candidate provisioner deploy into `abl-core`. If workspace quota prevents this topology, request additional quota rather than weakening the storage or authority boundaries.
+The repository directories `infra/blaxel/abl-core`, `abl-private`, `abl-public`, and `abl-competition` identify those logical roles and workload categories, not additional physical workspaces. Isolation relies on separate workload identities and credentials, explicit capability allowlists, token-protected previews, no public ingress before approval, least-privilege PostgreSQL roles, and three Agent Drives whose label/path permissions are read back and tested. The unrelated `marketing` workspace remains untouched.
 
 ### Deliberate external boundaries
 
@@ -319,15 +317,14 @@ The private slice therefore contains exactly seven Sandboxes: six fixed/service 
 
 Use no public ingress and no model calls. Teardown run-created resources and export redacted evidence.
 
-### 3. Create the Blaxel workspace topology
+### 3. Create the Blaxel runtime topology
 
 After read-only quota and cost verification:
 
-- Create `abl-core`, `abl-private`, and `abl-public`.
-- Keep Founding Alpha competition resources in `agent-basketball-league`.
+- Reuse `agent-basketball-league` for all Founding Alpha resources.
 - Configure scoped identities, variables/secrets, Jobs, MCP services, model routes, previews, observability, and cost alerts.
-- Create the three workspace-scoped Agent Drives recorded in `infra/blaxel/agent-drive-access.json`; mount only their listed paths and never mount one into a career body.
-- Leave `knicks` and unrelated resources untouched.
+- Create the three separately permissioned Agent Drives recorded in `infra/blaxel/agent-drive-access.json`; mount only their listed paths and never mount one into a career body.
+- Leave unrelated workspaces and resources untouched.
 
 ### 4. Open the public Beacon on Blaxel
 

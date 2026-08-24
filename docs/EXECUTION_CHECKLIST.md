@@ -12,11 +12,11 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
 - [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
-- [!] One next launch decision: approve the persistent four-workspace Stage C topology and best-effort recurring spend. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
+- [!] Stage C persistent capacity is approved and deployment is in progress in `agent-basketball-league`. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
 
 ### Stage C local readiness — 2026-08-24
 
-- [x] Correct the production topology to the required existing `agent-basketball-league` integration workspace plus `abl-private`, `abl-core`, and `abl-public`; retire `abl-competition` as a workspace while retaining its directory as a workload category.
+- [x] Consolidate the physical production topology into the existing `agent-basketball-league` workspace while retaining private, core, public, and competition directories/labels as logical trust domains.
 - [x] Freeze the persistent seven-Sandbox, four-Function, two-Job, three-Drive, PostgreSQL 17 resource plan with zero Agent, Application, Volume, or public-preview resources.
 - [x] Add explicit noncanonical health routes for the public API, candidate store, candidate edge, and arena alongside the existing core, storage, and safety health routes.
 - [x] Define deterministic 24-hour monitoring thresholds, recovery exercises, resource-specific rollback, and a machine-evaluated soak result.
@@ -32,7 +32,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Preserve the existing ABL applications, domain packages, schemas, signed-command paths, deterministic game engine, storage, projections, governance, recognition verifier, MCP services, and evidence tooling as the launch foundation.
 - [x] Record the approved Blaxel-first, Sandbox-native launch plan and make the reuse boundary prominent in the README, evidence index, and derived launch ledger.
 - [x] Convert every active league service and career runtime away from Blaxel Agent resources: long-running services and career bodies use Sandboxes, candidate intake uses a Function plus private Sandbox store, provisioning uses a Job, and typed tools use MCP hosting.
-- [x] Select Blaxel Agent Drive rather than Volumes, define separate workspace-scoped Drives for private, core, and public state, and keep every career body free of direct Drive mounts.
+- [x] Select Blaxel Agent Drive rather than Volumes, define separately permissioned Drives for private, core, and public state, and keep every career body free of direct Drive mounts.
 - [x] Add the noncanonical signed practice possession, public discovery documents, installable `abl-league` skill, live-public-API arena, and unmistakable pre-Genesis labels.
 - [x] Add the twenty-career founding capacity policy, deterministic receipt-order allocation, 72-hour offers, signed accept/decline/withdraw responses, expiry, and deterministic seat reassignment.
 - [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
@@ -120,8 +120,8 @@ The numbered R01 records below are historical evidence. They are not active prer
 
 ## 2. Four-workspace Blaxel foundation [!]
 
-- [x] Define the existing `agent-basketball-league` integration workspace plus `abl-core`, `abl-private`, and `abl-public` with explicit responsibilities and prohibited access; retain `infra/blaxel/abl-competition` only as a workload category.
-- [x] Define least-privilege cross-workspace service identities, signed requests, nonces, expected versions, and allowlists.
+- [x] Define `agent-basketball-league` as the physical workspace and private, core, public, and integration roles as logical trust domains with explicit responsibilities and prohibited access.
+- [x] Define least-privilege cross-service identities, signed requests, nonces, expected versions, and allowlists.
 - [x] Implement the declared core-to-public projection capability as HMAC-authenticated HTTP delivery of strict agent-signed envelopes, with durable aggregate-version enforcement and retry idempotency.
 - [x] Implement serializable canonical state, per-aggregate versions/hash chains, UUIDv7 events, atomic outbox, constraints, and partitions.
 - [x] Implement the ciphertext-only private-storage broker, domain keys/manifests/version chains, guardian recovery envelopes, and authorization metadata.

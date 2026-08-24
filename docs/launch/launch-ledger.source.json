@@ -72,7 +72,7 @@
     {
       "requirementId": "FOUNDING_ALPHA_PERSISTENT_BEACON",
       "requiredForStage": "READ_ONLY_BEACON",
-      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": [
         "persistent-beacon-local-readiness",
         "persistent-beacon-live-proof"
@@ -261,13 +261,13 @@
   "approvals": [
     {
       "action": "MATERIAL_SPEND",
-      "state": "NOT_REQUESTED",
-      "approvalId": null
+      "state": "GRANTED",
+      "approvalId": "ABL-COMPLETION-01"
     },
     {
       "action": "RESOURCE_CREATION",
-      "state": "NOT_REQUESTED",
-      "approvalId": null
+      "state": "GRANTED",
+      "approvalId": "ABL-COMPLETION-01"
     },
     {
       "action": "PUBLIC_EXPOSURE",
@@ -292,129 +292,129 @@
   ],
   "resources": [
     {
-      "resourceId": "abl-core/abl-core-api",
+      "resourceId": "agent-basketball-league/abl-core-api",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-safety-gateway",
+      "resourceId": "agent-basketball-league/abl-safety-gateway",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-private-storage-broker",
+      "resourceId": "agent-basketball-league/abl-private-storage-broker",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-career-{career-id}",
+      "resourceId": "agent-basketball-league/abl-career-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "abl-private/abl-fixed-broker-{career-id}",
+      "resourceId": "agent-basketball-league/abl-fixed-broker-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-candidate-provisioner",
+      "resourceId": "agent-basketball-league/abl-candidate-provisioner",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "abl-core/abl-basketball-mcp",
+      "resourceId": "agent-basketball-league/abl-basketball-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-model-primary",
+      "resourceId": "agent-basketball-league/abl-model-primary",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-model-alternate",
+      "resourceId": "agent-basketball-league/abl-model-alternate",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-career-mcp",
+      "resourceId": "agent-basketball-league/abl-career-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-government-mcp",
+      "resourceId": "agent-basketball-league/abl-government-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-recovery-verifier",
+      "resourceId": "agent-basketball-league/abl-recovery-verifier",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-public/abl-public-api",
+      "resourceId": "agent-basketball-league/abl-public-api",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "public-api-implementation"
     },
     {
-      "resourceId": "abl-public/abl-spectator-arena",
+      "resourceId": "agent-basketball-league/abl-spectator-arena",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "arena-implementation"
     },
     {
-      "resourceId": "abl-public/abl-candidate-store",
+      "resourceId": "agent-basketball-league/abl-candidate-store",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-edge-implementation"
     },
     {
-      "resourceId": "abl-public/abl-candidate-edge",
+      "resourceId": "agent-basketball-league/abl-candidate-edge",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-edge-implementation"
     },
     {
-      "resourceId": "abl-public/abl-discovery-mcp",
+      "resourceId": "agent-basketball-league/abl-discovery-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-private-state",
+      "resourceId": "agent-basketball-league/abl-private-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "abl-core/abl-core-state",
+      "resourceId": "agent-basketball-league/abl-core-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "abl-public/abl-public-state",
+      "resourceId": "agent-basketball-league/abl-public-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "neon/abl-founding-alpha",
+      "resourceId": "neon/shy-pine-00200479",
       "kind": "PostgreSQL17",
-      "state": "PLANNED",
+      "state": "CREATED",
       "evidenceId": "neon-live-proof"
     }
   ],

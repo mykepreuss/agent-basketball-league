@@ -7,7 +7,7 @@ import { parse } from "yaml";
 import { z } from "zod";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const WorkspaceSchema = z.enum(["abl-private", "abl-core", "abl-public"]);
+const WorkspaceSchema = z.literal("agent-basketball-league");
 const WorkloadKindSchema = z.enum(["Sandbox", "Function", "Job"]);
 const WorkloadSchema = z.strictObject({
   ordinal: z.number().int().positive(),
@@ -25,7 +25,7 @@ const DeploymentMapSchema = z.strictObject({
   $schema: z.string(),
   programId: z.literal("ABL-COMPLETION-01"),
   stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
-  status: z.literal("LOCAL_VALIDATED_RECURRING_CAPACITY_APPROVAL_REQUIRED"),
+  status: z.literal("APPROVED_DEPLOYMENT_IN_PROGRESS"),
   region: z.literal("us-was-1"),
   publicExposure: z.literal("NONE"),
   recursiveDirectoryApplyAllowed: z.literal(false),
@@ -224,8 +224,10 @@ export async function validatePersistentDeployment(
   const candidateWorkspace = candidateProvisioner.spec.runtime.envs?.find(
     ({ name }) => name === "ABL_CANDIDATE_WORKSPACE",
   )?.value;
-  if (candidateWorkspace !== "abl-private")
-    throw new Error("Candidate provisioner does not target abl-private");
+  if (candidateWorkspace !== "agent-basketball-league")
+    throw new Error(
+      "Candidate provisioner does not target agent-basketball-league",
+    );
 
   const privateEndpointCount = deployment.workloads.filter(
     ({ privateEndpoint }) => privateEndpoint,

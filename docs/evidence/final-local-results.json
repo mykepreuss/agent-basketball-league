@@ -92,7 +92,7 @@
       "totalTasks": 30
     }
   ],
-  "recordedAt": "2026-08-24T21:31:59.081Z",
+  "recordedAt": "2026-08-24T22:07:09.276Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -140,28 +140,28 @@
       "testFiles": 0,
       "successfulTasks": 43,
       "totalTasks": 43,
-      "outputSha256": "7ebb58bf6193d24ee076369a14dbd44c5ee617cd8597e24de6716d15db709723",
+      "outputSha256": "f98b2c469b1e0db842efabfb103c6cfd3134fdf69ffa24df143890eaa10342f5",
       "outputTail": [
-        "@abl/projections:check: cache bypass, force executing 8a81209d41c761ea",
+        "@abl/safety-gateway:check: cache bypass, force executing c9f90a3a1069dc20",
+        "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/projections:check: cache bypass, force executing e7784a079ffad583",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/rehearsal:check: cache bypass, force executing 2c8c394044d8f77e",
         "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/assurance:check: cache bypass, force executing a2f11244cf8a5894",
+        "@abl/projections:build: cache bypass, force executing ee8adf118d11c49c",
+        "@abl/projections:build: $ tsc -p tsconfig.json",
+        "@abl/assurance:check: cache bypass, force executing 98a64c7c7a68ff9b",
         "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/candidate-provisioner:check: cache bypass, force executing 9ee08724b079e6fc",
-        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/candidate-edge:check: cache bypass, force executing 2ed813884712583f",
-        "@abl/candidate-edge:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/arena:check: cache bypass, force executing 55727a9fec832d07",
+        "@abl/arena:check: cache bypass, force executing 3d14d6173116fa16",
         "@abl/arena:check: $ tsc --noEmit",
-        "@abl/public-api:check: cache bypass, force executing 3517194f73552982",
-        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/core-api:check: cache bypass, force executing c8f2ba3c93e962de",
+        "@abl/core-api:check: cache bypass, force executing ab199059672e093b",
         "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/public-api:check: cache bypass, force executing 61895e94339f7656",
+        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
         " Tasks:    43 successful, 43 total",
         "Cached:    0 cached, 43 total",
-        "  Time:    1m3.206s"
+        "  Time:    1m19.924s"
       ]
     },
     {
@@ -173,7 +173,7 @@
       "testFiles": 74,
       "successfulTasks": 43,
       "totalTasks": 43,
-      "outputSha256": "e2441468826fd0f7659b2005df08777a7c4d43d76aa01574d8cd4d1186f2655e",
+      "outputSha256": "c41becd6ad2bffe32873dc9d29f0e055739c20e98357f797fdff4deaa9c06ec3",
       "outputTail": [
         " WARNING  no output files found for task @abl/database#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/discovery-mcp#test. Please check your `outputs` key in `turbo.json`",
@@ -206,7 +206,7 @@
       "testFiles": 4,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "77a8d2dc60aaa230a9206b041a3bdae69b5b2b10a22c751f35d5541b35d67231",
+      "outputSha256": "6c3777f2aee376e036392173a3da94698723b5bc4091852fdf2f8cc5164bf13b",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
@@ -215,8 +215,8 @@
         "",
         " Test Files  4 passed (4)",
         "      Tests  18 passed (18)",
-        "   Start at  14:30:42",
-        "   Duration  13.42s (transform 2.12s, setup 0ms, import 5.30s, tests 12.57s, environment 0ms)"
+        "   Start at  15:05:59",
+        "   Duration  23.30s (transform 10.50s, setup 0ms, import 25.08s, tests 17.56s, environment 1ms)"
       ]
     },
     {
@@ -228,7 +228,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "4dd4075ba32507e15c2f6370b971df8c09376f5aca71e4d872c6f4dbcab113f2",
+      "outputSha256": "10893f515e6f00a9800b3ccdcf58cf0d2137b95043b45210315dc96598bdda41",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
@@ -237,8 +237,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  14:30:56",
-        "   Duration  1.85s (transform 694ms, setup 0ms, import 1.56s, tests 206ms, environment 0ms)"
+        "   Start at  15:06:22",
+        "   Duration  1.75s (transform 661ms, setup 0ms, import 1.47s, tests 204ms, environment 0ms)"
       ]
     },
     {
@@ -250,10 +250,10 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "67b6a5165c813922facd54df5291e108208c529b182b1d3ca68e1e12eec00efe",
+      "outputSha256": "8c70a71ccdcb60d5a5ecd79076f0131fe53b7b1f66471e42c9eead59e4c4c6d7",
       "outputTail": [
         "$ tsx scripts/run-network-load.ts",
-        "loopback HTTP requests: 22000; failures: 0; p95: 33.84ms",
+        "loopback HTTP requests: 22000; failures: 0; p95: 23.58ms",
         "ABL Assertions 2 passed",
         "ABL Test Files 1 passed"
       ]
@@ -267,28 +267,28 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "ef11966f32995f7584b3764ece068e6516fc684fd5bb9899c1b7dce3342053b3",
+      "outputSha256": "5fe1fd55ccd95804341168cbef86cc1d786eb594c91bf1b06f7c76ebf0d3db56",
       "outputTail": [
-        "[arena] (node:77169) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:83474) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
-        "[arena] (node:77170) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:83476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "Running 2 tests using 1 worker",
         "",
-        "(node:77171) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:83477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[1/2] [desktop-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "(node:77177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:83482) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[2/2] [mobile-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "  2 passed (11.3s)"
+        "  2 passed (9.8s)"
       ]
     },
     {
@@ -300,7 +300,7 @@
       "testFiles": 0,
       "successfulTasks": 30,
       "totalTasks": 30,
-      "outputSha256": "b8fc406903fca23d7ed713cd3d7f8a5179a9f16c87eebda36dbd3eec1edc165b",
+      "outputSha256": "bdeace7703ac64d051f6a2baa1ad73e672dce6298f53d8070f107abdb195f083",
       "outputTail": [
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
@@ -314,25 +314,25 @@
         "@abl/arena:build: ○  (Static)   prerendered as static content",
         "@abl/arena:build: ƒ  (Dynamic)  server-rendered on demand",
         "@abl/arena:build: ",
-        "@abl/public-api:build: cache bypass, force executing 91708e92b84e5ea4",
-        "@abl/public-api:build: $ tsc -p tsconfig.json",
-        "@abl/core-api:build: cache bypass, force executing 0f7adabebdef8c01",
+        "@abl/core-api:build: cache bypass, force executing 3b3d0d4d4f851727",
         "@abl/core-api:build: $ tsc -p tsconfig.json",
+        "@abl/public-api:build: cache bypass, force executing 76fec7af40e11773",
+        "@abl/public-api:build: $ tsc -p tsconfig.json",
         "",
         " Tasks:    30 successful, 30 total",
         "Cached:    0 cached, 30 total",
-        "  Time:    41.078s"
+        "  Time:    28.281s"
       ]
     }
   ],
   "limitations": [
-    "R01-09 live-proved PostgreSQL 17 migration, all thirteen sequential image sources, atomic Agent Drive ACL creation, a candidate-intake mount/write, cross-path denial, and private-preview posture before failing closed at the candidate-store port collision; the corrected private slice has not yet completed end to end.",
+    "The retained Stage B evidence live-proves the existing private end-to-end slice; the persistent Stage C environment and 24-hour soak are still in progress.",
     "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
     "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
-    "The four target production Blaxel workspaces are not yet verified as provisioned; the temporary R01-09 Agent Drive passed semantic ACL readback, one matching mount/write, and sibling-path denial but was torn down before restart, restore, direct-API label enforcement, concurrent-write, and broader recovery proof.",
-    "Prior temporary Neon PostgreSQL 17 projects passed migration and transaction probes and were permanently deleted; an active selected-provider project and live recovery proof are absent.",
+    "The existing agent-basketball-league workspace is the selected physical topology; its three persistent Agent Drives and thirteen workloads are not yet deployed or soak-verified.",
+    "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality remain live Stage C exercises.",
     "Base finality lacks a ratified deployment and credentials.",
-    "Remote capacity reservations and provider costs were not requested.",
+    "Stage C recurring capacity is approved within the USD 25 monthly ceiling; immutable images, workloads, monitoring, and measured provider cost remain to be established.",
     "Founding-agent decisions and signatures do not exist.",
     "Hardware-backed non-exportable signing is not supported by the local fixture."
   ]

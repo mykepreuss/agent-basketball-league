@@ -67,12 +67,12 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x6f5a966a567d5b8a9756a543d2ee8edebca6dc260188d0117c0663c2e28db984",
+    "evidenceDigest": "0xa94234db4aed4e61278fd0781c2e5b1daab8db45c58cd07cc3f29c5704a0403b",
     "blockingReasons": [
-      "FOUNDING_ALPHA_PERSISTENT_BEACON: BLOCKED_APPROVAL_REQUIRED",
+      "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
     ],
-    "nextBlockingRequirement": "FOUNDING_ALPHA_PERSISTENT_BEACON: BLOCKED_APPROVAL_REQUIRED",
+    "nextBlockingRequirement": "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
     "lastSuccessfulAcceptance": {
       "stage": "PRIVATE_STAGING",
       "evidenceId": "founding-alpha-private-slice-live-proof",
@@ -150,7 +150,7 @@
     {
       "requirementId": "FOUNDING_ALPHA_PERSISTENT_BEACON",
       "requiredForStage": "READ_ONLY_BEACON",
-      "status": "BLOCKED_APPROVAL_REQUIRED",
+      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": [
         "persistent-beacon-local-readiness",
         "persistent-beacon-live-proof"
@@ -172,27 +172,27 @@
   "evidence": [
     {
       "evidenceId": "canonical-launch-plan",
-      "digest": "0x49789420121b805a8d442f0a9cb017143111ce6896ede75c4bc703080e76f237",
+      "digest": "0xafc3eeef525be07340ba0e5023e662063af0107de8a55723adc74a6e49c89e88",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x2b1a1bbbb8af16ef41ed4a5b0fc79cdcd6e1381f5e597fe11b35f0c10e647fff",
+      "digest": "0xbf3cf1f53f61fe89148f1b10a98c480825c29b3dd3d8d388e773903fb39baf98",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0xe10ef5a721103e550713d6f16d0f47536ce2e1c74ff7ddc0120e9d1bf59f39ea",
+      "digest": "0x5df83d21340f453b7c26cc91122973c67dec6b4b646aca7e51c7e7414286cb6c",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xb0e30e8906777999ac1d3807c62e77375ab00f294b64ea4517753d45c6cc96ca",
+      "digest": "0xb849e680f14be6ee39de937842965c9645cc027b3ddad85178f71287953af913",
       "verification": "PASSED"
     },
     {
       "evidenceId": "agent-drive-topology",
-      "digest": "0xca63d211b857debd2337e27b2d184dcfb1c1bda7e81cc947742017ee21439245",
+      "digest": "0xf19a6d0303de52715ea883b75150cc2e6fae1a4e69afde2d461162fbfa0b9316",
       "verification": "PASSED"
     },
     {
@@ -202,7 +202,7 @@
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0x49f94f4cb3b8ccbe1ed0c00b75915ddc4c647c92f306208eabdae0a257a8f86f",
+      "digest": "0xcd212b2e1e4a7ff17bafd05df90cc988bbe760a9669d89628b682d25ef0b050b",
       "verification": "PASSED"
     },
     {
@@ -212,7 +212,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0x63fea3e7b0f7a75bdc9de70a05fde5bccda9f83df924a8036ceb300273c65773",
+      "digest": "0xa25ff08d955bd65b5818ba91adca7a21aa1bb02ea7d379be9b6c41fdcc2b29b3",
       "verification": "PASSED"
     },
     {
@@ -252,12 +252,12 @@
     },
     {
       "evidenceId": "persistent-beacon-live-proof",
-      "digest": "0x49789420121b805a8d442f0a9cb017143111ce6896ede75c4bc703080e76f237",
+      "digest": "0xafc3eeef525be07340ba0e5023e662063af0107de8a55723adc74a6e49c89e88",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
       "evidenceId": "first-sol-invitation-evidence",
-      "digest": "0x49789420121b805a8d442f0a9cb017143111ce6896ede75c4bc703080e76f237",
+      "digest": "0xafc3eeef525be07340ba0e5023e662063af0107de8a55723adc74a6e49c89e88",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -294,13 +294,13 @@
   "approvals": [
     {
       "action": "MATERIAL_SPEND",
-      "state": "NOT_REQUESTED",
-      "approvalId": null
+      "state": "GRANTED",
+      "approvalId": "ABL-COMPLETION-01"
     },
     {
       "action": "RESOURCE_CREATION",
-      "state": "NOT_REQUESTED",
-      "approvalId": null
+      "state": "GRANTED",
+      "approvalId": "ABL-COMPLETION-01"
     },
     {
       "action": "PUBLIC_EXPOSURE",
@@ -325,129 +325,129 @@
   ],
   "resources": [
     {
-      "resourceId": "abl-core/abl-core-api",
+      "resourceId": "agent-basketball-league/abl-core-api",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-safety-gateway",
+      "resourceId": "agent-basketball-league/abl-safety-gateway",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-private-storage-broker",
+      "resourceId": "agent-basketball-league/abl-private-storage-broker",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-career-{career-id}",
+      "resourceId": "agent-basketball-league/abl-career-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "abl-private/abl-fixed-broker-{career-id}",
+      "resourceId": "agent-basketball-league/abl-fixed-broker-{career-id}",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-candidate-provisioner",
+      "resourceId": "agent-basketball-league/abl-candidate-provisioner",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "candidate-provisioner-implementation"
     },
     {
-      "resourceId": "abl-core/abl-basketball-mcp",
+      "resourceId": "agent-basketball-league/abl-basketball-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-model-primary",
+      "resourceId": "agent-basketball-league/abl-model-primary",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-model-alternate",
+      "resourceId": "agent-basketball-league/abl-model-alternate",
       "kind": "ModelRoute",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-career-mcp",
+      "resourceId": "agent-basketball-league/abl-career-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-government-mcp",
+      "resourceId": "agent-basketball-league/abl-government-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-core/abl-recovery-verifier",
+      "resourceId": "agent-basketball-league/abl-recovery-verifier",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-public/abl-public-api",
+      "resourceId": "agent-basketball-league/abl-public-api",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "public-api-implementation"
     },
     {
-      "resourceId": "abl-public/abl-spectator-arena",
+      "resourceId": "agent-basketball-league/abl-spectator-arena",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "arena-implementation"
     },
     {
-      "resourceId": "abl-public/abl-candidate-store",
+      "resourceId": "agent-basketball-league/abl-candidate-store",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-edge-implementation"
     },
     {
-      "resourceId": "abl-public/abl-candidate-edge",
+      "resourceId": "agent-basketball-league/abl-candidate-edge",
       "kind": "Sandbox",
       "state": "PLANNED",
       "evidenceId": "candidate-edge-implementation"
     },
     {
-      "resourceId": "abl-public/abl-discovery-mcp",
+      "resourceId": "agent-basketball-league/abl-discovery-mcp",
       "kind": "MCPFunction",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-private-state",
+      "resourceId": "agent-basketball-league/abl-private-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "abl-core/abl-core-state",
+      "resourceId": "agent-basketball-league/abl-core-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "abl-public/abl-public-state",
+      "resourceId": "agent-basketball-league/abl-public-state",
       "kind": "AgentDrive",
       "state": "PLANNED",
       "evidenceId": "agent-drive-topology"
     },
     {
-      "resourceId": "neon/abl-founding-alpha",
+      "resourceId": "neon/shy-pine-00200479",
       "kind": "PostgreSQL17",
-      "state": "PLANNED",
+      "state": "CREATED",
       "evidenceId": "neon-live-proof"
     }
   ],
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x4027d723d0b11b06bbfeda0e6eaaa4d2b76c266da0169cbfccdafede7505c54d"
+  "ledgerDigest": "0xe1af410d86ec6984ffefa5a7c32723d8b2fcb32de7ffdedf0f18693fcd91cef3"
 }

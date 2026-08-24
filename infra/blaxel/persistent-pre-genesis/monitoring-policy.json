@@ -2,51 +2,46 @@
   "version": 1,
   "stage": "READ_ONLY_BEACON_PRIVATE_SOAK",
   "requiredDurationHours": 24,
-  "requiredWorkspaces": [
-    "agent-basketball-league",
-    "abl-private",
-    "abl-core",
-    "abl-public"
-  ],
+  "requiredWorkspaces": ["agent-basketball-league"],
   "requiredServices": [
     {
       "service": "abl-private-storage-broker",
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-core-api",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-safety-gateway",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-public-api",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-candidate-store",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-candidate-edge",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-spectator-arena",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 }
     },
     {
       "service": "abl-basketball-mcp",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "probe": {
         "method": "POST",
         "path": "/mcp",
@@ -56,7 +51,7 @@
     },
     {
       "service": "abl-career-mcp",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "probe": {
         "method": "POST",
         "path": "/mcp",
@@ -66,7 +61,7 @@
     },
     {
       "service": "abl-government-mcp",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "probe": {
         "method": "POST",
         "path": "/mcp",
@@ -76,7 +71,7 @@
     },
     {
       "service": "abl-discovery-mcp",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "probe": {
         "method": "POST",
         "path": "/mcp",

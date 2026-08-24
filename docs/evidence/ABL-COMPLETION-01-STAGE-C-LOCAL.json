@@ -3,25 +3,29 @@
   "programId": "ABL-COMPLETION-01",
   "stage": "READ_ONLY_BEACON",
   "evidenceClass": "LOCAL_STAGE_READINESS",
-  "status": "PASS_LOCAL_RECURRING_CAPACITY_APPROVAL_REQUIRED",
-  "recordedAt": "2026-08-24T20:44:52Z",
-  "baselineCommit": "75eed725cc44e7e41632607f3c530c49eb746084",
-  "runtime": { "node": "24.18.0", "pnpm": "11.21.0" },
+  "status": "PASS_LOCAL_DEPLOYMENT_IN_PROGRESS",
+  "recordedAt": "2026-08-24T22:11:26Z",
+  "sourceBaselineCommit": "656cc2742485f92a83d6755963c2c3daa6d14f47",
+  "correctionReleaseCommit": null,
+  "runtime": {
+    "node": "24.18.0",
+    "pnpm": "11.21.0"
+  },
   "verification": {
-    "assertions": 381,
-    "testFiles": 80,
-    "uncachedTasks": 113,
-    "stableResultDigest": "0x4b320d269586587eac3328963a6946ba088b6768432860924f63e245a8dbc123"
+    "assertions": 386,
+    "testFiles": 81,
+    "uncachedTasks": 116,
+    "stableResultDigest": "0x6193cb6e6d19da2601ac78289d1403c988b781a19f9c67a5c918cc9d03a267d1"
   },
   "packaging": {
     "reproducibilityRuns": 2,
-    "byteIdentical": true,
-    "imageSetDigest": "0x8f7bcb239c1f5e0c94df902420c5405309f6e78dffc5545efdd52673d61fa148",
-    "bodyImageSourceDigest": "0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642",
-    "bodyProgramArchiveDigest": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3"
+    "imageSourceDigestsIdentical": true,
+    "imageSetDigest": "0x8a72f1a1c20218ddcd49bd88fddc7995d140536b821fd75bd042fa7a6aa24789",
+    "arenaBuildSourceDigest": "0xe3a16c5c771500b999f9a1fa10d3ae60e0241807c794d5ea9e582ff656b7d01b"
   },
   "topology": {
-    "workspaces": [
+    "workspaces": ["agent-basketball-league"],
+    "logicalTrustDomains": [
       "agent-basketball-league",
       "abl-private",
       "abl-core",
@@ -38,7 +42,18 @@
     "volumes": 0,
     "postgresVersion": 17
   },
+  "persistentDatabase": {
+    "provider": "Neon",
+    "projectId": "shy-pine-00200479",
+    "region": "aws-us-east-1",
+    "postgresVersion": 17,
+    "neonAuth": false,
+    "publicTableCount": 23,
+    "status": "CREATED_MIGRATED"
+  },
   "preparedControls": [
+    "scoped service identities and secrets inside one physical workspace",
+    "three separately permissioned Agent Drives",
     "noncanonical health and protocol probes",
     "deterministic 24-hour private-soak assessment",
     "restart, rotation, backup, clean-room restore, replay, standby, rollback, and candidate-flow exercises",
@@ -48,11 +63,17 @@
   "codeSimplifier": {
     "status": "PASS",
     "behaviorChanged": false,
-    "result": "No additional structural refactor was warranted after consolidating the soak rules into one declarative evaluator."
+    "result": "No additional behavior-preserving structural simplification was warranted."
   },
-  "providerMutation": false,
+  "providerMutation": true,
+  "providerMutations": [
+    "Created persistent Neon project shy-pine-00200479",
+    "Applied the reviewed 23-table PostgreSQL migration",
+    "Created least-privilege runtime, recovery, and monitoring roles"
+  ],
+  "blaxelWorkloadMutation": false,
   "publicExposure": "NONE",
   "canonical": false,
   "genesis": false,
-  "nextApproval": "Persistent Stage C recurring capacity and private 24-hour soak"
+  "nextAction": "Merge the single-workspace correction, deploy the mapped private resources, and run the deterministic 24-hour private soak"
 }

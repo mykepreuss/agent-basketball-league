@@ -38,7 +38,7 @@ spec:
         value: BLAXEL_ACCESS_TOKEN
         secret: false
       - name: ABL_CORE_WORKSPACE
-        value: abl-core
+        value: agent-basketball-league
         secret: false
       - name: ABL_CORE_ACCESS_TOKEN_B64
         value: ${ABL_CORE_ACCESS_TOKEN_B64}
@@ -50,7 +50,7 @@ spec:
         value: BLAXEL_ACCESS_TOKEN
         secret: false
       - name: ABL_PRIVATE_WORKSPACE
-        value: abl-private
+        value: agent-basketball-league
         secret: false
       - name: ABL_PRIVATE_ACCESS_TOKEN_B64
         value: ${ABL_PRIVATE_ACCESS_TOKEN_B64}
