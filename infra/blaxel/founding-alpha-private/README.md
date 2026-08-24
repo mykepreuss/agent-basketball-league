@@ -1,7 +1,7 @@
 # Founding Alpha private slice
 
-> Status: `R01_09_CORRECTION_ASSURED_MERGE_AND_PREFLIGHT_REQUIRED`
-> Run ID: `ABL-FOUNDING-ALPHA-R01`
+> Status: `ACTIVE_PRIVATE_STAGING`
+> Run ID: `ABL-COMPLETION-01`
 > Workspace: `agent-basketball-league`
 > Region: `us-was-1`
 
@@ -23,6 +23,6 @@ The Drive is created atomically with the three exact label/path permissions in [
 
 At the published rates, the four-hour maximum with every declared Sandbox, Function, and Job active for the entire window is USD 4.9896. The plan reserves USD 1.0104 for transient image, snapshot, and provider-metering uncertainty, producing a USD 6.00 projected all-in cost under the unchanged USD 10 hard ceiling. This is a cost estimate, not execution authority.
 
-R01-09 is consumed. It proved the PostgreSQL 17 gate and migration, all thirteen sequential image pushes, atomic Drive ACL creation, the candidate-intake mount, matching writes, cross-path denial, and private-preview posture. It then failed closed because the candidate-store manifest assigned the ABL process to the provider-reserved Sandbox API port 8080. Exact teardown is recorded in [`FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md`](../../../docs/evidence/FOUNDING-ALPHA-R01-09-FAILED-CLOSED.md). The local correction uses port 3000, semantic ACL equality, and the external resolver above; those changes are not authority to retry.
+The historical R01 attempts remain evidence, not active blockers. Their last run proved the PostgreSQL 17 gate and migration, all thirteen sequential image pushes, atomic Drive ACL creation, the candidate-intake mount, matching writes, cross-path denial, and private-preview posture before exposing the candidate-store port collision. The merged correction uses port 3000, semantic ACL equality, and the external resolver above.
 
-Before any future mutation, merge the correction, freeze source and image-context digests, record the generated launch-ledger digest, refresh the read-only provider preflight, and obtain a new authorization quoting those exact values and resource names. During an authorized run, create the Neon project first through the signed-in console with explicit PostgreSQL 17, `aws-us-east-1`, Free plan, and Neon Auth-off selections. Immediately read back the exact new project ID, name, version, region, plan, and empty user schema before pushing any image. The generic Neon project-creation connector is not valid for this step because it cannot select version or region. A mismatch requires exact project deletion and a failed-closed stop before the first image push. On success, failure, timeout, balance below USD 5, or cost drift, delete only the resources listed in `resource-plan.json`, permanently delete the exact new Neon project ID, destroy temporary secret material, and verify final inventories.
+The active completion contract is [`ABL-COMPLETION-01`](../../../docs/launch/ABL_COMPLETION_01.md). Ordinary corrections and retries remain inside that program. During the private run, create the Neon project first through the signed-in console with explicit PostgreSQL 17, `aws-us-east-1`, Free plan, and Neon Auth-off selections. Immediately read back the exact new project ID, name, version, region, plan, and empty user schema before pushing any image. The generic Neon project-creation connector is not valid for this step because it cannot select version or region. A mismatch requires exact project deletion and a stopped attempt before the first image push. On success, failure, timeout, balance below USD 5, or cost drift, delete only the temporary resources listed in `resource-plan.json`, permanently delete the exact temporary Neon project ID, destroy temporary secret material, and verify final inventories.

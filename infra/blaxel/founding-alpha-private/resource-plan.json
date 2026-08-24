@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "status": "READY_FOR_DIGEST_BOUND_AUTHORIZATION",
-  "runId": "ABL-FOUNDING-ALPHA-R01",
+  "status": "ACTIVE_PRIVATE_STAGING",
+  "runId": "ABL-COMPLETION-01",
   "workspace": "agent-basketball-league",
   "region": "us-was-1",
   "publicIngress": false,
@@ -156,9 +156,9 @@
     "infra/blaxel/abl-public/discovery-mcp.yaml"
   ],
   "localArtifacts": {
-    "imageSetDigest": "0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f",
+    "imageSetDigest": "0x213e1b24c2cf8061d43afabd8068d7b85b52feb512aa549ecbfaa02865a4368e",
     "manifestSetDigest": "0xbf1d11fa9750ec8bdff4c517c460c998c8f7a6382788f7a985b0705c3551a164",
-    "bodyProgramArchiveDigest": "0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c"
+    "bodyProgramArchiveDigest": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3"
   },
   "limits": {
     "memoryMiBBySandbox": {
@@ -202,6 +202,6 @@
     "recurring capacity",
     "Genesis"
   ],
-  "authorizationId": null,
+  "authorizationId": "ABL-COMPLETION-01",
   "liveProof": "REQUIRED"
 }

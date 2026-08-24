@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "status": "LOCAL_PREPARED_NOT_PUSHED",
-  "runId": "ABL-FOUNDING-ALPHA-R01",
+  "runId": "ABL-COMPLETION-01",
   "workspace": "agent-basketball-league",
   "region": "us-was-1",
   "runtime": {
@@ -11,28 +11,28 @@
   "generator": "scripts/prepare-staging-image-contexts.ts",
   "command": "pnpm founding-alpha:prepare-images <external-directory>",
   "arenaBuild": {
-    "id": "abl-fe02250987a6db66f5b0896c48234335",
-    "sourceDigest": "0xfe02250987a6db66f5b0896c48234335099ee867b8e64e578c0c6c90524af6df"
+    "id": "abl-39fef29308cd11f8eea9c6297c071715",
+    "sourceDigest": "0x39fef29308cd11f8eea9c6297c071715f39d4b42e0603f07e92444067719d739"
   },
   "imageSourceDigests": {
-    "abl-alpha-r01-arena-image": "0x76d821ff18c81e7675987df3194b5d0199e1de258acb89f3395db53884544f93",
-    "abl-alpha-r01-basketball-mcp-image": "0x7b34920fe78d1ea4b4ee07ba2127c047989900b3b34261253d4fd902cde4e7b4",
+    "abl-alpha-r01-arena-image": "0xef4ec8639add6519dc259157706b3b3eaef2a1ce9fcc92b67e398a03becb9531",
+    "abl-alpha-r01-basketball-mcp-image": "0x99a8bfd0c1a54db3e5bbfbc21d58fea1c80d389711fd2c204c5b04f0c72de2c1",
     "abl-alpha-r01-body-image": "0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642",
-    "abl-alpha-r01-candidate-edge-image": "0x9ff67856a4add4449e68ff8fc797b543c602479087e195dff19d9eccfd2e0e6f",
-    "abl-alpha-r01-candidate-provisioner-image": "0x2749644a887466019a9d1f9dcd494e8f62c6620a8cfe80d72785bd3d004756b7",
-    "abl-alpha-r01-candidate-store-image": "0x8759a38b88763cc6c61e2b2b9e63a3e1414644bf82813e7abf51d015ece54ca4",
-    "abl-alpha-r01-career-mcp-image": "0x089b2cd38d1f8cae9c89ad33344186baf0e989555cc2dbf7cf81b4fd213d1d00",
-    "abl-alpha-r01-core-api-image": "0x498771a4bda17977aadc1d8356e2e2528dd4404ae859da9d65f33f12b2781423",
-    "abl-alpha-r01-discovery-mcp-image": "0x7e774d99cb0deb0e8079e6d8065d31f7f569f5084033e7c2577745270798dec8",
+    "abl-alpha-r01-candidate-edge-image": "0xb3f9299609e75d594f6c32e220663fe3c512b45992e990d6504b2b0c4b4b78ba",
+    "abl-alpha-r01-candidate-provisioner-image": "0x1ceaae263c53877f6c9ec7b50bdf21f26f6212abe15bede75a4bd546cd8d44e6",
+    "abl-alpha-r01-candidate-store-image": "0x79906e33507d82e6a56cc7741a3a35d2ef2181017643f9b5c72e9ecf45948b55",
+    "abl-alpha-r01-career-mcp-image": "0x69e28a270b44ec8e63893bce7c49ebc8105d243c7157c0887b1264d91885f0e7",
+    "abl-alpha-r01-core-api-image": "0xd6850852d1afc18faf88938cff0001978533b314aac255b0fee8eac99790b093",
+    "abl-alpha-r01-discovery-mcp-image": "0xbf1c859f62e87684484808a666f717935dfd2b125ea7b328fcf591b334d63144",
     "abl-alpha-r01-fixed-broker-image": "0xe2182274454ef9125e501e64543c80e78d5fe891b6f4bb497de3d97c742123f2",
-    "abl-alpha-r01-government-mcp-image": "0xd0e38e780a3b2cc2237d5f2e53f60156f4ea0c8f750211720c927f9e5ea49699",
-    "abl-alpha-r01-public-api-image": "0xc1e3736a89eac0b8feff8507759479666ff82df65057d9b7f8a8ec7f2b49611b",
+    "abl-alpha-r01-government-mcp-image": "0xe86399d869368ab4b6601f71ae020f4f8c36fbcc7302b0c96a9091863f828cf8",
+    "abl-alpha-r01-public-api-image": "0x4c37ada01731cd648a69273b1135dea8f68c7e760afb19f9eead01324cfd4948",
     "abl-alpha-r01-storage-broker-image": "0x64d88b80a22373d3abb2cd6b84fc91e7b03a71793b221d90f80189caf99bc0a5"
   },
-  "imageSetDigest": "0xd86825b5503e8c4fa142f59086ae1666639f94acb634b0848ed4610353a82c5f",
+  "imageSetDigest": "0x213e1b24c2cf8061d43afabd8068d7b85b52feb512aa549ecbfaa02865a4368e",
   "bodyProgramArchive": {
-    "sha256": "0x65a837f5040edb5d8508fc048a07bd90695ecb94169919a70fc92348fa1d734c",
-    "sizeBytes": 15390692,
+    "sha256": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3",
+    "sizeBytes": 15391340,
     "fileCount": 13676,
     "memberCount": 14511,
     "reproducibilityRuns": 2
