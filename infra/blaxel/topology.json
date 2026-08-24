@@ -2,7 +2,22 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.0.0-pre-genesis",
   "region": "us-was-1",
-  "workspaces": [
+  "workspace": {
+    "name": "agent-basketball-league",
+    "displayName": "Agent Basketball League",
+    "responsibilities": [
+      "host persistent pre-Genesis workloads",
+      "provide private preview and service-token boundaries",
+      "host separately permissioned Agent Drives",
+      "bounded integration and release verification"
+    ],
+    "prohibitedAccess": [
+      "unscoped cross-service access",
+      "undeclared Agent Drive paths",
+      "public production ingress before approval"
+    ]
+  },
+  "trustDomains": [
     {
       "name": "abl-core",
       "displayName": "ABL Core",

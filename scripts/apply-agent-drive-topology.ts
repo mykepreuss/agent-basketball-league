@@ -25,6 +25,7 @@ const ConfigurationSchema = z.strictObject({
   status: z.enum([
     "APPROVED_ARCHITECTURE_NOT_PROVISIONED",
     "READY_FOR_DIGEST_BOUND_AUTHORIZATION",
+    "APPROVED_DEPLOYMENT_IN_PROGRESS",
   ]),
   drives: z.array(
     z.strictObject({
@@ -84,33 +85,42 @@ const source = ConfigurationSchema.parse(
 const drives = source.drives.filter(
   (candidate) => candidate.workspace === workspace,
 );
-if (drives.length !== 1)
-  throw new Error("Each durable workspace must define exactly one Agent Drive");
-const drivePolicy = drives[0]!;
+if (drives.length === 0)
+  throw new Error(
+    "The topology workspace must define at least one Agent Drive",
+  );
+const drivesByName = new Map(drives.map((drive) => [drive.name, drive]));
+if (drivesByName.size !== drives.length)
+  throw new Error("Agent Drive names must be unique within the workspace");
 for (const mount of source.mounts.filter(
   (candidate) => candidate.workspace === workspace,
 )) {
-  if (mount.drive !== drivePolicy.name)
-    throw new Error("A mount crossed its workspace Agent Drive boundary");
+  if (!drivesByName.has(mount.drive))
+    throw new Error(`Mount references undeclared Agent Drive ${mount.drive}`);
 }
 
-const drive = await DriveInstance.createIfNotExists({
-  name: drivePolicy.name,
-  displayName: `ABL ${workspace} durable state`,
-  region: drivePolicy.region,
-  labels: {
-    "abl-storage-role": "agent-drive",
-    "abl-authority-workspace": workspace,
-  },
-  permissions: drivePolicy.permissions,
-});
-if (
-  drive.name !== drivePolicy.name ||
-  drive.region !== drivePolicy.region ||
-  drive.metadata.workspace !== workspace ||
-  !isDeepStrictEqual(drive.permissions, drivePolicy.permissions)
-)
-  throw new Error("Existing Agent Drive configuration drifted");
+const provisionedDrives: Array<{ name: string; region: string }> = [];
+for (const drivePolicy of drives) {
+  const drive = await DriveInstance.createIfNotExists({
+    name: drivePolicy.name,
+    displayName: `ABL ${drivePolicy.name} durable state`,
+    region: drivePolicy.region,
+    labels: {
+      "abl-storage-role": "agent-drive",
+      "abl-authority-workspace": workspace,
+      "abl-drive-name": drivePolicy.name,
+    },
+    permissions: drivePolicy.permissions,
+  });
+  if (
+    drive.name !== drivePolicy.name ||
+    drive.region !== drivePolicy.region ||
+    drive.metadata.workspace !== workspace ||
+    !isDeepStrictEqual(drive.permissions, drivePolicy.permissions)
+  )
+    throw new Error(`Existing Agent Drive drifted: ${drivePolicy.name}`);
+  provisionedDrives.push({ name: drive.name, region: drive.region });
+}
 
 const mounted: Array<{
   resource: string;
@@ -121,6 +131,7 @@ const mounted: Array<{
 for (const policy of source.mounts.filter(
   (candidate) => candidate.workspace === workspace,
 )) {
+  const drivePolicy = drivesByName.get(policy.drive)!;
   const sandbox = await SandboxInstance.get(policy.resource);
   if (sandbox.metadata.workspace !== workspace)
     throw new Error(`Sandbox ${policy.resource} is in another workspace`);
@@ -165,8 +176,7 @@ process.stdout.write(
   `${JSON.stringify({
     authorizationId,
     workspace,
-    drive: drive.name,
-    region: drive.region,
+    drives: provisionedDrives,
     mounted,
     careerBodyMounts: 0,
   })}\n`,

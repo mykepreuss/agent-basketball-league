@@ -2,13 +2,16 @@ import { z } from "zod";
 
 export * from "./service-auth.js";
 
-export const WorkspaceNameSchema = z.enum([
-  "agent-basketball-league",
+export const WorkspaceNameSchema = z.literal("agent-basketball-league");
+export type WorkspaceName = z.infer<typeof WorkspaceNameSchema>;
+
+export const TrustDomainNameSchema = z.enum([
   "abl-core",
   "abl-private",
   "abl-public",
+  "agent-basketball-league",
 ]);
-export type WorkspaceName = z.infer<typeof WorkspaceNameSchema>;
+export type TrustDomainName = z.infer<typeof TrustDomainNameSchema>;
 
 const ExternalNameSchema = z.enum([
   "base",
@@ -23,22 +26,30 @@ const WorkspaceSpecSchema = z.strictObject({
   prohibitedAccess: z.array(z.string().min(1)).min(1),
 });
 
+const TrustDomainSpecSchema = z.strictObject({
+  name: TrustDomainNameSchema,
+  displayName: z.string().min(1),
+  responsibilities: z.array(z.string().min(1)).min(1),
+  prohibitedAccess: z.array(z.string().min(1)).min(1),
+});
+
 const AllowedCallSchema = z.strictObject({
-  from: WorkspaceNameSchema,
-  to: z.union([WorkspaceNameSchema, ExternalNameSchema]),
+  from: TrustDomainNameSchema,
+  to: z.union([TrustDomainNameSchema, ExternalNameSchema]),
   capabilities: z.array(z.string().min(1)).min(1),
 });
 
 const ForbiddenCallSchema = z.strictObject({
-  from: WorkspaceNameSchema,
-  to: z.union([WorkspaceNameSchema, ExternalNameSchema]),
+  from: TrustDomainNameSchema,
+  to: z.union([TrustDomainNameSchema, ExternalNameSchema]),
 });
 
 export const TopologySchema = z.strictObject({
   $schema: z.literal("https://json-schema.org/draft/2020-12/schema"),
   version: z.string().min(1),
   region: z.literal("us-was-1"),
-  workspaces: z.array(WorkspaceSpecSchema).length(4),
+  workspace: WorkspaceSpecSchema,
+  trustDomains: z.array(TrustDomainSpecSchema).length(4),
   allowedCalls: z.array(AllowedCallSchema),
   explicitlyForbiddenCalls: z.array(ForbiddenCallSchema),
 });
@@ -47,9 +58,9 @@ export type Topology = z.infer<typeof TopologySchema>;
 
 export function validateTopology(input: unknown): Topology {
   const topology = TopologySchema.parse(input);
-  const names = new Set(topology.workspaces.map((workspace) => workspace.name));
+  const names = new Set(topology.trustDomains.map((domain) => domain.name));
   if (names.size !== 4)
-    throw new Error("Topology must contain four distinct workspaces");
+    throw new Error("Topology must contain four distinct trust domains");
 
   const allowed = new Set(
     topology.allowedCalls.map((edge) => `${edge.from}->${edge.to}`),

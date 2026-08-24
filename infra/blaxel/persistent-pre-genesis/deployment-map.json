@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "programId": "ABL-COMPLETION-01",
   "stage": "READ_ONLY_BEACON_PRIVATE_SOAK",
-  "status": "LOCAL_VALIDATED_RECURRING_CAPACITY_APPROVAL_REQUIRED",
+  "status": "APPROVED_DEPLOYMENT_IN_PROGRESS",
   "region": "us-was-1",
   "publicExposure": "NONE",
   "recursiveDirectoryApplyAllowed": false,
   "workloads": [
     {
       "ordinal": 1,
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-private-storage-broker",
       "manifest": "infra/blaxel/abl-private/storage-broker.yaml",
@@ -21,7 +21,7 @@
     },
     {
       "ordinal": 2,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-core-api",
       "manifest": "infra/blaxel/abl-core/core-api.yaml",
@@ -33,7 +33,7 @@
     },
     {
       "ordinal": 3,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-safety-gateway",
       "manifest": "infra/blaxel/abl-core/safety-gateway.yaml",
@@ -45,7 +45,7 @@
     },
     {
       "ordinal": 4,
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-public-api",
       "manifest": "infra/blaxel/abl-public/public-api.yaml",
@@ -57,7 +57,7 @@
     },
     {
       "ordinal": 5,
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-spectator-arena",
       "manifest": "infra/blaxel/abl-public/arena.yaml",
@@ -69,7 +69,7 @@
     },
     {
       "ordinal": 6,
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-candidate-store",
       "manifest": "infra/blaxel/persistent-pre-genesis/manifests/candidate-store.yaml",
@@ -81,7 +81,7 @@
     },
     {
       "ordinal": 7,
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "kind": "Sandbox",
       "name": "abl-candidate-edge",
       "manifest": "infra/blaxel/abl-public/candidate-edge.yaml",
@@ -93,7 +93,7 @@
     },
     {
       "ordinal": 8,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Function",
       "name": "abl-basketball-mcp",
       "manifest": "infra/blaxel/abl-competition/basketball-mcp.yaml",
@@ -105,7 +105,7 @@
     },
     {
       "ordinal": 9,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Function",
       "name": "abl-career-mcp",
       "manifest": "infra/blaxel/abl-core/career-mcp.yaml",
@@ -117,7 +117,7 @@
     },
     {
       "ordinal": 10,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Function",
       "name": "abl-government-mcp",
       "manifest": "infra/blaxel/abl-core/government-mcp.yaml",
@@ -129,7 +129,7 @@
     },
     {
       "ordinal": 11,
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "kind": "Function",
       "name": "abl-discovery-mcp",
       "manifest": "infra/blaxel/persistent-pre-genesis/manifests/discovery-mcp.yaml",
@@ -141,7 +141,7 @@
     },
     {
       "ordinal": 12,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Job",
       "name": "abl-candidate-provisioner",
       "manifest": "infra/blaxel/persistent-pre-genesis/manifests/candidate-provisioner.yaml",
@@ -153,7 +153,7 @@
     },
     {
       "ordinal": 13,
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "kind": "Job",
       "name": "abl-recovery-verifier",
       "manifest": "infra/blaxel/abl-core/recovery-job.yaml",

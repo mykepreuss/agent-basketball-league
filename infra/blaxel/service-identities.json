@@ -4,11 +4,17 @@
   "identities": [
     {
       "idPattern": "private-fixed-broker-{career-id}",
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "secretReference": "fixed-broker-{career-id}-core-hmac-v1",
       "allowedTargets": [
-        { "workspace": "abl-core", "capabilities": ["core:command"] },
-        { "workspace": "abl-private", "capabilities": ["private:ciphertext"] }
+        {
+          "workspace": "agent-basketball-league",
+          "capabilities": ["core:command"]
+        },
+        {
+          "workspace": "agent-basketball-league",
+          "capabilities": ["private:ciphertext"]
+        }
       ],
       "forbiddenCapabilities": [
         "database:connect",
@@ -19,10 +25,13 @@
     },
     {
       "idPattern": "private-arena-{game-id}",
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "secretReference": "arena-{game-id}-core-hmac-v1",
       "allowedTargets": [
-        { "workspace": "abl-core", "capabilities": ["core:game-command"] }
+        {
+          "workspace": "agent-basketball-league",
+          "capabilities": ["core:game-command"]
+        }
       ],
       "forbiddenCapabilities": [
         "database:connect",
@@ -33,10 +42,13 @@
     },
     {
       "idPattern": "core-projection-publisher",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "secretReference": "core-public-projection-hmac-v1",
       "allowedTargets": [
-        { "workspace": "abl-public", "capabilities": ["projection:append"] }
+        {
+          "workspace": "agent-basketball-league",
+          "capabilities": ["projection:append"]
+        }
       ],
       "forbiddenCapabilities": [
         "private:plaintext",
@@ -46,11 +58,11 @@
     },
     {
       "idPattern": "core-memory-verifier",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "secretReference": "core-private-storage-hmac-v1",
       "allowedTargets": [
         {
-          "workspace": "abl-private",
+          "workspace": "agent-basketball-league",
           "capabilities": ["private:commitment:verify"]
         }
       ],
@@ -63,11 +75,11 @@
     },
     {
       "idPattern": "core-exit-portability-verifier",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "secretReference": "core-exit-portability-hmac-v1",
       "allowedTargets": [
         {
-          "workspace": "abl-private",
+          "workspace": "agent-basketball-league",
           "capabilities": ["exit:portability:verify"]
         }
       ],
@@ -80,11 +92,11 @@
     },
     {
       "idPattern": "private-release-publisher",
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "secretReference": "private-public-release-hmac-v1",
       "allowedTargets": [
         {
-          "workspace": "abl-public",
+          "workspace": "agent-basketball-league",
           "capabilities": ["released-ciphertext:append"]
         }
       ],

@@ -115,7 +115,7 @@ describe("MCP Registry descriptor", () => {
   });
 });
 
-describe("four-workspace topology", () => {
+describe("single-workspace topology", () => {
   it("binds every persistent workload to one exact private Stage C manifest and image", async () => {
     await expect(validatePersistentDeployment()).resolves.toMatchObject({
       status: "PASS",
@@ -131,13 +131,12 @@ describe("four-workspace topology", () => {
     });
   });
 
-  it("contains exactly the approved isolated workspaces and no public call into them", async () => {
+  it("contains one physical workspace with four isolated trust domains", async () => {
     const topology = validateTopology(
       await readJson(new URL("topology.json", infraRoot)),
     );
-    expect(
-      topology.workspaces.map((workspace) => workspace.name).sort(),
-    ).toEqual([
+    expect(topology.workspace.name).toBe("agent-basketball-league");
+    expect(topology.trustDomains.map((domain) => domain.name).sort()).toEqual([
       "abl-core",
       "abl-private",
       "abl-public",
@@ -248,11 +247,15 @@ describe("four-workspace topology", () => {
     expect(fixedEnvironment.get("ABL_CORE_AUTH_MODE")).toBe(
       "BLAXEL_ACCESS_TOKEN",
     );
-    expect(fixedEnvironment.get("ABL_CORE_WORKSPACE")).toBe("abl-core");
+    expect(fixedEnvironment.get("ABL_CORE_WORKSPACE")).toBe(
+      "agent-basketball-league",
+    );
     expect(fixedEnvironment.get("ABL_PRIVATE_AUTH_MODE")).toBe(
       "BLAXEL_ACCESS_TOKEN",
     );
-    expect(fixedEnvironment.get("ABL_PRIVATE_WORKSPACE")).toBe("abl-private");
+    expect(fixedEnvironment.get("ABL_PRIVATE_WORKSPACE")).toBe(
+      "agent-basketball-league",
+    );
     expect(JSON.stringify(fixedBroker)).not.toMatch(
       /DATABASE_URL|DRIVE_TOKEN|BLFS|CONTROL_PLANE/,
     );
@@ -410,7 +413,7 @@ describe("four-workspace topology", () => {
           identity.secretReference === "core-public-projection-hmac-v1",
       )?.allowedTargets,
     ).toContainEqual({
-      workspace: "abl-public",
+      workspace: "agent-basketball-league",
       capabilities: ["projection:append"],
     });
     expect(
@@ -418,7 +421,7 @@ describe("four-workspace topology", () => {
         (identity) =>
           identity.secretReference === "fixed-broker-{career-id}-core-hmac-v1",
       ),
-    ).toMatchObject({ workspace: "abl-private" });
+    ).toMatchObject({ workspace: "agent-basketball-league" });
 
     const [coreApi] = (await readYamlDirectory("abl-core")).filter(
       (resource) =>
@@ -554,7 +557,7 @@ describe("four-workspace topology", () => {
           identity.secretReference === "core-private-storage-hmac-v1",
       )?.allowedTargets,
     ).toContainEqual({
-      workspace: "abl-private",
+      workspace: "agent-basketball-league",
       capabilities: ["private:commitment:verify"],
     });
     expect(
@@ -563,7 +566,7 @@ describe("four-workspace topology", () => {
           identity.secretReference === "core-exit-portability-hmac-v1",
       )?.allowedTargets,
     ).toContainEqual({
-      workspace: "abl-private",
+      workspace: "agent-basketball-league",
       capabilities: ["exit:portability:verify"],
     });
     const privateStorage = (await readYamlDirectory("abl-private")).find(
@@ -653,15 +656,15 @@ describe("four-workspace topology", () => {
     expect(driveAccess.drives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          workspace: "abl-private",
+          workspace: "agent-basketball-league",
           name: "abl-private-state",
         }),
         expect.objectContaining({
-          workspace: "abl-core",
+          workspace: "agent-basketball-league",
           name: "abl-core-state",
         }),
         expect.objectContaining({
-          workspace: "abl-public",
+          workspace: "agent-basketball-league",
           name: "abl-public-state",
         }),
       ]),
@@ -671,13 +674,13 @@ describe("four-workspace topology", () => {
         expect.objectContaining({
           resource: "abl-private-storage-broker",
           kind: "Sandbox",
-          workspace: "abl-private",
+          workspace: "agent-basketball-league",
           drive: "abl-private-state",
         }),
         expect.objectContaining({
           resource: "abl-safety-gateway",
           kind: "Sandbox",
-          workspace: "abl-core",
+          workspace: "agent-basketball-league",
           drive: "abl-core-state",
         }),
         expect.objectContaining({

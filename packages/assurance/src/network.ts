@@ -151,7 +151,10 @@ export interface WorkspaceTopologyShape {
     capabilities: readonly string[];
   }[];
   explicitlyForbiddenCalls: readonly { from: string; to: string }[];
-  workspaces: readonly { name: string; prohibitedAccess: readonly string[] }[];
+  trustDomains: readonly {
+    name: string;
+    prohibitedAccess: readonly string[];
+  }[];
 }
 
 export function provePublicCompromiseContainment(
@@ -168,10 +171,10 @@ export function provePublicCompromiseContainment(
   const forbidden = new Set(
     topology.explicitlyForbiddenCalls.map((edge) => `${edge.from}:${edge.to}`),
   );
-  const publicWorkspace = topology.workspaces.find(
-    (workspace) => workspace.name === "abl-public",
+  const publicDomain = topology.trustDomains.find(
+    (domain) => domain.name === "abl-public",
   );
-  const prohibited = new Set(publicWorkspace?.prohibitedAccess ?? []);
+  const prohibited = new Set(publicDomain?.prohibitedAccess ?? []);
   const result = {
     onlyCheckpointReadOutbound:
       publicOutbound.length === 1 &&

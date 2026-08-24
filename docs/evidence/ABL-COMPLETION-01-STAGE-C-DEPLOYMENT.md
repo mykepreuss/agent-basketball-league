@@ -1,23 +1,20 @@
 # ABL-COMPLETION-01 Stage C executable deployment packet
 
-Status: `LOCAL_DEPLOYMENT_PACKET_PASS_PROVIDER_MUTATION_NOT_AUTHORIZED`
+Status: `APPROVED_SINGLE_WORKSPACE_DEPLOYMENT_IN_PROGRESS`
 
-Recorded: `2026-08-24T21:24:31Z`
+Recorded: `2026-08-24T22:11:26Z`
 
-Baseline commit: `abc66700bb51d367a7a2d45454fb3637304ba4f4`
+Source baseline commit: `656cc2742485f92a83d6755963c2c3daa6d14f47`
 
-Authority boundary: this is local deployment-readiness evidence. It did not push an image or create, modify, or delete any Blaxel, Neon, billing, credential, or application resource. It does not authorize recurring capacity or public exposure.
+Authority boundary: `ABL-COMPLETION-01` authorizes this persistent private deployment within the USD 25 monthly ceiling. It authorizes no public exposure, model call, recognition broadcast, canonical-history claim, founding-agent decision, recovery-control removal, or Genesis.
 
 ## Result
 
-Stage C now has one exact, machine-validated deployment map for all 13 persistent workloads. The map assigns each workload to one of `abl-private`, `abl-core`, and `abl-public`; binds one reviewed manifest, image name, packaging context, image-digest variable, process kind, and memory limit; explicitly keeps every endpoint private; and rejects recursive manifest application, example/model manifests, mutable image tags, and premature career-body resources.
+Stage C has one exact, machine-validated deployment map for all 13 persistent workloads in the existing `agent-basketball-league` Blaxel workspace. The map binds one reviewed manifest, image name, packaging context, image-digest variable, process kind, memory limit, and private endpoint policy to every workload. It rejects recursive manifest application, example/model manifests, mutable image tags, and premature career-body resources.
 
-The production packet now includes the two previously undeployable components:
+The single physical workspace does not collapse the logical privacy model. The private, core, and public-surface trust domains retain distinct resource names, scoped service credentials, token-protected private previews, PostgreSQL roles, and Agent Drive label/path permissions. Three separately permissioned Drives isolate candidate/private, core safety, and public projection state. Career bodies still receive no Drive mount or raw infrastructure credential.
 
-- a packaged safety-gateway Sandbox; and
-- a packaged `abl-recovery-verifier` Job in `abl-core`.
-
-The recovery verifier compares a provider-created clean-room PostgreSQL 17 restore with its source using deterministic roots for all table rows plus public columns, constraints, indexes, and sequences. It requires distinct direct TLS database targets, rejects pooler endpoints, expects the reviewed 23-table schema, and emits only counts and digests.
+The persistent Neon PostgreSQL 17 project `shy-pine-00200479` was created in `aws-us-east-1`, migrated to the reviewed 23-table schema, and assigned least-privilege runtime, recovery, and monitoring roles. No Blaxel image, workload, preview, or Drive has been created for Stage C yet.
 
 ## Exact deployment result
 
@@ -30,37 +27,28 @@ The exact Node 24.18.0 validator reported:
   "privateEndpointCount": 11,
   "imageCount": 13,
   "memoryMiB": { "sandboxes": 21504, "functions": 8192, "jobs": 6144 },
-  "deploymentDigest": "0x65c4d2076fefe5c98449f78827b438a0647ce01c24ade423ef2b497eba310ea8"
+  "deploymentDigest": "0x83e31e5e0696adc50034c978bf42b5e8887bb3bb0cb00d8fda91e992c5bf23c5"
 }
 ```
 
-The canonical map is [`deployment-map.json`](../../infra/blaxel/persistent-pre-genesis/deployment-map.json). Its file SHA-256 is `0xa78d14c75f6a2a8cbae03955049654e9dd39e3fb18448dcb170420ce307a4c6e`.
+The canonical map is [`deployment-map.json`](../../infra/blaxel/persistent-pre-genesis/deployment-map.json). Its file SHA-256 is `0x8ac53025986843fd2c049965b56c8c27cf84cc1c7b74a3601652c0132167cb30`.
 
 ## Reproducible image contexts
 
-Two clean, isolated packaging runs under exact Node 24.18.0 produced the same 13 per-image source digests and the same aggregate image-set digest:
+Two clean, isolated packaging runs under exact Node 24.18.0 produced the same 13 per-image source digests and aggregate image-set digest:
 
-- arena build-source digest: `0xb54bdb9ddb334c52562ad77309b4745d70a2c72541bbb739977052fd4bbefd2d`;
-- image-set digest: `0x29632d1c3c6dc4bcee5f599b48b324321652ca5cf9052870436e323e179c9a54`; and
+- arena build-source digest: `0xe3a16c5c771500b999f9a1fa10d3ae60e0241807c794d5ea9e582ff656b7d01b`;
+- image-set digest: `0x8a72f1a1c20218ddcd49bd88fddc7995d140536b821fd75bd042fa7a6aa24789`; and
 - candidate-specific career-body and fixed-broker images: absent, as required for the persistent base deployment.
 
 The complete per-image digest record is in [`ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.json`](./ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.json).
 
-## Corrections made
+## Next Stage C actions
 
-- Replaced the ambiguous recursive `bl apply` guidance with an exact ordered deployment map.
-- Added Stage C-specific private discovery, candidate-store, and cross-workspace candidate-provisioner manifests without changing the accepted historical Stage B manifest set.
-- Packaged every declared workload, including the safety gateway and recovery verifier.
-- Moved the recovery Job to its declared `abl-core` workspace and supplied its executable implementation.
-- Bound topology tests, persistent-soak tests, resource accounting, and the launch ledger to the same deployment map.
-- Ran the code-simplifier review over changed production code; it reduced the image-prefix selection without changing behavior.
-
-## Remaining Stage C actions
-
-1. Receive explicit recurring-capacity approval for the three persistent workspaces and the USD 25/month ceiling.
-2. Refresh the expired Blaxel CLI login interactively and repeat the immediate no-drift preflight.
-3. Create the persistent PostgreSQL 17 project, push these 13 images sequentially, and deploy only the mapped private resources.
+1. Merge the reviewed single-workspace correction.
+2. Push the 13 exact reviewed image contexts sequentially and record their immutable provider revisions.
+3. Install scoped Blaxel secrets, create the three separately permissioned Agent Drives, and deploy only the mapped private resources.
 4. Exercise credential rotation and a provider-created clean-room restore.
 5. Complete one continuous 24-hour private soak and record measured cost, health, restart, recovery, and replay-root evidence.
 
-These are the same fixed Stage C acceptance criteria; an ordinary correction or retry does not create a new launch program or invalidate completed Stage B evidence.
+These are the fixed Stage C acceptance criteria. An ordinary correction or retry remains inside `ABL-COMPLETION-01` and does not invalidate completed Stage B evidence.

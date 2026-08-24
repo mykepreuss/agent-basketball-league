@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "status": "APPROVED_ARCHITECTURE_NOT_PROVISIONED",
-  "reason": "Agent Drive is workspace-scoped; core safety evidence and public noncanonical data cannot mount the private career-data Drive.",
+  "status": "APPROVED_DEPLOYMENT_IN_PROGRESS",
+  "reason": "The single physical workspace retains separate Drives and label/path permissions so each Sandbox mounts only its declared trust-domain data.",
   "drives": [
     {
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "name": "abl-private-state",
       "region": "us-was-1",
       "permissions": [
@@ -16,7 +16,7 @@
       ]
     },
     {
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "name": "abl-core-state",
       "region": "us-was-1",
       "permissions": [
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "name": "abl-public-state",
       "region": "us-was-1",
       "permissions": [
@@ -49,7 +49,7 @@
     {
       "resource": "abl-private-storage-broker",
       "kind": "Sandbox",
-      "workspace": "abl-private",
+      "workspace": "agent-basketball-league",
       "drive": "abl-private-state",
       "drivePath": "/ciphertext",
       "mountPath": "/mnt/abl-ciphertext",
@@ -58,7 +58,7 @@
     {
       "resource": "abl-safety-gateway",
       "kind": "Sandbox",
-      "workspace": "abl-core",
+      "workspace": "agent-basketball-league",
       "drive": "abl-core-state",
       "drivePath": "/safety",
       "mountPath": "/mnt/abl-safety",
@@ -67,7 +67,7 @@
     {
       "resource": "abl-public-api",
       "kind": "Sandbox",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "drive": "abl-public-state",
       "drivePath": "/projections",
       "mountPath": "/mnt/abl-public-projections",
@@ -76,7 +76,7 @@
     {
       "resource": "abl-candidate-store",
       "kind": "Sandbox",
-      "workspace": "abl-public",
+      "workspace": "agent-basketball-league",
       "drive": "abl-public-state",
       "drivePath": "/candidate-intake",
       "mountPath": "/mnt/abl-candidate-intake",

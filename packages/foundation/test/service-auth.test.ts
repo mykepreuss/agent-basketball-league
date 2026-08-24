@@ -24,7 +24,7 @@ const input = {
   capability: "core:command",
 };
 
-describe("cross-workspace service authentication", () => {
+describe("cross-domain service authentication", () => {
   it("binds identity, capability, route, body, nonce, time, and expected version", () => {
     const headers = signServiceRequest(identity, input);
     const verifier = new ServiceRequestVerifier([identity], { now: () => now });

@@ -1,32 +1,33 @@
 # ABL-COMPLETION-01 Stage C local readiness
 
-Status: `PASS_LOCAL_RECURRING_CAPACITY_APPROVAL_REQUIRED`
+Status: `PASS_LOCAL_DEPLOYMENT_IN_PROGRESS`
 
-Recorded: `2026-08-24T20:44:52Z`
+Recorded: `2026-08-24T22:11:26Z`
 
-Baseline: `75eed725cc44e7e41632607f3c530c49eb746084`
+Source baseline: `656cc2742485f92a83d6755963c2c3daa6d14f47`
 
-Authority boundary: this evidence records local preparation only. It does not authorize provider mutation, recurring capacity, public exposure, model calls, recognition broadcast, canonical-history claims, or Genesis.
+Authority boundary: `ABL-COMPLETION-01` authorizes persistent private capacity within the approved USD 25 monthly ceiling. This evidence does not authorize public exposure, model calls, recognition broadcast, canonical-history claims, recovery-control removal, founding-agent decisions, or Genesis.
 
 ## Result
 
-The persistent Stage C implementation is locally ready. The fixed topology uses the existing `agent-basketball-league` workspace for integration and release verification, plus approval-gated `abl-private`, `abl-core`, and `abl-public` workspaces. It declares seven Sandboxes, four private MCP Functions, two Jobs, three Agent Drives, eleven token-protected private previews, and one PostgreSQL 17 project. It declares zero Blaxel Agent, Application, Volume, or public-preview resources.
+The persistent Stage C implementation is locally ready for deployment into the existing `agent-basketball-league` Blaxel workspace. Private, core, and public-surface authority remains separated with scoped service identities, secrets, token-protected previews, PostgreSQL roles, and three separately permissioned Agent Drives. The plan declares seven Sandboxes, four private MCP Functions, two Jobs, three Agent Drives, eleven token-protected private previews, and zero Blaxel Agent, Application, Volume, model, or public-preview resources.
 
-The [persistent-services runbook](../launch/STAGE_C_PERSISTENT_SERVICES.md), [resource plan](../../infra/blaxel/persistent-pre-genesis/resource-plan.json), [monitoring policy](../../infra/blaxel/persistent-pre-genesis/monitoring-policy.json), [rollback runbook](../../infra/blaxel/persistent-pre-genesis/ROLLBACK.md), and machine-evaluated soak contract are the sole Stage C execution and acceptance definition.
+The persistent Neon PostgreSQL 17 project `shy-pine-00200479` exists in `aws-us-east-1`, has Neon Auth disabled, and contains the reviewed 23-table migration. Its runtime, recovery, and monitoring roles are separated by least privilege.
+
+The [persistent-services runbook](../launch/STAGE_C_PERSISTENT_SERVICES.md), [resource plan](../../infra/blaxel/persistent-pre-genesis/resource-plan.json), [deployment map](../../infra/blaxel/persistent-pre-genesis/deployment-map.json), [monitoring policy](../../infra/blaxel/persistent-pre-genesis/monitoring-policy.json), [rollback runbook](../../infra/blaxel/persistent-pre-genesis/ROLLBACK.md), and machine-evaluated soak contract are the sole Stage C execution and acceptance definition.
 
 ## Verification
 
 - Node `24.18.0` and pnpm `11.21.0`.
-- 381 assertions passed across 80 test files.
-- 113 uncached check, test, and build tasks passed.
+- 386 assertions passed across 81 test files.
+- 116 uncached check, test, and build tasks passed.
 - Formatting, tooling type-check, repository type-check, production build, browser, loopback load, acceptance/replay/recovery, and adversarial-security suites passed.
-- Stable result digest: `0x4b320d269586587eac3328963a6946ba088b6768432860924f63e245a8dbc123`.
-- Two independent clean-room packaging runs were byte-identical.
-- Image-set digest: `0x8f7bcb239c1f5e0c94df902420c5405309f6e78dffc5545efdd52673d61fa148`.
-- Body image source digest remained `0x93a1d11f9fce721487eed3a5b2ef2bb9109d3f8287b9c4a5819bd7e23ebbf642`.
-- Body program archive remained `0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3`.
-- The required code-simplifier review passed without a behavior change or an additional structural refactor.
+- Stable result digest: `0x6193cb6e6d19da2601ac78289d1403c988b781a19f9c67a5c918cc9d03a267d1`.
+- Two independent clean-room packaging runs reproduced all 13 image-source digests and the aggregate image-set digest.
+- Image-set digest: `0x8a72f1a1c20218ddcd49bd88fddc7995d140536b821fd75bd042fa7a6aa24789`.
+- Arena build-source digest: `0xe3a16c5c771500b999f9a1fa10d3ae60e0241807c794d5ea9e582ff656b7d01b`.
+- The code-simplifier review found no further behavior-preserving structural simplification was warranted.
 
-## Next gate
+## Next action
 
-Stage C now needs one approval for the persistent private deployment and its recurring-capacity ceiling. Immediately before mutation, execution must perform a fresh read-only provider preflight and stop on relevant cost, quota, region, feature, privacy, inventory, payment, or source drift. After deployment, one continuous 24-hour private soak must pass the checked-in deterministic policy. A failed criterion is corrected inside `ABL-COMPLETION-01`; it does not create a new numbered authorization series or reopen accepted `PRIVATE_STAGING` evidence.
+Merge this single-workspace correction, push the 13 reviewed image contexts sequentially, deploy only the private resources in the canonical map, install scoped secrets and Drive mounts, and start the deterministic 24-hour private soak. Ordinary deployment corrections and retries remain inside `ABL-COMPLETION-01`; they do not create another numbered authorization or reopen accepted `PRIVATE_STAGING` evidence.

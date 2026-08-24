@@ -170,7 +170,7 @@ export function assessGenesisReadiness(input: {
     blockers.push("exact ownerless deployment transaction unavailable");
   if (!cost.ready) blockers.push("funding and 30-day reserve unverified");
   blockers.push(
-    "four Blaxel workspaces and Agent Drive unavailable",
+    "persistent Blaxel workspace and Agent Drive topology unavailable",
     "live adversarial/capacity/recovery proofs incomplete",
     "explicit human approval for irreversible/public/spend actions absent",
   );
