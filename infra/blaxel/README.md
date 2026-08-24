@@ -66,13 +66,11 @@ The safety ledger is the durable scheduler/runtime control registry and restart-
 
 The reviewed body image is a repository-root Blaxel image project (`blaxel.toml`, `Dockerfile`, and `.blaxelignore`). The Dockerfile is the portable image recipe Blaxel's remote builder consumes; ABL does not need Docker as a runtime layer or a local Docker daemon. From the repository root, validate the package without mutation using `bl deploy --dryrun --type sandbox`; for Founding Alpha, use `bl push -w agent-basketball-league --type sandbox --yes` to build it in Blaxel without creating a Sandbox. Record the returned immutable image ID before applying any competition manifest. The inactive advanced containment inputs are not copied into this image.
 
-Expected safe staging flow after access is granted:
+Expected safe persistent deployment flow after approval is granted:
 
 ```sh
-bl apply -w abl-core -f infra/blaxel/abl-core -R -e staging.env
-bl apply -w abl-private -f infra/blaxel/abl-private -R -e staging.env
-bl apply -w abl-private -f infra/blaxel/abl-competition -R -e staging.env
-bl apply -w abl-public -f infra/blaxel/abl-public -R -e staging.env
+pnpm stage-c:validate-deployment
+pnpm stage-c:prepare-images <external-directory>
 ```
 
-The environment file must not enter Git. Never pass secrets directly on a command line because process listings and shell history may expose them.
+The exact ordered workspace, manifest, image, and memory mapping is [`persistent-pre-genesis/deployment-map.json`](./persistent-pre-genesis/deployment-map.json). Apply only its individual manifest files to their declared workspaces. Recursive directory apply is prohibited because `abl-competition` also contains candidate-specific examples and inactive model manifests that are outside Stage C. The environment file must not enter Git. Never pass secrets directly on a command line because process listings and shell history may expose them.

@@ -1,0 +1,53 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: abl-candidate-store
+  labels:
+    abl-workspace-role: public-noncanonical-intake-store
+    abl-drive-role: candidate-intake-writer
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  runtime:
+    image: ${ABL_CANDIDATE_STORE_IMAGE_DIGEST}
+    memory: 2048
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
+    envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_CANDIDATE_EDGE_MODE
+        value: STORE
+        secret: false
+      - name: ABL_CANDIDATE_INTAKE_PATH
+        value: /mnt/abl-candidate-intake
+        secret: false
+      - name: ABL_CANDIDATE_CAPACITY_POLICY_JSON
+        value: ${ABL_CANDIDATE_CAPACITY_POLICY_JSON}
+        secret: false
+      - name: ABL_CANDIDATE_CHALLENGE_SECRET
+        value: ${ABL_CANDIDATE_CHALLENGE_SECRET}
+        secret: true
+      - name: ABL_CANDIDATE_PROVISIONER_TOKEN
+        value: ${ABL_CANDIDATE_PROVISIONER_TOKEN}
+        secret: true
+      - name: ABL_CANDIDATE_AUTHORITY_TOKEN
+        value: ${ABL_CANDIDATE_AUTHORITY_TOKEN}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

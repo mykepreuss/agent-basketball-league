@@ -30,6 +30,7 @@ import {
 import { renderFoundingAlphaManifests } from "../../../scripts/render-founding-alpha-manifests.js";
 import { resolveFoundingAlphaManifest } from "../../../scripts/resolve-founding-alpha-manifest.js";
 import { uploadSandboxFile } from "../../../scripts/upload-sandbox-file-multipart.js";
+import { validatePersistentDeployment } from "../../../scripts/validate-persistent-deployment.js";
 
 import {
   assertImmutableImageReference,
@@ -115,6 +116,21 @@ describe("MCP Registry descriptor", () => {
 });
 
 describe("four-workspace topology", () => {
+  it("binds every persistent workload to one exact private Stage C manifest and image", async () => {
+    await expect(validatePersistentDeployment()).resolves.toMatchObject({
+      status: "PASS",
+      workloadCount: 13,
+      privateEndpointCount: 11,
+      imageCount: 13,
+      memoryMiB: {
+        sandboxes: 21 * 1024,
+        functions: 8 * 1024,
+        jobs: 6 * 1024,
+      },
+      deploymentDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+    });
+  });
+
   it("contains exactly the approved isolated workspaces and no public call into them", async () => {
     const topology = validateTopology(
       await readJson(new URL("topology.json", infraRoot)),
