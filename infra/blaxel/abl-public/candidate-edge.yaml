@@ -1,5 +1,5 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Function
+kind: Sandbox
 metadata:
   name: abl-candidate-edge
   labels:
@@ -7,20 +7,21 @@ metadata:
     abl-release: ${ABL_RELEASE_ID}
 spec:
   enabled: true
-  public: true
   region: us-was-1
   runtime:
-    generation: mk3
     image: ${ABL_CANDIDATE_EDGE_IMAGE_DIGEST}
     memory: 2048
-    minScale: 0
-    maxScale: 10
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
     envs:
       - name: HOST
         value: "0.0.0.0"
         secret: false
       - name: PORT
-        value: "8080"
+        value: "3000"
         secret: false
       - name: ABL_CANDIDATE_EDGE_MODE
         value: GATEWAY

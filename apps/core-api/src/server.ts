@@ -37,6 +37,7 @@ import {
   installCandidateRehearsalRoutes,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
+import type { CareerOperationalVerifier } from "./candidate-authority.js";
 import {
   installCaseRehearsalRoutes,
   type CaseRehearsalOptions,
@@ -163,6 +164,7 @@ export interface LiveCoreApiOptions {
     CandidateRehearsalOptions,
     "challengeSecret" | "challengeId" | "challengeBytes"
   >;
+  careerOperationalVerifier?: CareerOperationalVerifier;
   artifacts?: Pick<
     ArtifactRehearsalOptions,
     "governance" | "approvedInstitutionIds"
@@ -436,7 +438,16 @@ export function createLiveCoreApi(
       }
       if (signer.toLowerCase() !== authority.signerAddress.toLowerCase())
         throw authorizationError("Signature is not registered to actor");
-      if (candidateAdmission !== undefined && exitRoutesEnabled) {
+      if (options.careerOperationalVerifier !== undefined) {
+        try {
+          await options.careerOperationalVerifier.assertOperational(
+            event.actorDid,
+            signer,
+          );
+        } catch {
+          throw authorizationError("Career is not operational");
+        }
+      } else if (candidateAdmission !== undefined && exitRoutesEnabled) {
         try {
           await requireCareerOperational(
             {

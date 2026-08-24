@@ -168,7 +168,7 @@ const CheckpointSignerRegistrySchema = z.array(
     purpose: z.literal("SIGNING"),
   }),
 );
-const CheckpointPoliciesSchema = z.record(
+const CheckpointPoliciesSchema = z.partialRecord(
   z.enum([
     "CONSTITUTION",
     "KEY_REGISTRY",

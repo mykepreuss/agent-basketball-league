@@ -15,12 +15,20 @@ spec:
     memory: 2048
     minScale: 0
     maxScale: 5
+    transport: http-stream
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 8080
     envs:
       - name: ABL_CORE_BASE_URL
         value: ${ABL_CORE_BASE_URL}
         secret: false
       - name: ABL_CORE_SERVICE_CREDENTIAL
         value: ${ABL_GOVERNMENT_CORE_CREDENTIAL}
+        secret: true
+      - name: ABL_CORE_PREVIEW_TOKEN
+        value: ${ABL_CORE_PREVIEW_TOKEN}
         secret: true
       - name: DO_NOT_TRACK
         value: "1"

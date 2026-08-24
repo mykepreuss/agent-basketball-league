@@ -36,6 +36,7 @@ import {
 } from "./governance.js";
 import { ContractClubGovernorsSchema } from "./contracts.js";
 import { createCoreApi, createLiveCoreApi } from "./server.js";
+import { HttpCandidateOperationalVerifier } from "./candidate-authority.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -414,6 +415,16 @@ const app =
             : { genesisStartupEvidence }),
           store,
           ...authority,
+          careerOperationalVerifier: new HttpCandidateOperationalVerifier({
+            origin: required("ABL_CANDIDATE_AUTHORITY_URL"),
+            authorityToken: required("ABL_CANDIDATE_AUTHORITY_TOKEN"),
+            ...(process.env.ABL_CANDIDATE_AUTHORITY_PREVIEW_TOKEN === undefined
+              ? {}
+              : {
+                  previewToken:
+                    process.env.ABL_CANDIDATE_AUTHORITY_PREVIEW_TOKEN,
+                }),
+          }),
           competitionId,
           seasonId,
           candidateAdmission,

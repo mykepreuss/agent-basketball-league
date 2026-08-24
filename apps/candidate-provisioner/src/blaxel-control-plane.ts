@@ -311,7 +311,7 @@ function assertFixedBroker(input: {
     )
   )
     throw new Error("Candidate fixed-broker Sandbox configuration drifted");
-  if (sandbox.spec.volumes !== undefined && sandbox.spec.volumes.length !== 0)
+  if (hasMountedVolumes(sandbox.spec.volumes))
     throw new Error("Candidate fixed-broker Sandbox must not mount storage");
 }
 
@@ -341,7 +341,7 @@ function assertReturnedSandbox(input: {
   for (const [name, value] of Object.entries(input.labels))
     if (sandbox.metadata.labels?.[name] !== value)
       throw new Error("Existing candidate Sandbox labels drifted");
-  if (sandbox.spec.volumes !== undefined && sandbox.spec.volumes.length !== 0)
+  if (hasMountedVolumes(sandbox.spec.volumes))
     throw new Error("Candidate Sandbox must not mount durable storage");
   if (
     JSON.stringify(sandbox.spec.lifecycle) !==
@@ -357,6 +357,10 @@ function assertReturnedSandbox(input: {
     throw new Error("Candidate Sandbox egress policy drifted");
   if (!environmentContractMatches(sandbox.spec.runtime?.envs ?? [], input.envs))
     throw new Error("Candidate Sandbox environment contract drifted");
+}
+
+function hasMountedVolumes(volumes: unknown): boolean {
+  return Array.isArray(volumes) ? volumes.length !== 0 : volumes != null;
 }
 
 function environmentContractMatches(

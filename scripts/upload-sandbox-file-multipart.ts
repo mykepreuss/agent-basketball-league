@@ -1,173 +1,109 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { inspectStagingBodyArchive } from "./package-staging-body.js";
 
-const PART_SIZE_BYTES = 5 * 1024 * 1024;
 const RESOURCE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const REGION_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
-
-interface UploadedPart {
-  etag: string;
-  partNumber: number;
-  size: number;
-}
+const REMOTE_PATH = /^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/;
 
 interface UploadEvidence {
   archiveSha256: `0x${string}`;
   archiveSizeBytes: number;
-  partCount: number;
   remotePath: string;
   sandbox: string;
+  transport: "BLAXEL_SANDBOX_SDK";
   workspace: string;
 }
 
-function encodedPath(path: string): string {
-  return path.split("/").map(encodeURIComponent).join("/");
+interface SandboxAdapter {
+  metadata: { name?: string; workspace?: string };
+  spec: { region?: string };
+  fs: {
+    writeBinary(path: string, content: Buffer): Promise<unknown>;
+    readBinary(path: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> }>;
+  };
+  process: {
+    exec(input: {
+      name: string;
+      command: string;
+      waitForCompletion: boolean;
+      timeout: number;
+    }): Promise<{ status?: string; exitCode?: number }>;
+  };
 }
 
-async function responseJson<T>(
-  response: Response,
-  operation: string,
-): Promise<T> {
-  if (!response.ok) {
-    const detail = (await response.text()).slice(0, 500);
-    throw new Error(
-      `${operation} failed with HTTP ${response.status}: ${detail}`,
-    );
-  }
-  return (await response.json()) as T;
+const require = createRequire(import.meta.url);
+
+async function getBlaxelSandbox(name: string): Promise<SandboxAdapter> {
+  const { SandboxInstance } = require("@blaxel/core") as {
+    SandboxInstance: { get(sandboxName: string): Promise<unknown> };
+  };
+  return (await SandboxInstance.get(name)) as SandboxAdapter;
 }
 
-export async function uploadSandboxFileMultipart(
+export async function uploadSandboxFile(
   archivePath: string,
-  sandbox: string,
+  sandboxName: string,
   workspace: string,
   region = "us-was-1",
   remotePath = "/tmp/body-program.tgz",
+  getSandbox: (name: string) => Promise<SandboxAdapter> = getBlaxelSandbox,
 ): Promise<UploadEvidence> {
-  if (!RESOURCE_NAME.test(sandbox) || !RESOURCE_NAME.test(workspace))
+  if (!RESOURCE_NAME.test(sandboxName) || !RESOURCE_NAME.test(workspace))
     throw new Error(
       "Sandbox and workspace names must be lowercase resource names",
     );
   if (!REGION_NAME.test(region)) throw new Error("Invalid Blaxel region name");
-  if (!remotePath.startsWith("/") || remotePath.includes(".."))
-    throw new Error("The remote path must be absolute and cannot traverse");
+  if (!REMOTE_PATH.test(remotePath) || remotePath.includes(".."))
+    throw new Error("The remote path must be an absolute safe file path");
 
   const archive = await readFile(resolve(archivePath));
   inspectStagingBodyArchive(archive);
   const archiveSha256 = `0x${createHash("sha256")
     .update(archive)
     .digest("hex")}` as const;
-  const token = execFileSync("bl", ["token"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  })
-    .trim()
-    .replace(/^Bearer\s+/iu, "");
-  if (token.length === 0) throw new Error("Blaxel CLI returned an empty token");
 
-  const origin = `https://sbx-${sandbox}-${workspace}.${region}.bl.run`;
-  const authorization = { Authorization: `Bearer ${token}` };
-  let uploadId: string | undefined;
-  try {
-    const initiated = await responseJson<{ path: string; uploadId: string }>(
-      await fetch(
-        `${origin}/filesystem-multipart/initiate/${encodedPath(remotePath)}`,
-        {
-          method: "POST",
-          headers: { ...authorization, "Content-Type": "application/json" },
-          body: JSON.stringify({ permissions: "0600" }),
-        },
-      ),
-      "Multipart initiation",
-    );
-    if (initiated.path !== remotePath || initiated.uploadId.length === 0)
-      throw new Error("Multipart initiation returned inconsistent metadata");
-    uploadId = initiated.uploadId;
+  const sandbox = await getSandbox(sandboxName);
+  if (
+    sandbox.metadata.workspace !== workspace ||
+    sandbox.metadata.name !== sandboxName ||
+    sandbox.spec.region !== region
+  )
+    throw new Error("Blaxel returned a Sandbox outside the requested scope");
 
-    const parts: UploadedPart[] = [];
-    for (
-      let offset = 0, partNumber = 1;
-      offset < archive.length;
-      partNumber += 1
-    ) {
-      const chunk = archive.subarray(offset, offset + PART_SIZE_BYTES);
-      const form = new FormData();
-      form.append(
-        "file",
-        new Blob([new Uint8Array(chunk)]),
-        `part-${partNumber}`,
-      );
-      const part = await responseJson<UploadedPart>(
-        await fetch(
-          `${origin}/filesystem-multipart/${encodeURIComponent(uploadId)}/part?partNumber=${partNumber}`,
-          { method: "PUT", headers: authorization, body: form },
-        ),
-        `Multipart part ${partNumber}`,
-      );
-      if (
-        part.partNumber !== partNumber ||
-        part.size !== chunk.byteLength ||
-        part.etag.length === 0
-      )
-        throw new Error(
-          `Multipart part ${partNumber} returned inconsistent metadata`,
-        );
-      parts.push(part);
-      offset += chunk.byteLength;
-    }
+  await sandbox.fs.writeBinary(remotePath, archive);
+  const permissionResult = await sandbox.process.exec({
+    name: `abl-upload-permissions-${Date.now()}`,
+    command: `chmod 0600 -- ${remotePath}`,
+    waitForCompletion: true,
+    timeout: 30,
+  });
+  if (
+    permissionResult.status !== "completed" ||
+    permissionResult.exitCode !== 0
+  )
+    throw new Error("Could not restrict the uploaded archive permissions");
 
-    const completed = await responseJson<{ path: string }>(
-      await fetch(
-        `${origin}/filesystem-multipart/${encodeURIComponent(uploadId)}/complete`,
-        {
-          method: "POST",
-          headers: { ...authorization, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            parts: parts.map(({ etag, partNumber }) => ({ etag, partNumber })),
-          }),
-        },
-      ),
-      "Multipart completion",
-    );
-    if (completed.path !== remotePath)
-      throw new Error("Multipart completion returned an inconsistent path");
+  const downloaded = await sandbox.fs.readBinary(remotePath);
+  const remoteSha256 = `0x${createHash("sha256")
+    .update(Buffer.from(await downloaded.arrayBuffer()))
+    .digest("hex")}`;
+  if (remoteSha256 !== archiveSha256)
+    throw new Error("Remote staging-body archive digest does not match");
 
-    const downloaded = await fetch(
-      `${origin}/filesystem/${encodedPath(remotePath)}?download=true`,
-      { headers: authorization },
-    );
-    if (!downloaded.ok)
-      throw new Error(
-        `Remote hash verification failed with HTTP ${downloaded.status}`,
-      );
-    const remoteSha256 = `0x${createHash("sha256")
-      .update(Buffer.from(await downloaded.arrayBuffer()))
-      .digest("hex")}`;
-    if (remoteSha256 !== archiveSha256)
-      throw new Error("Remote staging-body archive digest does not match");
-
-    uploadId = undefined;
-    return {
-      archiveSha256,
-      archiveSizeBytes: archive.byteLength,
-      partCount: parts.length,
-      remotePath,
-      sandbox,
-      workspace,
-    };
-  } finally {
-    if (uploadId !== undefined) {
-      await fetch(
-        `${origin}/filesystem-multipart/${encodeURIComponent(uploadId)}/abort`,
-        { method: "DELETE", headers: authorization },
-      ).catch(() => undefined);
-    }
-  }
+  return {
+    archiveSha256,
+    archiveSizeBytes: archive.byteLength,
+    remotePath,
+    sandbox: sandboxName,
+    transport: "BLAXEL_SANDBOX_SDK",
+    workspace,
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -185,7 +121,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 64;
   } else {
-    uploadSandboxFileMultipart(archivePath, sandbox, workspace, region)
+    uploadSandboxFile(archivePath, sandbox, workspace, region)
       .then((evidence) => process.stdout.write(`${JSON.stringify(evidence)}\n`))
       .catch((error: unknown) => {
         process.stderr.write(

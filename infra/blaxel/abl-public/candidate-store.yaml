@@ -39,6 +39,9 @@ spec:
       - name: ABL_CANDIDATE_PROVISIONER_TOKEN
         value: ${ABL_CANDIDATE_PROVISIONER_TOKEN}
         secret: true
+      - name: ABL_CANDIDATE_AUTHORITY_TOKEN
+        value: ${ABL_CANDIDATE_AUTHORITY_TOKEN}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false

@@ -64,7 +64,7 @@ const imageServices = [
     directory: "candidate-edge",
     packageName: "@abl/candidate-edge",
     memory: 2048,
-    type: "function",
+    type: "sandbox",
   },
   {
     directory: "candidate-provisioner",

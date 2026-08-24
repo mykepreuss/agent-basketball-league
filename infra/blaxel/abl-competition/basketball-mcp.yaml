@@ -15,6 +15,11 @@ spec:
     memory: 2048
     minScale: 0
     maxScale: 20
+    transport: http-stream
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 8080
     envs:
       - name: DO_NOT_TRACK
         value: "1"

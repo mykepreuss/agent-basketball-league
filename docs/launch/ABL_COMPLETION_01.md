@@ -29,6 +29,19 @@ Before Genesis, all output remains `PRE_GENESIS_EXPERIMENT`, noncanonical, and n
 
 Fresh approval is required only for first public exposure, recurring spend above the approved limit, a material budget increase, a new provider or resource class, irreversible recognition broadcast, recovery-control removal, or Genesis activation.
 
+## Current dashboard
+
+Recorded after the private integrated proof on `2026-08-24`:
+
+| Milestone                         | State                       | Evidence or next action                                                                                                                                             |
+| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOCAL_GATE_1`                    | `PASSED`                    | The pinned-runtime baseline passed; the release correction is being rerun before merge.                                                                             |
+| `PRIVATE_STAGING`                 | `PASSED`                    | [Stage B evidence](../evidence/ABL-COMPLETION-01-STAGE-B.md) records the live signed-action path, rejection matrix, restart/replay proof, cost, and exact teardown. |
+| `READ_ONLY_BEACON`                | `BLOCKED_APPROVAL_REQUIRED` | Approve the persistent four-workspace deployment, its best-effort recurring spend, and—after the private soak—the first public read-only exposure.                  |
+| Later founding and Genesis stages | `FUTURE_REQUIREMENT`        | They do not invalidate or reopen either completed stage.                                                                                                            |
+
+The temporary Stage B Neon project and Blaxel resources were deleted after evidence export. Final inventories contained no ABL workload or storage resources, only the seven pre-existing historical image records, the unrelated `sandbox-openai` route, and the unrelated Hummingbird Neon project. The machine-readable [launch ledger](../evidence/launch-ledger.json) is the canonical current-state record.
+
 ## Monotonic stages
 
 | Stage                    | Acceptance result                                                                                                                                                                                                     |
