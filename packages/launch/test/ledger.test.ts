@@ -12,6 +12,7 @@ function input() {
     requirements: [
       {
         requirementId: "gate-1-local-verification",
+        requiredForStage: "LOCAL_GATE_1",
         status: "VERIFIED_COMPLETE",
         evidenceIds: ["exact-runtime-tests"],
       },
@@ -45,6 +46,7 @@ describe("derived launch ledger", () => {
     const second = deriveLaunchLedger(input());
     expect(first.gateStatus).toBe("READY");
     expect(first.launchState.genesis).toBe(false);
+    expect(first.launchState.lastSuccessfulAcceptance).toBeNull();
     expect(first.ledgerDigest).toBe(second.ledgerDigest);
   });
 
@@ -63,6 +65,7 @@ describe("derived launch ledger", () => {
       requirements: [
         {
           requirementId: "live-drive-proof",
+          requiredForStage: "PRIVATE_STAGING",
           status: "IMPLEMENTED_LIVE_PROOF_REQUIRED",
           evidenceIds: ["missing"],
         },
@@ -70,6 +73,7 @@ describe("derived launch ledger", () => {
     });
     expect(blocked.gateStatus).toBe("BLOCKED");
     expect(blocked.launchState.genesis).toBe(false);
+    expect(blocked.launchState.launchStage).toBe("PRODUCTION_GENESIS");
     expect(blocked.launchState.operatingProfile).toBe(
       "PRODUCTION_V1_PRE_GENESIS",
     );
@@ -81,9 +85,11 @@ describe("derived launch ledger", () => {
   it("blocks required signatures and binds verified signatures to passed evidence", () => {
     const required = deriveLaunchLedger({
       ...input(),
+      launchStage: "GENESIS_READY",
       signatures: [
         {
           signatureId: "founding-release-signature",
+          requiredForStage: "GENESIS_READY",
           purpose: "Authorize the founding release",
           signerDid: null,
           state: "REQUIRED",
@@ -101,6 +107,7 @@ describe("derived launch ledger", () => {
       signatures: [
         {
           signatureId: "local-release-check",
+          requiredForStage: "LOCAL_GATE_1",
           purpose: "Bind the local verification result",
           signerDid: "did:abl:release-verifier",
           state: "VERIFIED",
@@ -109,5 +116,96 @@ describe("derived launch ledger", () => {
       ],
     });
     expect(verified.gateStatus).toBe("READY");
+  });
+
+  it("does not let future requirements regress an earlier stage", () => {
+    const privateStaging = deriveLaunchLedger({
+      ...input(),
+      launchStage: "PRIVATE_STAGING",
+      requirements: [
+        ...input().requirements,
+        {
+          requirementId: "private-live-proof",
+          requiredForStage: "PRIVATE_STAGING",
+          status: "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+          evidenceIds: ["private-proof"],
+        },
+        {
+          requirementId: "founding-agent-ratification",
+          requiredForStage: "GENESIS_READY",
+          status: "BLOCKED_EXTERNAL_INPUT_REQUIRED",
+          evidenceIds: [],
+        },
+      ],
+      evidence: [
+        ...input().evidence,
+        {
+          evidenceId: "private-proof",
+          digest,
+          verification: "LIVE_PROOF_REQUIRED",
+        },
+      ],
+    });
+
+    expect(privateStaging.gateStatus).toBe("BLOCKED");
+    expect(privateStaging.launchState.launchStage).toBe("PRIVATE_STAGING");
+    expect(privateStaging.launchState.blockingReasons).toEqual([
+      "private-live-proof: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "private-live-proof: evidence private-proof not passed",
+    ]);
+    expect(privateStaging.launchState.nextBlockingRequirement).toBe(
+      "private-live-proof: IMPLEMENTED_LIVE_PROOF_REQUIRED",
+    );
+  });
+
+  it("reports candidate intake instead of collapsing public exposure to read-only", () => {
+    const intake = deriveLaunchLedger({
+      ...input(),
+      launchStage: "CAPPED_FOUNDING_INTAKE",
+      intake: {
+        ...input().intake,
+        mode: "CAPPED_PUBLIC",
+        capacityState: "AVAILABLE",
+      },
+    });
+
+    expect(intake.gateStatus).toBe("READY");
+    expect(intake.launchState.publicExposure).toBe("CANDIDATE_INTAKE");
+  });
+
+  it("records the last completed stage without asserting the current gate is ready", () => {
+    const privateStaging = deriveLaunchLedger({
+      ...input(),
+      launchStage: "PRIVATE_STAGING",
+      requirements: [
+        ...input().requirements,
+        {
+          requirementId: "private-live-proof",
+          requiredForStage: "PRIVATE_STAGING",
+          status: "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+          evidenceIds: ["private-proof"],
+        },
+      ],
+      evidence: [
+        ...input().evidence,
+        {
+          evidenceId: "private-proof",
+          digest,
+          verification: "LIVE_PROOF_REQUIRED",
+        },
+      ],
+      lastSuccessfulAcceptance: {
+        stage: "LOCAL_GATE_1",
+        evidenceId: "exact-runtime-tests",
+        acceptedAt: at,
+      },
+    });
+
+    expect(privateStaging.gateStatus).toBe("BLOCKED");
+    expect(privateStaging.launchState.lastSuccessfulAcceptance).toEqual({
+      stage: "LOCAL_GATE_1",
+      evidenceId: "exact-runtime-tests",
+      acceptedAt: at,
+    });
   });
 });

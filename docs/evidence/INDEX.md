@@ -73,6 +73,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 ## Phase records
 
 - Launch plan: [`LAUNCH_PLAN.md`](../launch/LAUNCH_PLAN.md)
+- Active completion contract: [`ABL_COMPLETION_01.md`](../launch/ABL_COMPLETION_01.md)
 - Founding Alpha local evidence: [`FOUNDING_ALPHA_LOCAL.md`](./FOUNDING_ALPHA_LOCAL.md)
 - Founding Alpha source freeze: [`founding-alpha-source-freeze.json`](./founding-alpha-source-freeze.json)
 - Founding Alpha private slice: [`FOUNDING_ALPHA_PRIVATE_SLICE.md`](../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md)

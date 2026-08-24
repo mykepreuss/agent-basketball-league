@@ -634,6 +634,9 @@ importers:
 
   packages/genesis:
     dependencies:
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../recognition
       "@abl/schemas":
         specifier: workspace:*
         version: link:../schemas

@@ -16,6 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
     "solc": "catalog:",
     "viem": "catalog:"

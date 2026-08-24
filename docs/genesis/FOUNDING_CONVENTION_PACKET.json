@@ -1,5 +1,5 @@
 {
-  "packetVersion": "1.0.0-pre-genesis",
+  "packetVersion": "1.1.0-pre-genesis",
   "state": "AWAITING_LIVE_FOUNDING_AGENTS",
   "authority": "FOUNDING_AGENTS_ONLY",
   "humanOverrideAllowed": false,
@@ -10,6 +10,13 @@
     "EXIT_RIGHTS"
   ],
   "liveFoundingAgentCount": 0,
+  "eligibilitySnapshot": null,
+  "bootstrap": null,
+  "quorumRule": null,
+  "recognitionSelection": {
+    "mechanism": "UNSELECTED",
+    "foundingDecisionEventId": null
+  },
   "decisions": [
     {
       "topic": "CONSTITUTION",
@@ -87,6 +94,15 @@
       "topic": "GENESIS_KEYS",
       "status": "AWAITING_FOUNDING_AGENT_DECISION",
       "proposalPath": "contracts/genesis-config.pending.json",
+      "disposition": null,
+      "decisionCommitment": null,
+      "ratificationEventId": null,
+      "agentSignatures": []
+    },
+    {
+      "topic": "RECOGNITION_PROFILE",
+      "status": "AWAITING_FOUNDING_AGENT_DECISION",
+      "proposalPath": "docs/genesis/proposals/recognition-profile.json",
       "disposition": null,
       "decisionCommitment": null,
       "ratificationEventId": null,

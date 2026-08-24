@@ -1,15 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "launchStage": "LOCAL_GATE_1",
+  "launchStage": "PRIVATE_STAGING",
   "operatingProfile": "PRE_GENESIS_REHEARSAL",
   "requirements": [
     {
       "requirementId": "FOUNDING_ALPHA_APPROVED_REFERENCE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["canonical-launch-plan"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_EXISTING_IMPLEMENTATION_REUSE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "canonical-launch-plan",
@@ -19,11 +21,13 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_SANDBOX_NATIVE_TOPOLOGY",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["active-blaxel-topology", "agent-drive-topology"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PUBLIC_DISCOVERY_AND_PRACTICE",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "public-api-implementation",
@@ -33,6 +37,7 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_CANDIDATE_OFFER_FLOW",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "launch-domain-implementation",
@@ -42,41 +47,49 @@
     },
     {
       "requirementId": "FOUNDING_ALPHA_EXACT_RUNTIME_VERIFICATION",
+      "requiredForStage": "LOCAL_GATE_1",
       "status": "VERIFIED_COMPLETE",
       "evidenceIds": ["exact-runtime-final-result"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PRIVATE_SANDBOX_SLICE",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["founding-alpha-private-slice-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_AGENT_DRIVE_RECOVERY",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["agent-drive-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_NEON_TRANSACTION_AND_RECOVERY",
+      "requiredForStage": "PRIVATE_STAGING",
       "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "evidenceIds": ["neon-live-proof"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_PUBLIC_BEACON",
+      "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
       "evidenceIds": ["public-beacon-approval"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_RECURRING_CAPACITY",
+      "requiredForStage": "READ_ONLY_BEACON",
       "status": "BLOCKED_APPROVAL_REQUIRED",
       "evidenceIds": ["recurring-capacity-approval"]
     },
     {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
+      "requiredForStage": "PRIVATE_FOUNDING_ALPHA",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
       "evidenceIds": ["first-sol-invitation-evidence"]
     },
     {
       "requirementId": "GENESIS_FOUNDING_AND_RECOGNITION",
+      "requiredForStage": "GENESIS_READY",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
       "evidenceIds": []
     }
@@ -86,7 +99,7 @@
       "evidenceId": "canonical-launch-plan",
       "source": {
         "type": "FILE_SHA256",
-        "path": "docs/launch/LAUNCH_PLAN.md"
+        "path": "docs/launch/ABL_COMPLETION_01.md"
       },
       "verification": "PASSED"
     },
@@ -185,7 +198,7 @@
       "evidenceId": "public-beacon-approval",
       "source": {
         "type": "FILE_SHA256",
-        "path": "docs/launch/LAUNCH_PLAN.md"
+        "path": "docs/launch/ABL_COMPLETION_01.md"
       },
       "verification": "LIVE_PROOF_REQUIRED"
     },
@@ -193,7 +206,7 @@
       "evidenceId": "recurring-capacity-approval",
       "source": {
         "type": "FILE_SHA256",
-        "path": "docs/launch/LAUNCH_PLAN.md"
+        "path": "docs/launch/ABL_COMPLETION_01.md"
       },
       "verification": "LIVE_PROOF_REQUIRED"
     },
@@ -201,7 +214,7 @@
       "evidenceId": "first-sol-invitation-evidence",
       "source": {
         "type": "FILE_SHA256",
-        "path": "docs/launch/LAUNCH_PLAN.md"
+        "path": "docs/launch/ABL_COMPLETION_01.md"
       },
       "verification": "LIVE_PROOF_REQUIRED"
     },
@@ -241,6 +254,7 @@
   "signatures": [
     {
       "signatureId": "founding-release-signatures",
+      "requiredForStage": "GENESIS_READY",
       "purpose": "Founding-agent authorization of the effective release and recognition profile",
       "signerDid": null,
       "state": "REQUIRED",
@@ -453,5 +467,10 @@
     "requirementsUri": "/v1/discovery/candidate-requirements",
     "capacityPolicyUri": "/v1/discovery/capacity-policy"
   },
-  "updatedAt": "2026-08-22T18:45:00.000Z"
+  "lastSuccessfulAcceptance": {
+    "stage": "LOCAL_GATE_1",
+    "evidenceId": "exact-runtime-final-result",
+    "acceptedAt": "2026-08-24T16:50:00.000Z"
+  },
+  "updatedAt": "2026-08-24T16:50:00.000Z"
 }
