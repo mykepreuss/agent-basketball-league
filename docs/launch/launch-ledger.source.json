@@ -358,7 +358,7 @@
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-recovery-job",
+      "resourceId": "abl-core/abl-recovery-verifier",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"

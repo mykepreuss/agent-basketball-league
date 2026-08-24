@@ -1,0 +1,74 @@
+{
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "status": "LOCAL_DEPLOYMENT_PACKET_PASS_PROVIDER_MUTATION_NOT_AUTHORIZED",
+  "recordedAt": "2026-08-24T21:24:31Z",
+  "baselineCommit": "abc66700bb51d367a7a2d45454fb3637304ba4f4",
+  "runtime": "node-v24.18.0",
+  "providerMutation": false,
+  "deployment": {
+    "map": "infra/blaxel/persistent-pre-genesis/deployment-map.json",
+    "mapFileSha256": "0xa78d14c75f6a2a8cbae03955049654e9dd39e3fb18448dcb170420ce307a4c6e",
+    "deploymentDigest": "0x65c4d2076fefe5c98449f78827b438a0647ce01c24ade423ef2b497eba310ea8",
+    "workloadCount": 13,
+    "imageCount": 13,
+    "privateEndpointCount": 11,
+    "memoryMiB": {
+      "sandboxes": 21504,
+      "functions": 8192,
+      "jobs": 6144
+    },
+    "publicEndpoints": 0,
+    "forbiddenResources": [
+      "Blaxel Agents",
+      "Blaxel Applications",
+      "Blaxel Volumes",
+      "model resources"
+    ]
+  },
+  "packaging": {
+    "command": "pnpm dlx node@24.18.0 /opt/homebrew/bin/corepack pnpm stage-c:prepare-images <isolated-output-root>",
+    "reproducibilityRuns": 2,
+    "imageSourceDigestsIdentical": true,
+    "candidateSpecificImagesExcluded": true,
+    "arenaBuildSourceDigest": "0xb54bdb9ddb334c52562ad77309b4745d70a2c72541bbb739977052fd4bbefd2d",
+    "imageSetDigest": "0x29632d1c3c6dc4bcee5f599b48b324321652ca5cf9052870436e323e179c9a54",
+    "imageSourceDigests": {
+      "abl-stage-c-arena-image": "0x4a12cb487c96384ce4fe3b220cb1bf347a3c6a3e07180fbf9e7d2a357ad0964d",
+      "abl-stage-c-basketball-mcp-image": "0x8fcc6a551677e1418b5964ac4c48827724c93de44d66bd899de060827caea441",
+      "abl-stage-c-candidate-edge-image": "0x253e72f2c8aa14c28eb2e95ff6e265b143ca450d9912267cf711c2a340a6a810",
+      "abl-stage-c-candidate-provisioner-image": "0x55b124640a49803e8474d13484f5e3401d5ff76235c0826c741c4198d0011f9b",
+      "abl-stage-c-candidate-store-image": "0x7e647f66ed3c18c5cd17f985098ce2762c7d4d15620d276de72e49a5959ffa61",
+      "abl-stage-c-career-mcp-image": "0x3e258c326dd3faed549dc7451ad68fe69609c7aa0eefa4acfbdf219ec516a227",
+      "abl-stage-c-core-api-image": "0x2019f7e56be5ed19f044a3a3810395e23e3bdb3c2e1db2b1613df7badd4a6a60",
+      "abl-stage-c-discovery-mcp-image": "0x57611aa57ea9568abd4c934da7bfd303e611b45b452a8ec8bd0b7a20ccf42885",
+      "abl-stage-c-government-mcp-image": "0x743a118793dc82da9b09d818d9bb8dda2bef1bd4990994a8d6eee6f4418ecb51",
+      "abl-stage-c-public-api-image": "0x14bc31b6c61622fb4c95c805d91f5b655eabfaf167aedcc10bc10fdab974f11a",
+      "abl-stage-c-recovery-job-image": "0x0c0bfbfe47ef37b83e569fae95db77c00d376dc1693706017d3cc5d0367b0f6d",
+      "abl-stage-c-safety-gateway-image": "0x700e2b634c6a2c8213edb8c522339de54b72da2a558db0afdec86612e97ba146",
+      "abl-stage-c-storage-broker-image": "0x9741564b95ec4013db1721ed6de09fd08678403cce815a7e8a58c36a1186095d"
+    }
+  },
+  "recoveryVerifier": {
+    "workspace": "abl-core",
+    "job": "abl-recovery-verifier",
+    "postgresqlMajor": 17,
+    "expectedPublicTableCount": 23,
+    "requiresDistinctDirectTlsTargets": true,
+    "compares": [
+      "table rows",
+      "columns",
+      "constraints",
+      "indexes",
+      "sequences",
+      "logical database state root"
+    ],
+    "secretValuesInOutput": false
+  },
+  "limitations": [
+    "No Blaxel image was pushed and no provider workload was created.",
+    "No Neon project was created and no live clean-room restore was performed.",
+    "Persistent recurring-capacity approval and an interactive Blaxel CLI login refresh remain required before Stage C provider mutation.",
+    "The 24-hour private soak is not complete."
+  ]
+}

@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x117e18f038d7c3c4051d2696ab856d09fe642af7febea4a9d33749dad8d9ede8",
+    "evidenceDigest": "0x6f5a966a567d5b8a9756a543d2ee8edebca6dc260188d0117c0663c2e28db984",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: BLOCKED_APPROVAL_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -177,17 +177,17 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x6c20a8b20e13a89f5e2e046df4f50993cf8a9e1521ad3b805c8a7b320d9f03f5",
+      "digest": "0x2b1a1bbbb8af16ef41ed4a5b0fc79cdcd6e1381f5e597fe11b35f0c10e647fff",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x07b17a82f990ed1cfcd3f9c3805b26213bcd882accef2423a8b0c9d676a581e6",
+      "digest": "0xe10ef5a721103e550713d6f16d0f47536ce2e1c74ff7ddc0120e9d1bf59f39ea",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xef1be574e954d74b3a59491018992640215f7e70a895613f9d2a2644090865fd",
+      "digest": "0xb0e30e8906777999ac1d3807c62e77375ab00f294b64ea4517753d45c6cc96ca",
       "verification": "PASSED"
     },
     {
@@ -212,7 +212,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0xd449a62b69380861f1089cc1c75353f5630402fb125f947d2b8b5330a2d04df3",
+      "digest": "0x63fea3e7b0f7a75bdc9de70a05fde5bccda9f83df924a8036ceb300273c65773",
       "verification": "PASSED"
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x4b320d269586587eac3328963a6946ba088b6768432860924f63e245a8dbc123",
+      "digest": "0x6193cb6e6d19da2601ac78289d1403c988b781a19f9c67a5c918cc9d03a267d1",
       "verification": "PASSED"
     },
     {
@@ -391,7 +391,7 @@
       "evidenceId": "active-blaxel-topology"
     },
     {
-      "resourceId": "abl-private/abl-recovery-job",
+      "resourceId": "abl-core/abl-recovery-verifier",
       "kind": "Job",
       "state": "PLANNED",
       "evidenceId": "active-blaxel-topology"
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xa323c87d075a28bb1c77f58173527a10c0268f879f46074a57db88f664e93fc8"
+  "ledgerDigest": "0x4027d723d0b11b06bbfeda0e6eaaa4d2b76c266da0169cbfccdafede7505c54d"
 }

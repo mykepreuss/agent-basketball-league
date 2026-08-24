@@ -158,6 +158,7 @@ describe("persistent private soak", () => {
         reason: string;
       };
       costEnvelope: string;
+      deploymentMap: string;
       publicExposure: string;
     };
     expect(plan.workspaces.map(({ name }) => name)).toEqual(
@@ -183,6 +184,9 @@ describe("persistent private soak", () => {
     });
     expect(plan.costEnvelope).toBe(
       "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
+    );
+    expect(plan.deploymentMap).toBe(
+      "infra/blaxel/persistent-pre-genesis/deployment-map.json",
     );
     expect(plan.publicExposure).toBe("NONE");
   });

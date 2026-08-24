@@ -1,0 +1,35 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Function
+metadata:
+  name: abl-discovery-mcp
+  labels:
+    abl-workspace-role: public
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  public: false
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_DISCOVERY_MCP_IMAGE_DIGEST}
+    memory: 2048
+    minScale: 0
+    maxScale: 20
+    transport: http-stream
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 8080
+    envs:
+      - name: ABL_PUBLIC_API_URL
+        value: ${ABL_PUBLIC_API_URL}
+        secret: false
+      - name: ABL_PUBLIC_API_PREVIEW_TOKEN
+        value: ${ABL_PUBLIC_API_PREVIEW_TOKEN}
+        secret: true
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false

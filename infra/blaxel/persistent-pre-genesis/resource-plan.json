@@ -22,7 +22,6 @@
       "role": "candidate and career privacy boundary",
       "resources": [
         { "kind": "Sandbox", "name": "abl-private-storage-broker" },
-        { "kind": "Job", "name": "abl-private-recovery" },
         { "kind": "Drive", "name": "abl-private-state" }
       ]
     },
@@ -37,6 +36,7 @@
         { "kind": "Function", "name": "abl-career-mcp" },
         { "kind": "Function", "name": "abl-government-mcp" },
         { "kind": "Job", "name": "abl-candidate-provisioner" },
+        { "kind": "Job", "name": "abl-recovery-verifier" },
         { "kind": "Drive", "name": "abl-core-state" }
       ]
     },
@@ -96,6 +96,7 @@
   },
   "monitoringPolicy": "infra/blaxel/persistent-pre-genesis/monitoring-policy.json",
   "costEnvelope": "infra/blaxel/persistent-pre-genesis/cost-envelope.json",
+  "deploymentMap": "infra/blaxel/persistent-pre-genesis/deployment-map.json",
   "rollbackRunbook": "infra/blaxel/persistent-pre-genesis/ROLLBACK.md",
   "prohibitions": [
     "public ingress during Stage C",

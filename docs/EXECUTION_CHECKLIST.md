@@ -21,6 +21,8 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Add explicit noncanonical health routes for the public API, candidate store, candidate edge, and arena alongside the existing core, storage, and safety health routes.
 - [x] Define deterministic 24-hour monitoring thresholds, recovery exercises, resource-specific rollback, and a machine-evaluated soak result.
 - [x] Refresh the read-only Blaxel and Neon provider state and freeze a measurable USD 21.9084/month cost envelope with USD 3.0916 contingency.
+- [x] Replace recursive manifest application with an exact thirteen-workload deployment map; keep all eleven endpoints private and exclude candidate-specific examples and model resources.
+- [x] Package the previously missing safety-gateway and PostgreSQL clean-room recovery-verifier images; make the Job compare every public table and database catalog without logging credentials or row content.
 - [!] Obtain recurring-capacity approval before creating the three production workspaces, persistent Neon project, or any declared workload.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.

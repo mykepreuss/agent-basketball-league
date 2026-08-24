@@ -1,0 +1,42 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Job
+metadata:
+  name: abl-recovery-verifier
+  labels:
+    abl-workspace-role: core-recovery-verifier
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_RECOVERY_JOB_IMAGE_DIGEST}
+    memory: 4096
+    maxConcurrentTasks: 1
+    timeout: 900
+    maxRetries: 0
+    envs:
+      - name: ABL_RECOVERY_SOURCE_DATABASE_URL
+        value: ${ABL_RECOVERY_SOURCE_DATABASE_URL}
+        secret: true
+      - name: ABL_RECOVERY_RESTORED_DATABASE_URL
+        value: ${ABL_RECOVERY_RESTORED_DATABASE_URL}
+        secret: true
+      - name: ABL_RECOVERY_EXPECTED_TABLE_COUNT
+        value: "23"
+        secret: false
+      - name: ABL_RECOVERY_EXPECTED_POSTGRES_MAJOR
+        value: "17"
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false

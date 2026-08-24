@@ -25,11 +25,22 @@ const outputRoot = resolve(
 const corepackPath = execFileSync("which", ["corepack"], {
   encoding: "utf8",
 }).trim();
-const foundingAlpha =
-  process.env.npm_lifecycle_event === "founding-alpha:prepare-images";
-const imageNamePrefix = foundingAlpha ? "abl-alpha-r01" : "abl-stage";
+const lifecycleEvent = process.env.npm_lifecycle_event;
+const foundingAlpha = lifecycleEvent === "founding-alpha:prepare-images";
+const persistentStageC = lifecycleEvent === "stage-c:prepare-images";
+let imageNamePrefix = "abl-stage";
+if (foundingAlpha) imageNamePrefix = "abl-alpha-r01";
+else if (persistentStageC) imageNamePrefix = "abl-stage-c";
+const imageNameSuffix = foundingAlpha || persistentStageC ? "-image" : "";
 
-const imageServices = [
+interface ImageService {
+  directory: string;
+  packageName: string;
+  memory: number;
+  type: "function" | "job" | "sandbox";
+}
+
+const privateProofImageServices = [
   {
     directory: "core-api",
     packageName: "@abl/core-api",
@@ -96,7 +107,27 @@ const imageServices = [
     memory: 2048,
     type: "function",
   },
-] as const;
+] as const satisfies readonly ImageService[];
+const persistentImageServices = [
+  ...privateProofImageServices.filter(
+    ({ directory }) => directory !== "fixed-broker",
+  ),
+  {
+    directory: "safety-gateway",
+    packageName: "@abl/safety-gateway",
+    memory: 1024,
+    type: "sandbox",
+  },
+  {
+    directory: "recovery-job",
+    packageName: "@abl/recovery-job",
+    memory: 4096,
+    type: "job",
+  },
+] satisfies readonly ImageService[];
+const imageServices: readonly ImageService[] = persistentStageC
+  ? persistentImageServices
+  : privateProofImageServices;
 const imageContextIgnore = ".git\n.DS_Store\n";
 const developmentEntries = [
   ".turbo",
@@ -136,7 +167,7 @@ function configuration(
   memory: number,
   type: "function" | "job" | "sandbox",
 ): string {
-  const imageName = `${imageNamePrefix}-${name}${foundingAlpha ? "-image" : ""}`;
+  const imageName = `${imageNamePrefix}-${name}${imageNameSuffix}`;
   return `name = "${imageName}"
 type = "${type}"
 region = "us-was-1"
@@ -325,7 +356,7 @@ await mkdir(outputRoot, { recursive: true, mode: 0o700 });
 const buildPackageNames = new Set([
   ...imageServices.map(({ packageName }) => packageName),
   "@abl/arena",
-  "@abl/staging-body",
+  ...(persistentStageC ? [] : ["@abl/staging-body"]),
 ]);
 const arenaBuildSourceDigest = await sourceDigest([
   "apps/arena/app",
@@ -435,26 +466,31 @@ await Promise.all([
 ]);
 
 const bodyContext = join(outputRoot, "body-program");
-await mkdir(bodyContext, { recursive: true, mode: 0o700 });
-pnpm([
-  "--config.node-linker=hoisted",
-  "--config.inject-workspace-packages=true",
-  "--filter",
-  "@abl/staging-body",
-  "deploy",
-  "--prod",
-  join(bodyContext, "agent"),
-]);
-await prepareRuntimePackageTree(join(bodyContext, "agent"));
-await writeFile(
-  join(bodyContext, "agent/main.mjs"),
-  'await import("./dist/index.js");\n',
-  { mode: 0o600 },
-);
-const bodyProgramArchive = await packageStagingBody(
-  bodyContext,
-  join(outputRoot, "body-program.tgz"),
-);
+let bodyProgramArchive:
+  | Awaited<ReturnType<typeof packageStagingBody>>
+  | undefined;
+if (!persistentStageC) {
+  await mkdir(bodyContext, { recursive: true, mode: 0o700 });
+  pnpm([
+    "--config.node-linker=hoisted",
+    "--config.inject-workspace-packages=true",
+    "--filter",
+    "@abl/staging-body",
+    "deploy",
+    "--prod",
+    join(bodyContext, "agent"),
+  ]);
+  await prepareRuntimePackageTree(join(bodyContext, "agent"));
+  await writeFile(
+    join(bodyContext, "agent/main.mjs"),
+    'await import("./dist/index.js");\n',
+    { mode: 0o600 },
+  );
+  bodyProgramArchive = await packageStagingBody(
+    bodyContext,
+    join(outputRoot, "body-program.tgz"),
+  );
+}
 const sandboxImageContexts = imageServices
   .filter(({ type }) => type === "sandbox")
   .map(({ directory }) => join(outputRoot, directory))
@@ -468,14 +504,15 @@ const imageSourceDigests = Object.fromEntries(
     contextDirectories.map(
       async (context) =>
         [
-          `${imageNamePrefix}-${context.split("/").at(-1)}${foundingAlpha ? "-image" : ""}`,
+          `${imageNamePrefix}-${context.split("/").at(-1)}${imageNameSuffix}`,
           await directoryDigest(context),
         ] as const,
     ),
   ),
 );
-imageSourceDigests[`${imageNamePrefix}-body${foundingAlpha ? "-image" : ""}`] =
-  await bodyImageSourceDigest();
+if (!persistentStageC)
+  imageSourceDigests[`${imageNamePrefix}-body${imageNameSuffix}`] =
+    await bodyImageSourceDigest();
 const imageSetHash = createHash("sha256");
 for (const [name, digest] of Object.entries(imageSourceDigests).sort(
   ([left], [right]) => left.localeCompare(right),
@@ -490,12 +527,14 @@ const contexts = {
   arenaBuildSourceDigest,
   imageSourceDigests,
   imageSetDigest: `0x${imageSetHash.digest("hex")}`,
-  bodyProgram: bodyContext,
-  bodyProgramArchive,
-  bodyImageProject: repositoryRoot,
-  bodyImageSourceDigest:
-    imageSourceDigests[
-      `${imageNamePrefix}-body${foundingAlpha ? "-image" : ""}`
-    ],
+  ...(persistentStageC
+    ? {}
+    : {
+        bodyProgram: bodyContext,
+        bodyProgramArchive,
+        bodyImageProject: repositoryRoot,
+        bodyImageSourceDigest:
+          imageSourceDigests[`${imageNamePrefix}-body${imageNameSuffix}`],
+      }),
 };
 process.stdout.write(`${JSON.stringify(contexts, null, 2)}\n`);
