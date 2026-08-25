@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-25T04:50:39.560Z`
+> Recorded: `2026-08-25T05:18:36.033Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0xd320c1a1314fcd8d054e075dc87f04a905349691e70368730cf61fc79a9ec820`
-> Implementation source digest: `0xa6b0b711b99a7fec58a0eef768c7bf924b370ccf23c8927f0276c89428b3a1aa`
-> Launch-ledger digest: `0xe10ee0bd79ad2ee968266c65cb6b9dacc568657b802481c46e20cb06b840da8b`
+> Stable result digest: `0x88200e43e2cb5aee489a8612635186cd86fd9ae3ae535e5e02b614533013a76e`
+> Implementation source digest: `0x9020f7ed469586e8b6b40fedb5ec18bfd2002121232e98f89dd5905376628452`
+> Launch-ledger digest: `0x7fc9b61d77f2eaf2bff85c8497a843e93059d661fa739954573c74f599500737`
 
 ## Outcome
 
@@ -19,7 +19,7 @@ The result proves the current founding-convention and release-candidate implemen
 | Evidence group               | Current evidence source                                   | Result |
 | ---------------------------- | --------------------------------------------------------- | ------ |
 | Canonical launch plan        | `docs/launch/LAUNCH_PLAN.md`                              | Passed |
-| Existing applications        | 481-file implementation source freeze                     | Passed |
+| Existing applications        | 482-file implementation source freeze                     | Passed |
 | Existing domain packages     | Uncached package unit/integration suites                  | Passed |
 | Active Blaxel topology       | Founding Alpha topology suite and rendered manifest set   | Passed |
 | Agent Drive topology         | `drive-access.json` and topology invariants               | Passed |
@@ -41,14 +41,14 @@ PATH=/private/tmp/abl-node-24.18.0.Nk7XCv/node-v24.18.0-darwin-arm64/bin:$PATH p
 | Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 44 of 44 Turbo tasks                                                         |
-| Uncached unit/integration/property/contract/migration/API | Pass   | 388 assertions across 82 files; 44 of 44 Turbo tasks                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 391 assertions across 82 files; 44 of 44 Turbo tasks                         |
 | Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 30 of 30 Turbo tasks                                                         |
 
-Total executable assertions: **419 across 89 test files**. Total uncached Turbo tasks: **118**. The generated route catalog contains **71 routes**.
+Total executable assertions: **422 across 89 test files**. Total uncached Turbo tasks: **118**. The generated route catalog contains **71 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 
