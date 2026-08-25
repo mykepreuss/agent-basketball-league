@@ -3,6 +3,7 @@ kind: Sandbox
 metadata:
   name: abl-candidate-store
   labels:
+    abl-trust-domain: abl-public
     abl-workspace-role: public-noncanonical-intake-store
     abl-drive-role: candidate-intake-writer
     abl-release: ${ABL_RELEASE_ID}

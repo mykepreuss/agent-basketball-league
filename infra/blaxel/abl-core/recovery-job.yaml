@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: abl-recovery-verifier
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: core-recovery-verifier
     abl-release: ${ABL_RELEASE_ID}
 spec:

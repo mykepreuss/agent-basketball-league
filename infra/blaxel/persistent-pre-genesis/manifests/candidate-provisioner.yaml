@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: abl-candidate-provisioner
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: competition-candidate-provisioner
     abl-release: ${ABL_RELEASE_ID}
 spec:

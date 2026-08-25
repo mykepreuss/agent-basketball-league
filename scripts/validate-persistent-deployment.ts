@@ -73,7 +73,12 @@ const CostEnvelopeSchema = z
 const ManifestSchema = z
   .object({
     kind: WorkloadKindSchema,
-    metadata: z.object({ name: z.string() }).passthrough(),
+    metadata: z
+      .object({
+        name: z.string(),
+        labels: z.record(z.string(), z.string()),
+      })
+      .passthrough(),
     spec: z
       .object({
         public: z.boolean().optional(),
@@ -230,6 +235,8 @@ export async function validatePersistentDeployment(
       manifest.metadata.name !== workload.name
     )
       throw new Error(`Manifest identity differs for ${workload.name}`);
+    if (manifest.metadata.labels["abl-trust-domain"] !== workload.trustDomain)
+      throw new Error(`Manifest trust domain differs for ${workload.name}`);
     if (manifest.spec.public === true)
       throw new Error(`Stage C workload is public: ${workload.name}`);
     if (workload.kind === "Function" && manifest.spec.public !== false)

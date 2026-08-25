@@ -3,6 +3,7 @@ kind: Sandbox
 metadata:
   name: abl-safety-gateway
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: fixed-safety-boundary
     abl-drive-role: safety-ledger-writer
     abl-release: ${ABL_RELEASE_ID}
