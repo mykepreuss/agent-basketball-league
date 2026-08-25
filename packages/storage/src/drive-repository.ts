@@ -18,7 +18,34 @@ function assertInside(root: string, path: string): void {
     throw new Error("Resolved ciphertext path escaped repository root");
 }
 
-async function writeImmutableJson(path: string, value: unknown): Promise<void> {
+export type ImmutableWriteMode = "AGENT_DRIVE_DIRECT" | "POSIX_HARD_LINK";
+
+async function syncDirectory(path: string): Promise<void> {
+  const directory = await open(dirname(path), "r");
+  try {
+    await directory.sync();
+  } finally {
+    await directory.close();
+  }
+}
+
+async function writeImmutableJson(
+  path: string,
+  value: unknown,
+  mode: ImmutableWriteMode,
+): Promise<void> {
+  if (mode === "AGENT_DRIVE_DIRECT") {
+    const handle = await open(path, "wx", 0o600);
+    try {
+      await handle.writeFile(`${JSON.stringify(value)}\n`, "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await syncDirectory(path);
+    return;
+  }
+
   const temporaryPath = `${path}.${randomUUID()}.tmp`;
   let handle: Awaited<ReturnType<typeof open>> | undefined = await open(
     temporaryPath,
@@ -31,12 +58,7 @@ async function writeImmutableJson(path: string, value: unknown): Promise<void> {
     await handle.close();
     handle = undefined;
     await link(temporaryPath, path);
-    const directory = await open(dirname(path), "r");
-    try {
-      await directory.sync();
-    } finally {
-      await directory.close();
-    }
+    await syncDirectory(path);
   } finally {
     if (handle !== undefined) await handle.close().catch(() => undefined);
     await rm(temporaryPath, { force: true }).catch(() => undefined);
@@ -80,9 +102,14 @@ export interface CiphertextRepository {
 
 export class FilesystemCiphertextRepository implements CiphertextRepository {
   readonly #root: string;
+  readonly #writeMode: ImmutableWriteMode;
 
-  public constructor(root: string) {
+  public constructor(
+    root: string,
+    writeMode: ImmutableWriteMode = "POSIX_HARD_LINK",
+  ) {
     this.#root = resolve(root);
+    this.#writeMode = writeMode;
   }
 
   public async initialize(): Promise<void> {
@@ -98,7 +125,11 @@ export class FilesystemCiphertextRepository implements CiphertextRepository {
     );
     assertInside(this.#root, directory);
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    await writeImmutableJson(join(directory, `${policy.version}.json`), policy);
+    await writeImmutableJson(
+      join(directory, `${policy.version}.json`),
+      policy,
+      this.#writeMode,
+    );
   }
 
   public async putCiphertext(blob: EncryptedBlob): Promise<void> {
@@ -111,7 +142,11 @@ export class FilesystemCiphertextRepository implements CiphertextRepository {
     );
     assertInside(this.#root, directory);
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    await writeImmutableJson(join(directory, `${blob.version}.json`), blob);
+    await writeImmutableJson(
+      join(directory, `${blob.version}.json`),
+      blob,
+      this.#writeMode,
+    );
   }
 
   public async putGuardianEnvelope(
@@ -129,6 +164,7 @@ export class FilesystemCiphertextRepository implements CiphertextRepository {
     await writeImmutableJson(
       join(directory, `${envelope.commitment.slice(2)}.json`),
       envelope,
+      this.#writeMode,
     );
   }
 
@@ -144,6 +180,7 @@ export class FilesystemCiphertextRepository implements CiphertextRepository {
     await writeImmutableJson(
       join(directory, `${segment(receipt.objectId)}.json`),
       receipt,
+      this.#writeMode,
     );
   }
 

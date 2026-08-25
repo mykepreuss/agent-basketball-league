@@ -22,11 +22,13 @@ const DrivePermissionSchema = z.strictObject({
   path: z.string().startsWith("/"),
 });
 const ConfigurationSchema = z.strictObject({
+  $schema: z.string().url().optional(),
   status: z.enum([
     "APPROVED_ARCHITECTURE_NOT_PROVISIONED",
     "READY_FOR_DIGEST_BOUND_AUTHORIZATION",
     "APPROVED_DEPLOYMENT_IN_PROGRESS",
   ]),
+  reason: z.string().min(1).optional(),
   drives: z.array(
     z.strictObject({
       workspace: WorkspaceSchema,

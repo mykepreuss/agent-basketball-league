@@ -14,7 +14,7 @@ spec:
     image: ${ABL_BASKETBALL_MCP_IMAGE_DIGEST}
     memory: 2048
     minScale: 0
-    maxScale: 20
+    maxScale: 1
     transport: http-stream
     ports:
       - name: http
