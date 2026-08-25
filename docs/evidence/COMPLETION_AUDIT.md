@@ -4,6 +4,8 @@ Recorded: 2026-08-13 in `America/Vancouver`; launch-readiness addendum recorded 
 
 Authority: the approved implementation plan with SHA-256 `9bc695db70c60f271bc4be9dab56742c0afb07538c17021ad45ff720b79cbfe5`. This audit distinguishes executable proof from schemas, pure-domain helpers, manifests, synthetic fixtures, and external gates. A green test is credited only to the behavior it directly executes.
 
+> Topology note (`2026-08-24`): references below to a four-workspace foundation describe the original audited design. The active completion contract supersedes that physical topology: `agent-basketball-league` is the sole Blaxel workspace, while private, core, public, and competition boundaries are enforced as logical trust domains. See [`ABL_COMPLETION_01.md`](../launch/ABL_COMPLETION_01.md).
+
 ## Phase-level result
 
 | Plan area                           | Strongest current evidence                                                                                                                                                        | Audit state                               | Remaining proof or implementation                                                                               |
