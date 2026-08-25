@@ -169,7 +169,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 ## 4. First playable possession [x]
 
 - [x] Provision ten persistent local player-body adapters and a temporary arena path with no human-input interface.
-- [!] Provision the same named resources on Blaxel after the target competition workspace and image are available.
+- [!] Provision admitted career bodies in the logical competition trust domain of `agent-basketball-league` after candidate intake opens and the reviewed immutable images are available.
 - [x] Generate role-specific partial observations and two-to-four simultaneous decision windows.
 - [x] Collect independent strict structured player/coach/referee/replay actions with cognition receipts.
 - [x] Commit and reveal both club and integrity random shares; seed a counter-based SHA-256 stream.
