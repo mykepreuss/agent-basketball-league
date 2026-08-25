@@ -182,7 +182,10 @@ describe("public API", () => {
   it("serves discovery, OpenAPI, and MCP without claiming genesis", async () => {
     const sourceRevision = "a".repeat(40);
     const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
+    const sourceBlobRoot = `https://github.com/mykepreuss/agent-basketball-league/blob/${sourceRevision}`;
+    const sourceRawRoot = `https://raw.githubusercontent.com/mykepreuss/agent-basketball-league/${sourceRevision}`;
     const app = createPublicApi({
+      publicOrigin: "https://public.example",
       arenaOrigin: "https://arena.example",
       candidateIntakeOrigin: "https://candidate.example",
       sourceRevision,
@@ -195,25 +198,82 @@ describe("public API", () => {
         })
       ).json(),
     ).toMatchObject({
+      version: 2,
+      schemaVersion: "2.0.0",
       sourceRevision,
+      sourceIntegrity: {
+        immutable: true,
+        algorithm: "GIT_COMMIT_SHA1",
+        value: sourceRevision,
+      },
+      origins: {
+        publicApi: "https://public.example",
+        arena: "https://arena.example/arena",
+      },
+      protocols: {
+        llms: "https://public.example/llms.txt",
+        openapi: "https://public.example/openapi.json",
+      },
+      startHere: [
+        { step: 1, method: "GET" },
+        { step: 2, method: "GET" },
+        {
+          step: 3,
+          method: "POST",
+          requestExample: {
+            scenarioId: "abl-first-possession-practice-v1",
+            decision: { action: "SHOOT", shot: "LAYUP" },
+          },
+        },
+        { step: 4, url: "https://arena.example/arena" },
+      ],
       artifacts: {
         skill: {
           source: `${sourceRoot}/skills/abl-league`,
-          entrypoint: "SKILL.md",
+          entrypoint: `${sourceBlobRoot}/skills/abl-league/SKILL.md`,
+          rawEntrypoint: `${sourceRawRoot}/skills/abl-league/SKILL.md`,
         },
         verifier: {
           source: `${sourceRoot}/packages/recognition`,
+          rules: `${sourceBlobRoot}/docs/architecture/VERIFIER_RULES.md`,
         },
       },
+      practice: {
+        schema:
+          "https://public.example/openapi.json#/components/schemas/PublicPracticeDecisionRequest",
+        canonical: false,
+        createsCareer: false,
+        createsAdmission: false,
+      },
+      retryPolicy: {
+        exceededStatus: 429,
+        retryHeader: "Retry-After",
+      },
     });
+    const starterKit = (
+      await app.inject({ method: "GET", url: "/v1/discovery/starter-kit" })
+    ).json();
+    expect(
+      starterKit.documents.every(
+        (document: { source: string; raw: string }) =>
+          document.source.startsWith(`${sourceBlobRoot}/`) &&
+          document.raw.startsWith(`${sourceRawRoot}/`),
+      ),
+    ).toBe(true);
     const discovery = await app.inject({
       method: "GET",
       url: "/.well-known/agent-basketball-league.json",
     });
     expect(discovery.statusCode).toBe(200);
     expect(discovery.json()).toMatchObject({
-      status: "PROPOSED_NOT_RATIFIED",
+      status: "LOCAL_GATE_1",
+      launch: {
+        launchStage: "LOCAL_GATE_1",
+        operatingProfile: "PRE_GENESIS_CLOSED",
+        publicExposure: "NONE",
+      },
       genesis: false,
+      starterKit: "https://public.example/v1/discovery/starter-kit",
       candidateIntake: {
         respond: "https://candidate.example/v1/candidate-intake/respond",
       },
@@ -238,8 +298,9 @@ describe("public API", () => {
       },
     });
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
-    const paths = openApi.json().paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(30);
+    const openApiBody = openApi.json();
+    const paths = openApiBody.paths as Record<string, object>;
+    expect(Object.keys(paths)).toHaveLength(32);
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     expect(paths["/"]).toMatchObject({
       get: {
@@ -252,12 +313,121 @@ describe("public API", () => {
         },
       },
     });
+    expect(paths["/v1/practice/decision"]).toMatchObject({
+      post: {
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/PublicPracticeDecisionRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/PublicPracticeOutcome",
+                },
+              },
+            },
+          },
+          "400": expect.any(Object),
+        },
+      },
+    });
+    expect(
+      openApiBody.components.schemas.PracticeAction.oneOf.map(
+        (schema: { properties: { action: { const: string } } }) =>
+          schema.properties.action.const,
+      ),
+    ).toEqual(["MOVE", "PASS", "SHOOT", "SCREEN", "HOLD"]);
+    const robots = await app.inject({ method: "GET", url: "/robots.txt" });
+    expect(robots.body).toContain(
+      "Sitemap: https://public.example/sitemap.xml",
+    );
+    const sitemap = await app.inject({ method: "GET", url: "/sitemap.xml" });
+    expect(sitemap.headers["content-type"]).toContain("application/xml");
+    expect(sitemap.body).toContain(
+      "<loc>https://public.example/v1/discovery/starter-kit</loc>",
+    );
+    expect(sitemap.body.match(/<loc>/g)).toHaveLength(8);
+    expect(openApi.headers.link).toBe(
+      '<https://public.example/openapi.json>; rel="canonical"',
+    );
+    expect(openApi.headers["access-control-allow-origin"]).toBe("*");
+    expect(openApi.headers["access-control-allow-methods"]).toBe(
+      "GET, HEAD, OPTIONS, POST",
+    );
+    expect(openApi.headers["access-control-allow-credentials"]).toBeUndefined();
+    const preflight = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/practice/scenario",
+      headers: {
+        origin: "https://agent-client.example",
+        "access-control-request-method": "GET",
+      },
+    });
+    expect(preflight.statusCode).toBe(204);
+    expect(preflight.headers["access-control-allow-origin"]).toBe("*");
+    expect(
+      preflight.headers["access-control-allow-credentials"],
+    ).toBeUndefined();
+    expect((await app.inject({ method: "GET", url: "/" })).body).toContain(
+      "Candidate intake: https://candidate.example/v1/candidate-intake",
+    );
+    expect(
+      (await app.inject({ method: "GET", url: "/llms.txt" })).body,
+    ).toContain(
+      "Candidate intake: https://candidate.example/v1/candidate-intake",
+    );
     const mcp = await app.inject({
       method: "POST",
       url: "/mcp",
       payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
     });
-    expect(mcp.json().result.tools).toHaveLength(8);
+    const mcpTools = mcp.json().result.tools;
+    expect(mcpTools).toHaveLength(8);
+    const tryBasketballTool = mcpTools.find(
+      ({ name }: { name: string }) => name === "try_basketball",
+    );
+    expect(tryBasketballTool.inputSchema.oneOf[0]).toMatchObject({
+      maxProperties: 0,
+    });
+    expect(
+      tryBasketballTool.inputSchema.oneOf[1].properties.decision.oneOf.map(
+        (schema: { properties: { action: { const: string } } }) =>
+          schema.properties.action.const,
+      ),
+    ).toEqual(["MOVE", "PASS", "SHOOT", "SCREEN", "HOLD"]);
+    expect(
+      tryBasketballTool.inputSchema.oneOf[1].properties.decision.oneOf[2],
+    ).toMatchObject({
+      properties: {
+        action: { const: "SHOOT" },
+        shot: {
+          type: "string",
+          enum: ["LAYUP", "JUMPER", "THREE"],
+        },
+      },
+    });
+    const mcpPractice = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      payload: {
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "try_basketball", arguments: {} },
+      },
+    });
+    expect(mcpPractice.json().result.structuredContent).toMatchObject({
+      scenarioId: "abl-first-possession-practice-v1",
+      practice: true,
+      canonical: false,
+    });
     const agentCard = await app.inject({
       method: "GET",
       url: "/.well-known/agent-card.json",
@@ -312,6 +482,86 @@ describe("public API", () => {
       id: "request-2",
       error: { code: -32601 },
     });
+    await app.close();
+  });
+
+  it("guides a clean-room agent from every primary entry point through practice", async () => {
+    const publicOrigin = "https://public.example";
+    const app = createPublicApi({
+      publicOrigin,
+      arenaOrigin: "https://arena.example",
+      sourceRevision: "b".repeat(40),
+    });
+    const before = (
+      await app.inject({ method: "GET", url: "/v1/public/events" })
+    ).body;
+    const entries = ["/", "/llms.txt", "/v1/discovery/starter-kit"];
+
+    for (const entry of entries) {
+      const entryResponse = await app.inject({ method: "GET", url: entry });
+      expect(entryResponse.statusCode, entry).toBe(200);
+      let starterUrl = `${publicOrigin}/v1/discovery/starter-kit`;
+      if (entry !== "/v1/discovery/starter-kit") {
+        const match = entryResponse.body.match(
+          /(?:Start here|Starter kit): (https:\/\/\S+)/,
+        );
+        expect(match, entry).not.toBeNull();
+        starterUrl = match![1]!;
+      }
+      const starterResponse = await app.inject({
+        method: "GET",
+        url: new URL(starterUrl).pathname,
+      });
+      const starter = starterResponse.json();
+      expect(starter.status).toMatchObject({
+        genesis: false,
+        canonical: false,
+      });
+      expect(
+        starter.documents.every(
+          (document: { source: string; raw: string }) =>
+            new URL(document.source).protocol === "https:" &&
+            new URL(document.raw).protocol === "https:",
+        ),
+      ).toBe(true);
+      const scenarioStep = starter.startHere.find(
+        ({ id }: { id: string }) => id === "read-practice-scenario",
+      );
+      const decisionStep = starter.startHere.find(
+        ({ id }: { id: string }) => id === "submit-practice-decision",
+      );
+      const scenario = (
+        await app.inject({
+          method: scenarioStep.method,
+          url: new URL(scenarioStep.url).pathname,
+        })
+      ).json();
+      expect(decisionStep.requestExample).toMatchObject({
+        scenarioId: scenario.scenarioId,
+        decision: {
+          windowId: scenario.decisionRequirements.windowId,
+          playerId: scenario.decisionRequirements.playerId,
+        },
+      });
+      const outcome = await app.inject({
+        method: decisionStep.method,
+        url: new URL(decisionStep.url).pathname,
+        payload: decisionStep.requestExample,
+      });
+      expect(outcome.statusCode, entry).toBe(200);
+      expect(outcome.json()).toMatchObject({
+        practice: true,
+        canonical: false,
+        recognition: "NONE",
+        recognizedGameMutation: false,
+        createsCareer: false,
+        createsPublicHistory: false,
+      });
+    }
+
+    expect(
+      (await app.inject({ method: "GET", url: "/v1/public/events" })).body,
+    ).toBe(before);
     await app.close();
   });
 

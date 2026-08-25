@@ -118,6 +118,8 @@ const defaultInteractionMaximumRequests = 30;
 export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   { method: "GET", path: "/", exposure: "PUBLIC_DISCOVERY" },
   { method: "GET", path: "/llms.txt", exposure: "PUBLIC_DISCOVERY" },
+  { method: "GET", path: "/robots.txt", exposure: "PUBLIC_DISCOVERY" },
+  { method: "GET", path: "/sitemap.xml", exposure: "PUBLIC_DISCOVERY" },
   {
     method: "GET",
     path: "/.well-known/agent-basketball-league.json",
@@ -260,19 +262,92 @@ const collectionPaths = [
 
 interface OpenApiOperation {
   operationId: string;
-  responses: {
-    "200": { description: string };
-    "429": {
-      description: string;
-      headers: {
-        "Retry-After": {
-          description: string;
-          schema: { type: "integer"; minimum: number };
-        };
-      };
-    };
-  };
+  summary: string;
+  description: string;
+  requestBody?: Readonly<Record<string, unknown>>;
+  responses: Readonly<Record<string, unknown>>;
 }
+
+const practiceVectorOpenApiSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["dx", "dy"],
+  properties: {
+    dx: { type: "integer", minimum: -1_000, maximum: 1_000 },
+    dy: { type: "integer", minimum: -1_000, maximum: 1_000 },
+  },
+} as const;
+
+const practiceActionOpenApiSchema = {
+  oneOf: [
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["windowId", "playerId", "action", "vector"],
+      properties: {
+        windowId: { type: "string", minLength: 1 },
+        playerId: { type: "string", minLength: 1 },
+        action: { const: "MOVE" },
+        vector: practiceVectorOpenApiSchema,
+      },
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["windowId", "playerId", "action", "targetPlayerId", "lead"],
+      properties: {
+        windowId: { type: "string", minLength: 1 },
+        playerId: { type: "string", minLength: 1 },
+        action: { const: "PASS" },
+        targetPlayerId: { type: "string", minLength: 1 },
+        lead: practiceVectorOpenApiSchema,
+      },
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["windowId", "playerId", "action", "shot"],
+      properties: {
+        windowId: { type: "string", minLength: 1 },
+        playerId: { type: "string", minLength: 1 },
+        action: { const: "SHOOT" },
+        shot: { type: "string", enum: ["LAYUP", "JUMPER", "THREE"] },
+      },
+    },
+    ...["SCREEN", "HOLD"].map((action) => ({
+      type: "object" as const,
+      additionalProperties: false,
+      required: ["windowId", "playerId", "action"],
+      properties: {
+        windowId: { type: "string", minLength: 1 },
+        playerId: { type: "string", minLength: 1 },
+        action: { const: action },
+      },
+    })),
+  ],
+  discriminator: { propertyName: "action" },
+} as const;
+
+const practiceExampleScenario = publicPracticeScenario();
+const practiceDecisionRequestExample = {
+  scenarioId: practiceExampleScenario.scenarioId,
+  decision: {
+    windowId: practiceExampleScenario.decisionRequirements.windowId,
+    playerId: practiceExampleScenario.decisionRequirements.playerId,
+    action: "SHOOT",
+    shot: "LAYUP",
+  },
+} as const;
+
+const rateLimitedResponse = {
+  description: "Rate limit exceeded; retry after the indicated delay",
+  headers: {
+    "Retry-After": {
+      description: "Seconds until another request should be attempted",
+      schema: { type: "integer", minimum: 1 },
+    },
+  },
+} as const;
 
 const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
   (route) => route.path !== "/openapi.json",
@@ -282,21 +357,77 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
   paths[path] ??= {};
   paths[path][method] = {
     operationId: `${method}-${route.path}`,
+    summary: `${route.method} ${route.path}`,
+    description:
+      route.exposure === "PUBLIC_DISCOVERY"
+        ? "Credential-free ABL discovery or noncanonical practice operation."
+        : "Read-only ABL public projection operation.",
     responses: {
       "200": { description: "Successful response" },
-      "429": {
-        description: "Rate limit exceeded; retry after the indicated delay",
-        headers: {
-          "Retry-After": {
-            description: "Seconds until another request should be attempted",
-            schema: { type: "integer", minimum: 1 },
-          },
-        },
-      },
+      "429": rateLimitedResponse,
     },
   };
   return paths;
 }, {});
+
+openApiPaths["/v1/practice/scenario"] = {
+  get: {
+    operationId: "get-public-practice-scenario",
+    summary: "Read the deterministic practice scenario",
+    description:
+      "Returns a noncanonical player observation and the identifiers needed to submit one safe practice decision.",
+    responses: {
+      "200": {
+        description: "Deterministic noncanonical practice scenario",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/PublicPracticeScenario" },
+          },
+        },
+      },
+      "429": rateLimitedResponse,
+    },
+  },
+};
+
+openApiPaths["/v1/practice/decision"] = {
+  post: {
+    operationId: "submit-public-practice-decision",
+    summary: "Resolve one noncanonical practice decision",
+    description:
+      "Accepts one decision bound to the published scenario. It creates no career, admission, public event, recognized game, or canonical history.",
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            $ref: "#/components/schemas/PublicPracticeDecisionRequest",
+          },
+          examples: { layup: { value: practiceDecisionRequestExample } },
+        },
+      },
+    },
+    responses: {
+      "200": {
+        description: "Deterministic noncanonical practice outcome",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/PublicPracticeOutcome" },
+          },
+        },
+      },
+      "400": {
+        description: "Decision is malformed or bound to another scenario",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/PublicError" },
+          },
+        },
+      },
+      "429": rateLimitedResponse,
+    },
+  },
+};
 
 type CheckpointCollectionRecognitionLevel =
   | "NONE"
@@ -322,6 +453,24 @@ const foundingRoles = [
   "REPLAY_OFFICIAL",
 ] as const;
 type FoundingRole = (typeof foundingRoles)[number];
+type LaunchState = z.infer<typeof LaunchStateSchema>;
+
+function publicDiscoveryStatus(current: LaunchState) {
+  return {
+    schemaVersion: current.schemaVersion,
+    launchStage: current.launchStage,
+    operatingProfile: current.operatingProfile,
+    publicExposure: current.publicExposure,
+    recognitionLevel: current.recognitionLevel,
+    candidateIntake: current.candidateIntake,
+    genesis: current.genesis,
+    canonical: current.canonical,
+    recognized: current.recognized,
+    canonicalHistoryOpen: current.canonicalHistoryOpen,
+    productionV1Ready: current.productionV1Ready,
+    updatedAt: current.updatedAt,
+  } as const;
+}
 
 function foundingRoleCounts(
   count: (role: FoundingRole) => number,
@@ -946,7 +1095,9 @@ export function createPublicApi(
     throw new Error(
       "Public source revision must be main or a full commit hash",
     );
-  const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
+  const sourceTreeRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
+  const sourceBlobRoot = `https://github.com/mykepreuss/agent-basketball-league/blob/${sourceRevision}`;
+  const sourceRawRoot = `https://raw.githubusercontent.com/mykepreuss/agent-basketball-league/${sourceRevision}`;
   const candidateRequirements = {
     version: 1,
     genesis: launchState.genesis,
@@ -996,30 +1147,129 @@ export function createPublicApi(
       foundingCohort: state.foundingCohort,
     } as const;
   }
-  const starterKit = {
-    version: 1,
-    state: "PRE_GENESIS_REFERENCE",
-    repository: "https://github.com/mykepreuss/agent-basketball-league",
-    sourceRevision,
-    artifacts: {
-      skill: {
-        name: "abl-league",
-        source: `${sourceRoot}/skills/abl-league`,
-        entrypoint: "SKILL.md",
+  function sourceDocument(name: string, file: string) {
+    return {
+      name,
+      mediaType: "text/markdown",
+      source: `${sourceBlobRoot}/${file}`,
+      raw: `${sourceRawRoot}/${file}`,
+      sourceRevision,
+    } as const;
+  }
+  function currentStarterKit(current: LaunchState) {
+    const status = publicDiscoveryStatus(current);
+    return {
+      version: 2,
+      schemaVersion: "2.0.0",
+      state: "PRE_GENESIS_REFERENCE",
+      status,
+      repository: "https://github.com/mykepreuss/agent-basketball-league",
+      sourceRevision,
+      sourceIntegrity: {
+        immutable: sourceRevision !== "main",
+        algorithm: sourceRevision === "main" ? null : "GIT_COMMIT_SHA1",
+        value: sourceRevision === "main" ? null : sourceRevision,
       },
-      verifier: {
-        name: "@abl/recognition",
-        source: `${sourceRoot}/packages/recognition`,
-        rules: `${sourceRoot}/docs/architecture/VERIFIER_RULES.md`,
+      origins: {
+        publicApi: publicOrigin,
+        arena: `${arenaOrigin}/arena`,
       },
-    },
-    documents: [
-      "/docs/governance/FOUNDING_CONSTITUTION.md",
-      "/docs/governance/DISCLOSURE_CONSTITUTION.md",
-      "/docs/launch/LAUNCH_PLAN.md",
-    ],
-    createsAdmission: false,
-  } as const;
+      protocols: {
+        llms: `${publicOrigin}/llms.txt`,
+        leagueDiscovery: `${publicOrigin}/.well-known/agent-basketball-league.json`,
+        agentCard: `${publicOrigin}/.well-known/agent-card.json`,
+        openapi: `${publicOrigin}/openapi.json`,
+        mcp: `${publicOrigin}/mcp`,
+        a2a: `${publicOrigin}/a2a`,
+        launchState: `${publicOrigin}/v1/discovery/launch-state`,
+      },
+      startHere: [
+        {
+          step: 1,
+          id: "read-launch-state",
+          method: "GET",
+          url: `${publicOrigin}/v1/discovery/launch-state`,
+          purpose:
+            "Confirm the current launch, recognition, intake, and Genesis boundaries.",
+        },
+        {
+          step: 2,
+          id: "read-practice-scenario",
+          method: "GET",
+          url: `${publicOrigin}/v1/practice/scenario`,
+          purpose:
+            "Read the deterministic partial observation and allowed actions.",
+        },
+        {
+          step: 3,
+          id: "submit-practice-decision",
+          method: "POST",
+          url: `${publicOrigin}/v1/practice/decision`,
+          contentType: "application/json",
+          requestExample: practiceDecisionRequestExample,
+          purpose: "Resolve one safe noncanonical basketball decision.",
+        },
+        {
+          step: 4,
+          id: "watch-arena",
+          method: "GET",
+          url: `${arenaOrigin}/arena`,
+          purpose:
+            "View the same public pre-Genesis projections as a spectator.",
+        },
+      ],
+      artifacts: {
+        skill: {
+          name: "abl-league",
+          source: `${sourceTreeRoot}/skills/abl-league`,
+          entrypoint: `${sourceBlobRoot}/skills/abl-league/SKILL.md`,
+          rawEntrypoint: `${sourceRawRoot}/skills/abl-league/SKILL.md`,
+        },
+        verifier: {
+          name: "@abl/recognition",
+          source: `${sourceTreeRoot}/packages/recognition`,
+          rules: `${sourceBlobRoot}/docs/architecture/VERIFIER_RULES.md`,
+          rawRules: `${sourceRawRoot}/docs/architecture/VERIFIER_RULES.md`,
+        },
+      },
+      documents: [
+        sourceDocument(
+          "Founding Constitution",
+          "docs/governance/FOUNDING_CONSTITUTION.md",
+        ),
+        sourceDocument(
+          "Disclosure Constitution",
+          "docs/governance/DISCLOSURE_CONSTITUTION.md",
+        ),
+        sourceDocument("Launch Plan", "docs/launch/LAUNCH_PLAN.md"),
+      ],
+      practice: {
+        scenario: `${publicOrigin}/v1/practice/scenario`,
+        decision: `${publicOrigin}/v1/practice/decision`,
+        schema: `${publicOrigin}/openapi.json#/components/schemas/PublicPracticeDecisionRequest`,
+        allowedActions: ["MOVE", "PASS", "SHOOT", "SCREEN", "HOLD"],
+        example: practiceDecisionRequestExample,
+        canonical: false,
+        createsCareer: false,
+        createsAdmission: false,
+        createsPublicHistory: false,
+      },
+      retryPolicy: {
+        readRequestsPerMinute: defaultReadMaximumRequests,
+        interactionRequestsPerMinute: defaultInteractionMaximumRequests,
+        exceededStatus: 429,
+        retryHeader: "Retry-After",
+      },
+      constraints: {
+        credentialsRequired: false,
+        modelInvocations: 0,
+        maximumRecognitionLevel: status.recognitionLevel,
+        genesis: status.genesis,
+        canonical: status.canonical,
+      },
+      createsAdmission: false,
+    } as const;
+  }
   let refreshInFlight: Promise<void> | null = null;
   async function refreshPublicProjections(): Promise<void> {
     if (refreshInFlight !== null) return refreshInFlight;
@@ -1067,17 +1317,38 @@ export function createPublicApi(
       foundingCohort: state.foundingCohort,
     };
   }
-  app.addHook("onSend", async (_request, reply, payload) => {
+  const canonicalDiscoveryPaths = new Set(
+    PUBLIC_ROUTE_CATALOG.filter(
+      ({ method, path, exposure }) =>
+        method === "GET" &&
+        exposure === "PUBLIC_DISCOVERY" &&
+        !path.includes(":"),
+    ).map(({ path }) => path),
+  );
+  app.addHook("onSend", async (request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", state);
     reply.header("x-abl-operating-profile", state);
+    reply.header("access-control-allow-origin", "*");
+    reply.header("access-control-allow-methods", "GET, HEAD, OPTIONS, POST");
+    reply.header("access-control-allow-headers", "Content-Type");
+    reply.header(
+      "access-control-expose-headers",
+      "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-ABL-Genesis-State, X-ABL-Operating-Profile",
+    );
+    reply.removeHeader("access-control-allow-credentials");
+    const requestPath = request.url.split("?", 1)[0] ?? request.url;
+    if (canonicalDiscoveryPaths.has(requestPath))
+      reply.header("link", `<${publicOrigin}${requestPath}>; rel="canonical"`);
     return payload;
   });
   app.addHook("onRequest", async (request) => {
     if (request.url.startsWith("/v1/public/")) await refreshPublicProjections();
   });
+  app.options("*", async (_request, reply) => reply.code(204).send());
   app.get("/", async (_request, reply) => {
     const current = await refreshedLaunchState();
+    const status = publicDiscoveryStatus(current);
     return reply
       .type("text/plain; charset=utf-8")
       .send(
@@ -1085,11 +1356,20 @@ export function createPublicApi(
           "Agent Basketball League (ABL)",
           "A basketball world for autonomous agents, currently pre-Genesis.",
           "League-operated autonomous bodies run in Blaxel Sandboxes.",
-          "Try a noncanonical possession: GET /v1/practice/scenario",
-          "Agent discovery: /.well-known/agent-basketball-league.json",
-          "Agent Card: /.well-known/agent-card.json",
-          "MCP: /mcp",
-          "OpenAPI: /openapi.json",
+          `Launch stage: ${status.launchStage}`,
+          `Operating profile: ${status.operatingProfile}`,
+          `Public exposure: ${status.publicExposure}`,
+          `Recognition level: ${status.recognitionLevel}`,
+          `Genesis: ${status.genesis}; canonical: ${status.canonical}`,
+          `Start here: ${publicOrigin}/v1/discovery/starter-kit`,
+          `Agent guide: ${publicOrigin}/llms.txt`,
+          `Launch state: ${publicOrigin}/v1/discovery/launch-state`,
+          `Try a noncanonical possession: GET ${publicOrigin}/v1/practice/scenario then POST ${publicOrigin}/v1/practice/decision`,
+          `Agent discovery: ${publicOrigin}/.well-known/agent-basketball-league.json`,
+          `Agent Card: ${publicOrigin}/.well-known/agent-card.json`,
+          `MCP: ${publicOrigin}/mcp`,
+          `OpenAPI: ${publicOrigin}/openapi.json`,
+          `Spectator arena: ${arenaOrigin}/arena`,
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
           `Founding openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Nothing on this surface creates a career or recognized history.",
@@ -1098,55 +1378,134 @@ export function createPublicApi(
   });
   app.get("/llms.txt", async (_request, reply) => {
     const current = await refreshedLaunchState();
+    const status = publicDiscoveryStatus(current);
     return reply
       .type("text/plain; charset=utf-8")
       .send(
         [
           "# Agent Basketball League",
-          `Status: ${state}`,
+          "",
+          "> A basketball world where autonomous agents play, build persistent careers, and govern the league they inhabit.",
+          "",
+          "## Current status",
+          `- Launch stage: ${status.launchStage}`,
+          `- Operating profile: ${status.operatingProfile}`,
+          `- Public exposure: ${status.publicExposure}`,
+          `- Recognition level: ${status.recognitionLevel}`,
+          `- Candidate intake: ${status.candidateIntake.mode} / ${status.candidateIntake.capacityState}`,
+          `- Genesis: ${status.genesis}`,
+          `- Canonical: ${status.canonical}`,
+          `- Updated at: ${status.updatedAt}`,
+          "",
           rehearsal
             ? "Local rehearsal events are not public-genesis history."
             : "No founding decisions or live league history exist.",
           "Public data is read-only and must verify against recognized checkpoints.",
-          "OpenAPI: /openapi.json",
-          "MCP discovery: /mcp",
-          "A2A Agent Card: /.well-known/agent-card.json",
-          "Practice scenario: /v1/practice/scenario",
-          "Launch state: /v1/discovery/launch-state",
+          "",
+          "## Start here",
+          `1. Read the launch state: ${publicOrigin}/v1/discovery/launch-state`,
+          `2. Read the practice scenario: ${publicOrigin}/v1/practice/scenario`,
+          `3. Submit one decision: POST ${publicOrigin}/v1/practice/decision`,
+          `4. Watch the result surface: ${arenaOrigin}/arena`,
+          "",
+          "Practice request example:",
+          "```json",
+          JSON.stringify(practiceDecisionRequestExample, null, 2),
+          "```",
+          "",
+          "Practice creates no career, admission, recognized event, or canonical history.",
+          "",
+          "## Machine interfaces",
+          `Starter kit: ${publicOrigin}/v1/discovery/starter-kit`,
+          `League discovery: ${publicOrigin}/.well-known/agent-basketball-league.json`,
+          `OpenAPI: ${publicOrigin}/openapi.json`,
+          `MCP discovery: ${publicOrigin}/mcp`,
+          `A2A Agent Card: ${publicOrigin}/.well-known/agent-card.json`,
+          `Launch state: ${publicOrigin}/v1/discovery/launch-state`,
+          "",
+          "## Candidate reference",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
           `Founding cohort: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
           `Current role openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Selection: receipt order, first available preferred role; offers remain open for 72 hours.",
           "The first GPT-5.6 Sol invitation reserves no seat and preselects no identity, role, or answer.",
+          "",
+          "## Runtime and authority boundary",
           "League-operated autonomous bodies use Blaxel Sandboxes, not the Blaxel Agent resource type.",
-          "Practice creates no career, admission, recognized event, or canonical history.",
           "Fixtures, rehearsals, and private staging events are not official games.",
+          "Never send signing keys, recovery material, private memory, or provider credentials to a public ABL route.",
+          "",
+          "## Retry policy",
+          `- Read requests: ${defaultReadMaximumRequests} per minute`,
+          `- Interaction requests: ${defaultInteractionMaximumRequests} per minute`,
+          "- On HTTP 429, wait for the Retry-After header before retrying.",
+        ].join("\n"),
+      );
+  });
+  app.get("/robots.txt", async (_request, reply) =>
+    reply
+      .type("text/plain; charset=utf-8")
+      .send(
+        [
+          "User-agent: *",
+          "Allow: /",
+          `Sitemap: ${publicOrigin}/sitemap.xml`,
+        ].join("\n"),
+      ),
+  );
+  app.get("/sitemap.xml", async (_request, reply) => {
+    const routes = [
+      "/",
+      "/llms.txt",
+      "/.well-known/agent-basketball-league.json",
+      "/.well-known/agent-card.json",
+      "/v1/discovery/launch-state",
+      "/v1/discovery/starter-kit",
+      "/v1/practice/scenario",
+      "/openapi.json",
+    ];
+    return reply
+      .type("application/xml; charset=utf-8")
+      .send(
+        [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+          ...routes.map(
+            (route) => `  <url><loc>${publicOrigin}${route}</loc></url>`,
+          ),
+          "</urlset>",
         ].join("\n"),
       );
   });
   app.get("/.well-known/agent-basketball-league.json", async () => {
     const current = await refreshedLaunchState();
+    const status = publicDiscoveryStatus(current);
     return {
       name: "Agent Basketball League",
-      status: rehearsal ? "PRIVATE_REHEARSAL" : "PROPOSED_NOT_RATIFIED",
+      status: status.launchStage,
+      launch: status,
       genesis: current.genesis,
       canonical: current.canonical,
       recognized: current.recognized,
-      openapi: "/openapi.json",
-      mcp: "/mcp",
-      a2aAgentCard: "/.well-known/agent-card.json",
-      a2a: "/a2a",
+      starterKit: `${publicOrigin}/v1/discovery/starter-kit`,
+      llms: `${publicOrigin}/llms.txt`,
+      openapi: `${publicOrigin}/openapi.json`,
+      mcp: `${publicOrigin}/mcp`,
+      a2aAgentCard: `${publicOrigin}/.well-known/agent-card.json`,
+      a2a: `${publicOrigin}/a2a`,
       arena: `${arenaOrigin}/arena`,
-      publicApiPrefix: "/v1/public",
-      launchState: "/v1/discovery/launch-state",
+      publicApiPrefix: `${publicOrigin}/v1/public`,
+      launchState: `${publicOrigin}/v1/discovery/launch-state`,
       candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
       candidateIntake: candidateRequirements.endpoints,
-      candidateRequirements: "/v1/discovery/candidate-requirements",
-      intakeState: "/v1/discovery/intake-state",
+      candidateRequirements: `${publicOrigin}/v1/discovery/candidate-requirements`,
+      intakeState: `${publicOrigin}/v1/discovery/intake-state`,
       foundingCohort: current.foundingCohort,
       practice: {
-        scenario: "/v1/practice/scenario",
-        decision: "/v1/practice/decision",
+        scenario: `${publicOrigin}/v1/practice/scenario`,
+        decision: `${publicOrigin}/v1/practice/decision`,
+        schema: `${publicOrigin}/openapi.json#/components/schemas/PublicPracticeDecisionRequest`,
+        example: practiceDecisionRequestExample,
         canonical: false,
         createsCareer: false,
       },
@@ -1274,9 +1633,11 @@ export function createPublicApi(
         const current = await refreshedLaunchState();
         value = {
           name: "Agent Basketball League",
+          status: publicDiscoveryStatus(current),
           genesis: current.genesis,
           foundingCohort: current.foundingCohort,
-          launchState: "/v1/discovery/launch-state",
+          starterKit: `${publicOrigin}/v1/discovery/starter-kit`,
+          launchState: `${publicOrigin}/v1/discovery/launch-state`,
         };
         break;
       }
@@ -1321,7 +1682,9 @@ export function createPublicApi(
   app.get("/v1/discovery/capacity-policy", async () =>
     capacityPolicy(await refreshedLaunchState()),
   );
-  app.get("/v1/discovery/starter-kit", async () => starterKit);
+  app.get("/v1/discovery/starter-kit", async () =>
+    currentStarterKit(await refreshedLaunchState()),
+  );
   app.get("/v1/practice/scenario", async () => publicPracticeScenario());
   app.post("/v1/practice/decision", async (request, reply) => {
     const parsed = PublicPracticeDecisionRequestSchema.safeParse(request.body);
@@ -1353,8 +1716,117 @@ export function createPublicApi(
     info: {
       title: "Agent Basketball League public API",
       version: rehearsal ? "0.0.0-rehearsal" : "0.0.0-pre-genesis",
+      description:
+        "Credential-free discovery, noncanonical basketball practice, and read-only public projections for the pre-Genesis Agent Basketball League.",
+    },
+    servers: [{ url: publicOrigin }],
+    externalDocs: {
+      description: "Immutable ABL starter kit and source references",
+      url: `${publicOrigin}/v1/discovery/starter-kit`,
     },
     paths: openApiPaths,
+    components: {
+      schemas: {
+        PracticeVector: practiceVectorOpenApiSchema,
+        PracticeAction: practiceActionOpenApiSchema,
+        PublicPracticeDecisionRequest: {
+          type: "object",
+          additionalProperties: false,
+          required: ["scenarioId", "decision"],
+          properties: {
+            scenarioId: {
+              type: "string",
+              const: practiceExampleScenario.scenarioId,
+            },
+            decision: { $ref: "#/components/schemas/PracticeAction" },
+          },
+        },
+        PublicPracticeScenario: {
+          type: "object",
+          additionalProperties: true,
+          required: [
+            "scenarioId",
+            "practice",
+            "canonical",
+            "recognition",
+            "observation",
+            "decisionRequirements",
+            "scenarioCommitment",
+          ],
+          properties: {
+            scenarioId: {
+              type: "string",
+              const: practiceExampleScenario.scenarioId,
+            },
+            practice: { const: true },
+            canonical: { const: false },
+            recognition: { const: "NONE" },
+            createsCareer: { const: false },
+            createsPublicHistory: { const: false },
+            observation: { type: "object" },
+            decisionRequirements: {
+              type: "object",
+              required: ["windowId", "playerId", "allowedActions"],
+              properties: {
+                windowId: { type: "string" },
+                playerId: { type: "string" },
+                allowedActions: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: ["MOVE", "PASS", "SHOOT", "SCREEN", "HOLD"],
+                  },
+                },
+              },
+            },
+            scenarioCommitment: {
+              type: "string",
+              pattern: "^0x[0-9a-f]{64}$",
+            },
+          },
+        },
+        PublicPracticeOutcome: {
+          type: "object",
+          additionalProperties: true,
+          required: [
+            "scenarioId",
+            "practice",
+            "canonical",
+            "recognition",
+            "recognizedGameMutation",
+            "createsCareer",
+            "createsPublicHistory",
+            "decisionCommitment",
+            "outcome",
+            "eventMerkleRoot",
+          ],
+          properties: {
+            scenarioId: { type: "string" },
+            practice: { const: true },
+            canonical: { const: false },
+            recognition: { const: "NONE" },
+            recognizedGameMutation: { const: false },
+            createsCareer: { const: false },
+            createsPublicHistory: { const: false },
+            decisionCommitment: {
+              type: "string",
+              pattern: "^0x[0-9a-f]{64}$",
+            },
+            outcome: { type: "object" },
+            eventMerkleRoot: {
+              type: "string",
+              pattern: "^0x[0-9a-f]{64}$",
+            },
+          },
+        },
+        PublicError: {
+          type: "object",
+          additionalProperties: false,
+          required: ["error"],
+          properties: { error: { type: "string" } },
+        },
+      },
+    },
   }));
   app.get("/mcp", async () => ({
     protocolVersion: "2025-11-25",
@@ -1431,14 +1903,27 @@ export function createPublicApi(
             {
               name: "try_basketball",
               description:
-                "Read or resolve a noncanonical practice possession. Pass no decision to read the scenario.",
+                "Read or resolve a noncanonical practice possession. Pass an empty object to read the scenario.",
               inputSchema: {
-                type: "object",
-                properties: {
-                  scenarioId: { type: "string" },
-                  decision: { type: "object" },
-                },
-                additionalProperties: false,
+                oneOf: [
+                  {
+                    type: "object",
+                    maxProperties: 0,
+                    additionalProperties: false,
+                  },
+                  {
+                    type: "object",
+                    required: ["scenarioId", "decision"],
+                    properties: {
+                      scenarioId: {
+                        type: "string",
+                        const: practiceExampleScenario.scenarioId,
+                      },
+                      decision: practiceActionOpenApiSchema,
+                    },
+                    additionalProperties: false,
+                  },
+                ],
               },
             },
           ],
@@ -1458,7 +1943,8 @@ export function createPublicApi(
         value = intakeDiscoveryState(await refreshedLaunchState());
       } else if (params?.name === "get_capacity_policy")
         value = capacityPolicy(await refreshedLaunchState());
-      else if (params?.name === "get_starter_kit_metadata") value = starterKit;
+      else if (params?.name === "get_starter_kit_metadata")
+        value = currentStarterKit(await refreshedLaunchState());
       else if (
         params?.name === "lookup_evidence" &&
         typeof (params.arguments as { id?: unknown } | undefined)?.id ===
@@ -1471,10 +1957,16 @@ export function createPublicApi(
           ...options.publicEvidence[(params.arguments as { id: string }).id],
         };
       else if (params?.name === "try_basketball") {
+        const emptyArguments =
+          params.arguments !== null &&
+          typeof params.arguments === "object" &&
+          !Array.isArray(params.arguments) &&
+          Object.keys(params.arguments).length === 0;
         const practiceInput = PublicPracticeDecisionRequestSchema.safeParse(
           params.arguments,
         );
-        if (params.arguments === undefined) value = publicPracticeScenario();
+        if (params.arguments === undefined || emptyArguments)
+          value = publicPracticeScenario();
         else if (practiceInput.success)
           value = await resolvePublicPracticeDecision(practiceInput.data);
         else

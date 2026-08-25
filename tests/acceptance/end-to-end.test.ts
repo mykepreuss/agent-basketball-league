@@ -3414,6 +3414,8 @@ describe("complete local acceptance", () => {
     const expected = new Set([
       "GET /",
       "GET /llms.txt",
+      "GET /robots.txt",
+      "GET /sitemap.xml",
       "GET /.well-known/agent-basketball-league.json",
       "GET /.well-known/agent-card.json",
       "POST /a2a",

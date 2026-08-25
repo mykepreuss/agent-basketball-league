@@ -109,7 +109,14 @@ describe("actual MCP service interfaces", () => {
       expect(genesis.json().result.structuredContent).toMatchObject({
         ok: true,
         status: 200,
-        body: { genesis: false, status: "PROPOSED_NOT_RATIFIED" },
+        body: {
+          genesis: false,
+          status: "LOCAL_GATE_1",
+          launch: {
+            launchStage: "LOCAL_GATE_1",
+            operatingProfile: "PRE_GENESIS_CLOSED",
+          },
+        },
       });
 
       const gatedGovernment = await government.inject(

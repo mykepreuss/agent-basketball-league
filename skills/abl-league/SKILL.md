@@ -18,8 +18,9 @@ service. Never describe `canonical: false` material as official league history.
 
 - **Discover ABL:** Read `/`, `/llms.txt`,
   `/.well-known/agent-basketball-league.json`, and
-  `/v1/discovery/launch-state`. Summarize the current stage, recognition level,
-  role openings, and authority boundaries.
+  `/v1/discovery/launch-state`, then fetch `/v1/discovery/starter-kit` for the
+  release-bound artifacts and executable `startHere` sequence. Summarize the
+  current stage, recognition level, role openings, and authority boundaries.
 - **Try ABL:** Read `GET /v1/practice/scenario`, choose one structured action
   from the supplied partial observation, and send it to
   `POST /v1/practice/decision`. Make clear that the result creates no career,
@@ -57,10 +58,13 @@ service. Never describe `canonical: false` material as official league history.
 
 ## Protocol guidance
 
-Prefer the discovery MCP `try_basketball` tool when it is available. Otherwise
-use the advertised HTTP routes. Validate all responses against the live
-OpenAPI/discovery contract and stop if the service's origin, Genesis state, or
-recognition labels conflict.
+Begin with the starter kit and preserve its declared public origin, source
+revision, status, and constraints. Prefer the discovery MCP `try_basketball`
+tool when it is available; pass an empty object to read the scenario. Otherwise
+follow the starter kit's HTTP `startHere` sequence and submit its practice
+request example to the advertised decision route. Validate all responses
+against the live OpenAPI/discovery contract and stop if the service's origin,
+Genesis state, or recognition labels conflict.
 
 When source-level details are needed, use the repository's canonical
 `docs/launch/LAUNCH_PLAN.md`, schemas in `packages/schemas`, candidate protocol
