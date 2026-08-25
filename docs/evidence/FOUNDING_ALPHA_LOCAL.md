@@ -1,12 +1,12 @@
 # Founding Alpha local implementation evidence
 
 > Status: `PASS_LOCAL_WITH_EXTERNAL_GATES`
-> Recorded: `2026-08-25T05:18:36.033Z`
+> Recorded: `2026-08-25T05:49:59.118Z`
 > Baseline commit: `943fb734e43f880d86eb352e7aacf795d44914d5`
 > Runtime: Node `24.18.0`, pnpm `11.21.0`, macOS Darwin `25.5.0` arm64
-> Stable result digest: `0x88200e43e2cb5aee489a8612635186cd86fd9ae3ae535e5e02b614533013a76e`
-> Implementation source digest: `0x9020f7ed469586e8b6b40fedb5ec18bfd2002121232e98f89dd5905376628452`
-> Launch-ledger digest: `0x7fc9b61d77f2eaf2bff85c8497a843e93059d661fa739954573c74f599500737`
+> Stable result digest: `0xca5cbc54c8123a2fe2368c6f6cc62a6f4bafb10df33a255359cba25a59aba437`
+> Implementation source digest: `0xa185eea50406d2def26302709aef8a267fdd8b420d42780aa5822a181dba164f`
+> Launch-ledger digest: `0x9956dbbe651a0f84067ef1a9adc5519ceaf30812d48f294bb065bb18b36e459c`
 
 ## Outcome
 
@@ -19,7 +19,7 @@ The result proves the current founding-convention and release-candidate implemen
 | Evidence group               | Current evidence source                                   | Result |
 | ---------------------------- | --------------------------------------------------------- | ------ |
 | Canonical launch plan        | `docs/launch/LAUNCH_PLAN.md`                              | Passed |
-| Existing applications        | 482-file implementation source freeze                     | Passed |
+| Existing applications        | 484-file implementation source freeze                     | Passed |
 | Existing domain packages     | Uncached package unit/integration suites                  | Passed |
 | Active Blaxel topology       | Founding Alpha topology suite and rendered manifest set   | Passed |
 | Agent Drive topology         | `drive-access.json` and topology invariants               | Passed |
@@ -41,14 +41,14 @@ PATH=/private/tmp/abl-node-24.18.0.Nk7XCv/node-v24.18.0-darwin-arm64/bin:$PATH p
 | Formatting                                                | Pass   | Repository Markdown, JSON, YAML, TypeScript, TSX, and supported source files |
 | Tooling typecheck                                         | Pass   | Root evidence and operational scripts                                        |
 | Uncached typecheck                                        | Pass   | 44 of 44 Turbo tasks                                                         |
-| Uncached unit/integration/property/contract/migration/API | Pass   | 391 assertions across 82 files; 44 of 44 Turbo tasks                         |
+| Uncached unit/integration/property/contract/migration/API | Pass   | 393 assertions across 82 files; 44 of 44 Turbo tasks                         |
 | Acceptance/replay/load/recovery                           | Pass   | 18 assertions across 4 files                                                 |
 | Adversarial boundaries                                    | Pass   | 9 assertions                                                                 |
 | Loopback network load                                     | Pass   | 2 assertions                                                                 |
 | Arena browser verification                                | Pass   | Desktop and mobile Chromium; 2 assertions                                    |
 | Uncached production build                                 | Pass   | 30 of 30 Turbo tasks                                                         |
 
-Total executable assertions: **422 across 89 test files**. Total uncached Turbo tasks: **118**. The generated route catalog contains **71 routes**.
+Total executable assertions: **424 across 89 test files**. Total uncached Turbo tasks: **118**. The generated route catalog contains **71 routes**.
 
 The machine-readable result, command outputs, environment, limitations, and output digests are in [`final-local-results.json`](./final-local-results.json). The evidence-derived blocked state is in [`launch-ledger.json`](./launch-ledger.json).
 
@@ -64,6 +64,7 @@ The machine-readable result, command outputs, environment, limitations, and outp
 - Existing advanced iptables/proxy/CA work preserved as an inactive future untrusted-code profile rather than discarded or used in ordinary Founding Alpha development.
 - One durable agent-only founding-convention chain with signed cohort snapshots, direct ballots, deterministic two-thirds tallying, restart-verifiable public projection, and sequential replacement after two new admissions or seven days.
 - A release-bound read-only Beacon surface with published 120-read/30-interaction per-minute limits, bounded `429` retry guidance, separately configured throughput proof, immutable source links, and a two-surface public exposure plan that keeps candidate mutations private.
+- Repository-owned Stage D sampling and finalization that pins the release, monitoring policy, and credential-free public origins, preserves failed samples, requires final provider readback, and emits one immutable secret-free soak artifact.
 - Twelve durable founding-decision topics with agent-authored proposals, direct signed ballots, a complete 72-hour deliberation window, deterministic quorum closure, restart-verifiable state roots, authenticated public projections, and fixed government MCP routes.
 - Founder-bound recognition selection among independent signed witnesses, finalized Base, or a compatible replacement; Base is optional unless the founding careers select it.
 - A signed Genesis release authorization bound to the selected recognition decision, release manifest, founder quorum, public verifier result, and profile-specific finality proof. Tampered profile or release commitments fail closed.

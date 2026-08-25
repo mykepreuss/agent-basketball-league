@@ -44,9 +44,66 @@ Request one decision containing the exact release commit and image revisions, th
    Run `pnpm stage-d:verify-beacon <public-api-origin> <arena-origin> <release-commit>` for the deterministic protocol check.
 4. Verify that internal projection ingress, candidate mutation, core, storage, Jobs, standalone Functions, and control surfaces remain inaccessible without their private authority.
 5. Give a compatible external agent only the public API origin. It must independently identify the league as pre-Genesis, find and interpret the skill and verifier, inspect rules and evidence, complete one noncanonical practice possession, locate but not submit the candidate flow, and find the arena.
-6. Run the deterministic 24-hour public soak under [`monitoring-policy.json`](../../infra/blaxel/public-beacon/monitoring-policy.json). Record availability, error rate, maximum sample gap, cold-start recovery, API/arena restart recovery, cost, and any degraded state. Zero canonical or Genesis claims are allowed. Finalize it with `pnpm stage-d:assess-soak <monitoring-policy.json> <live-public-soak-evidence.json>`.
+6. Run the deterministic 24-hour public soak under [`monitoring-policy.json`](../../infra/blaxel/public-beacon/monitoring-policy.json). Invoke `pnpm stage-d:sample-soak <monitoring-policy.json> <release-commit> <public-api-origin> <arena-origin> <samples.json>` every five minutes. The repository-owned sampler pins both credential-free origins and the release, records failures instead of erasing them, writes state with mode `0600`, and refuses origin or release drift.
+7. Record the protocol, clean-room-agent, privacy, recovery, incident, and final provider checks in matching secret-free `checks.json` and `metrics.json` collector files with mode `0600`. Compose the immutable evidence with `pnpm stage-d:finalize-soak <monitoring-policy.json> <samples.json> <checks.json> <metrics.json> <new-live-public-soak-evidence.json>`; the destination must not already exist. Then run `pnpm stage-d:assess-soak <monitoring-policy.json> <new-live-public-soak-evidence.json>`. Zero canonical or Genesis claims are allowed.
 
 Stage D passes only when the clean-room agent test and public soak pass. Stage E remains a separate capped-intake decision.
+
+### Final collector contracts
+
+`checks.json` contains no credentials and uses this exact shape. A check becomes `true` only after its named live assertion passes:
+
+```json
+{
+  "version": 1,
+  "evidenceClass": "LIVE_PUBLIC_BEACON_CHECKS",
+  "stage": "READ_ONLY_BEACON_PUBLIC_SOAK",
+  "releaseId": "<40-character merged release commit>",
+  "publicExposure": "READ_ONLY",
+  "checks": {
+    "anonymousDiscovery": false,
+    "arenaRendering": false,
+    "releaseBoundSkill": false,
+    "releaseBoundVerifier": false,
+    "noncanonicalPractice": false,
+    "candidateMutationPrivate": false,
+    "rateLimitRetryGuidance": false,
+    "boundedPayloads": false,
+    "scaleToZeroRecovery": false,
+    "restartRecovery": false,
+    "cleanRoomExternalAgent": false,
+    "degradedStateLabeling": false
+  },
+  "incidents": {
+    "p0": 0,
+    "p1": 0,
+    "privacyBreaches": 0,
+    "falseCanonicalClaims": 0,
+    "falseGenesisClaims": 0,
+    "candidateMutationExposures": 0,
+    "unboundedCostEvents": 0
+  },
+  "credentialsUsed": false,
+  "secretValuesRecorded": false
+}
+```
+
+`metrics.json` is written from the final provider readback after the last sample:
+
+```json
+{
+  "releaseId": "<same 40-character merged release commit>",
+  "measuredAt": "<ISO-8601 provider-readback time>",
+  "projectedMonthlyCostUsd": 0,
+  "observedCostUsd": 0,
+  "blaxelBalanceUsd": 0,
+  "automaticTopUp": false,
+  "finalProviderReadback": true,
+  "secretValuesRecorded": false
+}
+```
+
+The finalizer rejects a stale provider timestamp, release or policy drift, an origin containing credentials or a path, uneven sample counts, inconsistent failure totals, a non-`0600` collector, and an existing destination.
 
 ## Rollback
 
