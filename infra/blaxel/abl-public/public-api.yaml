@@ -39,6 +39,9 @@ spec:
       - name: ABL_BLAXEL_REGION
         value: us-was-1
         secret: false
+      - name: ABL_RELEASE_ID
+        value: ${ABL_RELEASE_ID}
+        secret: false
       - name: ABL_PROJECTION_INGEST_SERVICE_ID
         value: core-projection-publisher
         secret: false

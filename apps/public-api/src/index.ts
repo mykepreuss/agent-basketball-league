@@ -737,6 +737,9 @@ const apiOptions: PublicApiOptions = {
   ...(process.env.ABL_CANDIDATE_INTAKE_ORIGIN === undefined
     ? {}
     : { candidateIntakeOrigin: process.env.ABL_CANDIDATE_INTAKE_ORIGIN }),
+  ...(process.env.ABL_RELEASE_ID === undefined
+    ? {}
+    : { sourceRevision: process.env.ABL_RELEASE_ID }),
 };
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)

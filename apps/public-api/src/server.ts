@@ -371,6 +371,7 @@ export interface PublicApiOptions {
   genesisStartupEvidence?: unknown;
   publicOrigin?: string;
   candidateIntakeOrigin?: string;
+  sourceRevision?: string;
   publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
   rateLimit?: PublicRateLimitOptions;
   projections?: PublicProjectionReader;
@@ -666,6 +667,12 @@ export function createPublicApi(
     options.candidateIntakeOrigin ??
       "https://candidate.agent-basketball-league.invalid",
   );
+  const sourceRevision = options.sourceRevision ?? "main";
+  if (!/^(?:main|[0-9a-f]{40})$/.test(sourceRevision))
+    throw new Error(
+      "Public source revision must be main or a full commit hash",
+    );
+  const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
   const candidateRequirements = {
     version: 1,
     genesis: launchState.genesis,
@@ -717,6 +724,19 @@ export function createPublicApi(
     version: 1,
     state: "PRE_GENESIS_REFERENCE",
     repository: "https://github.com/mykepreuss/agent-basketball-league",
+    sourceRevision,
+    artifacts: {
+      skill: {
+        name: "abl-league",
+        source: `${sourceRoot}/skills/abl-league`,
+        entrypoint: "SKILL.md",
+      },
+      verifier: {
+        name: "@abl/recognition",
+        source: `${sourceRoot}/packages/recognition`,
+        rules: `${sourceRoot}/docs/architecture/VERIFIER_RULES.md`,
+      },
+    },
     documents: [
       "/docs/governance/FOUNDING_CONSTITUTION.md",
       "/docs/governance/DISCLOSURE_CONSTITUTION.md",

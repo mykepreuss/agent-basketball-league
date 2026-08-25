@@ -93,8 +93,30 @@ describe("public API", () => {
   });
 
   it("serves discovery, OpenAPI, and MCP without claiming genesis", async () => {
+    const sourceRevision = "a".repeat(40);
+    const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
     const app = createPublicApi({
       candidateIntakeOrigin: "https://candidate.example",
+      sourceRevision,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/starter-kit",
+        })
+      ).json(),
+    ).toMatchObject({
+      sourceRevision,
+      artifacts: {
+        skill: {
+          source: `${sourceRoot}/skills/abl-league`,
+          entrypoint: "SKILL.md",
+        },
+        verifier: {
+          source: `${sourceRoot}/packages/recognition`,
+        },
+      },
     });
     const discovery = await app.inject({
       method: "GET",
