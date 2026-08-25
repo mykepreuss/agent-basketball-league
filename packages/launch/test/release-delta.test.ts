@@ -44,16 +44,19 @@ const deploymentMap = {
       kind: "Sandbox",
       name: "abl-core-api",
       imageName: "abl-stage-c-core-api-image",
+      trustDomain: "abl-core",
     },
     {
       kind: "Function",
       name: "abl-government-mcp",
       imageName: "abl-stage-c-government-mcp-image",
+      trustDomain: "abl-core",
     },
     {
       kind: "Job",
       name: "abl-candidate-provisioner",
       imageName: "abl-stage-c-candidate-provisioner-image",
+      trustDomain: "abl-core",
     },
   ],
 } as const;
@@ -133,14 +136,17 @@ function deltaEvidence() {
     changedWorkloads: [
       {
         ...deploymentMap.workloads[0],
+        providerTrustDomainLabel: deploymentMap.workloads[0].trustDomain,
         immutableImageReference: `sandbox/abl-stage-c-core-api-image:${"c".repeat(12)}`,
       },
       {
         ...deploymentMap.workloads[1],
+        providerTrustDomainLabel: deploymentMap.workloads[1].trustDomain,
         immutableImageReference: `function/abl-stage-c-government-mcp-image:${"d".repeat(12)}`,
       },
       {
         ...deploymentMap.workloads[2],
+        providerTrustDomainLabel: deploymentMap.workloads[2].trustDomain,
         immutableImageReference: `job/abl-stage-c-candidate-provisioner-image:${"e".repeat(12)}`,
       },
     ],
@@ -294,6 +300,18 @@ describe("private release-delta handoff", () => {
         },
       }),
     ).toThrow("Provider readback predates");
+    expect(() =>
+      PrivateReleaseDeltaEvidenceSchema.parse({
+        ...observed,
+        changedWorkloads: [
+          {
+            ...observed.changedWorkloads[0],
+            providerTrustDomainLabel: "abl-public",
+          },
+        ],
+        changedServiceRestarts: [observed.changedServiceRestarts[0]],
+      }),
+    ).toThrow("Provider trust-domain label does not match");
 
     const result = assessPrivateReleaseDelta(
       policy,

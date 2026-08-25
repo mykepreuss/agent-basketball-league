@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0xccdd38c55900ebab7988ffb644e6e99514db8994c3fef7f5f9af02da1038d846",
+    "evidenceDigest": "0xa0ee6abf8d09152d01213ae299a65d907af4c0329ad8d39222a8e3aacfe96e3f",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -172,7 +172,7 @@
   "evidence": [
     {
       "evidenceId": "canonical-launch-plan",
-      "digest": "0x97393973d6b364391776528869feed1ef0a4fededdb33203fe3fbd25e8600a26",
+      "digest": "0x435b4cbb7270f565ad6cdaa29bc0a904c20a2e78d94fca40347f69dc13469a61",
       "verification": "PASSED"
     },
     {
@@ -182,7 +182,7 @@
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x5426d809a6e8368349fd6de33d691b675cef2ac7f6329746140fee9306123c69",
+      "digest": "0x7a10ad9a53a5453d0aeba448bed409eef99201635457096bcfd002dd154db62c",
       "verification": "PASSED"
     },
     {
@@ -212,7 +212,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0x948c775a80f30892ab2821541aef92315c709c4e55558a2e50dd684418750706",
+      "digest": "0xd0fb1f37c0184ca5a85c4e34e6e47b432e3b3a451ee986c07bcf1b87a4290ef1",
       "verification": "PASSED"
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0xa8f2711fd8b32e7bfd0a4f4f4bb8874a0b803dcd601a954b475a046390652a26",
+      "digest": "0xdde0400e3edc1b15a4eee5f6ab33f3b8c7c7e5c77c3b3f3d9c301a8bdb1753f5",
       "verification": "PASSED"
     },
     {
@@ -252,12 +252,12 @@
     },
     {
       "evidenceId": "persistent-beacon-live-proof",
-      "digest": "0x97393973d6b364391776528869feed1ef0a4fededdb33203fe3fbd25e8600a26",
+      "digest": "0x435b4cbb7270f565ad6cdaa29bc0a904c20a2e78d94fca40347f69dc13469a61",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
       "evidenceId": "first-sol-invitation-evidence",
-      "digest": "0x97393973d6b364391776528869feed1ef0a4fededdb33203fe3fbd25e8600a26",
+      "digest": "0x435b4cbb7270f565ad6cdaa29bc0a904c20a2e78d94fca40347f69dc13469a61",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x277a875261b3aae820a55d5eb421de87e8bc3c74da8c06f369e82f94f443e5b1"
+  "ledgerDigest": "0xe229d6c277df401d0718fcc51a4e0b31cb5df0c88a5d6770213cb3fcb64f1ce4"
 }

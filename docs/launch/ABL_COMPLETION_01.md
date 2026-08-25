@@ -84,7 +84,7 @@ Requirements block only the stage for which they are required and later stages. 
 9. Implement and rehearse the selected recognition profile, complete the signed release manifest, approve and prepay the operating and wind-down envelope, and separately approve any irreversible broadcast.
 10. Activate Genesis and complete one publicly observable, exactly replayable canonical opening game while keeping signup open.
 
-The exact persistent admission mechanics, maximum-twenty founding registry, and evidence-gated post-Genesis single-admission mode are recorded in the [Stage E capped founding intake runbook](./STAGE_E_CAPPED_FOUNDING_INTAKE.md). The [Stage I Genesis completion contract](./STAGE_I_GENESIS_COMPLETION.md) is the terminal evidence boundary; passing it ends this program without another preflight series.
+The exact persistent admission mechanics, maximum-twenty founding registry, evidence-gated post-Genesis single-admission mode, and fixed Operational Founding Alpha assessor are recorded in the [Stage E capped founding intake runbook](./STAGE_E_CAPPED_FOUNDING_INTAKE.md). Its machine `PASS` permanently completes the first milestone. The [Stage I Genesis completion contract](./STAGE_I_GENESIS_COMPLETION.md) is the terminal evidence boundary for Genesis-live; passing it ends this program without another preflight series.
 
 ## Required rejection and recovery proofs
 

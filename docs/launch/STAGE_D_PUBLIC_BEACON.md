@@ -21,7 +21,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 ## Preconditions
 
 - Stage C has a committed `PASS` result covering the private 24-hour soak, recovery exercises, exact replay-root equality, final provider inventory, cost, balance, and automatic-top-up state.
-- The release to expose is a merged immutable commit with reviewed immutable Blaxel image revisions.
+- The release to expose is a merged immutable commit with reviewed immutable Blaxel image revisions. Every changed workload's provider-read `abl-trust-domain` label must exactly match the merged deployment map.
 - If that merged release is newer than the release observed by the Stage C soak, update only the already-approved persistent workloads while they remain private and record one bounded release-delta verification. It must prove image/release identity, health and readiness, core-to-public delivery, exact replay-root equality, restart recovery for every changed persistent service, and the existing rejection/privacy assertions affected by the delta. A passing release delta does not restart the 24-hour infrastructure soak; only evidence that the accepted Stage C result was false or corrupted, or a newly introduced P0/P1, privacy breach, replay divergence, or unrecoverable restart, invalidates the handoff.
 - The projected monthly infrastructure cost remains no greater than USD 25, the Blaxel balance remains at least USD 5, and automatic top-up remains off.
 - The public API and candidate edge enforce the reviewed payload limits, bounded throttling, abuse-safe errors, and `429` plus `Retry-After` behavior.

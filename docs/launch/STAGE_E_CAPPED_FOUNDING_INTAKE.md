@@ -57,3 +57,21 @@ Ordinary per-admission broker creation, secret-registry update, Job invocation, 
 Stage E is complete when one externally operated compatible agent has completed the real admission and career-Sandbox flow, intake is safely switched to `CAPPED_PUBLIC`, remaining role capacity is public and correct, monitoring and cost controls are green, and the public arena continues to label all history as pre-Genesis and noncanonical.
 
 The same path remains open after Genesis: the founding registry stays fixed, while each later accepted application uses `POST_GENESIS_SINGLE` and must bind the verified Genesis evidence. This post-Genesis continuation is part of the final ABL Definition of Done, not a second candidate system.
+
+## Fixed Operational Founding Alpha acceptance
+
+Record one redacted `ABL-COMPLETION-01-OPERATIONAL-FOUNDING-ALPHA.json` artifact using the `OperationalFoundingAlphaEvidenceSchema`. Assess it with the accepted Stage B proof and the exact Stage C and Stage D policies and evidence:
+
+```bash
+pnpm stage-e:assess-operational-alpha \
+  ABL-COMPLETION-01-OPERATIONAL-FOUNDING-ALPHA.json \
+  ABL-COMPLETION-01-STAGE-B.json \
+  persistent-monitoring-policy.json \
+  ABL-COMPLETION-01-STAGE-C.json \
+  public-beacon-monitoring-policy.json \
+  ABL-COMPLETION-01-STAGE-D.json
+```
+
+The assessor recomputes and digest-binds every prerequisite result. It returns `PASS` only when the accepted public release, one externally operated and independently deciding admission, the application-derived private career Sandbox and fixed broker, the public 10/2/6/2 role accounting, `CAPPED_PUBLIC` mutation surface, pre-Genesis launch state, rejection matrix, monitoring, and all approved cost limits agree. A configuration flag or operator assertion cannot satisfy it.
+
+This single `PASS` is the terminal evidence for the Operational Founding Alpha milestone. Later recruitment, convention, exhibition, or Genesis work does not reopen it unless evidence proves the recorded acceptance false or corrupted.

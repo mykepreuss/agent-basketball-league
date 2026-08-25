@@ -13,6 +13,12 @@ const WorkloadNameSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
 const WorkloadKindSchema = z.enum(["Sandbox", "Function", "Job"]);
+const TrustDomainSchema = z.enum([
+  "abl-core",
+  "abl-private",
+  "abl-public",
+  "abl-competition",
+]);
 const ImmutableWorkloadImageReferenceSchema = z.union([
   ImmutableSandboxImageReferenceSchema,
   z
@@ -28,9 +34,17 @@ const ChangedWorkloadSchema = z
     kind: WorkloadKindSchema,
     name: WorkloadNameSchema,
     imageName: WorkloadNameSchema,
+    trustDomain: TrustDomainSchema,
+    providerTrustDomainLabel: TrustDomainSchema,
     immutableImageReference: ImmutableWorkloadImageReferenceSchema,
   })
   .superRefine((workload, context) => {
+    if (workload.providerTrustDomainLabel !== workload.trustDomain)
+      context.addIssue({
+        code: "custom",
+        path: ["providerTrustDomainLabel"],
+        message: "Provider trust-domain label does not match the release",
+      });
     if (
       !workload.immutableImageReference.includes("@sha256:") &&
       !workload.immutableImageReference.startsWith(
@@ -161,6 +175,7 @@ const DeploymentMapSchema = z.object({
         kind: WorkloadKindSchema,
         name: WorkloadNameSchema,
         imageName: WorkloadNameSchema,
+        trustDomain: TrustDomainSchema,
       }),
     )
     .min(1)
@@ -192,7 +207,11 @@ export function assessPrivateReleaseDelta(
   );
   for (const workload of evidence.changedWorkloads) {
     const declared = declaredWorkloads.get(resourceId(workload));
-    if (declared === undefined || declared.imageName !== workload.imageName)
+    if (
+      declared === undefined ||
+      declared.imageName !== workload.imageName ||
+      declared.trustDomain !== workload.trustDomain
+    )
       blockers.push(
         `changed workload is outside the approved deployment map: ${resourceId(workload)}`,
       );

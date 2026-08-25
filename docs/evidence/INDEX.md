@@ -27,7 +27,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Sandbox-native active topology              | Local manifests and invariants implemented                                         | `infra/blaxel/README.md`, `@abl/foundation` topology suite                             |
 | Public discovery and practice               | Local noncanonical path implemented                                                | `@abl/public-api`, `@abl/discovery-mcp`, `skills/abl-league`                           |
 | Founding cohort capacity                    | Local deterministic allocation implemented                                         | `@abl/schemas`, `@abl/launch`, `@abl/candidate-edge`                                   |
-| Stage E capped-intake readiness             | Maximum-twenty persistent career assignment boundary implemented locally           | `../launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md`, `@abl/candidate-provisioner`            |
+| Stage E capped-intake readiness             | Career cap and Operational Alpha assessor implemented locally                      | `../launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md`, `@abl/launch`                           |
 | Stage I terminal acceptance                 | Assessor implemented; live Genesis and opening-game evidence remain gated          | `../launch/STAGE_I_GENESIS_COMPLETION.md`, `@abl/launch`                               |
 | Monotonic Stage C→D release handoff         | Deterministic private release-delta assessor implemented locally                   | `../launch/STAGE_D_PUBLIC_BEACON.md`, `@abl/launch`                                    |
 | Gate 0/1 launch reconciliation              | Historical local evidence; live gates preserved                                    | `docs/launch/GATE_0_1_TRACEABILITY.md`, `GATE-01.md`                                   |
@@ -65,7 +65,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                     | `PHASE-05.md`, continuity/exit tests                                                   |
 | Founding convention                         | Signed bootstrap and replacement path passes locally; live-agent gate              | `PHASE-11.md`, genesis/core/projection/public/MCP suites                               |
 | Genesis readiness                           | Local bundle ready; gated                                                          | `PHASE-11.md`, release/deployment/cost/risk bundle                                     |
-| Final local acceptance                      | 440 assertions across 91 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
+| Final local acceptance                      | 448 assertions across 93 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
 
 ## Known limitations and external dependencies
 
