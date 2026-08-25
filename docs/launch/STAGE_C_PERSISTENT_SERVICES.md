@@ -1,6 +1,6 @@
 # Stage C — Persistent pre-Genesis services
 
-Status: `APPROVED_DEPLOYMENT_IN_PROGRESS`
+Status: `OWNER_ACCEPTED_EXPERIMENTAL_HANDOFF`
 
 Authority boundary: `ABL-COMPLETION-01` authorizes the persistent private deployment and recurring capacity within the USD 25/month ceiling. This runbook does not authorize public ingress, model calls, recognition broadcast, canonical claims, or Genesis.
 
@@ -24,11 +24,11 @@ The checked-in [`cost-envelope.json`](../../infra/blaxel/persistent-pre-genesis/
 6. Keep every endpoint private and start the 24-hour observation window only after every Sandbox health probe and Function `tools/list` protocol probe passes once. Sample each required service at least every ten minutes.
 7. Exercise the private candidate flow, Sandbox standby/resume, service restart, credential rotation, backup creation, clean-room restore, exact replay-root equality, and release rollback readiness. Before the backup, use `pnpm stage-c:seed-recovery-probe <new-secret-free-receipt.json>` with a temporary environment-only signing key and the least-privilege runtime database URL. The command uses the existing signed canonical-store transaction, writes one explicitly `PRE_GENESIS_EXPERIMENT` event and private outbox record, emits no secret, and is idempotent for the same key and timestamp. An empty database is not sufficient recovery evidence. Run `abl-recovery-verifier` against distinct direct-TLS source and restored PostgreSQL 17 targets; it must compare all 23 public tables plus schema, index, constraint, and sequence catalogs and emit only counts and digests. Record observations in a secret-free JSON artifact matching the checked-in soak schema and destroy the temporary key after the recovery result passes.
 8. Replace each cost-envelope projection with the greater of its declared cap or the first 24 hours of measured usage annualized to 30 days. Record the final provider, balance, top-up, direct-TLS database metrics, launch-state, and candidate-flow readbacks in a mode-`0600` metrics file. Every named source timestamp must be no later than `measuredAt` and no more than one hour old; `measuredAt` cannot precede the final service sample. Then run `pnpm stage-c:finalize-soak infra/blaxel/persistent-pre-genesis/monitoring-policy.json <samples.json> <exercises.json> <metrics.json> <new-live-evidence.json>`. The finalizer requires matching release IDs, exact single-workspace boundaries, zero secret-bearing inputs, consistent aggregate/per-service failures, the reviewed cost-projection method, and fresh source-specific provider readbacks. Run `pnpm stage-c:assess-soak infra/blaxel/persistent-pre-genesis/monitoring-policy.json <new-live-evidence.json>`. A nonzero exit or any P0/P1, privacy breach, divergence, public request, canonical claim, Genesis claim, or cost breach fails Stage C without reopening Stage B.
-9. If the assessment passes, retain the environment, record Stage C acceptance in the launch ledger, and request the separate Stage D first-public-exposure approval.
+9. If the technical assessment passes, retain the environment and continue to the merged private release handoff. If it fails only because a local monitor interruption shortened an otherwise healthy observation, the owner may record one bounded experimental-launch disposition and run `pnpm stage-c:assess-handoff <policy.json> <evidence.json> <owner-acceptance.json>`. The handoff assessor binds the exact technical result and cannot waive privacy, recovery, replay, cost, public-ingress, canonical-history, Genesis, or secret-recording failures.
 
 ## Acceptance
 
-Stage C is complete only after one continuous 24-hour private observation passes the deterministic policy with:
+The original technical contract remains one continuous 24-hour private observation with:
 
 - all required Sandbox and Function probes present, no observation gap longer than ten minutes, and error rates no greater than 1%;
 - no P0/P1 defect, privacy breach, replay divergence, unrecoverable restart, or unbounded-cost incident;
@@ -38,4 +38,6 @@ Stage C is complete only after one continuous 24-hour private observation passes
 - projected infrastructure cost no greater than USD 25/month, balance at least USD 5, and automatic top-up off; and
 - zero public ingress, canonical claims, or Genesis claims.
 
-This is the sole Stage C acceptance contract. An ordinary correction reruns only its failed criterion and the remaining observation needed to establish a continuous passing 24-hour window; it does not create a new numbered authorization or invalidate `PRIVATE_STAGING`.
+R04 did not satisfy that technical duration contract: the local monitor interruption produced a 13.502821666666666-hour observation and 1667-second gaps. The technical result therefore remains `FAIL`. The owner accepted that exact result for experimental launch under [`ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01.json`](../evidence/ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01.json), limited to at least 12 observed hours, no more than 1800 seconds of sampling gap, at most one service failure, and the two recorded follow-ups. [`ABL-COMPLETION-01-STAGE-C-R04.json`](../evidence/ABL-COMPLETION-01-STAGE-C-R04.json) is the immutable technical evidence.
+
+The owner disposition is a one-time experimental handoff, not a reusable relaxation of the technical policy. It permits the merged private release-delta check and the later request for first public exposure. It does not authorize public ingress, candidate mutation, model calls, recognition broadcast, canonical history, founding-agent decisions, or Genesis.

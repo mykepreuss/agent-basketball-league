@@ -1,11 +1,11 @@
 # Stage D public Beacon
 
 > Program: `ABL-COMPLETION-01`  
-> Status: `PREPARED_AWAITING_STAGE_C_ACCEPTANCE_AND_PUBLIC_EXPOSURE_APPROVAL`  
+> Status: `PREPARED_AWAITING_MERGED_PRIVATE_RELEASE_DELTA_AND_PUBLIC_EXPOSURE_APPROVAL`
 > Physical Blaxel workspace: `agent-basketball-league`  
 > Public classification: `PRE_GENESIS_EXPERIMENT` / `SIGNED_VALID` / noncanonical
 
-This is the exact first-public-exposure runbook. It does not authorize public ingress. It becomes executable only after Stage C passes and the owner approves first public exposure. Ordinary corrections and retries remain inside `ABL-COMPLETION-01` and do not create another numbered launch program.
+This is the exact first-public-exposure runbook. It does not authorize public ingress. It becomes executable only after the Stage C handoff is accepted, the merged private release delta passes, and the owner approves first public exposure. Ordinary corrections and retries remain inside `ABL-COMPLETION-01` and do not create another numbered launch program.
 
 ## Fixed surface
 
@@ -20,7 +20,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 ## Preconditions
 
-- Stage C has a committed `PASS` result covering the private 24-hour soak, recovery exercises, exact replay-root equality, final provider inventory, cost, balance, and automatic-top-up state.
+- Stage C has either a committed technical `PASS` or a committed bounded owner acceptance produced by `stage-c:assess-handoff`. The owner-acceptance route must preserve the technical `FAIL`, bind its exact blockers, and leave recovery, replay, privacy, cost, ingress, canonical-history, Genesis, and secret-recording requirements unwaived.
 - The release to expose is a merged immutable commit with reviewed immutable Blaxel image revisions. Every changed workload's provider-read `abl-trust-domain` label must exactly match the merged deployment map.
 - If that merged release is newer than the release observed by the Stage C soak, update only the already-approved persistent workloads while they remain private and record one bounded release-delta verification. It must prove image/release identity, health and readiness, core-to-public delivery, exact replay-root equality, restart recovery for every changed persistent service, and the existing rejection/privacy assertions affected by the delta. A passing release delta does not restart the 24-hour infrastructure soak; only evidence that the accepted Stage C result was false or corrupted, or a newly introduced P0/P1, privacy breach, replay divergence, or unrecoverable restart, invalidates the handoff.
 - The projected monthly infrastructure cost remains no greater than USD 25, the Blaxel balance remains at least USD 5, and automatic top-up remains off.
@@ -31,7 +31,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 Any failed precondition stops before public-preview creation. It does not invalidate Stage A, B, or C evidence.
 
-After Stage C acceptance, merge the reviewed release stack, build and push only changed images, update the existing private workloads to the returned immutable revisions, and complete the release-delta verification above. Record the secret-free observations in a mode-`0600` `LIVE_PRIVATE_RELEASE_DELTA` artifact and run `pnpm stage-d:assess-release-delta <monitoring-policy.json> <deployment-map.json> <passed-stage-c-evidence.json> <release-delta-evidence.json>`. The assessor verifies the actual Stage C result, target ancestry, approved workload set, exact release linkage, immutable image references, changed-service restart coverage, required checks, incident counts, private boundary, provider readback, and budget controls. Then derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
+After Stage C acceptance, merge the reviewed release stack, build and push only changed images, update the existing private workloads to the returned immutable revisions, and complete the release-delta verification above. Record the secret-free observations in a mode-`0600` `LIVE_PRIVATE_RELEASE_DELTA` artifact and run `pnpm stage-d:assess-release-delta <monitoring-policy.json> <deployment-map.json> <stage-c-evidence.json> <release-delta-evidence.json> [owner-acceptance.json]`. The assessor verifies the Stage C handoff, target ancestry, approved workload set, exact release linkage, immutable image references, changed-service restart coverage, required checks, incident counts, private boundary, provider readback, and budget controls. Then derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <stage-c-evidence.json> <accepted-at> [owner-acceptance.json]`. The commands reject an unaccepted, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
 
 ## One approval
 

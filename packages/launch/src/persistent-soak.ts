@@ -136,6 +136,56 @@ export type PersistentSoakEvidence = z.infer<
   typeof PersistentSoakEvidenceSchema
 >;
 
+const OwnerAcceptableStageCBlockerSchema = z
+  .string()
+  .superRefine((blocker, context) => {
+    if (
+      blocker !== "private soak is shorter than 24 hours" &&
+      !blocker.startsWith("service observation gap exceeded threshold: ")
+    )
+      context.addIssue({
+        code: "custom",
+        message:
+          "Owner acceptance may cover only the shortened observation and local sampling-gap blockers",
+      });
+  });
+
+export const PersistentSoakOwnerAcceptanceSchema = z.strictObject({
+  version: z.literal(1),
+  evidenceClass: z.literal("OWNER_ACCEPTED_EXPERIMENTAL_STAGE_C"),
+  programId: z.literal("ABL-COMPLETION-01"),
+  acceptanceId: z.literal("ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01"),
+  releaseId: z.string().min(1).max(200),
+  technicalStatus: z.literal("FAIL"),
+  technicalResultDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  acceptedBlockers: z.array(OwnerAcceptableStageCBlockerSchema).min(1),
+  ownerDisposition: z.literal("ACCEPTED_FOR_EXPERIMENTAL_LAUNCH"),
+  rationaleCode: z.literal("LOCAL_MONITOR_SLEEP_INTERRUPTION"),
+  experimentalLimits: z.strictObject({
+    minimumObservedHours: z.literal(12),
+    maximumObservedGapSeconds: z.literal(1_800),
+    maximumServiceFailures: z.literal(1),
+  }),
+  observed: z.strictObject({
+    durationHours: z.number().nonnegative(),
+    maximumSampleGapSeconds: z.number().int().nonnegative(),
+    serviceFailures: z.number().int().nonnegative(),
+  }),
+  requiredFollowUps: z.tuple([
+    z.literal("FOCUSED_GOVERNMENT_MCP_HEALTH"),
+    z.literal("LIVE_PUBLIC_MONITORING_AND_ROLLBACK"),
+  ]),
+  publicExposure: z.literal("NONE"),
+  canonicalHistoryClaim: z.literal(false),
+  genesis: z.literal(false),
+  secretValuesRecorded: z.literal(false),
+  acceptedAt: z.iso.datetime({ offset: true }),
+});
+
+export type PersistentSoakOwnerAcceptance = z.infer<
+  typeof PersistentSoakOwnerAcceptanceSchema
+>;
+
 const PersistentSoakSamplesSchema = z.object({
   stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
   releaseId: z.string().min(1).max(200),
@@ -419,16 +469,121 @@ export function assessPersistentSoak(
   return { ...result, resultDigest: sha256Commitment(result) };
 }
 
+function sameOrderedValues(left: readonly string[], right: readonly string[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
+export function assessPersistentSoakHandoff(
+  policyInput: unknown,
+  evidenceInput: unknown,
+  ownerAcceptanceInput?: unknown,
+) {
+  const evidence = PersistentSoakEvidenceSchema.parse(evidenceInput);
+  const technicalResult = assessPersistentSoak(policyInput, evidence);
+  const common = {
+    stage: evidence.stage,
+    releaseId: evidence.releaseId,
+    technicalStatus: technicalResult.status,
+    technicalResultDigest: technicalResult.resultDigest,
+  } as const;
+
+  if (technicalResult.status === "PASS") {
+    const result = {
+      status: "ACCEPTED" as const,
+      basis: "TECHNICAL_PASS" as const,
+      ...common,
+      ownerAcceptanceDigest: null,
+      blockers: [] as string[],
+    };
+    return { ...result, resultDigest: sha256Commitment(result) };
+  }
+
+  if (ownerAcceptanceInput === undefined || ownerAcceptanceInput === null) {
+    const result = {
+      status: "REJECTED" as const,
+      basis: "TECHNICAL_FAILURE" as const,
+      ...common,
+      ownerAcceptanceDigest: null,
+      blockers: technicalResult.blockers,
+    };
+    return { ...result, resultDigest: sha256Commitment(result) };
+  }
+
+  const acceptance =
+    PersistentSoakOwnerAcceptanceSchema.parse(ownerAcceptanceInput);
+  const durationHours = technicalResult.durationHours;
+  const maximumSampleGapSeconds = Math.max(
+    ...evidence.services.map(
+      ({ maximumSampleGapSeconds }) => maximumSampleGapSeconds,
+    ),
+  );
+  const serviceFailures = evidence.services.reduce(
+    (total, service) => total + service.failures,
+    0,
+  );
+  const blockers: string[] = [];
+
+  if (acceptance.releaseId !== evidence.releaseId)
+    blockers.push("owner acceptance release does not match Stage C evidence");
+  if (acceptance.technicalResultDigest !== technicalResult.resultDigest)
+    blockers.push("owner acceptance does not bind the technical result");
+  if (!sameOrderedValues(acceptance.acceptedBlockers, technicalResult.blockers))
+    blockers.push(
+      "owner acceptance does not enumerate every technical blocker",
+    );
+  if (Date.parse(acceptance.acceptedAt) < Date.parse(evidence.endedAt))
+    blockers.push("owner acceptance predates the final Stage C observation");
+  if (
+    acceptance.observed.durationHours !== durationHours ||
+    acceptance.observed.maximumSampleGapSeconds !== maximumSampleGapSeconds ||
+    acceptance.observed.serviceFailures !== serviceFailures
+  )
+    blockers.push(
+      "owner acceptance observation does not match Stage C evidence",
+    );
+  if (durationHours < acceptance.experimentalLimits.minimumObservedHours)
+    blockers.push("owner acceptance requires at least 12 observed hours");
+  if (
+    maximumSampleGapSeconds >
+    acceptance.experimentalLimits.maximumObservedGapSeconds
+  )
+    blockers.push("owner acceptance sampling gap exceeds 1800 seconds");
+  if (serviceFailures > acceptance.experimentalLimits.maximumServiceFailures)
+    blockers.push("owner acceptance service failures exceed the bounded limit");
+
+  const ownerAcceptanceDigest = sha256Commitment(acceptance);
+  const result = {
+    status:
+      blockers.length === 0 ? ("ACCEPTED" as const) : ("REJECTED" as const),
+    basis:
+      blockers.length === 0
+        ? ("OWNER_ACCEPTED_EXPERIMENTAL_LAUNCH" as const)
+        : ("INVALID_OWNER_ACCEPTANCE" as const),
+    ...common,
+    ownerAcceptanceDigest,
+    blockers: [...new Set(blockers)],
+  };
+  return { ...result, resultDigest: sha256Commitment(result) };
+}
+
 export function createReadOnlyBeaconLaunchState(
   policyInput: unknown,
   evidenceInput: unknown,
   acceptedAtInput: string,
+  ownerAcceptanceInput?: unknown,
 ) {
   const evidence = PersistentSoakEvidenceSchema.parse(evidenceInput);
-  const result = assessPersistentSoak(policyInput, evidence);
-  if (result.status !== "PASS")
+  const result = assessPersistentSoakHandoff(
+    policyInput,
+    evidence,
+    ownerAcceptanceInput,
+  );
+  if (result.status !== "ACCEPTED")
     throw new Error(
-      `Stage C private soak has not passed: ${result.blockers.join(", ")}`,
+      `Stage C private soak has not been accepted: ${result.blockers.join(", ")}`,
     );
   const acceptedAt = z.iso.datetime({ offset: true }).parse(acceptedAtInput);
   return LaunchStateSchema.parse({
@@ -449,7 +604,7 @@ export function createReadOnlyBeaconLaunchState(
       capacityPolicyUri: "/v1/discovery/capacity-policy",
     },
     evidenceDigest: sha256Commitment({
-      stageCResultDigest: result.resultDigest,
+      stageCHandoffResultDigest: result.resultDigest,
       releaseId: evidence.releaseId,
     }),
     blockingReasons: [

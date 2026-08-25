@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 
 import { assessOperationalFoundingAlpha } from "../packages/launch/src/index.js";
 
-if (process.argv.length !== 8)
+if (![8, 9].includes(process.argv.length))
   throw new Error(
-    "Usage: assess-operational-founding-alpha <stage-e-evidence.json> <stage-b-evidence.json> <stage-c-policy.json> <stage-c-evidence.json> <stage-d-policy.json> <stage-d-evidence.json>",
+    "Usage: assess-operational-founding-alpha <stage-e-evidence.json> <stage-b-evidence.json> <stage-c-policy.json> <stage-c-evidence.json> <stage-d-policy.json> <stage-d-evidence.json> [stage-c-owner-acceptance.json]",
   );
 
 const [
@@ -15,6 +15,7 @@ const [
   stageCEvidence,
   stageDPolicy,
   stageDEvidence,
+  stageCOwnerAcceptance,
 ] = await Promise.all(
   process.argv
     .slice(2)
@@ -25,6 +26,7 @@ const result = assessOperationalFoundingAlpha({
   privateProofEvidence,
   stageCPolicy,
   stageCEvidence,
+  stageCOwnerAcceptance,
   stageDPolicy,
   stageDEvidence,
 });

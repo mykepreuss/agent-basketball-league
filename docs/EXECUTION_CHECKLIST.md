@@ -12,7 +12,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
 - [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
-- [~] Stage C persistent capacity is approved and live in `agent-basketball-league`; the deterministic 24-hour private soak is in progress. First public read-only exposure remains a distinct approval boundary after the soak passes.
+- [x] Stage C persistent capacity is live in `agent-basketball-league`; R04 remains a technical `FAIL` for shortened duration and local-monitor gaps, and its bounded evidence is owner-accepted for experimental launch. First public read-only exposure remains a distinct approval boundary after the merged private release delta.
 
 ### Stage C local readiness — 2026-08-24
 
@@ -149,7 +149,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [~] Retain `agent-basketball-league` as the sole physical production workspace and complete its operational proof. Scoped workload identities, credentials, private previews, PostgreSQL roles, Agent Drive ACLs, credential rotation, and clean-room recovery are live-proved; the deterministic 24-hour private soak remains in progress.
+- [x] Retain `agent-basketball-league` as the sole physical production workspace and complete its private operational proof. Scoped workload identities, credentials, private previews, PostgreSQL roles, Agent Drive ACLs, credential rotation, nonempty clean-room recovery, and the bounded Stage C handoff are live-proved.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.

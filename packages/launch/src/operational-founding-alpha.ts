@@ -6,7 +6,7 @@ import {
 } from "@abl/schemas";
 import { z } from "zod";
 
-import { assessPersistentSoak } from "./persistent-soak.js";
+import { assessPersistentSoakHandoff } from "./persistent-soak.js";
 import {
   PublicBeaconSoakEvidenceSchema,
   assessPublicBeaconSoak,
@@ -142,6 +142,7 @@ const PrerequisiteDigestsSchema = z.strictObject({
   privateProofEvidence: DigestSchema,
   stageCPolicy: DigestSchema,
   stageCEvidence: DigestSchema,
+  stageCOwnerAcceptance: DigestSchema,
   stageCResult: DigestSchema,
   stageDPolicy: DigestSchema,
   stageDEvidence: DigestSchema,
@@ -238,6 +239,7 @@ export interface OperationalFoundingAlphaInputs {
   privateProofEvidence: unknown;
   stageCPolicy: unknown;
   stageCEvidence: unknown;
+  stageCOwnerAcceptance?: unknown;
   stageDPolicy: unknown;
   stageDEvidence: unknown;
 }
@@ -390,14 +392,18 @@ export function assessOperationalFoundingAlpha(
   if (!privateProof.success)
     blockers.push("Private integrated proof evidence does not pass");
 
-  let stageCResult: ReturnType<typeof assessPersistentSoak> | null = null;
+  let stageCResult: ReturnType<typeof assessPersistentSoakHandoff> | null =
+    null;
   try {
-    stageCResult = assessPersistentSoak(
+    stageCResult = assessPersistentSoakHandoff(
       input.stageCPolicy,
       input.stageCEvidence,
+      input.stageCOwnerAcceptance,
     );
-    if (stageCResult.status !== "PASS")
-      blockers.push("Stage C private soak evidence does not pass");
+    if (stageCResult.status !== "ACCEPTED")
+      blockers.push(
+        "Stage C evidence has not been accepted for public handoff",
+      );
   } catch {
     blockers.push("Stage C private soak evidence is invalid");
   }
@@ -418,6 +424,9 @@ export function assessOperationalFoundingAlpha(
     privateProofEvidence: sha256Commitment(input.privateProofEvidence),
     stageCPolicy: sha256Commitment(input.stageCPolicy),
     stageCEvidence: sha256Commitment(input.stageCEvidence),
+    stageCOwnerAcceptance: sha256Commitment(
+      input.stageCOwnerAcceptance ?? null,
+    ),
     stageCResult:
       stageCResult?.resultDigest ?? sha256Commitment("invalid-stage-c-result"),
     stageDPolicy: sha256Commitment(input.stageDPolicy),

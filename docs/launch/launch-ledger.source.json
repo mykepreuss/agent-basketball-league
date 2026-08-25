@@ -72,10 +72,11 @@
     {
       "requirementId": "FOUNDING_ALPHA_PERSISTENT_BEACON",
       "requiredForStage": "READ_ONLY_BEACON",
-      "status": "IMPLEMENTED_LIVE_PROOF_REQUIRED",
+      "status": "VERIFIED_COMPLETE",
       "evidenceIds": [
         "persistent-beacon-local-readiness",
-        "persistent-beacon-live-proof"
+        "persistent-beacon-live-proof",
+        "persistent-beacon-owner-acceptance"
       ]
     },
     {
@@ -203,9 +204,17 @@
       "evidenceId": "persistent-beacon-live-proof",
       "source": {
         "type": "FILE_SHA256",
-        "path": "docs/launch/ABL_COMPLETION_01.md"
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-C-R04.json"
       },
-      "verification": "LIVE_PROOF_REQUIRED"
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "persistent-beacon-owner-acceptance",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01.json"
+      },
+      "verification": "PASSED"
     },
     {
       "evidenceId": "first-sol-invitation-evidence",

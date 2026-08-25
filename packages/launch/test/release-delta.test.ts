@@ -4,6 +4,7 @@ import {
   PrivateReleaseDeltaEvidenceSchema,
   assessPrivateReleaseDelta,
 } from "../src/release-delta.js";
+import { assessPersistentSoak } from "../src/persistent-soak.js";
 
 const stageCReleaseId = "a".repeat(40);
 const targetReleaseId = "b".repeat(40);
@@ -186,6 +187,55 @@ function deltaEvidence() {
   } as const;
 }
 
+function ownerAcceptedStageC() {
+  const base = stageCEvidence();
+  const observed = {
+    ...base,
+    endedAt: "2026-08-24T13:30:00.000Z",
+    services: base.services.map((service) => ({
+      ...service,
+      maximumSampleGapSeconds: 1_667,
+      failures: 1,
+      errorRate: 1 / service.samples,
+    })),
+  };
+  const technical = assessPersistentSoak(policy, observed);
+  return {
+    observed,
+    acceptance: {
+      version: 1,
+      evidenceClass: "OWNER_ACCEPTED_EXPERIMENTAL_STAGE_C",
+      programId: "ABL-COMPLETION-01",
+      acceptanceId: "ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01",
+      releaseId: stageCReleaseId,
+      technicalStatus: "FAIL",
+      technicalResultDigest: technical.resultDigest,
+      acceptedBlockers: technical.blockers,
+      ownerDisposition: "ACCEPTED_FOR_EXPERIMENTAL_LAUNCH",
+      rationaleCode: "LOCAL_MONITOR_SLEEP_INTERRUPTION",
+      experimentalLimits: {
+        minimumObservedHours: 12,
+        maximumObservedGapSeconds: 1_800,
+        maximumServiceFailures: 1,
+      },
+      observed: {
+        durationHours: technical.durationHours,
+        maximumSampleGapSeconds: 1_667,
+        serviceFailures: 1,
+      },
+      requiredFollowUps: [
+        "FOCUSED_GOVERNMENT_MCP_HEALTH",
+        "LIVE_PUBLIC_MONITORING_AND_ROLLBACK",
+      ],
+      publicExposure: "NONE",
+      canonicalHistoryClaim: false,
+      genesis: false,
+      secretValuesRecorded: false,
+      acceptedAt: "2026-08-24T13:31:00.000Z",
+    } as const,
+  };
+}
+
 describe("private release-delta handoff", () => {
   it("passes a bounded private update linked to accepted Stage C evidence", () => {
     expect(
@@ -203,6 +253,24 @@ describe("private release-delta handoff", () => {
       publicExposure: "NONE",
       blockers: [],
       resultDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+    });
+  });
+
+  it("accepts a release delta through the bounded experimental Stage C disposition", () => {
+    const stageC = ownerAcceptedStageC();
+    expect(
+      assessPrivateReleaseDelta(
+        policy,
+        deploymentMap,
+        stageC.observed,
+        deltaEvidence(),
+        stageC.acceptance,
+      ),
+    ).toMatchObject({
+      status: "PASS",
+      stageCHandoffBasis: "OWNER_ACCEPTED_EXPERIMENTAL_LAUNCH",
+      stageCOwnerAcceptanceDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      blockers: [],
     });
   });
 

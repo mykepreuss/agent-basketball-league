@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   PersistentSoakPolicySchema,
   assessPersistentSoak,
+  assessPersistentSoakHandoff,
   composePersistentSoakEvidence,
   createReadOnlyBeaconLaunchState,
 } from "../src/persistent-soak.js";
@@ -169,6 +170,56 @@ function collectorInputs() {
       },
       secretValuesRecorded: false,
     },
+  } as const;
+}
+
+function ownerAcceptedEvidence() {
+  const observed = evidence();
+  return {
+    ...observed,
+    endedAt: "2026-08-24T13:30:00.000Z",
+    services: observed.services.map((service) => ({
+      ...service,
+      maximumSampleGapSeconds: 1_667,
+      ...(service.service === "abl-government-mcp"
+        ? { failures: 1, errorRate: 1 / service.samples }
+        : {}),
+    })),
+  };
+}
+
+function ownerAcceptance(observed = ownerAcceptedEvidence()) {
+  const technical = assessPersistentSoak(policy, observed);
+  return {
+    version: 1,
+    evidenceClass: "OWNER_ACCEPTED_EXPERIMENTAL_STAGE_C",
+    programId: "ABL-COMPLETION-01",
+    acceptanceId: "ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01",
+    releaseId: observed.releaseId,
+    technicalStatus: "FAIL",
+    technicalResultDigest: technical.resultDigest,
+    acceptedBlockers: technical.blockers,
+    ownerDisposition: "ACCEPTED_FOR_EXPERIMENTAL_LAUNCH",
+    rationaleCode: "LOCAL_MONITOR_SLEEP_INTERRUPTION",
+    experimentalLimits: {
+      minimumObservedHours: 12,
+      maximumObservedGapSeconds: 1_800,
+      maximumServiceFailures: 1,
+    },
+    observed: {
+      durationHours: technical.durationHours,
+      maximumSampleGapSeconds: 1_667,
+      serviceFailures: 1,
+    },
+    requiredFollowUps: [
+      "FOCUSED_GOVERNMENT_MCP_HEALTH",
+      "LIVE_PUBLIC_MONITORING_AND_ROLLBACK",
+    ],
+    publicExposure: "NONE",
+    canonicalHistoryClaim: false,
+    genesis: false,
+    secretValuesRecorded: false,
+    acceptedAt: "2026-08-24T13:31:00.000Z",
   } as const;
 }
 
@@ -338,6 +389,39 @@ describe("persistent private soak", () => {
     });
   });
 
+  it("keeps the technical failure while accepting only the bounded local-monitor interruption", () => {
+    const observed = ownerAcceptedEvidence();
+    expect(assessPersistentSoak(policy, observed).status).toBe("FAIL");
+    expect(
+      assessPersistentSoakHandoff(policy, observed, ownerAcceptance(observed)),
+    ).toMatchObject({
+      status: "ACCEPTED",
+      basis: "OWNER_ACCEPTED_EXPERIMENTAL_LAUNCH",
+      technicalStatus: "FAIL",
+      ownerAcceptanceDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      blockers: [],
+    });
+  });
+
+  it("does not let owner acceptance waive substantive launch failures", () => {
+    const base = ownerAcceptedEvidence();
+    const observed = {
+      ...base,
+      incidents: { ...base.incidents, privacyBreaches: 1 },
+    };
+    const technical = assessPersistentSoak(policy, observed);
+    expect(technical.blockers).toContain("soak recorded privacyBreaches: 1");
+    expect(() =>
+      assessPersistentSoakHandoff(policy, observed, {
+        ...ownerAcceptance(),
+        technicalResultDigest: technical.resultDigest,
+        acceptedBlockers: technical.blockers,
+      }),
+    ).toThrow(
+      "Owner acceptance may cover only the shortened observation and local sampling-gap blockers",
+    );
+  });
+
   it("composes final evidence only from matching secret-free collectors", () => {
     const inputs = collectorInputs();
     const composed = composePersistentSoakEvidence({ policy, ...inputs });
@@ -453,7 +537,21 @@ describe("persistent private soak", () => {
         shortSoak,
         "2026-08-25T00:01:00.000Z",
       ),
-    ).toThrow("Stage C private soak has not passed");
+    ).toThrow("Stage C private soak has not been accepted");
+
+    const observed = ownerAcceptedEvidence();
+    expect(
+      createReadOnlyBeaconLaunchState(
+        policy,
+        observed,
+        "2026-08-24T13:31:00.000Z",
+        ownerAcceptance(observed),
+      ),
+    ).toMatchObject({
+      launchStage: "READ_ONLY_BEACON",
+      publicExposure: "READ_ONLY",
+      candidateIntake: { mode: "INVITE_ONLY" },
+    });
   });
 
   it("fails only the observed Stage C criteria without reopening earlier stages", () => {

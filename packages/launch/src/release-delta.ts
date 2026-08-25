@@ -5,7 +5,7 @@ import { ImmutableSandboxImageReferenceSchema } from "./image-reference.js";
 import {
   PersistentSoakEvidenceSchema,
   PersistentSoakPolicySchema,
-  assessPersistentSoak,
+  assessPersistentSoakHandoff,
 } from "./persistent-soak.js";
 
 const GitCommitSchema = z.string().regex(/^[0-9a-f]{40}$/);
@@ -187,17 +187,22 @@ export function assessPrivateReleaseDelta(
   deploymentMapInput: unknown,
   stageCEvidenceInput: unknown,
   deltaEvidenceInput: unknown,
+  stageCOwnerAcceptanceInput?: unknown,
 ) {
   const policy = PersistentSoakPolicySchema.parse(policyInput);
   const deploymentMap = DeploymentMapSchema.parse(deploymentMapInput);
   const stageCEvidence =
     PersistentSoakEvidenceSchema.parse(stageCEvidenceInput);
   const evidence = PrivateReleaseDeltaEvidenceSchema.parse(deltaEvidenceInput);
-  const stageCAssessment = assessPersistentSoak(policy, stageCEvidence);
+  const stageCHandoff = assessPersistentSoakHandoff(
+    policy,
+    stageCEvidence,
+    stageCOwnerAcceptanceInput,
+  );
   const blockers: string[] = [];
 
-  if (stageCAssessment.status !== "PASS")
-    blockers.push("Stage C acceptance evidence does not pass");
+  if (stageCHandoff.status !== "ACCEPTED")
+    blockers.push("Stage C evidence has not been accepted for public handoff");
   if (stageCEvidence.releaseId !== evidence.stageCReleaseId)
     blockers.push(
       "release delta does not reference the accepted Stage C release",
@@ -256,7 +261,9 @@ export function assessPrivateReleaseDelta(
     status: uniqueBlockers.length === 0 ? ("PASS" as const) : ("FAIL" as const),
     stage: evidence.stage,
     stageCReleaseId: evidence.stageCReleaseId,
-    stageCResultDigest: stageCAssessment.resultDigest,
+    stageCHandoffBasis: stageCHandoff.basis,
+    stageCResultDigest: stageCHandoff.resultDigest,
+    stageCOwnerAcceptanceDigest: stageCHandoff.ownerAcceptanceDigest,
     targetReleaseId: evidence.targetReleaseId,
     changedWorkloadCount: evidence.changedWorkloads.length,
     publicExposure: evidence.publicExposure,

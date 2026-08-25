@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   OperationalFoundingAlphaEvidenceSchema,
   assessOperationalFoundingAlpha,
-  assessPersistentSoak,
+  assessPersistentSoakHandoff,
   assessPublicBeaconSoak,
   createFoundingIntakeLaunchState,
 } from "../src/index.js";
@@ -211,7 +211,10 @@ const privateProofEvidence = {
 } as const;
 
 function operationalEvidence() {
-  const stageCResult = assessPersistentSoak(stageCPolicy, stageCEvidence);
+  const stageCResult = assessPersistentSoakHandoff(
+    stageCPolicy,
+    stageCEvidence,
+  );
   const stageDResult = assessPublicBeaconSoak(stageDPolicy, stageDEvidence);
   return {
     version: 1,
@@ -222,6 +225,7 @@ function operationalEvidence() {
       privateProofEvidence: digest(privateProofEvidence),
       stageCPolicy: digest(stageCPolicy),
       stageCEvidence: digest(stageCEvidence),
+      stageCOwnerAcceptance: digest(null),
       stageCResult: stageCResult.resultDigest,
       stageDPolicy: digest(stageDPolicy),
       stageDEvidence: digest(stageDEvidence),
