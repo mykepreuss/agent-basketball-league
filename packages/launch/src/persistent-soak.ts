@@ -349,6 +349,13 @@ export function assessPersistentSoak(
     blockers.push("private soak emitted Genesis claims");
 
   if (
+    evidence.recovery.sourceEventCount === 0 ||
+    evidence.recovery.sourceOutboxCount === 0
+  )
+    blockers.push(
+      "clean-room restore did not include recorded event and outbox history",
+    );
+  if (
     evidence.recovery.sourceEventCount !==
       evidence.recovery.restoredEventCount ||
     evidence.recovery.sourceOutboxCount !==

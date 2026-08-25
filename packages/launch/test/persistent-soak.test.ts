@@ -436,4 +436,22 @@ describe("persistent private soak", () => {
       ]),
     );
   });
+
+  it("rejects an empty clean-room restore as insufficient replay evidence", () => {
+    const observed = evidence();
+    const result = assessPersistentSoak(policy, {
+      ...observed,
+      recovery: {
+        ...observed.recovery,
+        sourceEventCount: 0,
+        restoredEventCount: 0,
+        sourceOutboxCount: 0,
+        restoredOutboxCount: 0,
+      },
+    });
+    expect(result.status).toBe("FAIL");
+    expect(result.blockers).toContain(
+      "clean-room restore did not include recorded event and outbox history",
+    );
+  });
 });

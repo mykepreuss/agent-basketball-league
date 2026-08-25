@@ -35,6 +35,7 @@
     "stage-c:assess-soak": "tsx scripts/assess-persistent-soak.ts",
     "stage-c:finalize-soak": "tsx scripts/finalize-persistent-soak.ts",
     "stage-c:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
+    "stage-c:seed-recovery-probe": "tsx scripts/seed-persistent-recovery-probe.ts",
     "stage-c:validate-deployment": "tsx scripts/validate-persistent-deployment.ts",
     "stage-d:validate-beacon": "tsx scripts/validate-public-beacon.ts",
     "stage-d:prepare-launch-state": "tsx scripts/prepare-public-beacon-launch-state.ts",

@@ -5,3 +5,4 @@ export * from "./ledger.js";
 export * from "./persistent-soak.js";
 export * from "./public-beacon.js";
 export * from "./release-delta.js";
+export * from "./recovery-probe.js";
