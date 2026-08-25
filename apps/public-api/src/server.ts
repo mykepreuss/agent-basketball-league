@@ -306,6 +306,14 @@ type PublicHistoryClassification =
   | "PRE_GENESIS_EXPERIMENT"
   | "CANONICAL_GENESIS_HISTORY";
 
+const stagesBeforeFoundingConvention: ReadonlySet<string> = new Set([
+  "LOCAL_GATE_1",
+  "PRIVATE_STAGING",
+  "READ_ONLY_BEACON",
+  "PRIVATE_FOUNDING_ALPHA",
+  "CAPPED_FOUNDING_INTAKE",
+]);
+
 function suppressCanonicalClaims(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(suppressCanonicalClaims);
   if (value === null || typeof value !== "object") return value;
@@ -723,6 +731,9 @@ export function createPublicApi(
     }
     return LaunchStateSchema.parse({
       ...launchState,
+      launchStage: stagesBeforeFoundingConvention.has(launchState.launchStage)
+        ? "FOUNDING_CONVENTION"
+        : launchState.launchStage,
       genesisRecognition,
       foundingConvention: {
         state: conventionState,
@@ -870,6 +881,10 @@ export function createPublicApi(
     } finally {
       if (refreshInFlight === refresh) refreshInFlight = null;
     }
+  }
+  async function refreshedLaunchState() {
+    await refreshPublicProjections();
+    return currentLaunchState();
   }
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -1077,7 +1092,7 @@ export function createPublicApi(
         };
         break;
       case "read_launch_state":
-        value = launchState;
+        value = await refreshedLaunchState();
         break;
       case "get_candidate_requirements":
         value = candidateRequirements;
@@ -1105,8 +1120,7 @@ export function createPublicApi(
     };
   });
   app.get("/v1/discovery/launch-state", async () => {
-    await refreshPublicProjections();
-    return currentLaunchState();
+    return refreshedLaunchState();
   });
   app.get(
     "/v1/discovery/candidate-requirements",
@@ -1248,12 +1262,13 @@ export function createPublicApi(
         | undefined;
       let value: unknown;
       if (params?.name === "list_public_routes") value = PUBLIC_ROUTE_CATALOG;
-      else if (params?.name === "get_genesis_state") value = launchState;
-      else if (params?.name === "get_candidate_requirements")
+      else if (params?.name === "get_genesis_state") {
+        value = await refreshedLaunchState();
+      } else if (params?.name === "get_candidate_requirements")
         value = candidateRequirements;
-      else if (params?.name === "get_intake_state")
-        value = launchState.candidateIntake;
-      else if (params?.name === "get_capacity_policy") value = capacityPolicy;
+      else if (params?.name === "get_intake_state") {
+        value = (await refreshedLaunchState()).candidateIntake;
+      } else if (params?.name === "get_capacity_policy") value = capacityPolicy;
       else if (params?.name === "get_starter_kit_metadata") value = starterKit;
       else if (
         params?.name === "lookup_evidence" &&

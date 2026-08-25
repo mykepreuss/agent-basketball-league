@@ -253,8 +253,45 @@ describe("public founding-decision ingress", () => {
         })
       ).json(),
     ).toMatchObject({
+      launchStage: "FOUNDING_CONVENTION",
       foundingConvention: { state: "DECIDING" },
       genesisRecognition: { mechanism: "UNSELECTED", ratified: false },
+    });
+    const a2a = await app.inject({
+      method: "POST",
+      url: "/a2a",
+      payload: {
+        jsonrpc: "2.0",
+        id: "founding-state",
+        method: "SendMessage",
+        params: {
+          message: {
+            messageId: "founding-state-message",
+            role: "ROLE_USER",
+            parts: [{ text: "read_launch_state" }],
+          },
+        },
+      },
+    });
+    expect(
+      JSON.parse(a2a.json().result.message.parts[0].text as string),
+    ).toMatchObject({
+      launchStage: "FOUNDING_CONVENTION",
+      foundingConvention: { state: "DECIDING" },
+    });
+    const mcp = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      payload: {
+        jsonrpc: "2.0",
+        id: "founding-state",
+        method: "tools/call",
+        params: { name: "get_genesis_state", arguments: {} },
+      },
+    });
+    expect(mcp.json().result.structuredContent).toMatchObject({
+      launchStage: "FOUNDING_CONVENTION",
+      foundingConvention: { state: "DECIDING" },
     });
     await app.close();
 
