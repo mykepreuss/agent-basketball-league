@@ -3443,6 +3443,7 @@ describe("complete local acceptance", () => {
       "POST /v1/development/*",
       "POST /v1/governance/*",
       "POST /v1/elections/*",
+      "POST /v1/founding-convention/*",
       "POST /v1/resources/*",
       "POST /v1/releases/*",
       "POST /v1/cases/*",

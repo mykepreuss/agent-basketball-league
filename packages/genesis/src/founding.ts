@@ -108,6 +108,7 @@ export interface SignedFoundingBootstrapBallot {
 
 export interface FoundingBootstrapAuthorizationContext {
   domain: TypedDataDomain;
+  aggregateId: string;
   signers: ReadonlyMap<string, `0x${string}`>;
 }
 
@@ -256,7 +257,13 @@ export function openFoundingBootstrap(input: {
   if (snapshot.commitment !== input.snapshot.commitment)
     throw new Error("Founding eligibility snapshot commitment mismatch");
   const openedAt = Date.parse(input.openedAt);
-  if (input.proposalId.length === 0 || !Number.isFinite(openedAt))
+  const capturedAt = Date.parse(snapshot.capturedAt);
+  if (
+    input.proposalId.length === 0 ||
+    !Number.isFinite(openedAt) ||
+    !Number.isFinite(capturedAt) ||
+    capturedAt > openedAt
+  )
     throw new Error("Founding bootstrap proposal is invalid");
   return {
     proposalId: input.proposalId,
@@ -316,7 +323,7 @@ export async function evaluateFoundingBootstrap(input: {
       ballot.snapshotCommitment !== snapshot.commitment ||
       !Number.isFinite(castAt) ||
       castAt < openedAt ||
-      castAt > closesAt
+      castAt >= closesAt
     )
       throw new Error("Founding bootstrap ballot is ineligible or duplicated");
     const event = signed.authorizationEvent;
@@ -332,10 +339,9 @@ export async function evaluateFoundingBootstrap(input: {
       signed.signerAddress.toLowerCase() !== recoveredSigner.toLowerCase() ||
       event.actorDid !== ballot.voterDid ||
       event.aggregateType !== "founding-convention-bootstrap" ||
-      event.aggregateId !== input.proposal.proposalId ||
-      event.aggregateVersion !== 1n ||
+      event.aggregateId !== input.authorization.aggregateId ||
+      event.aggregateVersion < 1n ||
       event.eventType !== "FoundingBootstrapBallotCast" ||
-      event.stateRoot !== snapshot.commitment ||
       event.timestamp !== ballot.castAt ||
       sha256Commitment(event.payload.command) !== sha256Commitment(ballot)
     )
@@ -347,7 +353,7 @@ export async function evaluateFoundingBootstrap(input: {
   }
 
   const adopted = yes >= input.proposal.requiredYes;
-  const expired = evaluatedAt > closesAt;
+  const expired = evaluatedAt >= closesAt;
   return {
     state: bootstrapState({
       adopted,

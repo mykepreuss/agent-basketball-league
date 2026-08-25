@@ -19,6 +19,7 @@
   "dependencies": {
     "@abl/basketball": "workspace:*",
     "@abl/foundation": "workspace:*",
+    "@abl/genesis": "workspace:*",
     "@abl/institutions": "workspace:*",
     "@abl/launch": "workspace:*",
     "@abl/projections": "workspace:*",

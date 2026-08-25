@@ -11,6 +11,30 @@ import { z } from "zod";
 
 const governmentTools = [
   {
+    name: "open_founding_bootstrap",
+    aggregateType: "founding-convention-bootstrap",
+    eventType: "FoundingBootstrapOpened",
+    path: "/v1/founding-convention/bootstrap/open",
+    description:
+      "Submit an eligible founding career's signed opening of the 72-hour convention bootstrap.",
+  },
+  {
+    name: "cast_founding_bootstrap_ballot",
+    aggregateType: "founding-convention-bootstrap",
+    eventType: "FoundingBootstrapBallotCast",
+    path: "/v1/founding-convention/bootstrap/vote",
+    description:
+      "Submit an eligible founding career's direct signed bootstrap ballot.",
+  },
+  {
+    name: "close_founding_bootstrap",
+    aggregateType: "founding-convention-bootstrap",
+    eventType: "FoundingBootstrapClosed",
+    path: "/v1/founding-convention/bootstrap/close",
+    description:
+      "Submit an eligible founding career's signed close command after the 72-hour window.",
+  },
+  {
     name: "register_proposal",
     aggregateType: "governance-proposal",
     eventType: "GovernanceProposalRegistered",

@@ -20,6 +20,7 @@
     "@abl/career": "workspace:*",
     "@abl/database": "workspace:*",
     "@abl/foundation": "workspace:*",
+    "@abl/genesis": "workspace:*",
     "@abl/institutions": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",

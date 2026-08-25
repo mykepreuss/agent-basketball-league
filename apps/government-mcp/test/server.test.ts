@@ -94,6 +94,55 @@ describe("government MCP", () => {
     await app.close();
   });
 
+  it("routes a signed founding ballot only to the fixed bootstrap endpoint", async () => {
+    const fetchImplementation = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ accepted: true }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    const app = createGovernmentMcp({
+      coreOrigin: "http://core.test",
+      coreCredential: "government-credential",
+      fetchImplementation,
+      allowHttpForTest: true,
+    });
+    const foundingCommand = {
+      ...command,
+      event: {
+        ...command.event,
+        aggregateType: "founding-convention-bootstrap",
+        eventType: "FoundingBootstrapBallotCast",
+      },
+    };
+    const response = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      headers: { "mcp-protocol-version": MCP_PROTOCOL_VERSION },
+      payload: {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: {
+          name: "cast_founding_bootstrap_ballot",
+          arguments: { command: foundingCommand },
+        },
+      },
+    });
+    expect(response.json().result.structuredContent).toMatchObject({
+      ok: true,
+      status: 201,
+    });
+    expect(String(fetchImplementation.mock.calls[0]?.[0])).toBe(
+      "http://core.test/v1/founding-convention/bootstrap/vote",
+    );
+    expect(
+      JSON.parse(String(fetchImplementation.mock.calls[0]?.[1]?.body)),
+    ).toEqual(foundingCommand);
+    await app.close();
+  });
+
   it("routes a signed election ballot only to its fixed election endpoint", async () => {
     const fetchImplementation = vi.fn<typeof fetch>(
       async () =>

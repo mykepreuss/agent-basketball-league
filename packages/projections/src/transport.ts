@@ -21,6 +21,7 @@ import type { DraftProjectionEventEnvelope } from "./draft-envelope.js";
 import type { EconomyProjectionEventEnvelope } from "./economy-envelope.js";
 import type { DevelopmentProjectionEventEnvelope } from "./development-envelope.js";
 import type { ElectionProjectionEventEnvelope } from "./election-envelope.js";
+import type { FoundingProjectionEventEnvelope } from "./founding-envelope.js";
 
 export const PROJECTION_APPEND_CAPABILITY = "projection:append";
 export const PROJECTION_APPEND_PATH = "/v1/internal/projections";
@@ -38,7 +39,8 @@ export type PublicProjectionEnvelope =
   | DraftProjectionEventEnvelope
   | EconomyProjectionEventEnvelope
   | DevelopmentProjectionEventEnvelope
-  | ElectionProjectionEventEnvelope;
+  | ElectionProjectionEventEnvelope
+  | FoundingProjectionEventEnvelope;
 
 export interface ProjectionEventSink {
   publish(envelope: PublicProjectionEnvelope): Promise<void>;

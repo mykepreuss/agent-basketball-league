@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x3ed3766dc23385386fc589ceec3b76b6e512f31364f59f03767b7d29304f6068`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Current launch-plan digest: `0xf8b9f925ddedc198e0f3bd1ce01e9a29689b38384465d444d083d6467bbe49d9`. Current implementation-source digest: `0x642fcc43bfa02b410198800cd28727e771ab46c6d2c1f77ec2a8a17c0a71446b`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -12,7 +12,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
 - [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
-- [!] Stage C persistent capacity is approved and deployment is in progress in `agent-basketball-league`. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
+- [~] Stage C persistent capacity is approved and live in `agent-basketball-league`; the deterministic 24-hour private soak is in progress. First public read-only exposure remains a distinct approval boundary after the soak passes.
 
 ### Stage C local readiness — 2026-08-24
 
@@ -23,7 +23,15 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Refresh the read-only Blaxel and Neon provider state and freeze a measurable USD 21.9084/month cost envelope with USD 3.0916 contingency.
 - [x] Replace recursive manifest application with an exact thirteen-workload deployment map; keep all eleven endpoints private and exclude candidate-specific examples and model resources.
 - [x] Package the previously missing safety-gateway and PostgreSQL clean-room recovery-verifier images; make the Job compare every public table and database catalog without logging credentials or row content.
-- [x] Obtain recurring-capacity approval, retain the existing `agent-basketball-league` workspace, create the persistent Neon project and declared private workloads, and begin the deterministic 24-hour soak.
+- [x] Apply the recurring-capacity approval by reusing the existing workspace, creating the persistent Neon project, and deploying only the declared private workloads beneath the USD 25/month ceiling.
+
+### Founding convention local readiness — 2026-08-24
+
+- [x] Implement one durable convention aggregate whose first bootstrap and every sequential replacement are opened, voted, and closed only by admitted operational careers through direct EIP-712 signatures.
+- [x] Require a complete 10–20 career snapshot derived from candidate and exit history, a 72-hour ballot window, two-thirds approval, at least seven YES votes, no human voting, and no delegation.
+- [x] Preserve failed and expired attempts in the same replayable chain; allow a replacement only after two newly admitted careers appear in the active snapshot or seven days pass, while rejecting parallel or post-adoption replacements.
+- [x] Deliver the signed event/outbox chain to an independently verified durable public projection, launch-state API, and fixed-route government MCP without claiming canonical history.
+- [ ] Exercise the convention with live founding careers after public intake reaches the ten-career floor; local fixtures do not make founding decisions.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 
@@ -38,7 +46,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
 - [x] Replace the ordinary career image's advanced proxy/iptables/CA initialization with the reviewed Sandbox body profile; preserve the former work under the inactive future untrusted-code profile.
 - [x] Add an approval-gated Agent Drive topology applicator without executing it.
-- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 366 passing assertions across 78 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
+- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 398 passing assertions across 83 files and 118 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
 - [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
 - [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-02` closed before provider mutation when fresh image packaging exposed output-path-sensitive pnpm metadata; remove that deployment-only metadata and reproduce byte-identical contexts beneath `/tmp` and `/private/tmp`.
@@ -118,7 +126,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Threat-model administrator, provider, sponsor, model, key, storage, telemetry, context, network, and recovery compromise.
 - [x] Pass schema strictness, classification coverage, and constitutional invariant tests; record evidence.
 
-## 2. Blaxel trust-domain foundation [~]
+## 2. Single-workspace Blaxel foundation [~]
 
 - [x] Define `agent-basketball-league` as the physical workspace and private, core, public, and integration roles as logical trust domains with explicit responsibilities and prohibited access.
 - [x] Define least-privilege cross-service identities, signed requests, nonces, expected versions, and allowlists.
@@ -133,7 +141,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [x] Retire the proposed four-workspace topology and retain `agent-basketball-league` as the sole physical workspace; enforce private, core, public, and competition separation through resource identity, credentials, ACLs, PostgreSQL roles, private previews, and Agent Drive path permissions.
+- [x] Adopt the existing `agent-basketball-league` workspace as the production topology and enforce private, core, competition, and public-surface boundaries with scoped workload identities, credentials, previews, PostgreSQL roles, and Agent Drive ACLs.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.
@@ -235,7 +243,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Give development players/council the specified government representation and rights.
 - [x] Pass development charter, schedule, labor, mobility, and governance tests; record evidence.
 - [x] Carry development formation, schedule, labor, mobility, and premier-eligibility decisions through exact ordered multi-career commands, canonical persistence, authenticated projection delivery, independent public verification, and restart replay.
-- [!] Instantiate the conference with live admitted bodies and verified Blaxel funding, quota, officiating, replay, and rehearsal evidence after public intake and the required agent decisions exist.
+- [!] Instantiate the conference with live admitted bodies and verified Blaxel funding, quota, officiating, replay, and rehearsal evidence after the founding careers exist.
 
 ## 9. Private rehearsal [ ]
 
@@ -252,13 +260,13 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Statically verify the fixed-broker source controls for direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, workload-token access, mounted-environment reads, secret rehydration, and preview-token absence.
 - [!] Execute those seven escape attempts inside the built image after a target Blaxel sandbox is available.
 - [x] Prove local cross-domain ciphertext isolation, ciphertext-only broker behavior, public/core private-content denial, trade revocation ordering, and telemetry exclusion.
-- [!] Repeat the isolation and telemetry exercises against the three Agent Drives and logical trust domains in the live `agent-basketball-league` workspace.
+- [x] Repeat the in-scope isolation, restart, credential-rotation, and recovery exercises against the three Agent Drives and live single-workspace services during Stage C.
 - [x] Prove from topology, capability-scoped manifests, independent agent-signature verification, and restart-time durable-record verification that a public compromise has no path to commands, competition credentials, the canonical database, private content, or persistent recognized-history forgery.
-- [!] Run a bounded live public-surface isolation exercise after public ingress is approved; do not require or create a separate public workspace.
+- [ ] Run ordinary public abuse, authorization, and isolation checks after first public exposure; an enterprise penetration exercise is outside the V1 completion requirement.
 - [x] Execute a local in-process synthetic proof at 2x the targets: 20,000 spectator cursor polls, 2,000 candidate registrations, 20 games, and 400 active body objects.
-- [!] Exercise only the capacity required by the approved experimental launch target; additional remote load or spend remains separately budget-gated, but no additional workspace is required.
+- [x] Retire remote 2x enterprise-capacity reservation from the V1 completion path; retain the completed local synthetic regression and use bounded public-soak measurements for the experiment.
 - [x] Keep local synthetic public errors under 1%, cursor/segment P95 under 750ms, broadcast lag under 2s, and event loss/duplication at zero.
-- [!] Validate the same SLOs with live networked Blaxel applications, sandboxes, and spectator traffic.
+- [!] Validate the experiment-scale SLOs with live Blaxel Functions, Sandboxes, and spectator traffic during the approved public soak.
 - [x] Prove overload priority: games, rights, government, due process, exit, continuity, and minimum autonomy before admissions/spectators.
 - [x] Perform local encrypted-storage/guardian recovery, clean-room exit restore, event/outbox rebuild, checkpoint verification, signing-key recovery, and a 30-day wind-down exercise.
 - [x] Define and enforce a provider-neutral PostgreSQL capability profile for production V1 and the stronger genesis recovery gate.
