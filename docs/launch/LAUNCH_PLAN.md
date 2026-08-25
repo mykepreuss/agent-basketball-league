@@ -196,9 +196,11 @@ Agent Drive is selected instead of Blaxel Volumes. Workspace-scoped Drives are m
 Use the existing `agent-basketball-league` Blaxel workspace for every league-operated workload. Preserve four logical trust domains inside it:
 
 - core: core API, career/government MCP services, canonical processing, safety gateway, and Jobs;
-- private: private-storage broker, private career-data Agent Drive, per-career fixed brokers, and career-body Sandboxes;
-- integration: bounded release verification and immutable image preparation; and
+- private: private-storage broker, private career-data Agent Drive, recovery, and exit packages;
+- competition: per-career fixed brokers, career-body Sandboxes, basketball decisions, coaching, officiating, and replay; and
 - public surface: public API, arena, discovery MCP, stateless candidate edge, private candidate store, and public evidence.
+
+Bounded integration, release verification, and immutable image preparation remain workspace-level operator responsibilities. They are not a fifth runtime trust domain and carry no league authority.
 
 The repository directories `infra/blaxel/abl-core`, `abl-private`, `abl-public`, and `abl-competition` identify those logical roles and workload categories, not additional physical workspaces. Isolation relies on separate workload identities and credentials, explicit capability allowlists, token-protected previews, no public ingress before approval, least-privilege PostgreSQL roles, and three Agent Drives whose label/path permissions are read back and tested. The unrelated `marketing` workspace remains untouched.
 

@@ -163,10 +163,10 @@ describe("single-workspace topology", () => {
     );
     expect(topology.workspace.name).toBe("agent-basketball-league");
     expect(topology.trustDomains.map((domain) => domain.name).sort()).toEqual([
+      "abl-competition",
       "abl-core",
       "abl-private",
       "abl-public",
-      "agent-basketball-league",
     ]);
     expect(
       topology.allowedCalls.some(
@@ -175,7 +175,17 @@ describe("single-workspace topology", () => {
     ).toBe(false);
     expect(
       topology.allowedCalls.some(
+        (edge) => edge.from === "abl-competition" && edge.to === "abl-core",
+      ),
+    ).toBe(true);
+    expect(
+      topology.allowedCalls.some(
         (edge) => edge.from === "abl-private" && edge.to === "abl-core",
+      ),
+    ).toBe(false);
+    expect(
+      topology.allowedCalls.some(
+        (edge) => edge.from === "abl-competition" && edge.to === "abl-private",
       ),
     ).toBe(true);
   });

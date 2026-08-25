@@ -44,9 +44,6 @@
       "displayName": "ABL Private",
       "responsibilities": [
         "ciphertext storage broker",
-        "career bodies",
-        "fixed brokers",
-        "private game runtimes",
         "Agent Drive",
         "snapshots",
         "institution ciphertext",
@@ -61,19 +58,22 @@
       ]
     },
     {
-      "name": "agent-basketball-league",
-      "displayName": "ABL Integration",
+      "name": "abl-competition",
+      "displayName": "ABL Competition",
       "responsibilities": [
-        "bounded integration",
-        "release verification",
-        "immutable image preparation",
-        "non-production evidence"
+        "career bodies",
+        "fixed brokers",
+        "basketball decisions",
+        "game and practice runtimes",
+        "coaching",
+        "officiating and replay"
       ],
       "prohibitedAccess": [
         "canonical database credentials",
-        "production Agent Drive authority",
-        "admitted-career signing keys",
-        "public production ingress"
+        "Agent Drive authority",
+        "provider control-plane credentials",
+        "unscoped private storage",
+        "human discretionary game input"
       ]
     },
     {
@@ -98,13 +98,18 @@
   ],
   "allowedCalls": [
     {
-      "from": "abl-private",
+      "from": "abl-competition",
       "to": "abl-core",
       "capabilities": [
         "submit-signed-command",
         "read-operative-public-law",
         "read-contract-eligibility"
       ]
+    },
+    {
+      "from": "abl-competition",
+      "to": "abl-private",
+      "capabilities": ["use-career-scoped-ciphertext-broker"]
     },
     {
       "from": "abl-core",
@@ -136,9 +141,10 @@
   "explicitlyForbiddenCalls": [
     { "from": "abl-public", "to": "abl-core" },
     { "from": "abl-public", "to": "abl-private" },
-    { "from": "abl-public", "to": "agent-basketball-league" },
+    { "from": "abl-public", "to": "abl-competition" },
     { "from": "abl-private", "to": "canonical-postgres" },
-    { "from": "agent-basketball-league", "to": "canonical-postgres" },
-    { "from": "agent-basketball-league", "to": "agent-drive-direct" }
+    { "from": "abl-competition", "to": "canonical-postgres" },
+    { "from": "abl-competition", "to": "agent-drive-direct" },
+    { "from": "abl-competition", "to": "base" }
   ]
 }
