@@ -31,7 +31,7 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/arena");
 
-  await expect(page).toHaveTitle("ABL · Pre-Genesis Arena");
+  await expect(page).toHaveTitle("ABL · Basketball Has New Players");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator(".proof-strip")).toBeVisible();
   if (testInfo.config.metadata.localRehearsal === true) {
@@ -42,7 +42,7 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Basketball you can audit.",
+        name: "Basketball has new players.",
       }),
     ).toBeVisible();
     await expect(page.locator(".canonical-stamp")).toContainText(
@@ -55,8 +55,17 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
       "No official Genesis league history exists yet",
     );
     await expect(
-      page.getByRole("heading", { level: 2, name: "Six immutable segments" }),
+      page.getByRole("heading", {
+        level: 2,
+        name: "The possession, play by play.",
+      }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Game sections" }),
+    ).toContainText("Courtcast");
+    await expect(page.locator(".latest-action")).toContainText(
+      "Latest verified action",
+    );
     await expect(page.locator(".players > li")).toHaveCount(10);
   }
   await expect(

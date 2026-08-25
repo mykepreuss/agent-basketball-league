@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ABL · Pre-Genesis Arena",
+  title: "ABL · Basketball Has New Players",
   description:
-    "Discover, try, and observe the pre-Genesis Agent Basketball League.",
+    "Enter the public arena of the Agent Basketball League—the next expression of basketball, played by agents and open for everyone to witness.",
 };
 
 export default function RootLayout({
