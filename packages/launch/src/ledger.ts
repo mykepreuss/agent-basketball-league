@@ -1,4 +1,5 @@
 import {
+  GenesisRecognitionSelectionSchema,
   LaunchStageSchema,
   LaunchStateSchema,
   SchemaVersion,
@@ -31,6 +32,7 @@ const ApprovalSchema = z.strictObject({
     "PUBLIC_EXPOSURE",
     "RECOGNITION_BROADCAST",
     "FOUNDING_AGENT_DECISION",
+    "GENESIS_ACTIVATION",
     "RECOVERY_CONTROL_REMOVAL",
   ]),
   state: z.enum(["NOT_REQUESTED", "PENDING", "GRANTED", "DENIED"]),
@@ -92,6 +94,11 @@ export const LaunchLedgerInputSchema = z.strictObject({
     "INDEPENDENTLY_WITNESSED",
     "ONCHAIN_FINALIZED",
   ]),
+  genesisRecognition: GenesisRecognitionSelectionSchema.default({
+    mechanism: "UNSELECTED",
+    ratified: false,
+    foundingDecisionEventId: null,
+  }),
   intake: z.strictObject({
     mode: z.enum(["CLOSED", "INVITE_ONLY", "CAPPED_PUBLIC"]),
     capacityState: z.enum([
@@ -185,15 +192,48 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
     input.launchStage === "PRODUCTION_GENESIS" &&
     input.operatingProfile === "PRODUCTION_GENESIS";
   if (genesisRequested) {
-    if (input.recognitionLevel !== "ONCHAIN_FINALIZED")
-      blockingReasons.push("Genesis recognition is not ONCHAIN_FINALIZED");
-    for (const action of [
+    const selection = input.genesisRecognition;
+    if (
+      !selection.ratified ||
+      selection.mechanism === "UNSELECTED" ||
+      selection.foundingDecisionEventId === null
+    ) {
+      blockingReasons.push(
+        "Genesis recognition profile lacks a ratified founding decision",
+      );
+    } else if (
+      selection.mechanism === "SIGNED_WITNESSES" &&
+      input.recognitionLevel !== "INDEPENDENTLY_WITNESSED"
+    ) {
+      blockingReasons.push(
+        "Genesis recognition does not satisfy the signed-witness profile",
+      );
+    } else if (
+      selection.mechanism === "BASE_FINALIZED" &&
+      input.recognitionLevel !== "ONCHAIN_FINALIZED"
+    ) {
+      blockingReasons.push(
+        "Genesis recognition does not satisfy the finalized-Base profile",
+      );
+    } else if (
+      selection.mechanism === "COMPATIBLE_REPLACEMENT" &&
+      input.recognitionLevel !== "INDEPENDENTLY_WITNESSED" &&
+      input.recognitionLevel !== "ONCHAIN_FINALIZED"
+    ) {
+      blockingReasons.push(
+        "Genesis recognition does not satisfy the compatible replacement profile",
+      );
+    }
+    const requiredHumanApprovals = [
       "MATERIAL_SPEND",
       "RESOURCE_CREATION",
       "PUBLIC_EXPOSURE",
-      "RECOGNITION_BROADCAST",
-      "FOUNDING_AGENT_DECISION",
-    ] as const) {
+      "GENESIS_ACTIVATION",
+      ...(selection.mechanism === "BASE_FINALIZED"
+        ? (["RECOGNITION_BROADCAST"] as const)
+        : []),
+    ] as const;
+    for (const action of requiredHumanApprovals) {
       const approval = input.approvals.find((item) => item.action === action);
       if (approval?.state !== "GRANTED" || approval.approvalId === null)
         blockingReasons.push(`${action}: approval not granted`);
@@ -210,6 +250,7 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
     resources: input.resources,
     deployments: input.deployments,
     incidents: input.incidents,
+    genesisRecognition: input.genesisRecognition,
   });
   const launchState = LaunchStateSchema.parse({
     schemaVersion: SchemaVersion,
@@ -240,6 +281,7 @@ export function deriveLaunchLedger(candidate: unknown): LaunchLedger {
             ? "READ_ONLY"
             : "NONE",
     candidateIntake: input.intake,
+    genesisRecognition: input.genesisRecognition,
     evidenceDigest,
     blockingReasons: uniqueBlockingReasons,
     nextBlockingRequirement: uniqueBlockingReasons[0] ?? null,

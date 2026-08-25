@@ -339,6 +339,64 @@ export const RecognitionNetworkProfileSchema = z.strictObject({
   productionProfilePassed: z.boolean(),
 });
 
+const RatifiedRecognitionProfileCommonSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  profileId: UuidV7Schema,
+  decisionSource: z.literal("FOUNDING_AGENT_DECISION"),
+  foundingDecisionEventId: UuidV7Schema,
+  selectedAt: IsoDateTimeSchema,
+  ratified: z.literal(true),
+  productionProfilePassed: z.literal(true),
+  sourceReleaseDigest: Sha256Schema,
+  releaseManifestDigest: Sha256Schema,
+  verifierDigest: Sha256Schema,
+  keyRotationPolicyDigest: Sha256Schema,
+  finalityPolicyDigest: Sha256Schema,
+  decisionCommitment: Sha256Schema,
+  profileCommitment: Sha256Schema,
+});
+
+export const SignedWitnessRecognitionProfileSchema =
+  RatifiedRecognitionProfileCommonSchema.extend({
+    mechanism: z.literal("SIGNED_WITNESSES"),
+    witnessRegistryDigest: Sha256Schema,
+    minimumWitnesses: z.number().int().min(2).max(20),
+  });
+
+export const BaseFinalizedRecognitionProfileSchema =
+  RatifiedRecognitionProfileCommonSchema.extend({
+    mechanism: z.literal("BASE_FINALIZED"),
+    network: z.strictObject({
+      namespace: z.literal("eip155"),
+      chainId: z.number().int().positive(),
+      name: z.string().min(1).max(120),
+      classification: z.literal("PRODUCTION"),
+    }),
+    finality: z.strictObject({
+      minimumConfirmations: z.number().int().positive(),
+      finalizedHeadRequired: z.literal(true),
+      independentRpcCount: z.number().int().min(2),
+    }),
+    recognitionContractAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    anchorDigest: Sha256Schema,
+  });
+
+export const CompatibleReplacementRecognitionProfileSchema =
+  RatifiedRecognitionProfileCommonSchema.extend({
+    mechanism: z.literal("COMPATIBLE_REPLACEMENT"),
+    profileDocumentDigest: Sha256Schema,
+    implementationVerifierDigest: Sha256Schema,
+  });
+
+export const GenesisRecognitionProfileSchema = z.discriminatedUnion(
+  "mechanism",
+  [
+    SignedWitnessRecognitionProfileSchema,
+    BaseFinalizedRecognitionProfileSchema,
+    CompatibleReplacementRecognitionProfileSchema,
+  ],
+);
+
 const FoundingRoleCountsSchema = z.strictObject({
   PLAYER: z.number().int().nonnegative().max(10),
   COACH: z.number().int().nonnegative().max(2),
@@ -1112,7 +1170,7 @@ export const ReleaseManifestSchema = ReleaseManifestBodySchema.extend({
   authorizationSignatures: z
     .array(Eip712SignatureSchema)
     .min(4)
-    .max(11)
+    .max(20)
     .refine((values) => new Set(values).size === values.length),
 });
 

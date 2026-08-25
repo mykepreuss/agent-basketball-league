@@ -16,6 +16,7 @@ import {
   verifyEconomyProjectionEvent,
   verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
+  verifyFoundingDecisionProjectionEvent,
   verifyFoundingProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -40,6 +41,8 @@ import {
   type PublicFinalGameProjectionReader,
   type PublicFinalGameProjectionWriter,
   type PublicFinalizedGameProjection,
+  type PublicFoundingDecisionProjectionReader,
+  type PublicFoundingDecisionProjectionWriter,
   type PublicFoundingConventionProjectionReader,
   type PublicFoundingConventionProjectionWriter,
   type PublicGameProjection,
@@ -57,7 +60,11 @@ import {
   type PublicSocialProjectionWriter,
   type DevelopmentProjectionVerificationAuthority,
 } from "@abl/projections";
-import { FOUNDING_BOOTSTRAP_AGGREGATE_TYPE } from "@abl/genesis";
+import {
+  FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+  FOUNDING_DECISIONS,
+  FOUNDING_DECISION_AGGREGATE_TYPE,
+} from "@abl/genesis";
 import {
   PublicPracticeDecisionRequestSchema,
   publicPracticeScenario,
@@ -390,6 +397,7 @@ export interface PublicApiOptions {
   governanceProjections?: PublicGovernanceProjectionReader;
   electionProjections?: PublicElectionProjectionReader;
   foundingConventionProjections?: PublicFoundingConventionProjectionReader;
+  foundingDecisionProjections?: PublicFoundingDecisionProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
@@ -406,6 +414,7 @@ export interface PublicApiOptions {
     governanceWriter?: PublicGovernanceProjectionWriter;
     electionWriter?: PublicElectionProjectionWriter;
     foundingWriter?: PublicFoundingConventionProjectionWriter;
+    foundingDecisionWriter?: PublicFoundingDecisionProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
     modelWriter?: PublicModelProjectionWriter;
@@ -595,6 +604,7 @@ export function createPublicApi(
     options.governanceProjections !== undefined ||
     options.electionProjections !== undefined ||
     options.foundingConventionProjections !== undefined ||
+    options.foundingDecisionProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
     options.modelProjections !== undefined ||
@@ -622,9 +632,7 @@ export function createPublicApi(
       ? ("PRODUCTION_GENESIS" as const)
       : ("LOCAL_GATE_1" as const),
     operatingProfile: defaultOperatingProfile,
-    recognitionLevel: genesisAssessment.ready
-      ? ("ONCHAIN_FINALIZED" as const)
-      : ("NONE" as const),
+    recognitionLevel: genesisAssessment.recognitionLevel,
     genesis: genesisAssessment.ready,
     canonical: genesisAssessment.ready,
     recognized: genesisAssessment.ready,
@@ -639,6 +647,7 @@ export function createPublicApi(
       requirementsUri: "/v1/discovery/candidate-requirements",
       capacityPolicyUri: "/v1/discovery/capacity-policy",
     },
+    genesisRecognition: genesisAssessment.genesisRecognition,
     foundingCohort: DEFAULT_FOUNDING_COHORT_STATE,
     evidenceDigest:
       genesisAssessment.evidenceDigest ??
@@ -663,20 +672,58 @@ export function createPublicApi(
       ?.foundingConvention()
       .at(-1);
     if (founding === undefined) return launchState;
+    const decisions =
+      options.foundingDecisionProjections?.foundingDecisions() ?? [];
+    const adoptedDecisions = new Map<string, (typeof decisions)[number]>();
+    const conflictingTopics = new Set<string>();
+    for (const decision of decisions) {
+      if (
+        decision.conventionId !== founding.conventionId ||
+        decision.result?.state !== "DECIDED" ||
+        decision.disposition === "REJECT"
+      ) {
+        continue;
+      }
+      if (adoptedDecisions.has(decision.topic))
+        conflictingTopics.add(decision.topic);
+      else adoptedDecisions.set(decision.topic, decision);
+    }
     const bootstrapState = founding.result?.state ?? "OPEN";
     let conventionState:
       | "RECRUITING"
       | "BOOTSTRAP_OPEN"
-      | "QUORUM_RULE_ADOPTED";
+      | "QUORUM_RULE_ADOPTED"
+      | "DECIDING"
+      | "COMPLETE";
     if (bootstrapState === "ADOPTED") {
-      conventionState = "QUORUM_RULE_ADOPTED";
+      const allTopicsDecided =
+        conflictingTopics.size === 0 &&
+        FOUNDING_DECISIONS.every((topic) => adoptedDecisions.has(topic));
+      if (allTopicsDecided) conventionState = "COMPLETE";
+      else if (decisions.length > 0) conventionState = "DECIDING";
+      else conventionState = "QUORUM_RULE_ADOPTED";
     } else if (bootstrapState === "OPEN") {
       conventionState = "BOOTSTRAP_OPEN";
     } else {
       conventionState = "RECRUITING";
     }
+    const recognitionDecision = adoptedDecisions.get("RECOGNITION_PROFILE");
+    const recognitionMechanism =
+      recognitionDecision?.proposal.recognitionMechanism ?? "UNSELECTED";
+    let genesisRecognition = launchState.genesisRecognition;
+    if (
+      recognitionMechanism !== "UNSELECTED" &&
+      recognitionDecision?.result?.ratificationEventId != null
+    ) {
+      genesisRecognition = {
+        mechanism: recognitionMechanism,
+        ratified: true,
+        foundingDecisionEventId: recognitionDecision.result.ratificationEventId,
+      };
+    }
     return LaunchStateSchema.parse({
       ...launchState,
+      genesisRecognition,
       foundingConvention: {
         state: conventionState,
         minimumFounders: 10,
@@ -913,7 +960,7 @@ export function createPublicApi(
       privateStaging: "NONCANONICAL_PRIVATE_EVIDENCE",
       witnessedPreGenesis: "SIGNED_OR_WITNESSED_NON_GENESIS_EVIDENCE",
       recognizedCanonical:
-        "ONLY_AFTER_PRODUCTION_GENESIS_AND_ONCHAIN_FINALIZED_CHECKPOINT",
+        "ONLY_AFTER_PRODUCTION_GENESIS_AND_RATIFIED_PROFILE_FINALITY",
     },
   }));
   app.get("/.well-known/agent-card.json", async () => ({
@@ -1518,6 +1565,44 @@ export function createPublicApi(
           }
           if (
             projectionAggregateType(request.body) ===
+            FOUNDING_DECISION_AGGREGATE_TYPE
+          ) {
+            if (
+              projectionIngress.foundingConventionId === undefined ||
+              projectionIngress.foundingDecisionWriter === undefined
+            ) {
+              throw new ServiceAuthenticationError(
+                "Founding-decision projection authority is not configured",
+              );
+            }
+            const verified = await verifyFoundingDecisionProjectionEvent(
+              request.body,
+              {
+                ...projectionIngress,
+                foundingConventionId: projectionIngress.foundingConventionId,
+              },
+            );
+            if (
+              headers["x-abl-expected-version"] !== verified.expectedVersion
+            ) {
+              throw new ProjectionVersionConflictError(
+                "Signed expected version does not precede the founding-decision event",
+              );
+            }
+            const record =
+              await projectionIngress.foundingDecisionWriter.publish(
+                verified.envelope,
+                verified.expectedVersion,
+                projectionIngress.now?.().toISOString(),
+              );
+            return reply.code(201).send({
+              accepted: true,
+              canonicalEventHash: verified.event.eventHash,
+              cursor: record.cursor,
+            });
+          }
+          if (
+            projectionAggregateType(request.body) ===
             ELECTION_WORKFLOW_AGGREGATE_TYPE
           ) {
             if (
@@ -1828,6 +1913,7 @@ export function createPublicApi(
           ...(options.electionProjections?.elections() ?? []),
           ...(options.foundingConventionProjections?.foundingConvention() ??
             []),
+          ...(options.foundingDecisionProjections?.foundingDecisions() ?? []),
           ...(options.caseProjections?.cases() ?? []),
         ];
       }

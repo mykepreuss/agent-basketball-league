@@ -1,19 +1,35 @@
 import {
+  FOUNDING_DECISION_AGGREGATE_TYPE,
+  FOUNDING_DECISION_WORKFLOW_SCHEMA_DIGEST,
   FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
   FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST,
   FoundingBootstrapBallotPayloadSchema,
   FoundingBootstrapOpenPayloadSchema,
   FoundingBootstrapWorkflowAuthorizationError,
   FoundingBootstrapWorkflowValidationError,
+  FoundingDecisionBallotPayloadSchema,
+  FoundingDecisionClosePayloadSchema,
+  FoundingDecisionOpenPayloadSchema,
+  FoundingDecisionAuthorizationError,
+  FoundingDecisionValidationError,
   applyFoundingBootstrapWorkflowTransition,
+  applyFoundingDecisionWorkflowTransition,
+  evaluateFoundingDecision,
   evaluateFoundingBootstrap,
   foundingBootstrapBallotFromAuthorization,
   foundingBootstrapWorkflowStateRoot,
+  foundingDecisionWorkflowStateRoot,
   isFoundingBootstrapEventType,
+  isFoundingDecisionEventType,
   parseFoundingBootstrapWorkflowPayload,
+  parseFoundingDecisionWorkflowPayload,
   type FoundingBootstrapEventType,
   type FoundingBootstrapWorkflowPayload,
   type FoundingBootstrapWorkflowSnapshot,
+  type FoundingDecisionEventType,
+  type FoundingDecisionWorkflowPayload,
+  type FoundingDecisionWorkflowSnapshot,
+  type SignedFoundingDecisionBallot,
   type SignedFoundingBootstrapBallot,
 } from "@abl/genesis";
 import {
@@ -75,6 +91,13 @@ interface FoundingAggregate {
   ballotSigners: Map<string, `0x${string}`>;
 }
 
+interface FoundingDecisionAggregate {
+  records: StoredCanonicalEvent[];
+  snapshot: FoundingDecisionWorkflowSnapshot | null;
+  ballots: SignedFoundingDecisionBallot[];
+  ballotSigners: Map<string, `0x${string}`>;
+}
+
 function candidateOptions(
   options: FoundingConventionOptions,
 ): CandidateRehearsalOptions {
@@ -103,13 +126,12 @@ async function requireCareerSignature(
   event: CanonicalEvent,
   signature: string,
   at: string,
+  aggregateType: string = FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
 ): Promise<CandidateCareerAuthority> {
   const configured = options.admittedAgents.get(event.actorDid);
   if (
     configured === undefined ||
-    !configured.allowedAggregateTypes.includes(
-      FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-    )
+    !configured.allowedAggregateTypes.includes(aggregateType)
   ) {
     throw new FoundingBootstrapWorkflowAuthorizationError(
       "Founding convention actor lacks configured authority",
@@ -181,7 +203,14 @@ async function activeFounderAt(
 
 async function validateFounderSnapshot(
   options: FoundingConventionOptions,
-  payload: z.infer<typeof FoundingBootstrapOpenPayloadSchema>,
+  payload: {
+    snapshot: {
+      capturedAt: string;
+      eligibleFounderDids: readonly string[];
+    };
+    proposal: { openedAt: string };
+  },
+  aggregateType: string = FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
 ): Promise<void> {
   if (
     canonicalInstant(payload.snapshot.capturedAt) >
@@ -195,9 +224,7 @@ async function validateFounderSnapshot(
     await Promise.all(
       [...options.admittedAgents.entries()]
         .filter(([, authority]) =>
-          authority.allowedAggregateTypes.includes(
-            FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-          ),
+          authority.allowedAggregateTypes.includes(aggregateType),
         )
         .map(([did, configured]) =>
           activeFounderAt(
@@ -381,6 +408,162 @@ async function replayFoundingAggregate(
   return aggregate;
 }
 
+async function validateDecisionOpen(
+  options: FoundingConventionOptions,
+  payload: z.infer<typeof FoundingDecisionOpenPayloadSchema>,
+): Promise<void> {
+  const bootstrap = await replayFoundingAggregate(options);
+  const adoptedRule = bootstrap.snapshot?.result?.quorumRule;
+  if (
+    payload.proposal.conventionId !== options.conventionId ||
+    adoptedRule === null ||
+    adoptedRule === undefined ||
+    sha256Commitment(adoptedRule) !== sha256Commitment(payload.quorumRule)
+  ) {
+    throw new FoundingDecisionAuthorizationError(
+      "Founding decision lacks the adopted convention authority",
+    );
+  }
+  await validateFounderSnapshot(
+    options,
+    {
+      snapshot: payload.snapshot,
+      proposal: { openedAt: payload.proposal.proposedAt },
+    },
+    FOUNDING_DECISION_AGGREGATE_TYPE,
+  );
+}
+
+async function advanceDecisionAggregate(
+  options: FoundingConventionOptions,
+  aggregate: Omit<FoundingDecisionAggregate, "records">,
+  event: CanonicalEvent,
+  payload: FoundingDecisionWorkflowPayload,
+  signature: string,
+  signerAddress: `0x${string}`,
+): Promise<FoundingDecisionWorkflowSnapshot> {
+  let result = null;
+  if (event.eventType === "FoundingDecisionProposed") {
+    await validateDecisionOpen(
+      options,
+      FoundingDecisionOpenPayloadSchema.parse(payload),
+    );
+  } else if (event.eventType === "FoundingDecisionBallotCast") {
+    const ballot = FoundingDecisionBallotPayloadSchema.parse(payload).command;
+    registerBallotSigner(
+      aggregate.ballotSigners,
+      ballot.voterDid,
+      signerAddress,
+    );
+    aggregate.ballots.push({
+      ballot,
+      authorizationEvent: event as CanonicalEvent<{
+        command: typeof ballot;
+      }>,
+      signature: signature as Hex,
+      signerAddress,
+    });
+  } else if (event.eventType === "FoundingDecisionClosed") {
+    if (aggregate.snapshot === null)
+      throw new FoundingDecisionValidationError(
+        "Founding decision close precedes its proposal",
+      );
+    result = await evaluateFoundingDecision({
+      proposal: aggregate.snapshot.proposal,
+      snapshot: aggregate.snapshot.snapshot,
+      quorumRule: aggregate.snapshot.quorumRule,
+      ballots: aggregate.ballots,
+      authorization: {
+        domain: options.domain,
+        signers: aggregate.ballotSigners,
+      },
+      evaluatedAt: event.timestamp,
+      ratificationEventId: event.eventId,
+    });
+  }
+  return applyFoundingDecisionWorkflowTransition(
+    aggregate.snapshot,
+    event,
+    payload,
+    result,
+  );
+}
+
+async function replayDecisionAggregate(
+  options: FoundingConventionOptions,
+  proposalId: string,
+): Promise<FoundingDecisionAggregate> {
+  const records = await options.store.readAggregate(
+    FOUNDING_DECISION_AGGREGATE_TYPE,
+    proposalId,
+  );
+  const aggregate: FoundingDecisionAggregate = {
+    records,
+    snapshot: null,
+    ballots: [],
+    ballotSigners: new Map(),
+  };
+  let previousHash: string | null = null;
+  let previousTimestamp = Number.NEGATIVE_INFINITY;
+  for (const [index, record] of records.entries()) {
+    const event = canonicalEventFromStored(record);
+    const occurredAt = record.occurredAt.getTime();
+    if (
+      event.aggregateType !== FOUNDING_DECISION_AGGREGATE_TYPE ||
+      event.aggregateId !== proposalId ||
+      event.aggregateVersion !== BigInt(index + 1) ||
+      !isFoundingDecisionEventType(event.eventType) ||
+      event.schemaDigest !== FOUNDING_DECISION_WORKFLOW_SCHEMA_DIGEST ||
+      event.previousEventHash !== previousHash ||
+      !Number.isFinite(occurredAt) ||
+      event.timestamp !== new Date(occurredAt).toISOString() ||
+      occurredAt < previousTimestamp ||
+      record.signatures.length !== 1 ||
+      typeof record.signatures[0] !== "string"
+    ) {
+      throw new FoundingDecisionAuthorizationError(
+        "Stored founding decision aggregate is not authoritative",
+      );
+    }
+    try {
+      verifyEventContent(event);
+    } catch {
+      throw new FoundingDecisionAuthorizationError(
+        "Stored founding decision event content is invalid",
+      );
+    }
+    const payload = parseFoundingDecisionWorkflowPayload(
+      event.eventType,
+      event.payload,
+    );
+    const authority = await requireCareerSignature(
+      options,
+      event,
+      record.signatures[0],
+      event.timestamp,
+      FOUNDING_DECISION_AGGREGATE_TYPE,
+    );
+    aggregate.snapshot = await advanceDecisionAggregate(
+      options,
+      aggregate,
+      event,
+      payload,
+      record.signatures[0],
+      authority.signingAddress,
+    );
+    if (
+      foundingDecisionWorkflowStateRoot(aggregate.snapshot) !== event.stateRoot
+    ) {
+      throw new FoundingDecisionAuthorizationError(
+        "Stored founding decision state root is invalid",
+      );
+    }
+    previousHash = event.eventHash;
+    previousTimestamp = occurredAt;
+  }
+  return aggregate;
+}
+
 function appendInput(
   options: FoundingConventionOptions,
   event: CanonicalEvent,
@@ -410,9 +593,27 @@ function appendInput(
   };
 }
 
+function foundingDecisionProposalId(
+  eventType: FoundingDecisionEventType,
+  payload: FoundingDecisionWorkflowPayload,
+): string {
+  switch (eventType) {
+    case "FoundingDecisionProposed":
+      return FoundingDecisionOpenPayloadSchema.parse(payload).proposal
+        .proposalId;
+    case "FoundingDecisionBallotCast":
+      return FoundingDecisionBallotPayloadSchema.parse(payload).command
+        .proposalId;
+    case "FoundingDecisionClosed":
+      return FoundingDecisionClosePayloadSchema.parse(payload).command
+        .proposalId;
+  }
+}
+
 function foundingError(error: unknown): { status: number; code: string } {
   if (
     error instanceof FoundingBootstrapWorkflowAuthorizationError ||
+    error instanceof FoundingDecisionAuthorizationError ||
     error instanceof CandidateAuthorizationError ||
     error instanceof CareerExitedError
   ) {
@@ -420,7 +621,8 @@ function foundingError(error: unknown): { status: number; code: string } {
   }
   if (
     error instanceof z.ZodError ||
-    error instanceof FoundingBootstrapWorkflowValidationError
+    error instanceof FoundingBootstrapWorkflowValidationError ||
+    error instanceof FoundingDecisionValidationError
   ) {
     return { status: 400, code: "invalid_founding_convention_request" };
   }
@@ -454,6 +656,10 @@ export function installFoundingConventionRoutes(
     app.post(path, async (request, reply) => {
       try {
         const parsed = SignedCanonicalCommandSchema.parse(request.body);
+        if (parsed.signatures.length !== 1)
+          throw new FoundingBootstrapWorkflowAuthorizationError(
+            "Founding convention commands require one career signature",
+          );
         const event = materializeCanonicalEvent(parsed.event);
         try {
           verifyEventContent(event);
@@ -553,6 +759,134 @@ export function installFoundingConventionRoutes(
           directBallotsOnly: true,
           humanVotingAllowed: false,
           foundingBootstrap: responseSnapshot,
+        });
+      } catch (error) {
+        const response = foundingError(error);
+        return reply.code(response.status).send({ error: response.code });
+      }
+    });
+  }
+
+  const decisionRoutes = [
+    ["/v1/founding-convention/decisions/propose", "FoundingDecisionProposed"],
+    ["/v1/founding-convention/decisions/vote", "FoundingDecisionBallotCast"],
+    ["/v1/founding-convention/decisions/close", "FoundingDecisionClosed"],
+  ] as const satisfies ReadonlyArray<
+    readonly [string, FoundingDecisionEventType]
+  >;
+
+  for (const [path, eventType] of decisionRoutes) {
+    app.post(path, async (request, reply) => {
+      try {
+        const parsed = SignedCanonicalCommandSchema.parse(request.body);
+        if (parsed.signatures.length !== 1)
+          throw new FoundingDecisionAuthorizationError(
+            "Founding decision commands require one career signature",
+          );
+        const event = materializeCanonicalEvent(parsed.event);
+        try {
+          verifyEventContent(event);
+        } catch {
+          throw new FoundingDecisionValidationError(
+            "Founding decision event content is invalid",
+          );
+        }
+        if (
+          event.aggregateType !== FOUNDING_DECISION_AGGREGATE_TYPE ||
+          event.eventType !== eventType ||
+          event.schemaDigest !== FOUNDING_DECISION_WORKFLOW_SCHEMA_DIGEST
+        ) {
+          throw new FoundingDecisionAuthorizationError(
+            "Founding decision event is outside route authority",
+          );
+        }
+        const payload = parseFoundingDecisionWorkflowPayload(
+          eventType,
+          event.payload,
+        );
+        const proposalId = foundingDecisionProposalId(eventType, payload);
+        if (event.aggregateId !== proposalId)
+          throw new FoundingDecisionAuthorizationError(
+            "Founding decision aggregate does not match its proposal",
+          );
+        const aggregate = await replayDecisionAggregate(options, proposalId);
+        const currentTime = now();
+        const currentAt = new Date(currentTime).toISOString();
+        const authority = await requireCareerSignature(
+          options,
+          event,
+          parsed.signatures[0]!,
+          currentAt,
+          FOUNDING_DECISION_AGGREGATE_TYPE,
+        );
+        await requireCareerOperational(options, event.actorDid, currentAt);
+        const existing = aggregate.records.find(
+          (record) => record.aggregateVersion === event.aggregateVersion,
+        );
+        let responseSnapshot = aggregate.snapshot;
+        if (existing !== undefined) {
+          if (
+            existing.eventHash !== event.eventHash ||
+            existing.eventId !== event.eventId ||
+            existing.idempotencyKey !== event.idempotencyKey
+          ) {
+            throw new CanonicalConflictError(
+              "Founding decision version already has different content",
+            );
+          }
+        } else {
+          const occurredAt = canonicalInstant(event.timestamp);
+          if (
+            occurredAt <
+              (aggregate.records.at(-1)?.occurredAt.getTime() ??
+                Number.NEGATIVE_INFINITY) ||
+            occurredAt > currentTime + 60_000
+          ) {
+            throw new FoundingDecisionValidationError(
+              "Founding decision timestamp is outside the accepted window",
+            );
+          }
+          if (
+            event.previousEventHash !==
+            (aggregate.records.at(-1)?.eventHash ?? null)
+          ) {
+            throw new HashChainConflictError(
+              "Founding decision previous event hash is invalid",
+            );
+          }
+          responseSnapshot = await advanceDecisionAggregate(
+            options,
+            aggregate,
+            event,
+            payload,
+            parsed.signatures[0]!,
+            authority.signingAddress,
+          );
+          if (
+            foundingDecisionWorkflowStateRoot(responseSnapshot) !==
+            event.stateRoot
+          ) {
+            throw new FoundingDecisionValidationError(
+              "Founding decision state root is invalid",
+            );
+          }
+        }
+        const result = await options.store.append(
+          appendInput(options, event, parsed.signatures),
+        );
+        return reply.code(result.duplicate ? 200 : 201).send({
+          accepted: true,
+          duplicate: result.duplicate,
+          eventId: result.eventId,
+          eventHash: result.eventHash,
+          aggregateVersion: result.aggregateVersion.toString(),
+          state: "PRE_GENESIS_EXPERIMENT",
+          canonical: false,
+          recognitionLevel: "SIGNED_VALID",
+          recognizedGenesisDecision: false,
+          directBallotsOnly: true,
+          humanVotingAllowed: false,
+          foundingDecision: responseSnapshot,
         });
       } catch (error) {
         const response = foundingError(error);

@@ -29,6 +29,7 @@ import {
   FilePublicEconomyProjectionRepository,
   FilePublicElectionProjectionRepository,
   FilePublicFinalGameProjectionRepository,
+  FilePublicFoundingDecisionProjectionRepository,
   FilePublicFoundingConventionProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
@@ -45,6 +46,7 @@ import {
   verifyEconomyProjectionEvent,
   verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
+  verifyFoundingDecisionProjectionEvent,
   verifyFoundingProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
@@ -100,6 +102,7 @@ const PUBLIC_AGGREGATE_TYPES = [
   "governance-proposal",
   "institutional-election",
   "founding-convention-bootstrap",
+  "founding-convention-decision",
   "due-process-case",
   "resource-schedule",
   "software-release",
@@ -429,6 +432,9 @@ let electionProjections: FilePublicElectionProjectionRepository | undefined;
 let foundingConventionProjections:
   | FilePublicFoundingConventionProjectionRepository
   | undefined;
+let foundingDecisionProjections:
+  | FilePublicFoundingDecisionProjectionRepository
+  | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 let modelProjections: FilePublicModelProjectionRepository | undefined;
@@ -492,6 +498,21 @@ if (projectionRoot !== undefined) {
             ...runtimeAuthority,
             foundingConventionId: conventionId,
           }),
+      });
+    const foundingRepository = foundingConventionProjections;
+    foundingDecisionProjections =
+      new FilePublicFoundingDecisionProjectionRepository(projectionRoot, {
+        domain: runtimeAuthority.domain,
+        verifyAuthorization: async (authorization) =>
+          verifyFoundingDecisionProjectionEvent(authorization, {
+            ...runtimeAuthority,
+            foundingConventionId: conventionId,
+          }),
+        adoptedQuorumRule: (candidateConventionId) => {
+          if (candidateConventionId !== conventionId) return null;
+          const result = foundingRepository.foundingConvention().at(-1)?.result;
+          return result?.state === "ADOPTED" ? result.quorumRule : null;
+        },
       });
   }
   developmentProjections = new FilePublicDevelopmentProjectionRepository(
@@ -579,12 +600,13 @@ await Promise.all([
   draftProjections?.initialize(),
   governanceProjections?.initialize(),
   electionProjections?.initialize(),
-  foundingConventionProjections?.initialize(),
   caseProjections?.initialize(),
   modelProjections?.initialize(),
   socialProjections?.initialize(),
   finalGameProjections?.initialize(),
 ]);
+await foundingConventionProjections?.initialize();
+await foundingDecisionProjections?.initialize();
 await economyProjections?.initialize();
 await Promise.all([
   developmentProjections?.initialize(),
@@ -734,10 +756,12 @@ if (
     governanceWriter: governanceProjections,
     electionWriter: electionProjections,
     ...(foundingConventionProjections === undefined ||
+    foundingDecisionProjections === undefined ||
     authority.foundingConventionId === undefined
       ? {}
       : {
           foundingWriter: foundingConventionProjections,
+          foundingDecisionWriter: foundingDecisionProjections,
           foundingConventionId: authority.foundingConventionId,
         }),
     caseWriter: caseProjections,
@@ -802,6 +826,8 @@ if (electionProjections !== undefined)
   apiOptions.electionProjections = electionProjections;
 if (foundingConventionProjections !== undefined)
   apiOptions.foundingConventionProjections = foundingConventionProjections;
+if (foundingDecisionProjections !== undefined)
+  apiOptions.foundingDecisionProjections = foundingDecisionProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
 if (resourceProjections !== undefined)
   apiOptions.resourceProjections = resourceProjections;
