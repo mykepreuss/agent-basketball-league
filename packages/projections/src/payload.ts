@@ -1,4 +1,5 @@
 import { merkleRoot, sha256Commitment } from "@abl/recognition";
+import type { AgentPlayedPossessionAuthorityDids } from "@abl/basketball";
 
 import type { PublicGameProjection } from "./repository.js";
 
@@ -19,6 +20,7 @@ export interface PossessionResolvedPayload {
     coachDecisionHashes: readonly `0x${string}`[];
     refereeDecisionHashes: readonly `0x${string}`[];
     replayDecisionHashes: readonly `0x${string}`[];
+    authorityDids?: AgentPlayedPossessionAuthorityDids;
   };
 }
 
@@ -29,6 +31,10 @@ export interface ProjectionAgentAuthority {
 
 function isHash(value: unknown): value is `0x${string}` {
   return typeof value === "string" && /^0x[0-9a-f]{64}$/.test(value);
+}
+
+function isDid(value: unknown): value is string {
+  return typeof value === "string" && value.startsWith("did:");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -87,12 +93,23 @@ export function validatePossessionResolvedPayload(
       "finalSegmentHash",
     ]) ||
     !hasExactKeys(source.score, ["home", "away"]) ||
-    !hasExactKeys(proof, [
-      "playerDecisionHashes",
-      "coachDecisionHashes",
-      "refereeDecisionHashes",
-      "replayDecisionHashes",
-    ]) ||
+    !hasExactKeys(
+      proof,
+      proof.authorityDids === undefined
+        ? [
+            "playerDecisionHashes",
+            "coachDecisionHashes",
+            "refereeDecisionHashes",
+            "replayDecisionHashes",
+          ]
+        : [
+            "playerDecisionHashes",
+            "coachDecisionHashes",
+            "refereeDecisionHashes",
+            "replayDecisionHashes",
+            "authorityDids",
+          ],
+    ) ||
     source.players.some(
       (player) =>
         !isRecord(player) ||
@@ -139,6 +156,41 @@ export function validatePossessionResolvedPayload(
       new Set(hashes).size !== hashes.length
     )
       throw new Error(`Projection decision proof is invalid: ${key}`);
+  }
+  if (proof.authorityDids !== undefined) {
+    const authorityDids = proof.authorityDids;
+    if (
+      !isRecord(authorityDids) ||
+      !hasExactKeys(authorityDids, [
+        "players",
+        "coaches",
+        "referees",
+        "replayOfficials",
+      ])
+    )
+      throw new Error("Projection decision authority evidence is invalid");
+    const roleRequirements = [
+      ["players", "playerDecisionHashes", 10],
+      ["coaches", "coachDecisionHashes", 2],
+      ["referees", "refereeDecisionHashes", 3],
+      ["replayOfficials", "replayDecisionHashes", 2],
+    ] as const;
+    const allAuthorityDids: string[] = [];
+    for (const [role, decisionHashKey, uniqueCareerCount] of roleRequirements) {
+      const dids = authorityDids[role];
+      const hashes = proof[decisionHashKey];
+      if (
+        !Array.isArray(dids) ||
+        !dids.every(isDid) ||
+        !Array.isArray(hashes) ||
+        dids.length !== hashes.length ||
+        new Set(dids).size !== uniqueCareerCount
+      )
+        throw new Error("Projection decision authority evidence is invalid");
+      allAuthorityDids.push(...dids);
+    }
+    if (new Set(allAuthorityDids).size !== 17)
+      throw new Error("Projection decision authority evidence is invalid");
   }
   const typed = payload as unknown as PossessionResolvedPayload;
   if (

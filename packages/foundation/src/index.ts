@@ -10,7 +10,7 @@ export const TrustDomainNameSchema = z.enum([
   "abl-core",
   "abl-private",
   "abl-public",
-  "agent-basketball-league",
+  "abl-competition",
 ]);
 export type TrustDomainName = z.infer<typeof TrustDomainNameSchema>;
 

@@ -30,6 +30,7 @@ import {
   verifyEventContent,
   type CanonicalEvent,
 } from "@abl/recognition";
+import type { CandidateCareerBinding } from "@abl/schemas";
 import type { FastifyInstance } from "fastify";
 import type { Hex, TypedDataDomain } from "viem";
 import { z } from "zod";
@@ -40,6 +41,7 @@ import {
   canonicalEventFromStored,
   materializeCanonicalEvent,
 } from "./canonical-command.js";
+import type { CareerOperationalVerifier } from "./candidate-authority.js";
 
 const aggregateType = "candidate-admission";
 
@@ -67,6 +69,8 @@ export class CandidateAuthorizationError extends Error {
 
 export class CandidateNotAdmittedError extends CandidateAuthorizationError {}
 
+export class CandidateRecordAbsentError extends CandidateNotAdmittedError {}
+
 class CandidateChallengeError extends Error {
   public override readonly name = "CandidateChallengeError";
 }
@@ -80,6 +84,7 @@ export interface CandidateRehearsalOptions {
   now?: () => number;
   challengeId?: () => string;
   challengeBytes?: () => Uint8Array;
+  careerOperationalVerifier?: CareerOperationalVerifier;
 }
 
 interface CandidateAggregate {
@@ -202,6 +207,31 @@ async function validateTransitionAuthorization(
       "Candidate isolated signing authority is absent",
     );
   await requireSigner(options.domain, event, rawSignature, expectedAddress);
+  if (
+    enforceChallengeExpiry &&
+    event.eventType === "CandidateAdmitted" &&
+    options.careerOperationalVerifier !== undefined
+  ) {
+    const admission = next.admission;
+    if (admission === null)
+      throw new CandidateAuthorizationError(
+        "Candidate admission authority is absent",
+      );
+    try {
+      await options.careerOperationalVerifier.resolveOperational({
+        applicationId: admission.applicationId,
+        candidateDid: admission.candidateDid,
+        signerAddress: expectedAddress,
+        roleClass: admission.roleClass,
+        capacityDecisionCommitment: admission.capacityDecisionCommitment,
+        opportunityResponseCommitment: admission.opportunityResponseCommitment,
+      });
+    } catch {
+      throw new CandidateAuthorizationError(
+        "Candidate intake authority does not match admission",
+      );
+    }
+  }
 }
 
 async function replayCandidateAggregate(
@@ -261,8 +291,10 @@ async function replayCandidateAggregate(
   return { records, snapshot };
 }
 
-export interface CandidateCareerAuthority {
-  candidateDid: string;
+export interface CandidateCareerAuthority
+  extends Omit<CandidateCareerBinding, "signerAddress"> {
+  capacityDecisionCommitment: `0x${string}`;
+  opportunityResponseCommitment: `0x${string}`;
   signingAddress: `0x${string}`;
   signingPublicKey: string;
   runtimeDigest: string;
@@ -292,13 +324,13 @@ export async function readCandidateCareerAuthority(
     through,
   );
   const snapshot = aggregate.snapshot;
-  const state =
-    snapshot === null ? null : effectiveCandidateState(snapshot, at);
+  if (snapshot === null)
+    throw new CandidateRecordAbsentError("Candidate career record is absent");
+  const state = effectiveCandidateState(snapshot, at);
   const admissionEvent = aggregate.records.find(
     (record) => record.eventType === "CandidateAdmitted",
   );
   if (
-    snapshot === null ||
     snapshot.transfer === null ||
     snapshot.admission === null ||
     admissionEvent === undefined ||
@@ -307,7 +339,13 @@ export async function readCandidateCareerAuthority(
     throw new CandidateNotAdmittedError("Candidate career is not admitted");
   }
   return {
+    applicationId: snapshot.admission.applicationId,
     candidateDid,
+    roleClass: snapshot.admission.roleClass,
+    capacityDecisionCommitment: snapshot.admission
+      .capacityDecisionCommitment as `0x${string}`,
+    opportunityResponseCommitment: snapshot.admission
+      .opportunityResponseCommitment as `0x${string}`,
     signingAddress: snapshot.transfer.signingAddress,
     signingPublicKey: snapshot.transfer.signingPublicKey,
     runtimeDigest: snapshot.registration.manifest.runtimeDigest,

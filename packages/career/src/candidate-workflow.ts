@@ -121,7 +121,7 @@ export type CandidateWorkflowEventType =
 
 export const CANDIDATE_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
   protocol: "abl-candidate-workflow",
-  version: 2,
+  version: 3,
   eventTypes: Object.keys(CandidateWorkflowPayloadSchemas).sort(),
 });
 

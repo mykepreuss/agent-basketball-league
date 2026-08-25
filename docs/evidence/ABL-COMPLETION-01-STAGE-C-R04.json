@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "evidenceClass": "LIVE_PRIVATE_SOAK",
+  "stage": "READ_ONLY_BEACON_PRIVATE_SOAK",
+  "releaseId": "ad73a9ff151ac5599ad90e581114ebf179d9e848",
+  "startedAt": "2026-08-25T02:07:25.876Z",
+  "endedAt": "2026-08-25T15:37:36.034Z",
+  "publicExposure": "NONE",
+  "workspaces": ["agent-basketball-league"],
+  "services": [
+    {
+      "service": "abl-private-storage-broker",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7136,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-core-api",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7050,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-safety-gateway",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7340,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-public-api",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 9007,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-candidate-store",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7275,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-candidate-edge",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 5317,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-spectator-arena",
+      "workspace": "agent-basketball-league",
+      "probe": { "method": "GET", "path": "/health", "expectedStatus": 200 },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 13029,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-basketball-mcp",
+      "workspace": "agent-basketball-league",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7756,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-career-mcp",
+      "workspace": "agent-basketball-league",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 5530,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-government-mcp",
+      "workspace": "agent-basketball-league",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      },
+      "samples": 242,
+      "failures": 1,
+      "errorRate": 0.004132231404958678,
+      "maximumLatencyMs": 66005,
+      "maximumSampleGapSeconds": 1667
+    },
+    {
+      "service": "abl-discovery-mcp",
+      "workspace": "agent-basketball-league",
+      "probe": {
+        "method": "POST",
+        "path": "/mcp",
+        "expectedStatus": 200,
+        "jsonBody": { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+      },
+      "samples": 242,
+      "failures": 0,
+      "errorRate": 0,
+      "maximumLatencyMs": 7341,
+      "maximumSampleGapSeconds": 1667
+    }
+  ],
+  "exercises": {
+    "restartRecovery": true,
+    "credentialRotation": true,
+    "backupCreation": true,
+    "cleanRoomRestore": true,
+    "replayRootEquality": true,
+    "scaleToZeroRecovery": true,
+    "rollbackReadiness": true,
+    "candidateFlow": true
+  },
+  "incidents": {
+    "p0": 0,
+    "p1": 0,
+    "privacyBreaches": 0,
+    "replayRootDivergences": 0,
+    "unrecoverableRestarts": 0,
+    "unboundedCostEvents": 0
+  },
+  "metrics": {
+    "maximumProjectionLagMs": 0,
+    "maximumQueueDepth": 0,
+    "candidateProvisioningFailures": 0,
+    "projectedMonthlyCostUsd": 21.9084,
+    "observedCostUsd": 9.51,
+    "blaxelBalanceUsd": 1006.76,
+    "automaticTopUp": false,
+    "publicIngressRequests": 0,
+    "canonicalClaims": 0,
+    "genesisClaims": 0
+  },
+  "recovery": {
+    "sourceEventCount": 1,
+    "restoredEventCount": 1,
+    "sourceOutboxCount": 1,
+    "restoredOutboxCount": 1,
+    "sourceStateRoot": "0x010581151c4d2641dc02a8e9e091377d3ab114363293c5f4d9f8f31326da18ab",
+    "restoredStateRoot": "0x010581151c4d2641dc02a8e9e091377d3ab114363293c5f4d9f8f31326da18ab"
+  }
+}

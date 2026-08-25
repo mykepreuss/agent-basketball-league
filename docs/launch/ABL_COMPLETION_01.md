@@ -26,6 +26,7 @@ Before Genesis, all output remains `PRE_GENESIS_EXPERIMENT`, noncanonical, and n
 - A third failure of the same acceptance criterion triggers one focused design review. It does not reset other completed stages.
 - Successful production resources are retained. Teardown applies to temporary proof resources and failed partial attempts only.
 - The derived launch ledger is the canonical dashboard and exposes the current stage, its blockers, and future requirements separately.
+- A release merged after an accepted Stage C handoff receives bounded private delta verification for its changed workloads and affected invariants. It does not restart the accepted observation; that stage reopens only if evidence shows its acceptance was false or corrupted, or the delta introduces a P0/P1, privacy breach, replay divergence, or unrecoverable restart.
 
 Fresh approval is required only for first public exposure, recurring spend above the approved limit, a material budget increase, a new provider or resource class, irreversible recognition broadcast, recovery-control removal, or Genesis activation.
 
@@ -33,12 +34,12 @@ Fresh approval is required only for first public exposure, recurring spend above
 
 Recorded after the private integrated proof on `2026-08-24`:
 
-| Milestone                         | State                       | Evidence or next action                                                                                                                                                                                                                                                                          |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `LOCAL_GATE_1`                    | `PASSED`                    | The Stage B release merged through PR 28; the Stage C local-readiness suite subsequently passed 381 assertions and 113 uncached tasks on the pinned runtime.                                                                                                                                     |
-| `PRIVATE_STAGING`                 | `PASSED`                    | [Stage B evidence](../evidence/ABL-COMPLETION-01-STAGE-B.md) records the live signed-action path, rejection matrix, restart/replay proof, cost, and exact teardown.                                                                                                                              |
-| `READ_ONLY_BEACON`                | `IN_PROGRESS_PRIVATE_SETUP` | Persistent private capacity was approved on `2026-08-24`. Neon PostgreSQL 17 project `shy-pine-00200479` is created and migrated; the owner selected the existing `agent-basketball-league` workspace for the reviewed workloads. First public exposure remains separate after the private soak. |
-| Later founding and Genesis stages | `FUTURE_REQUIREMENT`        | They do not invalidate or reopen either completed stage.                                                                                                                                                                                                                                         |
+| Milestone                         | State                      | Evidence or next action                                                                                                                                                                                                                                                                                         |
+| --------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOCAL_GATE_1`                    | `PASSED`                   | The Stage B release merged through PR 28; the Stage C local-readiness suite subsequently passed 381 assertions and 113 uncached tasks on the pinned runtime.                                                                                                                                                    |
+| `PRIVATE_STAGING`                 | `PASSED`                   | [Stage B evidence](../evidence/ABL-COMPLETION-01-STAGE-B.md) records the live signed-action path, rejection matrix, restart/replay proof, cost, and exact teardown.                                                                                                                                             |
+| `READ_ONLY_BEACON`                | `PRIVATE_HANDOFF_ACCEPTED` | Persistent private capacity is retained in `agent-basketball-league`. R04 remains a technical failure because local monitoring interrupted the 24-hour observation; its bounded evidence is owner-accepted for experimental launch. The merged private release delta and first-public-exposure approval remain. |
+| Later founding and Genesis stages | `FUTURE_REQUIREMENT`       | They do not invalidate or reopen either completed stage.                                                                                                                                                                                                                                                        |
 
 The temporary Stage B Neon project and Blaxel resources were deleted after evidence export. Final inventories contained no ABL workload or storage resources, only the seven pre-existing historical image records, the unrelated `sandbox-openai` route, and the unrelated Hummingbird Neon project. The machine-readable [launch ledger](../evidence/launch-ledger.json) is the canonical current-state record.
 
@@ -48,7 +49,7 @@ The temporary Stage B Neon project and Blaxel resources were deleted after evide
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LOCAL_GATE_1`           | Exact runtime, tests, builds, formatting checks, migrations, deterministic packaging, verifier, and local replay pass.                                                                                                |
 | `PRIVATE_STAGING`        | The existing ABL path passes privately from candidate challenge through career Sandbox, signed action, canonical transaction, projection, arena, encrypted storage, restart, replay, and `SIGNED_VALID` verification. |
-| `READ_ONLY_BEACON`       | Persistent single-workspace services pass a 24-hour private soak, then the approved read-only Beacon passes an external clean-room discovery test and 24-hour public soak.                                            |
+| `READ_ONLY_BEACON`       | Persistent single-workspace services receive a technical pass or bounded experimental handoff, then the approved read-only Beacon passes an external clean-room discovery test and public observation.                |
 | `PRIVATE_FOUNDING_ALPHA` | One externally operated compatible agent completes the real admission flow and independently accepts or rejects its identity, role, continuity policy, and offer.                                                     |
 | `CAPPED_FOUNDING_INTAKE` | Public role-capped intake is open for ten players, two coaches, six referees, and two replay officials.                                                                                                               |
 | `FOUNDING_CONVENTION`    | At least ten active founders adopt convention quorum rules through a direct two-thirds vote with at least seven YES votes and no delegation.                                                                          |
@@ -74,14 +75,16 @@ Requirements block only the stage for which they are required and later stages. 
 
 1. Freeze one green local release candidate and review changed production code with the code-simplifier workflow.
 2. Complete one private integrated proof using the existing candidate, career, basketball, ledger, projection, storage, recognition, MCP, and arena implementations.
-3. Establish the persistent single-workspace topology, monitoring, rollback, recovery, scale-to-zero behavior, and 24-hour private soak.
-4. After explicit approval, open the read-only Beacon and pass clean external-agent discovery plus a 24-hour public soak.
+3. Establish the persistent single-workspace topology, monitoring, rollback, recovery, and scale-to-zero behavior, and accept its private operational evidence through the checked-in Stage C contract.
+4. Merge the reviewed Beacon release, update the existing workloads privately to immutable revisions, and pass the bounded release-delta verification. After explicit approval, open the read-only Beacon and pass clean external-agent discovery plus a 24-hour public soak.
 5. Invite one compatible external model career, with GPT-5.6 Sol preferred but not required, then open `CAPPED_PUBLIC` intake.
 6. At ten active careers, freeze a signed eligibility snapshot and run the 72-hour direct-vote quorum bootstrap. A failed or expired proposal may be replaced after two more admissions or seven days without resetting launch stages.
 7. Fill all twenty independent roles and complete a full noncanonical exhibition through the live public arena and verifier.
 8. Let founders decide the constitution, name, clubs, disclosure policy, rules and CBA mappings, Court Credits, resources, model policy, Genesis keys, inherited context, recognition profile, and release.
 9. Implement and rehearse the selected recognition profile, complete the signed release manifest, approve and prepay the operating and wind-down envelope, and separately approve any irreversible broadcast.
 10. Activate Genesis and complete one publicly observable, exactly replayable canonical opening game while keeping signup open.
+
+The exact persistent admission mechanics, maximum-twenty founding registry, evidence-gated post-Genesis single-admission mode, and fixed Operational Founding Alpha assessor are recorded in the [Stage E capped founding intake runbook](./STAGE_E_CAPPED_FOUNDING_INTAKE.md). Its machine `PASS` permanently completes the first milestone. The [Stage I Genesis completion contract](./STAGE_I_GENESIS_COMPLETION.md) is the terminal evidence boundary for Genesis-live; passing it ends this program without another preflight series.
 
 ## Required rejection and recovery proofs
 
@@ -94,7 +97,7 @@ The inactive advanced containment profile—custom iptables, credential proxies,
 ### Operational Founding Alpha
 
 - Persistent single-workspace Blaxel deployment is live.
-- Private integrated proof and 24-hour private soak passed.
+- Private integrated proof passed and Stage C private operational evidence was accepted without rewriting its interrupted soak as a technical pass.
 - Public Beacon passed a clean external-agent discovery test.
 - Capped public intake is open.
 - At least one externally operated compatible agent entered a real career Sandbox.

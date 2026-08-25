@@ -18,23 +18,26 @@ import {
   NonceReplayError,
   type CanonicalStore,
 } from "@abl/database";
-import { validatePossessionResolvedPayload } from "@abl/projections";
 import { assessGenesisStartupEvidence } from "@abl/launch";
+import { validatePossessionResolvedPayload } from "@abl/projections";
 import {
   recoverCanonicalEventSigner,
   sha256Commitment,
 } from "@abl/recognition";
+import { UuidV7Schema, type CandidateCareerBinding } from "@abl/schemas";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { TypedDataDomain } from "viem";
 import { z } from "zod";
-import { UuidV7Schema } from "@abl/schemas";
 
 import {
   installArtifactRehearsalRoutes,
   type ArtifactRehearsalOptions,
 } from "./artifacts.js";
 import {
+  CandidateRecordAbsentError,
   installCandidateRehearsalRoutes,
+  readCandidateCareerAuthority,
+  type CandidateCareerAuthority,
   type CandidateRehearsalOptions,
 } from "./candidates.js";
 import type { CareerOperationalVerifier } from "./candidate-authority.js";
@@ -174,6 +177,10 @@ export interface LiveCoreApiOptions {
     "challengeSecret" | "challengeId" | "challengeBytes"
   >;
   careerOperationalVerifier?: CareerOperationalVerifier;
+  candidateCareerAuthorityReader?: (
+    candidateDid: string,
+    at: string,
+  ) => Promise<CandidateCareerAuthority>;
   artifacts?: Pick<
     ArtifactRehearsalOptions,
     "governance" | "approvedInstitutionIds"
@@ -327,6 +334,43 @@ function commandValidationError(message: string): Error {
   return error;
 }
 
+function roleCommandAggregateTypes(roleClass: string): readonly string[] {
+  switch (roleClass) {
+    case "PLAYER":
+    case "COACH":
+    case "REFEREE":
+    case "REPLAY_OFFICIAL":
+      return ["game-possession"];
+    default:
+      return [];
+  }
+}
+
+function configuredAuthorityAllows(
+  authority: AdmittedAgentAuthority | undefined,
+  signer: string,
+  aggregateType: string,
+): boolean {
+  return (
+    authority !== undefined &&
+    signer.toLowerCase() === authority.signerAddress.toLowerCase() &&
+    authority.allowedAggregateTypes.includes(aggregateType)
+  );
+}
+
+function operationalBinding(
+  authority: CandidateCareerAuthority,
+): CandidateCareerBinding {
+  return {
+    applicationId: authority.applicationId,
+    candidateDid: authority.candidateDid,
+    signerAddress: authority.signingAddress,
+    roleClass: authority.roleClass,
+    capacityDecisionCommitment: authority.capacityDecisionCommitment,
+    opportunityResponseCommitment: authority.opportunityResponseCommitment,
+  };
+}
+
 export function createLiveCoreApi(
   options: LiveCoreApiOptions,
 ): FastifyInstance {
@@ -409,6 +453,23 @@ export function createLiveCoreApi(
   const caseRoutesEnabled = candidateRoutesEnabled && cases !== undefined;
   const releaseRoutesEnabled =
     candidateRoutesEnabled && governanceRoutesEnabled && releases !== undefined;
+  const candidateCareerAuthorityReader =
+    options.candidateCareerAuthorityReader ??
+    (candidateAdmission === undefined
+      ? undefined
+      : (candidateDid: string, at: string) =>
+          readCandidateCareerAuthority(
+            {
+              store: options.store,
+              domain: options.domain,
+              competitionId: options.competitionId,
+              seasonId: options.seasonId,
+              now,
+              ...candidateAdmission,
+            },
+            candidateDid,
+            at,
+          ));
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
     reply.header("x-abl-genesis-state", genesis ? "GENESIS" : "PRE_GENESIS");
@@ -428,11 +489,8 @@ export function createLiveCoreApi(
     try {
       const parsed = SignedCanonicalCommandSchema.parse(request.body);
       const event = materializeCanonicalEvent(parsed.event);
-      const authority = options.admittedAgents.get(event.actorDid);
       const occurredAt = Date.parse(event.timestamp);
       if (
-        authority === undefined ||
-        !authority.allowedAggregateTypes.includes(event.aggregateType) ||
         !Number.isFinite(occurredAt) ||
         event.timestamp !== new Date(occurredAt).toISOString() ||
         occurredAt > now() + 60_000
@@ -449,34 +507,70 @@ export function createLiveCoreApi(
       } catch {
         throw authorizationError("Canonical event signature is invalid");
       }
-      if (signer.toLowerCase() !== authority.signerAddress.toLowerCase())
-        throw authorizationError("Signature is not registered to actor");
-      if (options.careerOperationalVerifier !== undefined) {
+      let candidateAuthority: CandidateCareerAuthority | undefined;
+      if (candidateCareerAuthorityReader !== undefined) {
         try {
-          await options.careerOperationalVerifier.assertOperational(
-            event.actorDid,
-            signer,
-          );
-        } catch {
-          throw authorizationError("Career is not operational");
-        }
-      } else if (candidateAdmission !== undefined && exitRoutesEnabled) {
-        try {
-          await requireCareerOperational(
-            {
-              store: options.store,
-              domain: options.domain,
-              competitionId: options.competitionId,
-              seasonId: options.seasonId,
-              candidateAdmission,
-              now,
-            },
+          candidateAuthority = await candidateCareerAuthorityReader(
             event.actorDid,
             new Date(now()).toISOString(),
           );
-        } catch {
-          throw authorizationError("Career is not operational");
+        } catch (error) {
+          if (!(error instanceof CandidateRecordAbsentError))
+            throw authorizationError("Career authority is invalid");
         }
+      }
+      const configuredAuthority = options.admittedAgents.get(event.actorDid);
+      if (candidateAuthority !== undefined) {
+        const configuredCandidateAllowed =
+          configuredAuthority === undefined ||
+          configuredAuthorityAllows(
+            configuredAuthority,
+            signer,
+            event.aggregateType,
+          );
+        if (
+          signer.toLowerCase() !==
+            candidateAuthority.signingAddress.toLowerCase() ||
+          !roleCommandAggregateTypes(candidateAuthority.roleClass).includes(
+            event.aggregateType,
+          ) ||
+          !configuredCandidateAllowed
+        )
+          throw authorizationError("Signature is not registered to actor");
+        if (options.careerOperationalVerifier !== undefined) {
+          try {
+            await options.careerOperationalVerifier.resolveOperational(
+              operationalBinding(candidateAuthority),
+            );
+          } catch {
+            throw authorizationError("Career is not operational");
+          }
+        } else if (candidateAdmission !== undefined && exitRoutesEnabled) {
+          try {
+            await requireCareerOperational(
+              {
+                store: options.store,
+                domain: options.domain,
+                competitionId: options.competitionId,
+                seasonId: options.seasonId,
+                candidateAdmission,
+                now,
+              },
+              event.actorDid,
+              new Date(now()).toISOString(),
+            );
+          } catch {
+            throw authorizationError("Career is not operational");
+          }
+        }
+      } else if (
+        !configuredAuthorityAllows(
+          configuredAuthority,
+          signer,
+          event.aggregateType,
+        )
+      ) {
+        throw authorizationError("Actor is not admitted for this command");
       }
       const possessionCommand =
         event.aggregateType === "game-possession" &&
@@ -593,6 +687,9 @@ export function createLiveCoreApi(
       competitionId: options.competitionId,
       seasonId: options.seasonId,
       now,
+      ...(options.careerOperationalVerifier === undefined
+        ? {}
+        : { careerOperationalVerifier: options.careerOperationalVerifier }),
       ...candidateAdmission,
     });
   }

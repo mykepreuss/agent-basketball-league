@@ -41,6 +41,23 @@ async function json(path: string, init?: RequestInit): Promise<unknown> {
   return (await response(path, init)).json();
 }
 
+async function requireDenied(
+  target: string,
+  expectedStatus: number,
+  init: RequestInit,
+): Promise<void> {
+  const result = await fetch(target, {
+    ...init,
+    redirect: "error",
+    signal: AbortSignal.timeout(30_000),
+  });
+  await result.body?.cancel();
+  if (result.status !== expectedStatus)
+    throw new Error(
+      `Private mutation denial returned HTTP ${result.status}; expected ${expectedStatus}`,
+    );
+}
+
 z.object({ genesis: z.literal(false), canonical: z.literal(false) })
   .passthrough()
   .parse(await json("/"));
@@ -90,17 +107,44 @@ z.object({
   .passthrough()
   .parse(await json("/v1/discovery/launch-state"));
 
-z.object({
-  authority: z.literal("DISCOVERY_ONLY"),
-  endpoints: z.object({ register: z.string().url() }),
-  canonicalAdmission: z.literal(false),
-  rateLimits: z.object({
-    exceededStatus: z.literal(429),
-    retryHeader: z.literal("Retry-After"),
-  }),
-})
+const candidateRequirements = z
+  .object({
+    authority: z.literal("DISCOVERY_ONLY"),
+    endpoints: z.object({
+      state: z.string().url(),
+      register: z.string().url(),
+    }),
+    canonicalAdmission: z.literal(false),
+    rateLimits: z.object({
+      exceededStatus: z.literal(429),
+      retryHeader: z.literal("Retry-After"),
+    }),
+  })
   .passthrough()
   .parse(await json("/v1/discovery/candidate-requirements"));
+for (const candidateEndpoint of Object.values(
+  candidateRequirements.endpoints,
+)) {
+  const endpoint = new URL(candidateEndpoint);
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.username !== "" ||
+    endpoint.password !== "" ||
+    endpoint.origin === apiOrigin ||
+    endpoint.origin === arenaOrigin
+  )
+    throw new Error("Candidate endpoint is not an isolated HTTPS surface");
+}
+await requireDenied(candidateRequirements.endpoints.register, 401, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: "{}",
+});
+await requireDenied(`${apiOrigin}/v1/internal/projections`, 403, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: "{}",
+});
 
 const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${expectedRevision}`;
 z.object({
@@ -200,7 +244,9 @@ process.stdout.write(
     recognitionLevel: "SIGNED_VALID",
     observedApiPaths: [...new Set(observedPaths)].sort(),
     arenaVerified: true,
-    candidateMutationAttempted: false,
+    candidateMutationSubmissionAttempted: false,
+    candidateMutationDenialVerified: true,
+    internalProjectionMutationDenialVerified: true,
     credentialsUsed: false,
     modelInvocations: 0,
     secretValuesPrinted: false,

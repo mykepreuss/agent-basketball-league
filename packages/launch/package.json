@@ -16,7 +16,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/basketball": "workspace:*",
     "@abl/database": "workspace:*",
+    "@abl/genesis": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
     "libsodium-wrappers-sumo": "catalog:",

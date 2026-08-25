@@ -3,6 +3,7 @@ kind: Sandbox
 metadata:
   name: abl-core-api
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: core
     abl-release: ${ABL_RELEASE_ID}
 spec:

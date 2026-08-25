@@ -3,6 +3,7 @@ kind: Sandbox
 metadata:
   name: abl-spectator-arena
   labels:
+    abl-trust-domain: abl-public
     abl-workspace-role: public
     abl-release: ${ABL_RELEASE_ID}
 spec:

@@ -11,7 +11,6 @@ import { z } from "zod";
 const WorkspaceNameSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
-const HostnameSchema = z.hostname();
 const HttpsOriginSchema = z
   .url({ protocol: /^https$/ })
   .refine((value) => new URL(value).pathname === "/", "Origin only");
@@ -25,13 +24,96 @@ type SandboxResult = Awaited<
   ReturnType<typeof SandboxInstance.createIfNotExists>
 >;
 
-function candidateSandboxLifecycle() {
+function boundedCandidateSandboxLifecycle() {
   return {
     expirationPolicies: [
       { action: "delete" as const, type: "ttl-max-age" as const, value: "4h" },
     ],
     terminatedRetention: "24h",
   };
+}
+
+const FoundingRoleClass = z.enum([
+  "PLAYER",
+  "COACH",
+  "REFEREE",
+  "REPLAY_OFFICIAL",
+]);
+
+const CandidateRuntimeAssignmentSchema = z.strictObject({
+  applicationId: z.uuid(),
+  fixedBrokerOrigin: HttpsOriginSchema,
+  fixedBrokerResourceName: WorkspaceNameSchema,
+  capabilityTokenBase64: Base64SecretSchema,
+  previewToken: z
+    .string()
+    .min(32)
+    .max(4_096)
+    .refine((value) => !/[\r\n]/.test(value))
+    .optional(),
+});
+
+export type CandidateRuntimeAssignment = z.infer<
+  typeof CandidateRuntimeAssignmentSchema
+>;
+
+export type CandidateRuntimeScope =
+  | {
+      mode: "BOUNDED_SINGLE";
+      assignment: CandidateRuntimeAssignment;
+    }
+  | {
+      mode: "POST_GENESIS_SINGLE";
+      assignment: CandidateRuntimeAssignment;
+    }
+  | {
+      mode: "CAPPED_FOUNDING";
+      assignments: readonly CandidateRuntimeAssignment[];
+    };
+
+function parseRuntimeScope(
+  scope: CandidateRuntimeScope,
+): CandidateRuntimeScope {
+  if (scope.mode !== "CAPPED_FOUNDING") {
+    const assignment = CandidateRuntimeAssignmentSchema.parse(scope.assignment);
+    if (
+      scope.mode === "POST_GENESIS_SINGLE" &&
+      assignment.fixedBrokerResourceName !==
+        candidateFixedBrokerName(assignment.applicationId)
+    )
+      throw new Error(
+        "Post-Genesis fixed-broker name is not application-derived",
+      );
+    return {
+      mode: scope.mode,
+      assignment,
+    };
+  }
+  const assignments = parseCandidateRuntimeAssignments(scope.assignments);
+  for (const value of [
+    assignments.map(({ applicationId }) => applicationId),
+    assignments.map(({ fixedBrokerResourceName }) => fixedBrokerResourceName),
+    assignments.map(({ fixedBrokerOrigin }) => fixedBrokerOrigin),
+  ])
+    if (new Set(value).size !== value.length)
+      throw new Error("Founding runtime assignments must be unique");
+  for (const assignment of assignments)
+    if (
+      assignment.fixedBrokerResourceName !==
+      candidateFixedBrokerName(assignment.applicationId)
+    )
+      throw new Error("Founding fixed-broker name is not application-derived");
+  return { mode: scope.mode, assignments };
+}
+
+export function parseCandidateRuntimeAssignments(
+  candidate: unknown,
+): readonly CandidateRuntimeAssignment[] {
+  return z
+    .array(CandidateRuntimeAssignmentSchema)
+    .min(1)
+    .max(20)
+    .parse(candidate);
 }
 
 export interface CandidateSandboxFactory {
@@ -51,14 +133,10 @@ export interface BlaxelCandidateControlPlaneOptions {
   workspace: string;
   region: string;
   imageReference: string;
-  authorizedApplicationId: string;
+  runtimeScope: CandidateRuntimeScope;
   authorizationId: string;
-  fixedBrokerOrigin: string;
-  fixedBrokerHost: string;
-  fixedBrokerResourceName: string;
+  genesisEvidenceDigest?: string;
   fixedBrokerImageReference: string;
-  capabilityTokenBase64: string;
-  previewToken?: string;
   memory?: number;
   factory?: CandidateSandboxFactory;
 }
@@ -70,14 +148,10 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #workspace: string;
   readonly #region: string;
   readonly #imageReference: string;
-  readonly #authorizedApplicationId: string;
+  readonly #runtimeScope: CandidateRuntimeScope;
   readonly #authorizationId: string;
-  readonly #fixedBrokerOrigin: string;
-  readonly #fixedBrokerHost: string;
-  readonly #fixedBrokerResourceName: string;
+  readonly #genesisEvidenceDigest: `0x${string}` | null;
   readonly #fixedBrokerImageReference: string;
-  readonly #capabilityTokenBase64: string;
-  readonly #previewToken: string | undefined;
   readonly #memory: number;
   readonly #factory: CandidateSandboxFactory;
 
@@ -87,39 +161,24 @@ export class BlaxelCandidateSandboxControlPlane
     this.#imageReference = ImmutableSandboxImageReferenceSchema.parse(
       options.imageReference,
     );
-    this.#authorizedApplicationId = z
-      .uuid()
-      .parse(options.authorizedApplicationId);
+    this.#runtimeScope = parseRuntimeScope(options.runtimeScope);
     this.#authorizationId = z
       .string()
       .min(8)
       .max(160)
       .regex(/^[A-Za-z0-9._:-]+$/)
       .parse(options.authorizationId);
-    this.#fixedBrokerOrigin = HttpsOriginSchema.parse(
-      options.fixedBrokerOrigin,
-    );
-    this.#fixedBrokerHost = HostnameSchema.parse(options.fixedBrokerHost);
-    if (new URL(this.#fixedBrokerOrigin).hostname !== this.#fixedBrokerHost)
-      throw new Error("Fixed-broker origin and allowed host differ");
-    this.#fixedBrokerResourceName = WorkspaceNameSchema.parse(
-      options.fixedBrokerResourceName,
-    );
+    this.#genesisEvidenceDigest =
+      this.#runtimeScope.mode === "POST_GENESIS_SINGLE"
+        ? (z
+            .string()
+            .regex(/^0x[0-9a-f]{64}$/)
+            .parse(options.genesisEvidenceDigest) as `0x${string}`)
+        : null;
     this.#fixedBrokerImageReference =
       ImmutableSandboxImageReferenceSchema.parse(
         options.fixedBrokerImageReference,
       );
-    this.#capabilityTokenBase64 = Base64SecretSchema.parse(
-      options.capabilityTokenBase64,
-    );
-    this.#previewToken = options.previewToken;
-    if (
-      this.#previewToken !== undefined &&
-      (this.#previewToken.length < 32 ||
-        this.#previewToken.length > 4_096 ||
-        /[\r\n]/.test(this.#previewToken))
-    )
-      throw new Error("Invalid fixed-broker preview token");
     this.#memory = z
       .number()
       .int()
@@ -139,11 +198,16 @@ export class BlaxelCandidateSandboxControlPlane
     state: "PROVISIONED_AWAITING_TRANSFER";
     sandboxResourceName: string;
   }> {
-    if (input.applicationId !== this.#authorizedApplicationId)
-      throw new Error("Live Job is not authorized for this application");
+    const assignment = this.#assignment(input.applicationId);
+    if (
+      this.#runtimeScope.mode === "CAPPED_FOUNDING" &&
+      !FoundingRoleClass.safeParse(input.roleClass).success
+    )
+      throw new Error("Capped founding runtime rejects a non-founding role");
+    const fixedBrokerHost = new URL(assignment.fixedBrokerOrigin).hostname;
     assertFixedBroker({
-      sandbox: await this.#factory.get(this.#fixedBrokerResourceName),
-      resourceName: this.#fixedBrokerResourceName,
+      sandbox: await this.#factory.get(assignment.fixedBrokerResourceName),
+      resourceName: assignment.fixedBrokerResourceName,
       applicationId: input.applicationId,
       workspace: this.#workspace,
       region: this.#region,
@@ -152,7 +216,7 @@ export class BlaxelCandidateSandboxControlPlane
     const resourceName = candidateSandboxName(input.applicationId);
     const envs = [
       environment("ABL_RUNTIME_RESOURCE_TYPE", "SANDBOX"),
-      environment("ABL_FIXED_BROKER_ORIGIN", this.#fixedBrokerOrigin),
+      environment("ABL_FIXED_BROKER_ORIGIN", assignment.fixedBrokerOrigin),
       environment("ABL_AGENT_DID", input.candidateDid),
       environment(
         "ABL_AGENT_SIGNER_ADDRESS",
@@ -160,15 +224,15 @@ export class BlaxelCandidateSandboxControlPlane
       ),
       environment(
         "ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64",
-        this.#capabilityTokenBase64,
+        assignment.capabilityTokenBase64,
         true,
       ),
-      ...(this.#previewToken === undefined
+      ...(assignment.previewToken === undefined
         ? []
         : [
             environment(
               "ABL_FIXED_BROKER_PREVIEW_TOKEN",
-              this.#previewToken,
+              assignment.previewToken,
               true,
             ),
           ]),
@@ -184,13 +248,20 @@ export class BlaxelCandidateSandboxControlPlane
       "abl-role-class": input.roleClass.toLowerCase(),
       "abl-command-commitment": input.commandCommitment.slice(2, 18),
       "abl-authorization": runtimeContractCommitment(this.#authorizationId),
+      ...(this.#genesisEvidenceDigest === null
+        ? {}
+        : {
+            "abl-genesis-evidence": this.#genesisEvidenceDigest.slice(2, 18),
+          }),
       "abl-runtime-contract": runtimeContractCommitment({
         applicationId: input.applicationId,
         authorizationId: this.#authorizationId,
         image: this.#imageReference,
         region: this.#region,
         memory: this.#memory,
-        allowedDomains: [this.#fixedBrokerHost],
+        allowedDomains: [fixedBrokerHost],
+        lifecycle: this.#runtimeScope.mode,
+        genesisEvidenceDigest: this.#genesisEvidenceDigest,
         envs,
       }),
     };
@@ -204,8 +275,10 @@ export class BlaxelCandidateSandboxControlPlane
       spec: {
         enabled: true,
         region: this.#region,
-        lifecycle: candidateSandboxLifecycle(),
-        network: { allowedDomains: [this.#fixedBrokerHost] },
+        ...(this.#runtimeScope.mode === "BOUNDED_SINGLE"
+          ? { lifecycle: boundedCandidateSandboxLifecycle() }
+          : {}),
+        network: { allowedDomains: [fixedBrokerHost] },
         runtime: {
           image: this.#imageReference,
           memory: this.#memory,
@@ -219,11 +292,12 @@ export class BlaxelCandidateSandboxControlPlane
       workspace: this.#workspace,
       region: this.#region,
       imageReference: this.#imageReference,
-      fixedBrokerHost: this.#fixedBrokerHost,
+      fixedBrokerHost,
       applicationId: input.applicationId,
       memory: this.#memory,
       labels,
       envs,
+      persistent: this.#runtimeScope.mode !== "BOUNDED_SINGLE",
     });
     return {
       state: "PROVISIONED_AWAITING_TRANSFER",
@@ -238,12 +312,14 @@ export class BlaxelCandidateSandboxControlPlane
     state: "DEPROVISIONED" | "ALREADY_ABSENT";
     removedResourceNames: readonly string[];
   }> {
-    if (input.applicationId !== this.#authorizedApplicationId)
-      throw new Error("Live Job is not authorized for this application");
+    const assignment = this.#assignment(input.applicationId);
     const expectedBodyName = candidateSandboxName(input.applicationId);
     if (input.sandboxResourceName !== expectedBodyName)
       throw new Error("Provisioning receipt names another Sandbox");
-    const expectedNames = [expectedBodyName, this.#fixedBrokerResourceName];
+    const expectedNames = [
+      expectedBodyName,
+      assignment.fixedBrokerResourceName,
+    ];
     const page = await this.#factory.list({
       externalId: input.applicationId,
       limit: 3,
@@ -273,6 +349,22 @@ export class BlaxelCandidateSandboxControlPlane
       removedResourceNames,
     };
   }
+
+  #assignment(applicationId: string): CandidateRuntimeAssignment {
+    const id = z.uuid().parse(applicationId);
+    let assignment: CandidateRuntimeAssignment | undefined;
+    if (this.#runtimeScope.mode !== "CAPPED_FOUNDING") {
+      if (this.#runtimeScope.assignment.applicationId === id)
+        assignment = this.#runtimeScope.assignment;
+    } else {
+      assignment = this.#runtimeScope.assignments.find(
+        (candidate) => candidate.applicationId === id,
+      );
+    }
+    if (assignment === undefined)
+      throw new Error("Live Job is not authorized for this application");
+    return assignment;
+  }
 }
 
 function environment(name: string, value: string, secret = false) {
@@ -288,6 +380,10 @@ function runtimeContractCommitment(value: unknown): string {
 
 export function candidateSandboxName(applicationId: string): string {
   return `abl-career-${z.uuid().parse(applicationId).replaceAll("-", "")}`;
+}
+
+export function candidateFixedBrokerName(applicationId: string): string {
+  return `abl-broker-${z.uuid().parse(applicationId).replaceAll("-", "")}`;
 }
 
 function assertFixedBroker(input: {
@@ -326,6 +422,7 @@ function assertReturnedSandbox(input: {
   memory: number;
   labels: Record<string, string>;
   envs: Array<{ name: string; value: string; secret: boolean }>;
+  persistent: boolean;
 }): void {
   const { sandbox } = input;
   if (
@@ -343,9 +440,16 @@ function assertReturnedSandbox(input: {
       throw new Error("Existing candidate Sandbox labels drifted");
   if (hasMountedVolumes(sandbox.spec.volumes))
     throw new Error("Candidate Sandbox must not mount durable storage");
-  if (
+  if (input.persistent) {
+    if (
+      sandbox.spec.lifecycle?.expirationPolicies?.some(
+        ({ action }) => action === "delete",
+      )
+    )
+      throw new Error("Persistent candidate Sandbox has a deletion policy");
+  } else if (
     JSON.stringify(sandbox.spec.lifecycle) !==
-    JSON.stringify(candidateSandboxLifecycle())
+    JSON.stringify(boundedCandidateSandboxLifecycle())
   )
     throw new Error("Candidate Sandbox lifecycle drifted");
   if (sandbox.spec.runtime?.extraArgs !== undefined)

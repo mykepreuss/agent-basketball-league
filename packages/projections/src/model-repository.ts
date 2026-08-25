@@ -6,6 +6,10 @@ import {
   type ModelDependencyRecord,
 } from "@abl/institutions";
 import { sha256Commitment } from "@abl/recognition";
+import {
+  CandidateRoleClassSchema,
+  type CandidateRoleClass,
+} from "@abl/schemas";
 
 import { writeImmutableJson } from "./immutable-json.js";
 import type {
@@ -20,12 +24,19 @@ type ModelCareerHead = {
   version: bigint;
   signerAddress: string;
 };
+type ActiveCareer = {
+  dependency: ModelDependencyRecord;
+  roleClass: CandidateRoleClass;
+};
+
+const candidateRoles = CandidateRoleClassSchema.options;
 
 export interface PublicModelConcentrationProjection extends Concentration {
   state: "REHEARSAL";
   canonical: true;
   verification: "CANONICAL_LOCAL_REHEARSAL";
   recognizedGenesisConcentration: false;
+  admittedByRole: Record<CandidateRoleClass, number>;
   canonicalEventHash: `0x${string}`;
   projectedAt: string;
 }
@@ -95,36 +106,47 @@ function emptyConcentration(): Concentration {
 }
 
 function report(
-  active: ReadonlyMap<string, ModelDependencyRecord>,
+  active: ReadonlyMap<string, ActiveCareer>,
   eventHash: string,
   projectedAt: string,
 ): PublicModelConcentrationProjection {
+  const activeCareers = [...active.values()];
   const concentration =
     active.size === 0
       ? emptyConcentration()
-      : modelConcentration([...active.values()]);
+      : modelConcentration(activeCareers.map(({ dependency }) => dependency));
+  const admittedByRole = Object.fromEntries(
+    candidateRoles.map((role) => [
+      role,
+      activeCareers.filter((career) => career.roleClass === role).length,
+    ]),
+  ) as Record<CandidateRoleClass, number>;
   return {
     state: "REHEARSAL",
     canonical: true,
     verification: "CANONICAL_LOCAL_REHEARSAL",
     recognizedGenesisConcentration: false,
+    admittedByRole,
     ...concentration,
     canonicalEventHash: eventHash as `0x${string}`,
     projectedAt: canonicalProjectedAt(projectedAt),
   };
 }
 
-function dependencyRecord(
+function activeCareer(
   verified: Extract<VerifiedModelProjectionEvent, { action: "ADMIT" }>,
-): ModelDependencyRecord {
+): ActiveCareer {
   return {
-    agentDid: verified.event.actorDid,
-    ...structuredClone(verified.payload.admission.modelDependencies),
+    dependency: {
+      agentDid: verified.event.actorDid,
+      ...structuredClone(verified.payload.admission.modelDependencies),
+    },
+    roleClass: verified.payload.admission.roleClass,
   };
 }
 
 function applyVerified(
-  active: Map<string, ModelDependencyRecord>,
+  active: Map<string, ActiveCareer>,
   lastEvents: Map<string, ModelCareerHead>,
   verified: VerifiedModelProjectionEvent,
 ): void {
@@ -155,8 +177,7 @@ function applyVerified(
       );
     }
   }
-  if (verified.action === "ADMIT")
-    active.set(agentDid, dependencyRecord(verified));
+  if (verified.action === "ADMIT") active.set(agentDid, activeCareer(verified));
   else active.delete(agentDid);
   lastEvents.set(agentDid, {
     hash: verified.event.eventHash,
@@ -173,7 +194,7 @@ export class FilePublicModelProjectionRepository
   readonly #now: () => Date;
   readonly #records: ModelProjectionRecord[] = [];
   readonly #eventCursors = new Map<string, number>();
-  readonly #active = new Map<string, ModelDependencyRecord>();
+  readonly #active = new Map<string, ActiveCareer>();
   readonly #lastEvents = new Map<string, ModelCareerHead>();
   #operationTail = Promise.resolve();
 
@@ -222,7 +243,7 @@ export class FilePublicModelProjectionRepository
     await this.#serialize(async () => {
       const records: ModelProjectionRecord[] = [];
       const eventCursors = new Map<string, number>();
-      const active = new Map<string, ModelDependencyRecord>();
+      const active = new Map<string, ActiveCareer>();
       const lastEvents = new Map<string, ModelCareerHead>();
       const recordsRoot = join(this.#root, "model-records");
       const filenames = (await readdir(recordsRoot))

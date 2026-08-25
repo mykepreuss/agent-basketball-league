@@ -1117,7 +1117,15 @@ describe("complete local acceptance", () => {
     const admittedAt = "2026-08-13T12:07:00.000Z";
     const payload = {
       admission: {
+        applicationId: "0198e000-0000-7000-8002-000000000004",
         candidateDid: agentDid,
+        roleClass: "PLAYER" as const,
+        capacityDecisionCommitment: sha256Commitment(
+          "model-acceptance-capacity-decision",
+        ),
+        opportunityResponseCommitment: sha256Commitment(
+          "model-acceptance-opportunity-response",
+        ),
         identityStatementCommitment: sha256Commitment(
           "model-acceptance-identity",
         ),
@@ -1251,6 +1259,7 @@ describe("complete local acceptance", () => {
           {
             recognizedGenesisConcentration: false,
             totalAgents: 1,
+            admittedByRole: { PLAYER: 1 },
             exactModel: [
               { value: "model-acceptance-r1", count: 1, bps: 10_000 },
             ],
@@ -3348,8 +3357,8 @@ describe("complete local acceptance", () => {
     ]);
   });
 
-  it("exports all 43 primary, two V1 operational, and seven launch schemas as fail-closed strict JSON Schema", () => {
-    expect(Object.keys(schemaRegistry)).toHaveLength(52);
+  it("exports all 43 primary, two V1 operational, and eight launch schemas as fail-closed strict JSON Schema", () => {
+    expect(Object.keys(schemaRegistry)).toHaveLength(53);
     const jsonSchemas = exportJsonSchemas();
     expect(Object.keys(jsonSchemas)).toEqual(Object.keys(schemaRegistry));
     for (const [name, schema] of Object.entries(jsonSchemas)) {

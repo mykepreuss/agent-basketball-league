@@ -63,7 +63,15 @@ function admissionPayload(
 ) {
   return {
     admission: {
+      applicationId: uuid(800),
       candidateDid: agentDid,
+      roleClass: "PLAYER" as const,
+      capacityDecisionCommitment: sha256Commitment(
+        `${agentDid}:capacity-decision`,
+      ),
+      opportunityResponseCommitment: sha256Commitment(
+        `${agentDid}:opportunity-response`,
+      ),
       identityStatementCommitment: sha256Commitment(`${agentDid}:identity`),
       constitutionDigest: sha256Commitment("constitution"),
       threatModelDigest: sha256Commitment("threat-model"),
@@ -216,6 +224,12 @@ describe("public model concentration repository", () => {
         state: "REHEARSAL",
         canonical: true,
         recognizedGenesisConcentration: false,
+        admittedByRole: expect.objectContaining({
+          PLAYER: 2,
+          COACH: 0,
+          REFEREE: 0,
+          REPLAY_OFFICIAL: 0,
+        }),
         totalAgents: 2,
         family: [{ value: "family-a", count: 2, bps: 10_000 }],
         provider: [
@@ -244,6 +258,7 @@ describe("public model concentration repository", () => {
     });
     await models.publish(revocation.envelope, "10");
     expect(models.models()[0]).toMatchObject({
+      admittedByRole: { PLAYER: 1 },
       totalAgents: 1,
       exactModel: [{ value: "model-b-r1", count: 1, bps: 10_000 }],
     });

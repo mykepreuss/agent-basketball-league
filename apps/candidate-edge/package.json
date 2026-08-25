@@ -19,13 +19,13 @@
   "dependencies": {
     "@abl/foundation": "workspace:*",
     "@abl/launch": "workspace:*",
+    "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
     "fastify": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@abl/recognition": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

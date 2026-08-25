@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "evidenceClass": "OWNER_ACCEPTED_EXPERIMENTAL_STAGE_C",
+  "programId": "ABL-COMPLETION-01",
+  "acceptanceId": "ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01",
+  "releaseId": "ad73a9ff151ac5599ad90e581114ebf179d9e848",
+  "technicalStatus": "FAIL",
+  "technicalResultDigest": "0xe19241f61b25b35c04f8b7069567951996a8e00636f801bcecf742065bacdfa9",
+  "acceptedBlockers": [
+    "private soak is shorter than 24 hours",
+    "service observation gap exceeded threshold: abl-private-storage-broker",
+    "service observation gap exceeded threshold: abl-core-api",
+    "service observation gap exceeded threshold: abl-safety-gateway",
+    "service observation gap exceeded threshold: abl-public-api",
+    "service observation gap exceeded threshold: abl-candidate-store",
+    "service observation gap exceeded threshold: abl-candidate-edge",
+    "service observation gap exceeded threshold: abl-spectator-arena",
+    "service observation gap exceeded threshold: abl-basketball-mcp",
+    "service observation gap exceeded threshold: abl-career-mcp",
+    "service observation gap exceeded threshold: abl-government-mcp",
+    "service observation gap exceeded threshold: abl-discovery-mcp"
+  ],
+  "ownerDisposition": "ACCEPTED_FOR_EXPERIMENTAL_LAUNCH",
+  "rationaleCode": "LOCAL_MONITOR_SLEEP_INTERRUPTION",
+  "experimentalLimits": {
+    "minimumObservedHours": 12,
+    "maximumObservedGapSeconds": 1800,
+    "maximumServiceFailures": 1
+  },
+  "observed": {
+    "durationHours": 13.502821666666666,
+    "maximumSampleGapSeconds": 1667,
+    "serviceFailures": 1
+  },
+  "requiredFollowUps": [
+    "FOCUSED_GOVERNMENT_MCP_HEALTH",
+    "LIVE_PUBLIC_MONITORING_AND_ROLLBACK"
+  ],
+  "publicExposure": "NONE",
+  "canonicalHistoryClaim": false,
+  "genesis": false,
+  "secretValuesRecorded": false,
+  "acceptedAt": "2026-08-25T16:06:00.000Z"
+}

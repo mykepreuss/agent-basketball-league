@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   PersistentSoakPolicySchema,
   assessPersistentSoak,
+  assessPersistentSoakHandoff,
   composePersistentSoakEvidence,
   createReadOnlyBeaconLaunchState,
 } from "../src/persistent-soak.js";
@@ -155,8 +156,70 @@ function collectorInputs() {
       measuredAt: complete.endedAt,
       ...complete.metrics,
       finalProviderReadback: true,
+      sources: {
+        blaxelInventoryReadAt: complete.endedAt,
+        blaxelBillingReadAt: complete.endedAt,
+        neonInventoryReadAt: complete.endedAt,
+        databaseMetricsReadAt: complete.endedAt,
+        launchStateReadAt: complete.endedAt,
+        candidateFlowReadAt: complete.endedAt,
+        blaxelWorkspace: "agent-basketball-league",
+        neonProjectId: "project-under-test",
+        databaseConnection: "DIRECT_TLS",
+        costProjectionMethod: "GREATER_OF_CAP_OR_24H_ANNUALIZED",
+      },
       secretValuesRecorded: false,
     },
+  } as const;
+}
+
+function ownerAcceptedEvidence() {
+  const observed = evidence();
+  return {
+    ...observed,
+    endedAt: "2026-08-24T13:30:00.000Z",
+    services: observed.services.map((service) => ({
+      ...service,
+      maximumSampleGapSeconds: 1_667,
+      ...(service.service === "abl-government-mcp"
+        ? { failures: 1, errorRate: 1 / service.samples }
+        : {}),
+    })),
+  };
+}
+
+function ownerAcceptance(observed = ownerAcceptedEvidence()) {
+  const technical = assessPersistentSoak(policy, observed);
+  return {
+    version: 1,
+    evidenceClass: "OWNER_ACCEPTED_EXPERIMENTAL_STAGE_C",
+    programId: "ABL-COMPLETION-01",
+    acceptanceId: "ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01",
+    releaseId: observed.releaseId,
+    technicalStatus: "FAIL",
+    technicalResultDigest: technical.resultDigest,
+    acceptedBlockers: technical.blockers,
+    ownerDisposition: "ACCEPTED_FOR_EXPERIMENTAL_LAUNCH",
+    rationaleCode: "LOCAL_MONITOR_SLEEP_INTERRUPTION",
+    experimentalLimits: {
+      minimumObservedHours: 12,
+      maximumObservedGapSeconds: 1_800,
+      maximumServiceFailures: 1,
+    },
+    observed: {
+      durationHours: technical.durationHours,
+      maximumSampleGapSeconds: 1_667,
+      serviceFailures: 1,
+    },
+    requiredFollowUps: [
+      "FOCUSED_GOVERNMENT_MCP_HEALTH",
+      "LIVE_PUBLIC_MONITORING_AND_ROLLBACK",
+    ],
+    publicExposure: "NONE",
+    canonicalHistoryClaim: false,
+    genesis: false,
+    secretValuesRecorded: false,
+    acceptedAt: "2026-08-24T13:31:00.000Z",
   } as const;
 }
 
@@ -326,11 +389,68 @@ describe("persistent private soak", () => {
     });
   });
 
+  it("keeps the technical failure while accepting only the bounded local-monitor interruption", () => {
+    const observed = ownerAcceptedEvidence();
+    expect(assessPersistentSoak(policy, observed).status).toBe("FAIL");
+    expect(
+      assessPersistentSoakHandoff(policy, observed, ownerAcceptance(observed)),
+    ).toMatchObject({
+      status: "ACCEPTED",
+      basis: "OWNER_ACCEPTED_EXPERIMENTAL_LAUNCH",
+      technicalStatus: "FAIL",
+      ownerAcceptanceDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      blockers: [],
+    });
+  });
+
+  it("does not let owner acceptance waive substantive launch failures", () => {
+    const base = ownerAcceptedEvidence();
+    const observed = {
+      ...base,
+      incidents: { ...base.incidents, privacyBreaches: 1 },
+    };
+    const technical = assessPersistentSoak(policy, observed);
+    expect(technical.blockers).toContain("soak recorded privacyBreaches: 1");
+    expect(() =>
+      assessPersistentSoakHandoff(policy, observed, {
+        ...ownerAcceptance(),
+        technicalResultDigest: technical.resultDigest,
+        acceptedBlockers: technical.blockers,
+      }),
+    ).toThrow(
+      "Owner acceptance may cover only the shortened observation and local sampling-gap blockers",
+    );
+  });
+
   it("composes final evidence only from matching secret-free collectors", () => {
     const inputs = collectorInputs();
     const composed = composePersistentSoakEvidence({ policy, ...inputs });
     expect(composed).toEqual(evidence());
     expect(assessPersistentSoak(policy, composed).status).toBe("PASS");
+  });
+
+  it("accepts provider recovery metadata without copying it into final evidence", () => {
+    const inputs = collectorInputs();
+    const composed = composePersistentSoakEvidence({
+      policy,
+      ...inputs,
+      exercises: {
+        ...inputs.exercises,
+        recovery: {
+          ...inputs.exercises.recovery,
+          job: "abl-recovery-verifier",
+          executionId: "execution-under-test",
+          temporaryBranchId: "branch-under-test",
+          temporaryBranchDeleted: true,
+          temporarySecretMaterialDeleted: true,
+          sourceCredentialExposed: false,
+          restoredCredentialExposed: false,
+        },
+      },
+    });
+
+    expect(composed.recovery).toEqual(evidence().recovery);
+    expect(composed.recovery).not.toHaveProperty("temporaryBranchId");
   });
 
   it("accepts several service failures from the same failed sample run", () => {
@@ -364,6 +484,19 @@ describe("persistent private soak", () => {
         metrics: { ...inputs.metrics, finalProviderReadback: false },
       }),
     ).toThrow();
+    expect(() =>
+      composePersistentSoakEvidence({
+        policy,
+        ...inputs,
+        metrics: {
+          ...inputs.metrics,
+          sources: {
+            ...inputs.metrics.sources,
+            blaxelBillingReadAt: "2026-08-24T22:59:59.999Z",
+          },
+        },
+      }),
+    ).toThrow("Stage C metrics source is stale or future-dated");
     expect(() =>
       composePersistentSoakEvidence({
         policy,
@@ -404,7 +537,21 @@ describe("persistent private soak", () => {
         shortSoak,
         "2026-08-25T00:01:00.000Z",
       ),
-    ).toThrow("Stage C private soak has not passed");
+    ).toThrow("Stage C private soak has not been accepted");
+
+    const observed = ownerAcceptedEvidence();
+    expect(
+      createReadOnlyBeaconLaunchState(
+        policy,
+        observed,
+        "2026-08-24T13:31:00.000Z",
+        ownerAcceptance(observed),
+      ),
+    ).toMatchObject({
+      launchStage: "READ_ONLY_BEACON",
+      publicExposure: "READ_ONLY",
+      candidateIntake: { mode: "INVITE_ONLY" },
+    });
   });
 
   it("fails only the observed Stage C criteria without reopening earlier stages", () => {
@@ -434,6 +581,24 @@ describe("persistent private soak", () => {
         "private soak received public ingress",
         "clean-room restore did not reproduce canonical state",
       ]),
+    );
+  });
+
+  it("rejects an empty clean-room restore as insufficient replay evidence", () => {
+    const observed = evidence();
+    const result = assessPersistentSoak(policy, {
+      ...observed,
+      recovery: {
+        ...observed.recovery,
+        sourceEventCount: 0,
+        restoredEventCount: 0,
+        sourceOutboxCount: 0,
+        restoredOutboxCount: 0,
+      },
+    });
+    expect(result.status).toBe("FAIL");
+    expect(result.blockers).toContain(
+      "clean-room restore did not include recorded event and outbox history",
     );
   });
 });

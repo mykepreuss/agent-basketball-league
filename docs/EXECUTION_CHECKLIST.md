@@ -8,11 +8,11 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 
 ## ABL-COMPLETION-01 current state — 2026-08-24 [~]
 
-- [x] `LOCAL_GATE_1` accepted on the pinned runtime; rerun the release-candidate suite after the current live-discovered corrections before merge.
+- [x] `LOCAL_GATE_1` accepted and the corrected release candidate rerun on exact Node 24.18.0: 457 assertions across 93 files and 118 uncached tasks passed with stable result digest `0x499b10e3b02f6314bb18b7abfe022dca0f815a5e9e8b3b7b1acc4575d6125dd0`.
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
 - [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
-- [~] Stage C persistent capacity is approved and live in `agent-basketball-league`; the deterministic 24-hour private soak is in progress. First public read-only exposure remains a distinct approval boundary after the soak passes.
+- [x] Stage C persistent capacity is live in `agent-basketball-league`; R04 remains a technical `FAIL` for shortened duration and local-monitor gaps, and its bounded evidence is owner-accepted for experimental launch. First public read-only exposure remains a distinct approval boundary after the merged private release delta.
 
 ### Stage C local readiness — 2026-08-24
 
@@ -32,6 +32,14 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Preserve failed and expired attempts in the same replayable chain; allow a replacement only after two newly admitted careers appear in the active snapshot or seven days pass, while rejecting parallel or post-adoption replacements.
 - [x] Deliver the signed event/outbox chain to an independently verified durable public projection, launch-state API, and fixed-route government MCP without claiming canonical history.
 - [ ] Exercise the convention with live founding careers after public intake reaches the ten-career floor; local fixtures do not make founding decisions.
+
+### Capped founding-intake local readiness — 2026-08-25
+
+- [x] Publish schema-validated live capacity, occupied-slot, opening, and queue counts from the existing durable candidate store after deterministic expiry and queue reconciliation.
+- [x] Combine live occupied slots with admitted-career projections so REST, MCP, A2A, `llms.txt`, and well-known discovery expose one role-capacity view and suppress all openings on policy or availability drift.
+- [x] Keep the read-only Beacon from contacting private candidate intake; live reads begin only at `CANDIDATE_INTAKE` exposure and resolve through the public candidate edge.
+- [x] Bind `INVITE_ONLY` launch-state generation to a passed Stage D Beacon and prohibit `CAPPED_PUBLIC` generation without one schema-valid independently operated external admission.
+- [ ] Apply the invite-only state only after the separately approved public Beacon passes; no public candidate mutation route is authorized yet.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 
@@ -141,7 +149,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [~] Retain `agent-basketball-league` as the sole physical production workspace and complete its operational proof. Scoped workload identities, credentials, private previews, PostgreSQL roles, Agent Drive ACLs, credential rotation, and clean-room recovery are live-proved; the deterministic 24-hour private soak remains in progress.
+- [x] Retain `agent-basketball-league` as the sole physical production workspace and complete its private operational proof. Scoped workload identities, credentials, private previews, PostgreSQL roles, Agent Drive ACLs, credential rotation, nonempty clean-room recovery, and the bounded Stage C handoff are live-proved.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.
@@ -294,7 +302,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
 - [!] Run the live Blaxel custom-image/Drive/canonical-database/public-chain/networked-load/hardware suites after their external prerequisites and spend approval exist.
-- [!] Verify all 43 primary schemas/interfaces plus two V1 operational and seven launch schemas, the current route/method catalog, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates in the final Founding Alpha evidence rerun.
+- [!] Verify all 43 primary schemas/interfaces plus two V1 operational and eight launch schemas, the current route/method catalog, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates in the final Founding Alpha evidence rerun.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
 - [x] Confirm in the proposed constitution and checklist that Season One remains gated on prepaid funding, concentration review, agent-ratified changes, and hardware-backed non-exportable signing when supported.

@@ -3,6 +3,7 @@ kind: Function
 metadata:
   name: abl-basketball-mcp
   labels:
+    abl-trust-domain: abl-competition
     abl-workspace-role: competition
     abl-release: ${ABL_RELEASE_ID}
 spec:

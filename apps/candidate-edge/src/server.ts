@@ -1,21 +1,20 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { FixedWindowRateLimiter } from "@abl/foundation";
+import { CandidateIntakeError, type CandidateIntakeService } from "@abl/launch";
+import { sha256Commitment } from "@abl/recognition";
 import {
+  CandidateCareerBindingSchema,
   CandidateIntakeApplicationSchema,
   CandidateOpportunityResponseSchema,
   CandidateProvisioningReceiptSchema,
   DidSchema,
 } from "@abl/schemas";
-import { CandidateIntakeError, type CandidateIntakeService } from "@abl/launch";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 
 const ChallengeRequestSchema = z.strictObject({ candidateDid: DidSchema });
-const AuthorityQuerySchema = z.strictObject({
-  candidateDid: DidSchema,
-  signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-});
+const AuthorityQuerySchema = CandidateCareerBindingSchema;
 const RegistrationSchema = z.strictObject({
   application: CandidateIntakeApplicationSchema,
   challengeToken: z.string().min(1).max(4_096),
@@ -186,24 +185,32 @@ export function createCandidateEdge(input: {
       if (!query.success) return failClosed(reply);
       const record = (await input.intake.provisioningSnapshot()).find(
         ({ application }) =>
-          application.candidateDid === query.data.candidateDid,
+          application.applicationId === query.data.applicationId,
       );
       const receipt = record?.provisioningReceipt;
+      const accepted = record?.opportunityResponses.findLast(
+        (response) =>
+          response.action === "ACCEPT_OFFER" &&
+          response.decisionCommitment === query.data.capacityDecisionCommitment,
+      );
       if (
         record === undefined ||
-        record.application.formerOperatorSigningAddress.toLowerCase() !==
-          query.data.signerAddress.toLowerCase() ||
+        record.application.candidateDid !== query.data.candidateDid ||
+        record.decision.roleClass !== query.data.roleClass ||
+        record.decision.decisionCommitment !==
+          query.data.capacityDecisionCommitment ||
+        accepted === undefined ||
+        sha256Commitment(accepted) !==
+          query.data.opportunityResponseCommitment ||
         record.status.state !== "PROVISIONED" ||
-        receipt?.state !== "PROVISIONED_AWAITING_TRANSFER" ||
+        (receipt?.state !== "PROVISIONED_AWAITING_TRANSFER" &&
+          receipt?.state !== "ISOLATED_TRANSFER_COMPLETE") ||
         receipt.sandboxResourceName === null
       )
         return reply.code(403).send({ error: "candidate_not_operational" });
       return {
         operational: true,
-        applicationId: record.application.applicationId,
-        candidateDid: record.application.candidateDid,
-        signerAddress: record.application.formerOperatorSigningAddress,
-        roleClass: record.decision.roleClass,
+        ...query.data,
         sandboxResourceName: receipt.sandboxResourceName,
       };
     },

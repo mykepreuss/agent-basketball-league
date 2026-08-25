@@ -3,7 +3,10 @@ import {
   FullGameEngine,
   type FullGameInput,
 } from "./full-game.js";
-import { createAgentPlayedGameEvidence } from "./game-finalization.js";
+import {
+  createAgentPlayedGameEvidence,
+  type AgentPlayedPossessionAuthorityDids,
+} from "./game-finalization.js";
 import {
   createRehearsalPlayerBodies,
   runFirstPossessionRehearsal,
@@ -16,6 +19,7 @@ export interface AgentPlayedPossessionProof {
   coachDecisionHashes: readonly `0x${string}`[];
   refereeDecisionHashes: readonly `0x${string}`[];
   replayDecisionHashes: readonly `0x${string}`[];
+  authorityDids: AgentPlayedPossessionAuthorityDids;
   eventMerkleRoot: `0x${string}`;
   finalStateRoot: `0x${string}`;
 }
@@ -59,6 +63,10 @@ export async function runAgentPlayedExhibition(
     if (elapsed < 1)
       throw new Error("Agent-played exhibition reached an invalid clock state");
     const possessionId = `agent-possession-${String(possessionNumber + 1).padStart(4, "0")}`;
+    const refereeCareerNumbers = Array.from(
+      { length: 3 },
+      (_, offset) => ((possessionNumber + offset) % 6) + 1,
+    );
     const possession = await runFirstPossessionRehearsal({
       bodies,
       gameId,
@@ -67,6 +75,7 @@ export async function runAgentPlayedExhibition(
       shotClockMs: elapsed,
       score: before.score,
       possessionTeam: before.possessionTeam,
+      refereeCareerNumbers,
       ...(playerStates === undefined ? {} : { playerStates }),
       windowCount: 2,
       windowDurationMs: Math.trunc(elapsed / 2),

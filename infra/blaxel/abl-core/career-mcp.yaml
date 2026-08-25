@@ -3,6 +3,7 @@ kind: Function
 metadata:
   name: abl-career-mcp
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: core
     abl-release: ${ABL_RELEASE_ID}
 spec:

@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: abl-candidate-provisioner
   labels:
+    abl-trust-domain: abl-core
     abl-workspace-role: competition-candidate-provisioner
     abl-release: ${ABL_RELEASE_ID}
 spec:
@@ -43,9 +44,12 @@ spec:
       - name: ABL_CANDIDATE_CONTROL_PLANE_MODE
         value: ${ABL_CANDIDATE_CONTROL_PLANE_MODE}
         secret: false
-      - name: ABL_CANDIDATE_TARGET_APPLICATION_ID
-        value: ${ABL_CANDIDATE_TARGET_APPLICATION_ID}
+      - name: ABL_CANDIDATE_RUNTIME_SCOPE
+        value: CAPPED_FOUNDING
         secret: false
+      - name: ABL_CANDIDATE_RUNTIME_ASSIGNMENTS_JSON
+        value: ${ABL_CANDIDATE_RUNTIME_ASSIGNMENTS_JSON}
+        secret: true
       - name: ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID
         value: ${ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID}
         secret: false
@@ -58,24 +62,9 @@ spec:
       - name: ABL_CANDIDATE_BODY_IMAGE_REFERENCE
         value: ${ABL_BODY_SANDBOX_IMAGE_REFERENCE}
         secret: false
-      - name: ABL_CANDIDATE_FIXED_BROKER_ORIGIN
-        value: ${ABL_CANDIDATE_FIXED_BROKER_ORIGIN}
-        secret: false
-      - name: ABL_CANDIDATE_FIXED_BROKER_HOST
-        value: ${ABL_CANDIDATE_FIXED_BROKER_HOST}
-        secret: false
-      - name: ABL_CANDIDATE_FIXED_BROKER_NAME
-        value: ${ABL_CANDIDATE_FIXED_BROKER_NAME}
-        secret: false
       - name: ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE
         value: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_REFERENCE}
         secret: false
-      - name: ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64
-        value: ${ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64}
-        secret: true
-      - name: ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN
-        value: ${ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN}
-        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false

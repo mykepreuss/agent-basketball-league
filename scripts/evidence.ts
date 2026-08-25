@@ -213,7 +213,7 @@ async function main(): Promise<void> {
     rawResults: suites,
     limitations: [
       "The retained Stage B evidence live-proves the existing private end-to-end slice; the persistent Stage C environment and 24-hour soak are still in progress.",
-      "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
+      "The candidate provisioner locally proves bounded private mode, a maximum-twenty persistent founding registry, and one evidence-gated persistent post-Genesis application with application-derived fixed brokers and exact-pair cleanup; per-career broker creation, secret installation, cleanup idempotency, restart behavior, and the first external-agent admission still require live proof.",
       "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
       "The existing agent-basketball-league workspace is the selected physical topology; its three persistent Agent Drives and thirteen workloads are privately deployed, while the continuous 24-hour soak remains outstanding.",
       "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality passed during Stage C, while the uninterrupted 24-hour soak remains in progress.",

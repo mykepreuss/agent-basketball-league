@@ -230,6 +230,7 @@ export interface FirstPossessionRehearsalOptions {
   possessionTeam?: "HOME" | "AWAY";
   playerStates?: readonly PlayerState[];
   playerDidOverrides?: Readonly<Record<string, string>>;
+  refereeCareerNumbers?: readonly number[];
   windowCount?: 2 | 3 | 4;
   windowDurationMs?: number;
 }
@@ -283,8 +284,23 @@ export async function runFirstPossessionRehearsal(
     HOME: fixedIdentity(101),
     AWAY: fixedIdentity(102),
   } as const;
-  const refereeIdentities = [103, 104, 105].map(fixedIdentity);
-  const replayIdentities = [106, 107].map(fixedIdentity);
+  const refereeCareerNumbers = options.refereeCareerNumbers ?? [1, 2, 3];
+  if (
+    refereeCareerNumbers.length !== 3 ||
+    new Set(refereeCareerNumbers).size !== 3 ||
+    refereeCareerNumbers.some(
+      (careerNumber) =>
+        !Number.isInteger(careerNumber) || careerNumber < 1 || careerNumber > 6,
+    )
+  ) {
+    throw new Error(
+      "A rehearsal possession requires three distinct referees from the six-career pool",
+    );
+  }
+  const refereeIdentities = refereeCareerNumbers.map((careerNumber) =>
+    fixedIdentity(102 + careerNumber),
+  );
+  const replayIdentities = [109, 110].map(fixedIdentity);
   const windows: DecisionWindow[] = [];
   for (let index = 0; index < windowCount; index += 1) {
     const observationState = structuredClone(initial);
@@ -378,7 +394,7 @@ export async function runFirstPossessionRehearsal(
     },
     referees: refereeIdentities.map(
       (identity, index): CompetitionAuthority => ({
-        did: `did:abl:referee-${index + 1}`,
+        did: `did:abl:referee-${refereeCareerNumbers[index]}`,
         signerAddress: identity.address,
       }),
     ),
@@ -397,7 +413,7 @@ export async function runFirstPossessionRehearsal(
   const refereeDecisions: RefereeDecision[] = await Promise.all(
     refereeIdentities.map(async (identity, index) => {
       const body: RefereeDecisionBody = {
-        refereeDid: `did:abl:referee-${index + 1}`,
+        refereeDid: `did:abl:referee-${refereeCareerNumbers[index]}`,
         possessionId: initial.possessionId,
         sequence: index,
         call: "NO_CALL",
@@ -483,6 +499,18 @@ export async function runFirstPossessionRehearsal(
       ),
       refereeDecisionHashes: refereeDecisions.map(({ eventHash }) => eventHash),
       replayDecisionHashes: replayDecisions.map(({ eventHash }) => eventHash),
+      authorityDids: {
+        players: windows.flatMap(({ decisions }) =>
+          decisions.map(
+            ({ authorizationEvent }) => authorizationEvent.actorDid,
+          ),
+        ),
+        coaches: windows.flatMap(({ coaches }) =>
+          coaches.map(({ coachDid }) => coachDid),
+        ),
+        referees: refereeDecisions.map(({ refereeDid }) => refereeDid),
+        replayOfficials: replayDecisions.map(({ replayDid }) => replayDid),
+      },
     },
   };
 }

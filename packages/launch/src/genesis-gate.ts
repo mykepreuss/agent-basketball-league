@@ -1,6 +1,9 @@
+import { AgentPlayedGameEvidenceSchema } from "@abl/basketball";
 import { assessCanonicalDatabaseProfile } from "@abl/database";
+import { FOUNDING_DECISIONS } from "@abl/genesis";
 import {
   CanonicalDatabaseProfileSchema,
+  DidSchema,
   GenesisRecognitionProfileSchema,
   RecognitionCheckpointSchema,
   ReleaseManifestSchema,
@@ -13,6 +16,207 @@ const PassedProofSchema = z.strictObject({
   digest: z.string().regex(/^0x[0-9a-f]{64}$/),
   passed: z.literal(true),
   verifiedAt: z.iso.datetime({ offset: true }),
+});
+
+const FoundingRoleCohortSchema = z
+  .strictObject({
+    players: z.array(DidSchema).length(10),
+    coaches: z.array(DidSchema).length(2),
+    referees: z.array(DidSchema).length(6),
+    replayOfficials: z.array(DidSchema).length(2),
+  })
+  .superRefine((roles, context) => {
+    const allDids = Object.values(roles).flat();
+    if (new Set(allDids).size !== 20)
+      context.addIssue({
+        code: "custom",
+        message: "Founding cohort requires twenty distinct careers",
+      });
+    for (const [role, dids] of Object.entries(roles)) {
+      if (dids.join("\u0000") !== [...dids].sort().join("\u0000"))
+        context.addIssue({
+          code: "custom",
+          path: [role],
+          message: "Founding cohort role careers must be sorted",
+        });
+    }
+  });
+
+const FoundingCohortProofSchema = z
+  .strictObject({
+    targetCareers: z.literal(20),
+    activeCareers: z.literal(20),
+    roles: FoundingRoleCohortSchema,
+    careerRegistryStateRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
+    eligibilitySnapshotCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    verifiedAt: z.iso.datetime({ offset: true }),
+    cohortCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+  })
+  .superRefine((cohort, context) => {
+    const { cohortCommitment, ...body } = cohort;
+    if (sha256Commitment(body) !== cohortCommitment)
+      context.addIssue({
+        code: "custom",
+        path: ["cohortCommitment"],
+        message: "Founding cohort commitment is invalid",
+      });
+  });
+
+const FoundingExhibitionBindingSchema = z.object({
+  classification: z.literal("PRE_GENESIS_EXPERIMENT"),
+  canonical: z.literal(false),
+  recognitionLevel: z.literal("SIGNED_VALID"),
+  finalizedPayloadDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  finalStateRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
+  eventMerkleRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
+  agentEvidence: AgentPlayedGameEvidenceSchema,
+  humanDecisionCount: z.literal(0),
+  inferenceInvocations: z.literal(0),
+});
+
+const FoundingExhibitionProofSchema = z.strictObject({
+  ...FoundingExhibitionBindingSchema.shape,
+  exactReplay: PassedProofSchema,
+  publicDelivery: PassedProofSchema,
+});
+
+const FoundingDecisionCompletionSchema = z
+  .strictObject({
+    topic: z.enum(FOUNDING_DECISIONS),
+    state: z.literal("DECIDED"),
+    disposition: z.enum(["RATIFY", "AMEND", "REPLACE"]),
+    eligible: z.number().int().min(10).max(20),
+    requiredYes: z.number().int().min(7).max(20),
+    yes: z.number().int().min(7).max(20),
+    eligibilitySnapshotCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    artifactDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    recognitionMechanism: z
+      .enum(["SIGNED_WITNESSES", "BASE_FINALIZED", "COMPATIBLE_REPLACEMENT"])
+      .nullable(),
+    releaseManifestDigest: z
+      .string()
+      .regex(/^0x[0-9a-f]{64}$/)
+      .nullable(),
+    decisionCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    ratificationEventId: z.string().uuid(),
+    authorizationSignatures: z
+      .array(z.string().regex(/^0x[0-9a-f]{130}$/))
+      .min(7)
+      .max(20),
+    directBallotsOnly: z.literal(true),
+    humanVotingAllowed: z.literal(false),
+    publicProjection: PassedProofSchema,
+  })
+  .superRefine((decision, context) => {
+    const threshold = Math.max(7, Math.ceil((decision.eligible * 2) / 3));
+    if (
+      decision.requiredYes !== threshold ||
+      decision.yes < threshold ||
+      decision.authorizationSignatures.length !== decision.yes ||
+      new Set(decision.authorizationSignatures).size !==
+        decision.authorizationSignatures.length
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Founding decision does not satisfy direct founder quorum",
+      });
+    if (
+      (decision.topic === "RECOGNITION_PROFILE") !==
+      (decision.recognitionMechanism !== null)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["recognitionMechanism"],
+        message: "Recognition mechanism belongs only to its founding topic",
+      });
+    if (
+      (decision.topic === "GENESIS_RELEASE") !==
+      (decision.releaseManifestDigest !== null)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["releaseManifestDigest"],
+        message: "Release digest belongs only to the Genesis-release topic",
+      });
+  });
+
+const FoundingDecisionCompletionSetSchema = z
+  .array(FoundingDecisionCompletionSchema)
+  .length(FOUNDING_DECISIONS.length)
+  .superRefine((decisions, context) => {
+    const topics = new Set(decisions.map(({ topic }) => topic));
+    const eventIds = new Set(
+      decisions.map(({ ratificationEventId }) => ratificationEventId),
+    );
+    if (
+      FOUNDING_DECISIONS.some((topic) => !topics.has(topic)) ||
+      eventIds.size !== decisions.length
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Every founding topic requires one distinct adopted decision",
+      });
+  });
+
+const PrepaidFundingEnvelopeSchema = z.strictObject({
+  currency: z.literal("USD"),
+  coverageStartsAt: z.iso.datetime({ offset: true }),
+  coverageEndsAt: z.iso.datetime({ offset: true }),
+  requiredAmountCents: z.number().int().positive().max(7_500),
+  prepaidAmountCents: z.number().int().positive().max(7_500),
+  prepaidAt: z.iso.datetime({ offset: true }),
+  providerReceiptDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+});
+
+const GenesisFundingProofSchema = z
+  .strictObject({
+    humanSpendApprovalDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    resourceScheduleDecisionEventId: z.string().uuid(),
+    operating: PrepaidFundingEnvelopeSchema.extend({
+      purpose: z.literal("SEASON_ZERO_OPERATION"),
+    }),
+    windDown: PrepaidFundingEnvelopeSchema.extend({
+      purpose: z.literal("WIND_DOWN_RESERVE"),
+      restrictedToWindDown: z.literal(true),
+    }),
+    verifiedAt: z.iso.datetime({ offset: true }),
+    fundingCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+  })
+  .superRefine((funding, context) => {
+    const { fundingCommitment, ...body } = funding;
+    if (sha256Commitment(body) !== fundingCommitment)
+      context.addIssue({
+        code: "custom",
+        path: ["fundingCommitment"],
+        message: "Genesis funding commitment is invalid",
+      });
+    if (
+      funding.operating.providerReceiptDigest ===
+      funding.windDown.providerReceiptDigest
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Operating funds and wind-down reserve must be separate",
+      });
+  });
+
+const GenesisLiveProofsSchema = z.strictObject({
+  exactRuntime: PassedProofSchema,
+  sandboxIsolation: PassedProofSchema,
+  storageRecovery: PassedProofSchema,
+  databaseRecovery: PassedProofSchema,
+  publicBoundary: PassedProofSchema,
+  cleanPublicVerification: PassedProofSchema,
+  monitoring: PassedProofSchema,
+  capacity: PassedProofSchema,
+});
+
+const GenesisPrerequisiteEvidenceSchema = z.object({
+  liveProofs: GenesisLiveProofsSchema,
+  foundingCohort: FoundingCohortProofSchema,
+  foundingExhibition: FoundingExhibitionProofSchema,
+  foundingDecisions: FoundingDecisionCompletionSetSchema,
+  funding: GenesisFundingProofSchema,
 });
 
 const RecognitionCommitmentsSchema = z.strictObject({
@@ -95,13 +299,7 @@ export const GenesisStartupEvidenceSchema = z.strictObject({
     schemaDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
     migrationDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
   }),
-  liveProofs: z.strictObject({
-    sandboxIsolation: PassedProofSchema,
-    storageRecovery: PassedProofSchema,
-    databaseRecovery: PassedProofSchema,
-    publicBoundary: PassedProofSchema,
-    capacity: PassedProofSchema,
-  }),
+  ...GenesisPrerequisiteEvidenceSchema.shape,
   recognitionProfile: GenesisRecognitionProfileSchema,
   ratifiedAnchor: z.strictObject({
     foundingDecisionEventId: z.string().uuid(),
@@ -120,6 +318,54 @@ export const GenesisStartupEvidenceSchema = z.strictObject({
 export type GenesisStartupEvidence = z.infer<
   typeof GenesisStartupEvidenceSchema
 >;
+
+export function genesisPrerequisiteEvidenceDigest(
+  candidate: unknown,
+): `0x${string}` {
+  const evidence = GenesisPrerequisiteEvidenceSchema.parse(candidate);
+  return sha256Commitment({
+    format: "ABL-GENESIS-PREREQUISITE-EVIDENCE-V1",
+    liveProofs: evidence.liveProofs,
+    foundingCohort: evidence.foundingCohort,
+    foundingExhibition: evidence.foundingExhibition,
+    foundingDecisions: evidence.foundingDecisions.filter(
+      ({ topic }) => topic !== "GENESIS_RELEASE",
+    ),
+    funding: evidence.funding,
+  });
+}
+
+export function foundingExhibitionReplayResultDigest(
+  candidate: unknown,
+): `0x${string}` {
+  const exhibition = FoundingExhibitionBindingSchema.parse(candidate);
+  return sha256Commitment({
+    protocol: "abl-role-complete-founding-exhibition-replay-v1",
+    gameId: exhibition.agentEvidence.gameId,
+    finalizedPayloadDigest: exhibition.finalizedPayloadDigest,
+    finalStateRoot: exhibition.finalStateRoot,
+    eventMerkleRoot: exhibition.eventMerkleRoot,
+    agentEvidenceDigest: sha256Commitment(exhibition.agentEvidence),
+    exact: true,
+    inferenceInvocations: exhibition.inferenceInvocations,
+  });
+}
+
+export function foundingExhibitionPublicDeliveryResultDigest(
+  candidate: unknown,
+): `0x${string}` {
+  const exhibition = FoundingExhibitionBindingSchema.parse(candidate);
+  return sha256Commitment({
+    protocol: "abl-live-public-exhibition-delivery-v1",
+    gameId: exhibition.agentEvidence.gameId,
+    finalizedPayloadDigest: exhibition.finalizedPayloadDigest,
+    finalStateRoot: exhibition.finalStateRoot,
+    eventMerkleRoot: exhibition.eventMerkleRoot,
+    classification: exhibition.classification,
+    canonical: exhibition.canonical,
+    recognitionLevel: exhibition.recognitionLevel,
+  });
+}
 
 export interface GenesisStartupAssessment {
   operatingProfile: "PRODUCTION_V1_PRE_GENESIS" | "PRODUCTION_GENESIS";
@@ -164,6 +410,63 @@ export function assessGenesisStartupEvidence(
   );
   blockers.push(...database.missing.map((missing) => `Database: ${missing}`));
 
+  const cohortRoles = evidence.foundingCohort.roles;
+  const exhibition = evidence.foundingExhibition;
+  const exhibitionAuthority = exhibition.agentEvidence.authorityEvidence;
+  if (
+    exhibitionAuthority === undefined ||
+    sha256Commitment(exhibitionAuthority.participants) !==
+      sha256Commitment(cohortRoles)
+  )
+    blockers.push(
+      "Founding exhibition does not use the complete twenty-career cohort",
+    );
+  const { evidenceCommitment, ...agentEvidenceBody } = exhibition.agentEvidence;
+  if (
+    sha256Commitment(agentEvidenceBody) !== evidenceCommitment ||
+    exhibition.agentEvidence.decisionCounts.players !==
+      exhibition.agentEvidence.possessionCount * 20 ||
+    exhibition.agentEvidence.decisionCounts.coaches !==
+      exhibition.agentEvidence.possessionCount * 4 ||
+    exhibition.agentEvidence.decisionCounts.referees !==
+      exhibition.agentEvidence.possessionCount * 3 ||
+    exhibition.agentEvidence.decisionCounts.replayOfficials !==
+      exhibition.agentEvidence.possessionCount * 2 ||
+    exhibitionAuthority === undefined ||
+    sha256Commitment(exhibitionAuthority.decisionRoots) !==
+      sha256Commitment(exhibition.agentEvidence.decisionRoots)
+  )
+    blockers.push("Founding exhibition authority evidence is invalid");
+  const expectedReplayDigest = foundingExhibitionReplayResultDigest(exhibition);
+  if (exhibition.exactReplay.digest !== expectedReplayDigest)
+    blockers.push("Founding exhibition exact-replay proof is invalid");
+  const expectedDeliveryDigest =
+    foundingExhibitionPublicDeliveryResultDigest(exhibition);
+  if (exhibition.publicDelivery.digest !== expectedDeliveryDigest)
+    blockers.push("Founding exhibition public-delivery proof is invalid");
+
+  const decisions = new Map(
+    evidence.foundingDecisions.map((decision) => [decision.topic, decision]),
+  );
+  if (
+    evidence.foundingDecisions.some(
+      ({ ratificationEventId }) =>
+        !evidence.releaseManifest.ratificationEventIds.includes(
+          ratificationEventId,
+        ),
+    )
+  )
+    blockers.push(
+      "Release manifest does not bind every non-rejected founding decision",
+    );
+  if (
+    evidence.releaseManifest.testResultDigest !==
+    genesisPrerequisiteEvidenceDigest(evidence)
+  )
+    blockers.push(
+      "Release manifest does not bind the complete Genesis prerequisites",
+    );
+
   const releaseDigest = sha256Commitment(evidence.releaseManifest);
   const profileDigest = sha256Commitment(evidence.recognitionProfile);
   if (
@@ -200,11 +503,30 @@ export function assessGenesisStartupEvidence(
   const anchor = evidence.ratifiedAnchor;
   const releaseAuthorization = evidence.genesisReleaseAuthorization;
   const checkpoint = evidence.genesisCheckpoint;
+  const recognitionDecision = decisions.get("RECOGNITION_PROFILE")!;
+  const releaseDecision = decisions.get("GENESIS_RELEASE")!;
+  const resourceScheduleDecision = decisions.get("RESOURCE_SCHEDULE")!;
   const { authorizationCommitment, ...releaseAuthorizationBody } =
     releaseAuthorization;
   if (
     anchor.decisionCommitment !== profile.decisionCommitment ||
+    recognitionDecision.ratificationEventId !==
+      profile.foundingDecisionEventId ||
+    recognitionDecision.decisionCommitment !== profile.decisionCommitment ||
+    recognitionDecision.recognitionMechanism !== profile.mechanism ||
+    sha256Commitment(recognitionDecision.authorizationSignatures) !==
+      sha256Commitment(anchor.ratificationSignatures) ||
     releaseAuthorization.releaseManifestDigest !== releaseDigest ||
+    releaseDecision.releaseManifestDigest !== releaseDigest ||
+    releaseDecision.ratificationEventId !==
+      releaseAuthorization.foundingDecisionEventId ||
+    releaseDecision.decisionCommitment !==
+      releaseAuthorization.decisionCommitment ||
+    releaseDecision.eligible !== 20 ||
+    releaseDecision.eligibilitySnapshotCommitment !==
+      evidence.foundingCohort.eligibilitySnapshotCommitment ||
+    sha256Commitment(releaseDecision.authorizationSignatures) !==
+      sha256Commitment(releaseAuthorization.authorizationSignatures) ||
     !evidence.releaseManifest.ratificationEventIds.includes(
       releaseAuthorization.foundingDecisionEventId,
     ) ||
@@ -216,6 +538,29 @@ export function assessGenesisStartupEvidence(
       "Founding decisions do not authorize the recognition profile and Genesis release",
     );
   }
+  if (
+    evidence.funding.resourceScheduleDecisionEventId !==
+    resourceScheduleDecision.ratificationEventId
+  )
+    blockers.push("Genesis funding is not bound to the resource schedule");
+  const releaseEffectiveAt = Date.parse(evidence.releaseManifest.effectiveAt);
+  const requiredCoverageEnd = releaseEffectiveAt + 30 * 24 * 60 * 60 * 1_000;
+  const fundingEnvelopes = [
+    evidence.funding.operating,
+    evidence.funding.windDown,
+  ];
+  if (
+    fundingEnvelopes.some(
+      (funding) =>
+        funding.prepaidAmountCents < funding.requiredAmountCents ||
+        Date.parse(funding.prepaidAt) > releaseEffectiveAt ||
+        Date.parse(funding.coverageStartsAt) > releaseEffectiveAt ||
+        Date.parse(funding.coverageEndsAt) < requiredCoverageEnd,
+    )
+  )
+    blockers.push(
+      "Season Zero operation and wind-down reserve are not separately prepaid for thirty days",
+    );
   const commitmentPairs = [
     [anchor.constitutionDigest, checkpoint.constitutionDigest, "constitution"],
     [anchor.verifierDigest, checkpoint.verifierDigest, "verifier"],

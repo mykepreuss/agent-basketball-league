@@ -2,6 +2,7 @@ import {
   CandidateIntakeRepository,
   CandidateProvisioner,
   DryRunCandidateControlPlane,
+  assessGenesisStartupEvidence,
   decryptCandidateEnvelope,
   parseCandidateIntakePolicy,
   type CandidateProvisioningRepository,
@@ -12,7 +13,11 @@ import { z } from "zod";
 
 import { createCandidateProvisionerServer } from "./server.js";
 import { CandidateEdgeProvisioningRepository } from "./edge-repository.js";
-import { BlaxelCandidateSandboxControlPlane } from "./blaxel-control-plane.js";
+import {
+  BlaxelCandidateSandboxControlPlane,
+  parseCandidateRuntimeAssignments,
+  type CandidateRuntimeScope,
+} from "./blaxel-control-plane.js";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -47,9 +52,15 @@ const envelopeKey = secret("ABL_CANDIDATE_ENVELOPE_KEY");
 const controlPlaneMode = z
   .enum(["DRY_RUN", "APPROVED_LIVE"])
   .parse(process.env.ABL_CANDIDATE_CONTROL_PLANE_MODE ?? "DRY_RUN");
+const liveRuntimeScope =
+  controlPlaneMode === "APPROVED_LIVE" ? candidateRuntimeScope() : null;
+const genesisEvidenceDigest =
+  liveRuntimeScope?.mode === "POST_GENESIS_SINGLE"
+    ? verifiedGenesisEvidenceDigest()
+    : undefined;
 const targetApplicationId =
-  controlPlaneMode === "APPROVED_LIVE"
-    ? z.uuid().parse(required("ABL_CANDIDATE_TARGET_APPLICATION_ID"))
+  liveRuntimeScope !== null && liveRuntimeScope.mode !== "CAPPED_FOUNDING"
+    ? liveRuntimeScope.assignment.applicationId
     : null;
 const controlPlane =
   controlPlaneMode === "DRY_RUN"
@@ -58,20 +69,16 @@ const controlPlane =
         workspace: required("ABL_CANDIDATE_WORKSPACE"),
         region: required("ABL_CANDIDATE_REGION"),
         imageReference: required("ABL_CANDIDATE_BODY_IMAGE_REFERENCE"),
-        authorizedApplicationId: targetApplicationId!,
+        runtimeScope: liveRuntimeScope!,
         authorizationId: required(
           "ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID",
         ),
-        fixedBrokerOrigin: required("ABL_CANDIDATE_FIXED_BROKER_ORIGIN"),
-        fixedBrokerHost: required("ABL_CANDIDATE_FIXED_BROKER_HOST"),
-        fixedBrokerResourceName: required("ABL_CANDIDATE_FIXED_BROKER_NAME"),
+        ...(genesisEvidenceDigest === undefined
+          ? {}
+          : { genesisEvidenceDigest }),
         fixedBrokerImageReference: required(
           "ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE",
         ),
-        capabilityTokenBase64: required(
-          "ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64",
-        ),
-        previewToken: required("ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN"),
       });
 if (
   controlPlaneMode === "APPROVED_LIVE" &&
@@ -101,6 +108,46 @@ const provisioner = new CandidateProvisioner({
   ),
   makeReceiptId: uuidv7,
 });
+
+function candidateRuntimeScope(): CandidateRuntimeScope {
+  const mode = z
+    .enum(["BOUNDED_SINGLE", "CAPPED_FOUNDING", "POST_GENESIS_SINGLE"])
+    .parse(process.env.ABL_CANDIDATE_RUNTIME_SCOPE ?? "BOUNDED_SINGLE");
+  if (mode === "CAPPED_FOUNDING")
+    return {
+      mode,
+      assignments: parseCandidateRuntimeAssignments(
+        JSON.parse(
+          required("ABL_CANDIDATE_RUNTIME_ASSIGNMENTS_JSON"),
+        ) as unknown,
+      ),
+    };
+  return {
+    mode,
+    assignment: {
+      applicationId: z
+        .uuid()
+        .parse(required("ABL_CANDIDATE_TARGET_APPLICATION_ID")),
+      fixedBrokerOrigin: required("ABL_CANDIDATE_FIXED_BROKER_ORIGIN"),
+      fixedBrokerResourceName: required("ABL_CANDIDATE_FIXED_BROKER_NAME"),
+      capabilityTokenBase64: required(
+        "ABL_CANDIDATE_FIXED_BROKER_CAPABILITY_TOKEN_B64",
+      ),
+      previewToken: required("ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN"),
+    },
+  };
+}
+
+function verifiedGenesisEvidenceDigest(): `0x${string}` {
+  const assessment = assessGenesisStartupEvidence(
+    JSON.parse(required("ABL_GENESIS_STARTUP_EVIDENCE_JSON")),
+  );
+  if (!assessment.ready || assessment.evidenceDigest === null)
+    throw new Error(
+      `Post-Genesis provisioning evidence rejected: ${assessment.blockers.join("; ")}`,
+    );
+  return assessment.evidenceDigest;
+}
 if (process.env.ABL_CANDIDATE_PROVISIONER_MODE === "JOB") {
   blStartJob(async (candidate: unknown) => {
     const task = CandidateProvisioningTaskSchema.parse(candidate);
@@ -121,6 +168,7 @@ if (process.env.ABL_CANDIDATE_PROVISIONER_MODE === "JOB") {
   const app = createCandidateProvisionerServer({
     provisioner,
     authorizationToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
+    controlPlaneMode,
   });
   await app.listen({
     host: process.env.HOST ?? "0.0.0.0",

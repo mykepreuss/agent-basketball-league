@@ -3,6 +3,7 @@ kind: Sandbox
 metadata:
   name: abl-private-storage-broker
   labels:
+    abl-trust-domain: abl-private
     abl-workspace-role: private
     abl-drive-role: ciphertext-broker
     abl-release: ${ABL_RELEASE_ID}

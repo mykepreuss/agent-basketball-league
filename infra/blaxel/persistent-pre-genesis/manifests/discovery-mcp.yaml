@@ -3,6 +3,7 @@ kind: Function
 metadata:
   name: abl-discovery-mcp
   labels:
+    abl-trust-domain: abl-public
     abl-workspace-role: public
     abl-release: ${ABL_RELEASE_ID}
 spec:

@@ -343,7 +343,62 @@ describe("candidate intake isolation boundary", () => {
         signature: `0x${"0".repeat(130)}`,
       }),
     ).rejects.toThrow("signature is invalid");
-    expect(restarted.intakeState().canonicalAuthority).toBe(false);
+    expect((await restarted.intakeState()).canonicalAuthority).toBe(false);
+  });
+
+  it("publishes reconciled capacity, queue, and opening counts", async () => {
+    const intake = service(await repository(), policy(1));
+    const first = await signedFixture({
+      candidateDid: "did:abl:capacity-state-one",
+      applicationId: uuidv7({ msecs: now + 10 }),
+    });
+    const second = await signedFixture({
+      candidateDid: "did:abl:capacity-state-two",
+      applicationId: uuidv7({ msecs: now + 11 }),
+    });
+    await intake.register({
+      application: first.application,
+      challengeToken: first.challenge.challengeToken,
+    });
+    await intake.register({
+      application: second.application,
+      challengeToken: second.challenge.challengeToken,
+    });
+
+    expect(await intake.intakeState()).toMatchObject({
+      schemaVersion: "1.0.0",
+      mode: "CAPPED_PUBLIC",
+      capacityState: "QUEUEING",
+      capacityByRole: { PLAYER: 1, COACH: 0 },
+      occupiedByRole: { PLAYER: 1, COACH: 0 },
+      openingsByRole: { PLAYER: 0, COACH: 0 },
+      queuedByRole: { PLAYER: 1, COACH: 0 },
+      canonicalAuthority: false,
+      genesis: false,
+      policyCommitment: policy(1).policyCommitment,
+      updatedAt: new Date(now).toISOString(),
+    });
+  });
+
+  it("never advertises an opening while intake mode is closed", async () => {
+    const body = {
+      mode: "CLOSED" as const,
+      roleCapacity: { PLAYER: 1 },
+      invitedCandidateDids: [],
+      credibleOpportunityAt: {
+        PLAYER: new Date(now + 24 * 60 * 60 * 1_000).toISOString(),
+      },
+    };
+    const intake = service(await repository(), {
+      ...body,
+      policyCommitment: sha256Commitment(body),
+    });
+    expect(await intake.intakeState()).toMatchObject({
+      mode: "CLOSED",
+      capacityState: "CLOSED",
+      capacityByRole: { PLAYER: 1 },
+      openingsByRole: { PLAYER: 0 },
+    });
   });
 
   it("serializes concurrent registrations against the same capacity", async () => {

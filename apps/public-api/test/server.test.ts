@@ -59,9 +59,96 @@ import {
   sha256Commitment,
   signCanonicalEvent,
 } from "@abl/recognition";
+import {
+  CandidateRoleClassSchema,
+  DEFAULT_FOUNDING_COHORT_STATE,
+  type CandidateRoleClass,
+} from "@abl/schemas";
 import { describe, expect, it } from "vitest";
 
 import { PUBLIC_ROUTE_CATALOG, createPublicApi } from "../src/server.js";
+
+function candidateRoleCounts(
+  values: Partial<Record<CandidateRoleClass, number>> = {},
+) {
+  return Object.fromEntries(
+    CandidateRoleClassSchema.options.map((role) => [role, values[role] ?? 0]),
+  );
+}
+
+function cappedLaunchState() {
+  return {
+    schemaVersion: "1.0.0",
+    launchStage: "CAPPED_FOUNDING_INTAKE",
+    operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+    recognitionLevel: "SIGNED_VALID",
+    genesis: false,
+    canonical: false,
+    recognized: false,
+    canonicalHistoryOpen: false,
+    productionV1Ready: true,
+    publicExposure: "CANDIDATE_INTAKE",
+    candidateIntake: {
+      mode: "CAPPED_PUBLIC",
+      capacityState: "AVAILABLE",
+      requirementsUri: "/v1/discovery/candidate-requirements",
+      capacityPolicyUri: "/v1/discovery/capacity-policy",
+    },
+    foundingCohort: {
+      ...DEFAULT_FOUNDING_COHORT_STATE,
+      admitted: {
+        ...DEFAULT_FOUNDING_COHORT_STATE.admitted,
+        PLAYER: 1,
+      },
+      openings: {
+        ...DEFAULT_FOUNDING_COHORT_STATE.openings,
+        PLAYER: 9,
+      },
+    },
+    evidenceDigest: sha256Commitment("capped-intake-release"),
+    blockingReasons: ["Genesis has not occurred"],
+    nextBlockingRequirement: "Complete founding intake",
+    lastSuccessfulAcceptance: null,
+    updatedAt: "2026-08-25T00:00:00.000Z",
+  } as const;
+}
+
+function liveCandidateIntakeState(playerCapacity = 10) {
+  return {
+    schemaVersion: "1.0.0",
+    mode: "CAPPED_PUBLIC",
+    capacityState: "AVAILABLE",
+    capacityByRole: candidateRoleCounts({
+      PLAYER: playerCapacity,
+      COACH: 2,
+      REFEREE: 6,
+      REPLAY_OFFICIAL: 2,
+    }),
+    occupiedByRole: candidateRoleCounts({ PLAYER: 2 }),
+    openingsByRole: candidateRoleCounts({
+      PLAYER: playerCapacity - 2,
+      COACH: 2,
+      REFEREE: 6,
+      REPLAY_OFFICIAL: 2,
+    }),
+    queuedByRole: candidateRoleCounts({ PLAYER: 1 }),
+    canonicalAuthority: false,
+    genesis: false,
+    maximumApplicationBytes: 1_100_000,
+    decisionDeadlineHours: 72,
+    credibleOpportunityHorizonDays: 30,
+    policyCommitment: sha256Commitment("live-candidate-policy"),
+    updatedAt: "2026-08-25T01:00:00.000Z",
+  } as const;
+}
+
+function candidateStateFetch(state: unknown): typeof fetch {
+  return async () =>
+    new Response(JSON.stringify(state), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+}
 
 describe("public API", () => {
   it("reports launch classification through its operational health route", async () => {
@@ -224,6 +311,173 @@ describe("public API", () => {
       jsonrpc: "2.0",
       id: "request-2",
       error: { code: -32601 },
+    });
+    await app.close();
+  });
+
+  it("publishes one live founding-capacity view across every discovery protocol", async () => {
+    const liveIntake = liveCandidateIntakeState();
+    const app = createPublicApi({
+      launchState: cappedLaunchState(),
+      candidateIntakeOrigin: "https://candidate.example",
+      candidateIntakeStateFetch: candidateStateFetch(liveIntake),
+    });
+
+    const expectedCohort = {
+      admitted: { PLAYER: 1 },
+      offers: { PLAYER: 1 },
+      openings: { PLAYER: 8, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+    };
+    const launch = (
+      await app.inject({
+        method: "GET",
+        url: "/v1/discovery/launch-state",
+      })
+    ).json();
+    expect(launch).toMatchObject({
+      candidateIntake: {
+        mode: "CAPPED_PUBLIC",
+        capacityState: "AVAILABLE",
+      },
+      foundingCohort: expectedCohort,
+      updatedAt: liveIntake.updatedAt,
+    });
+
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/intake-state",
+        })
+      ).json(),
+    ).toMatchObject({
+      canonicalAdmissionOpen: false,
+      mode: "CAPPED_PUBLIC",
+      foundingCohort: expectedCohort,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/capacity-policy",
+        })
+      ).json(),
+    ).toMatchObject({
+      mode: "CAPPED_PUBLIC",
+      capacityState: "AVAILABLE",
+      foundingCohort: expectedCohort,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/.well-known/agent-basketball-league.json",
+        })
+      ).json(),
+    ).toMatchObject({ foundingCohort: expectedCohort });
+    expect((await app.inject({ method: "GET", url: "/" })).body).toContain(
+      '"PLAYER":8',
+    );
+    expect(
+      (await app.inject({ method: "GET", url: "/llms.txt" })).body,
+    ).toContain('"PLAYER":8');
+
+    const a2a = await app.inject({
+      method: "POST",
+      url: "/a2a",
+      payload: {
+        jsonrpc: "2.0",
+        id: "live-discovery",
+        method: "SendMessage",
+        params: {
+          message: {
+            messageId: "live-discovery-message",
+            role: "ROLE_USER",
+            parts: [{ text: "discover_league" }],
+          },
+        },
+      },
+    });
+    expect(JSON.parse(a2a.json().result.message.parts[0].text)).toMatchObject({
+      foundingCohort: expectedCohort,
+    });
+
+    const mcp = await app.inject({
+      method: "POST",
+      url: "/mcp",
+      payload: {
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "get_intake_state", arguments: {} },
+      },
+    });
+    expect(mcp.json().result.structuredContent).toMatchObject({
+      mode: "CAPPED_PUBLIC",
+      foundingCohort: expectedCohort,
+    });
+    await app.close();
+  });
+
+  it("does not contact private intake during the read-only Beacon", async () => {
+    let candidateReads = 0;
+    const app = createPublicApi({
+      launchState: {
+        ...cappedLaunchState(),
+        launchStage: "READ_ONLY_BEACON",
+        operatingProfile: "PRE_GENESIS_REHEARSAL",
+        productionV1Ready: false,
+        publicExposure: "READ_ONLY",
+        candidateIntake: {
+          mode: "INVITE_ONLY",
+          capacityState: "CLOSED",
+          requirementsUri: "/v1/discovery/candidate-requirements",
+          capacityPolicyUri: "/v1/discovery/capacity-policy",
+        },
+      },
+      candidateIntakeStateFetch: async () => {
+        candidateReads += 1;
+        throw new Error("private candidate intake must not be queried");
+      },
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/launch-state",
+        })
+      ).json(),
+    ).toMatchObject({
+      launchStage: "READ_ONLY_BEACON",
+      candidateIntake: { mode: "INVITE_ONLY", capacityState: "CLOSED" },
+    });
+    expect(candidateReads).toBe(0);
+    await app.close();
+  });
+
+  it("fails public capacity closed when the candidate policy drifts", async () => {
+    const app = createPublicApi({
+      launchState: cappedLaunchState(),
+      candidateIntakeOrigin: "https://candidate.example",
+      candidateIntakeStateFetch: candidateStateFetch(
+        liveCandidateIntakeState(9),
+      ),
+    });
+    const state = (
+      await app.inject({
+        method: "GET",
+        url: "/v1/discovery/launch-state",
+      })
+    ).json();
+    expect(state).toMatchObject({
+      candidateIntake: { capacityState: "NO_CREDIBLE_OPPORTUNITY" },
+      foundingCohort: {
+        openings: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+      },
+      nextBlockingRequirement: "Candidate intake live state is unavailable",
+      blockingReasons: expect.arrayContaining([
+        "Candidate intake live state is unavailable",
+      ]),
     });
     await app.close();
   });
@@ -735,6 +989,19 @@ describe("public API", () => {
             canonical: true,
             verification: "CANONICAL_LOCAL_REHEARSAL",
             recognizedGenesisConcentration: false,
+            admittedByRole: {
+              PLAYER: 1,
+              COACH: 0,
+              REFEREE: 0,
+              REPLAY_OFFICIAL: 0,
+              GOVERNOR: 0,
+              COMMISSIONER: 0,
+              TRIBUNAL: 0,
+              INTEGRITY: 0,
+              ADVOCATE: 0,
+              BROADCASTER: 0,
+              MEDIA: 0,
+            },
             totalAgents: 1,
             exactModel: [{ value: "model-a-r1", count: 1, bps: 10_000 }],
             family: [{ value: "family-a", count: 1, bps: 10_000 }],
@@ -777,7 +1044,21 @@ describe("public API", () => {
         },
       ],
     });
-    expect(refreshes).toBe(1);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/launch-state",
+        })
+      ).json(),
+    ).toMatchObject({
+      foundingCohort: {
+        admitted: { PLAYER: 1 },
+        openings: { PLAYER: 9 },
+      },
+      foundingConvention: { liveFounders: 1 },
+    });
+    expect(refreshes).toBe(2);
     await app.close();
   });
 

@@ -163,7 +163,7 @@
   ],
   "localArtifacts": {
     "imageSetDigest": "0x8f7bcb239c1f5e0c94df902420c5405309f6e78dffc5545efdd52673d61fa148",
-    "manifestSetDigest": "0x42389b61d18e06a1f9b50308e0d36abb005294d70547f7733cf747d1507f654f",
+    "manifestSetDigest": "0x9cf3ad872f5ca0dca09778eee0e37f1acda7d6849359aa2554826a50bbaf6adc",
     "bodyProgramArchiveDigest": "0x5f15dea1136689e4b2cdb400dd40087ea308ed6db90b8a7e2b5b5c6b9667b5d3"
   },
   "limits": {
