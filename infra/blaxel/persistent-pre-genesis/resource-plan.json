@@ -64,7 +64,8 @@
   },
   "budget": {
     "currency": "USD",
-    "maximumProjectedMonthlyInfrastructure": 25,
+    "projectedMonthlyInfrastructureReference": 25,
+    "projectedMonthlyCostEnforcement": "ADVISORY",
     "minimumBlaxelBalance": 5,
     "automaticTopUp": false,
     "approvalRequiredBeforeFirstMutation": false,

@@ -58,7 +58,8 @@ export const PublicBeaconSoakPolicySchema = z.strictObject({
   thresholds: z.strictObject({
     maximumErrorRate: z.number().min(0).max(0.01),
     maximumSampleGapSeconds: z.literal(600),
-    maximumProjectedMonthlyCostUsd: z.literal(25),
+    maximumProjectedMonthlyCostUsd: z.number().positive(),
+    projectedMonthlyCostEnforcement: z.enum(["ADVISORY", "HARD_CEILING"]),
     minimumBlaxelBalanceUsd: z.literal(5),
   }),
 });
@@ -322,16 +323,18 @@ export function assessPublicBeaconSoak(
     if (count !== 0)
       blockers.push(`public soak recorded ${incident}: ${count}`);
 
-  if (
-    evidence.metrics.projectedMonthlyCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("projected monthly cost exceeded threshold");
-  if (
-    evidence.metrics.observedCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("observed public-soak cost exceeded the monthly ceiling");
+  if (policy.thresholds.projectedMonthlyCostEnforcement === "HARD_CEILING") {
+    if (
+      evidence.metrics.projectedMonthlyCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("projected monthly cost exceeded threshold");
+    if (
+      evidence.metrics.observedCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("observed public-soak cost exceeded the monthly ceiling");
+  }
   if (
     evidence.metrics.blaxelBalanceUsd <
     policy.thresholds.minimumBlaxelBalanceUsd

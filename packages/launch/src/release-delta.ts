@@ -232,16 +232,18 @@ export function assessPrivateReleaseDelta(
   for (const [incident, count] of Object.entries(evidence.incidents))
     if (count !== 0)
       blockers.push(`release delta recorded ${incident}: ${count}`);
-  if (
-    evidence.metrics.projectedMonthlyCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("projected monthly cost exceeded threshold");
-  if (
-    evidence.metrics.observedDeltaCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("observed release-delta cost exceeded threshold");
+  if (policy.thresholds.projectedMonthlyCostEnforcement === "HARD_CEILING") {
+    if (
+      evidence.metrics.projectedMonthlyCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("projected monthly cost exceeded threshold");
+    if (
+      evidence.metrics.observedDeltaCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("observed release-delta cost exceeded threshold");
+  }
   if (
     evidence.metrics.blaxelBalanceUsd <
     policy.thresholds.minimumBlaxelBalanceUsd

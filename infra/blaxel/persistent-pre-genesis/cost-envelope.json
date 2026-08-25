@@ -4,6 +4,7 @@
   "currency": "USD",
   "monthDays": 30,
   "maximumProjectedMonthlyCost": 25,
+  "projectedMonthlyCostEnforcement": "ADVISORY",
   "publishedRates": {
     "sandboxActiveGiBSecond": 0.0000115,
     "sandboxSnapshotGiBMonth": 0.2,
@@ -39,15 +40,14 @@
   },
   "acceptance": {
     "method": "Replace every projected component with the greater of its declared cap projection or the first 24 hours of measured usage annualized to 30 days.",
-    "passWhen": "The recalculated total is no greater than USD 25, the Blaxel balance is at least USD 5, automatic top-up remains off, and Neon remains within its Free allowance.",
+    "passWhen": "Projected and observed cost are reported for operator awareness; the Blaxel balance is at least USD 5, automatic top-up remains off, and Neon remains within its Free allowance.",
     "failClosedOn": [
       "published unit-price increase",
       "measured usage above a declared usage cap",
       "Neon paid-plan requirement",
       "Agent Drive beta pricing change",
       "automatic top-up enabled",
-      "Blaxel balance below USD 5",
-      "recalculated total above USD 25"
+      "Blaxel balance below USD 5"
     ]
   },
   "sources": [

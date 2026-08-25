@@ -52,6 +52,7 @@
   },
   "budget": {
     "maximumProjectedMonthlyInfrastructureUsd": 25,
+    "projectedMonthlyCostEnforcement": "ADVISORY",
     "minimumBlaxelBalanceUsd": 5,
     "automaticTopUp": false
   },

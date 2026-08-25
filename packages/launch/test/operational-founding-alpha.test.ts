@@ -41,6 +41,7 @@ const stageCPolicy = {
     maximumProjectionLagMs: 2_000,
     maximumQueueDepth: 100,
     maximumProjectedMonthlyCostUsd: 25,
+    projectedMonthlyCostEnforcement: "HARD_CEILING",
     minimumBlaxelBalanceUsd: 5,
   },
 } as const;
@@ -138,6 +139,7 @@ const stageDPolicy = {
     maximumErrorRate: 0.01,
     maximumSampleGapSeconds: 600,
     maximumProjectedMonthlyCostUsd: 25,
+    projectedMonthlyCostEnforcement: "HARD_CEILING",
     minimumBlaxelBalanceUsd: 5,
   },
 } as const;

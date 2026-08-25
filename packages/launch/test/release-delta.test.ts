@@ -36,6 +36,7 @@ const policy = {
     maximumProjectionLagMs: 2_000,
     maximumQueueDepth: 100,
     maximumProjectedMonthlyCostUsd: 25,
+    projectedMonthlyCostEnforcement: "HARD_CEILING",
     minimumBlaxelBalanceUsd: 5,
   },
 } as const;
@@ -316,6 +317,30 @@ describe("private release-delta handoff", () => {
         "private release delta emitted Genesis claims",
       ]),
     );
+  });
+
+  it("reports cost without blocking an advisory-cost release delta", () => {
+    const observed = deltaEvidence();
+    const result = assessPrivateReleaseDelta(
+      {
+        ...policy,
+        thresholds: {
+          ...policy.thresholds,
+          projectedMonthlyCostEnforcement: "ADVISORY",
+        },
+      },
+      deploymentMap,
+      stageCEvidence(),
+      {
+        ...observed,
+        metrics: {
+          ...observed.metrics,
+          projectedMonthlyCostUsd: 250,
+          observedDeltaCostUsd: 250,
+        },
+      },
+    );
+    expect(result).toMatchObject({ status: "PASS", blockers: [] });
   });
 
   it("rejects mutable, duplicated, mismatched, and incomplete image evidence", () => {

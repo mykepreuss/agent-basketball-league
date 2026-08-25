@@ -29,6 +29,7 @@
     "maximumErrorRate": 0.01,
     "maximumSampleGapSeconds": 600,
     "maximumProjectedMonthlyCostUsd": 25,
+    "projectedMonthlyCostEnforcement": "ADVISORY",
     "minimumBlaxelBalanceUsd": 5
   }
 }

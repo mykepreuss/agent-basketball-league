@@ -62,6 +62,7 @@ export const PersistentSoakPolicySchema = z.strictObject({
     maximumProjectionLagMs: z.number().int().nonnegative(),
     maximumQueueDepth: z.number().int().nonnegative(),
     maximumProjectedMonthlyCostUsd: z.number().positive(),
+    projectedMonthlyCostEnforcement: z.enum(["ADVISORY", "HARD_CEILING"]),
     minimumBlaxelBalanceUsd: z.number().nonnegative(),
   }),
 });
@@ -417,16 +418,18 @@ export function assessPersistentSoak(
     blockers.push("queue depth exceeded threshold");
   if (evidence.metrics.candidateProvisioningFailures !== 0)
     blockers.push("candidate flow recorded provisioning failures");
-  if (
-    evidence.metrics.projectedMonthlyCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("projected monthly cost exceeded threshold");
-  if (
-    evidence.metrics.observedCostUsd >
-    policy.thresholds.maximumProjectedMonthlyCostUsd
-  )
-    blockers.push("observed soak cost exceeded the monthly ceiling");
+  if (policy.thresholds.projectedMonthlyCostEnforcement === "HARD_CEILING") {
+    if (
+      evidence.metrics.projectedMonthlyCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("projected monthly cost exceeded threshold");
+    if (
+      evidence.metrics.observedCostUsd >
+      policy.thresholds.maximumProjectedMonthlyCostUsd
+    )
+      blockers.push("observed soak cost exceeded the monthly ceiling");
+  }
   if (
     evidence.metrics.blaxelBalanceUsd <
     policy.thresholds.minimumBlaxelBalanceUsd

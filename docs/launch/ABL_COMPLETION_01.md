@@ -121,7 +121,7 @@ Once these conditions pass, no extra preflight, enterprise-hardening exercise, n
 ## Fixed defaults
 
 - Initial hosting uses Blaxel URLs; no custom domain is required.
-- Infrastructure target: USD 25 per month.
+- Infrastructure reference: USD 25 per month is advisory; cost remains measured and unnecessary capacity is avoided, but the number is not a completion blocker.
 - Model limit: USD 20 per career and USD 50 per month across the experiment.
 - Initial Season Zero operating envelope: up to USD 75 for 30 days, plus a separate USD 75 wind-down reserve, subject to explicit approval.
 - Automatic top-up remains off; Blaxel balance floor is USD 5.
