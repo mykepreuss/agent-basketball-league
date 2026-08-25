@@ -333,6 +333,30 @@ describe("persistent private soak", () => {
     expect(assessPersistentSoak(policy, composed).status).toBe("PASS");
   });
 
+  it("accepts provider recovery metadata without copying it into final evidence", () => {
+    const inputs = collectorInputs();
+    const composed = composePersistentSoakEvidence({
+      policy,
+      ...inputs,
+      exercises: {
+        ...inputs.exercises,
+        recovery: {
+          ...inputs.exercises.recovery,
+          job: "abl-recovery-verifier",
+          executionId: "execution-under-test",
+          temporaryBranchId: "branch-under-test",
+          temporaryBranchDeleted: true,
+          temporarySecretMaterialDeleted: true,
+          sourceCredentialExposed: false,
+          restoredCredentialExposed: false,
+        },
+      },
+    });
+
+    expect(composed.recovery).toEqual(evidence().recovery);
+    expect(composed.recovery).not.toHaveProperty("temporaryBranchId");
+  });
+
   it("accepts several service failures from the same failed sample run", () => {
     const inputs = collectorInputs();
     const services = structuredClone(inputs.samples.services);

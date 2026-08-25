@@ -156,6 +156,10 @@ const PersistentSoakSamplesSchema = z.object({
   secretValuesRecorded: z.literal(false),
 });
 
+const PersistentSoakRecoveryInputSchema = z.object(
+  PersistentSoakEvidenceSchema.shape.recovery.shape,
+);
+
 const PersistentSoakExercisesSchema = z.object({
   stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
   releaseId: z.string().min(1).max(200),
@@ -163,7 +167,7 @@ const PersistentSoakExercisesSchema = z.object({
   publicExposure: z.literal("NONE"),
   exercises: PersistentSoakEvidenceSchema.shape.exercises,
   incidents: PersistentSoakEvidenceSchema.shape.incidents,
-  recovery: PersistentSoakEvidenceSchema.shape.recovery,
+  recovery: PersistentSoakRecoveryInputSchema,
   secretValuesRecorded: z.literal(false),
 });
 
@@ -242,7 +246,14 @@ export function composePersistentSoakEvidence(input: {
       canonicalClaims: metrics.canonicalClaims,
       genesisClaims: metrics.genesisClaims,
     },
-    recovery: exercises.recovery,
+    recovery: {
+      sourceEventCount: exercises.recovery.sourceEventCount,
+      restoredEventCount: exercises.recovery.restoredEventCount,
+      sourceOutboxCount: exercises.recovery.sourceOutboxCount,
+      restoredOutboxCount: exercises.recovery.restoredOutboxCount,
+      sourceStateRoot: exercises.recovery.sourceStateRoot,
+      restoredStateRoot: exercises.recovery.restoredStateRoot,
+    },
   });
 }
 
