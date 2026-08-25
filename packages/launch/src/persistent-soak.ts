@@ -1,4 +1,5 @@
 import { sha256Commitment } from "@abl/recognition";
+import { LaunchStateSchema, SchemaVersion } from "@abl/schemas";
 import { z } from "zod";
 
 const PersistentWorkspaceSchema = z.literal("agent-basketball-league");
@@ -366,4 +367,54 @@ export function assessPersistentSoak(
     blockers: uniqueBlockers,
   };
   return { ...result, resultDigest: sha256Commitment(result) };
+}
+
+export function createReadOnlyBeaconLaunchState(
+  policyInput: unknown,
+  evidenceInput: unknown,
+  acceptedAtInput: string,
+) {
+  const evidence = PersistentSoakEvidenceSchema.parse(evidenceInput);
+  const result = assessPersistentSoak(policyInput, evidence);
+  if (result.status !== "PASS")
+    throw new Error(
+      `Stage C private soak has not passed: ${result.blockers.join(", ")}`,
+    );
+  const acceptedAt = z.iso.datetime({ offset: true }).parse(acceptedAtInput);
+  return LaunchStateSchema.parse({
+    schemaVersion: SchemaVersion,
+    launchStage: "READ_ONLY_BEACON",
+    operatingProfile: "PRE_GENESIS_REHEARSAL",
+    recognitionLevel: "SIGNED_VALID",
+    genesis: false,
+    canonical: false,
+    recognized: false,
+    canonicalHistoryOpen: false,
+    productionV1Ready: false,
+    publicExposure: "READ_ONLY",
+    candidateIntake: {
+      mode: "INVITE_ONLY",
+      capacityState: "CLOSED",
+      requirementsUri: "/v1/discovery/candidate-requirements",
+      capacityPolicyUri: "/v1/discovery/capacity-policy",
+    },
+    evidenceDigest: sha256Commitment({
+      stageCResultDigest: result.resultDigest,
+      releaseId: evidence.releaseId,
+    }),
+    blockingReasons: [
+      "Public Beacon clean-room verification is pending",
+      "Public 24-hour soak is pending",
+      "Founding-agent ratification is pending",
+      "Genesis has not occurred",
+    ],
+    nextBlockingRequirement:
+      "Complete clean-room external-agent discovery and the 24-hour public soak",
+    lastSuccessfulAcceptance: {
+      stage: "READ_ONLY_BEACON",
+      evidenceId: "ABL-COMPLETION-01-STAGE-C",
+      acceptedAt,
+    },
+    updatedAt: acceptedAt,
+  });
 }

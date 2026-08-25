@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Current launch-plan digest: `0xf8b9f925ddedc198e0f3bd1ce01e9a29689b38384465d444d083d6467bbe49d9`. Current implementation-source digest: `0x642fcc43bfa02b410198800cd28727e771ab46c6d2c1f77ec2a8a17c0a71446b`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Current launch-plan digest: `0xf8b9f925ddedc198e0f3bd1ce01e9a29689b38384465d444d083d6467bbe49d9`. Current implementation-source digest: `0xa2458e1ab12801e99e7370ea1bf0be5a563984b91400ac8531450aa1b80c2a09`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -46,7 +46,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
 - [x] Replace the ordinary career image's advanced proxy/iptables/CA initialization with the reviewed Sandbox body profile; preserve the former work under the inactive future untrusted-code profile.
 - [x] Add an approval-gated Agent Drive topology applicator without executing it.
-- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 398 passing assertions across 83 files and 118 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
+- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the integrated founding-and-Beacon correction records 411 passing assertions across 85 files and 118 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
 - [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
 - [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-02` closed before provider mutation when fresh image packaging exposed output-path-sensitive pnpm metadata; remove that deployment-only metadata and reproduce byte-identical contexts beneath `/tmp` and `/private/tmp`.
@@ -141,7 +141,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [x] Adopt the existing `agent-basketball-league` workspace as the production topology and enforce private, core, competition, and public-surface boundaries with scoped workload identities, credentials, previews, PostgreSQL roles, and Agent Drive ACLs.
+- [~] Retain `agent-basketball-league` as the sole physical production workspace and complete its operational proof. Scoped workload identities, credentials, private previews, PostgreSQL roles, Agent Drive ACLs, credential rotation, and clean-room recovery are live-proved; the deterministic 24-hour private soak remains in progress.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.

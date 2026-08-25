@@ -196,6 +196,9 @@ importers:
 
   apps/candidate-edge:
     dependencies:
+      "@abl/foundation":
+        specifier: workspace:*
+        version: link:../../packages/foundation
       "@abl/launch":
         specifier: workspace:*
         version: link:../../packages/launch

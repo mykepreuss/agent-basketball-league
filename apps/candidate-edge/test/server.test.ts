@@ -9,6 +9,7 @@ import {
   CANDIDATE_EDGE_ROUTE_CATALOG,
   assertCandidateEdgeIsolation,
   createCandidateEdge,
+  type CandidateRateLimitOptions,
 } from "../src/server.js";
 import { createCandidateGateway } from "../src/gateway.js";
 
@@ -23,6 +24,7 @@ async function app(
   input: {
     provisioningToken?: string;
     authorityToken?: string;
+    rateLimit?: CandidateRateLimitOptions;
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "abl-edge-"));
@@ -108,6 +110,53 @@ describe("candidate edge", () => {
     expect(response.json()).toEqual({
       error: "candidate_intake_request_rejected",
     });
+    await server.close();
+  });
+
+  it("throttles candidate writes with explicit retry guidance", async () => {
+    let now = 1_000;
+    const server = await app({
+      rateLimit: {
+        readMaximumRequests: 1,
+        writeMaximumRequests: 1,
+        windowMs: 10_000,
+        maximumTrackedKeys: 10,
+        now: () => now,
+      },
+    });
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/v1/candidates/challenge",
+          payload: { candidateDid: "did:abl:candidate" },
+        })
+      ).statusCode,
+    ).toBe(200);
+    const throttled = await server.inject({
+      method: "POST",
+      url: "/v1/candidates/register",
+      payload: {},
+    });
+    expect(throttled.statusCode).toBe(429);
+    expect(throttled.headers["retry-after"]).toBe("10");
+    expect(throttled.json()).toEqual({
+      error: "candidate_intake_rate_limited",
+      retryAfterSeconds: 10,
+    });
+    expect(
+      (await server.inject({ method: "GET", url: "/health" })).statusCode,
+    ).toBe(200);
+    now = 11_000;
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/v1/candidates/challenge",
+          payload: { candidateDid: "did:abl:candidate" },
+        })
+      ).statusCode,
+    ).toBe(200);
     await server.close();
   });
 

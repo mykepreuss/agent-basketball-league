@@ -63,6 +63,7 @@ import {
   type InstitutionalKeyRecord,
   type ThresholdPolicy,
 } from "@abl/recognition";
+import { LaunchStateSchema } from "@abl/schemas";
 import type { Address, TypedDataDomain } from "viem";
 import { z } from "zod";
 
@@ -680,6 +681,17 @@ const operatingProfile = z
     "PRODUCTION_GENESIS",
   ])
   .parse(process.env.ABL_OPERATING_PROFILE ?? "PRE_GENESIS_CLOSED");
+const launchState =
+  process.env.ABL_LAUNCH_STATE_JSON === undefined
+    ? undefined
+    : LaunchStateSchema.parse(
+        JSON.parse(process.env.ABL_LAUNCH_STATE_JSON) as unknown,
+      );
+if (
+  launchState !== undefined &&
+  launchState.operatingProfile !== operatingProfile
+)
+  throw new Error("Launch state and operating profile do not match");
 if (operatingProfile === "PRODUCTION_V1_PRE_GENESIS") {
   const checkpoints = checkpointProjections?.checkpoints() ?? [];
   if (
@@ -762,13 +774,20 @@ const genesisStartupEvidence =
     : undefined;
 const apiOptions: PublicApiOptions = {
   operatingProfile,
+  ...(launchState === undefined ? {} : { launchState }),
   ...(genesisStartupEvidence === undefined ? {} : { genesisStartupEvidence }),
   ...(process.env.ABL_PUBLIC_ORIGIN === undefined
     ? {}
     : { publicOrigin: process.env.ABL_PUBLIC_ORIGIN }),
+  ...(process.env.ABL_ARENA_ORIGIN === undefined
+    ? {}
+    : { arenaOrigin: process.env.ABL_ARENA_ORIGIN }),
   ...(process.env.ABL_CANDIDATE_INTAKE_ORIGIN === undefined
     ? {}
     : { candidateIntakeOrigin: process.env.ABL_CANDIDATE_INTAKE_ORIGIN }),
+  ...(process.env.ABL_RELEASE_ID === undefined
+    ? {}
+    : { sourceRevision: process.env.ABL_RELEASE_ID }),
 };
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)

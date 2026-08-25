@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export * from "./service-auth.js";
+export * from "./rate-limit.js";
 
 export const WorkspaceNameSchema = z.literal("agent-basketball-league");
 export type WorkspaceName = z.infer<typeof WorkspaceNameSchema>;

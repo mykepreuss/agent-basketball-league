@@ -93,8 +93,31 @@ describe("public API", () => {
   });
 
   it("serves discovery, OpenAPI, and MCP without claiming genesis", async () => {
+    const sourceRevision = "a".repeat(40);
+    const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
     const app = createPublicApi({
+      arenaOrigin: "https://arena.example",
       candidateIntakeOrigin: "https://candidate.example",
+      sourceRevision,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/starter-kit",
+        })
+      ).json(),
+    ).toMatchObject({
+      sourceRevision,
+      artifacts: {
+        skill: {
+          source: `${sourceRoot}/skills/abl-league`,
+          entrypoint: "SKILL.md",
+        },
+        verifier: {
+          source: `${sourceRoot}/packages/recognition`,
+        },
+      },
     });
     const discovery = await app.inject({
       method: "GET",
@@ -107,6 +130,7 @@ describe("public API", () => {
       candidateIntake: {
         respond: "https://candidate.example/v1/candidate-intake/respond",
       },
+      arena: "https://arena.example/arena",
     });
     expect(
       (
@@ -119,11 +143,28 @@ describe("public API", () => {
       endpoints: {
         register: "https://candidate.example/v1/candidates/register",
       },
+      rateLimits: {
+        readRequestsPerMinute: 120,
+        writeRequestsPerMinute: 30,
+        exceededStatus: 429,
+        retryHeader: "Retry-After",
+      },
     });
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const paths = openApi.json().paths as Record<string, object>;
     expect(Object.keys(paths)).toHaveLength(30);
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
+    expect(paths["/"]).toMatchObject({
+      get: {
+        responses: {
+          "429": {
+            headers: {
+              "Retry-After": { schema: { type: "integer", minimum: 1 } },
+            },
+          },
+        },
+      },
+    });
     const mcp = await app.inject({
       method: "POST",
       url: "/mcp",
@@ -248,6 +289,56 @@ describe("public API", () => {
         })
       ).statusCode,
     ).toBe(404);
+    await app.close();
+  });
+
+  it("throttles public interactions with bounded 429 retry guidance", async () => {
+    let now = 1_000;
+    const app = createPublicApi({
+      rateLimit: {
+        readMaximumRequests: 2,
+        interactionMaximumRequests: 1,
+        windowMs: 10_000,
+        maximumTrackedKeys: 10,
+        now: () => now,
+      },
+    });
+    expect((await app.inject({ method: "GET", url: "/" })).statusCode).toBe(
+      200,
+    );
+    expect(
+      (await app.inject({ method: "GET", url: "/llms.txt" })).statusCode,
+    ).toBe(200);
+    const throttledRead = await app.inject({ method: "GET", url: "/" });
+    expect(throttledRead.statusCode).toBe(429);
+    expect(throttledRead.headers["retry-after"]).toBe("10");
+    expect(throttledRead.json()).toEqual({
+      error: "rate_limit_exceeded",
+      retryAfterSeconds: 10,
+    });
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/mcp",
+          payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        })
+      ).statusCode,
+    ).toBe(200);
+    const throttledInteraction = await app.inject({
+      method: "POST",
+      url: "/a2a",
+      payload: {},
+    });
+    expect(throttledInteraction.statusCode).toBe(429);
+    expect(throttledInteraction.headers["ratelimit-remaining"]).toBe("0");
+    expect(
+      (await app.inject({ method: "GET", url: "/health" })).statusCode,
+    ).toBe(200);
+    now = 11_000;
+    expect((await app.inject({ method: "GET", url: "/" })).statusCode).toBe(
+      200,
+    );
     await app.close();
   });
 

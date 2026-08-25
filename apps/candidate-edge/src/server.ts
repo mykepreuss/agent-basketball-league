@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { FixedWindowRateLimiter } from "@abl/foundation";
 import {
   CandidateIntakeApplicationSchema,
   CandidateOpportunityResponseSchema,
@@ -72,10 +73,57 @@ function failClosed(reply: {
   return reply.code(400).send({ error: "candidate_intake_request_rejected" });
 }
 
+export interface CandidateRateLimitOptions {
+  readMaximumRequests?: number;
+  writeMaximumRequests?: number;
+  windowMs?: number;
+  maximumTrackedKeys?: number;
+  now?: () => number;
+}
+
+export function installCandidateRateLimit(
+  app: FastifyInstance,
+  options: CandidateRateLimitOptions = {},
+): void {
+  const windowMs = options.windowMs ?? 60_000;
+  const maximumTrackedKeys = options.maximumTrackedKeys ?? 50_000;
+  const readLimiter = new FixedWindowRateLimiter({
+    maximumRequests: options.readMaximumRequests ?? 120,
+    windowMs,
+    maximumTrackedKeys,
+  });
+  const writeLimiter = new FixedWindowRateLimiter({
+    maximumRequests: options.writeMaximumRequests ?? 30,
+    windowMs,
+    maximumTrackedKeys,
+  });
+  app.addHook("onRequest", async (request, reply) => {
+    const path = request.url.split("?", 1)[0] ?? request.url;
+    if (path === "/health" || path.startsWith("/internal/")) return;
+    const isWrite = request.method !== "GET";
+    const decision = (isWrite ? writeLimiter : readLimiter).consume(
+      `${request.ip}:${isWrite ? "write" : "read"}`,
+      options.now?.(),
+    );
+    reply.header("ratelimit-limit", decision.limit);
+    reply.header("ratelimit-remaining", decision.remaining);
+    reply.header("ratelimit-reset", decision.retryAfterSeconds);
+    if (!decision.allowed)
+      return reply
+        .header("retry-after", decision.retryAfterSeconds)
+        .code(429)
+        .send({
+          error: "candidate_intake_rate_limited",
+          retryAfterSeconds: decision.retryAfterSeconds,
+        });
+  });
+}
+
 export function createCandidateEdge(input: {
   intake: CandidateIntakeService;
   provisioningToken?: string;
   authorityToken?: string;
+  rateLimit?: CandidateRateLimitOptions;
 }): FastifyInstance {
   for (const [name, token] of [
     ["provisioning", input.provisioningToken],
@@ -84,6 +132,7 @@ export function createCandidateEdge(input: {
     if (token !== undefined && Buffer.byteLength(token) < 32)
       throw new Error(`Candidate ${name} token is too short`);
   const app = Fastify({ logger: false, bodyLimit: 1_200_000 });
+  installCandidateRateLimit(app, input.rateLimit);
 
   function hasToken(
     expectedToken: string | undefined,

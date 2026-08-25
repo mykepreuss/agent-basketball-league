@@ -6,6 +6,7 @@ import {
   PersistentSoakPolicySchema,
   assessPersistentSoak,
   composePersistentSoakEvidence,
+  createReadOnlyBeaconLaunchState,
 } from "../src/persistent-soak.js";
 
 const requiredServices = [
@@ -370,6 +371,40 @@ describe("persistent private soak", () => {
         samples: { ...inputs.samples, failedRuns: 1 },
       }),
     ).toThrow("Stage C aggregate and per-service failures are inconsistent");
+  });
+
+  it("derives the evidence-bound read-only Beacon state only after Stage C passes", () => {
+    const launchState = createReadOnlyBeaconLaunchState(
+      policy,
+      evidence(),
+      "2026-08-25T00:01:00.000Z",
+    );
+    expect(launchState).toMatchObject({
+      launchStage: "READ_ONLY_BEACON",
+      operatingProfile: "PRE_GENESIS_REHEARSAL",
+      recognitionLevel: "SIGNED_VALID",
+      publicExposure: "READ_ONLY",
+      genesis: false,
+      canonical: false,
+      recognized: false,
+      canonicalHistoryOpen: false,
+      productionV1Ready: false,
+      candidateIntake: { mode: "INVITE_ONLY", capacityState: "CLOSED" },
+      lastSuccessfulAcceptance: {
+        stage: "READ_ONLY_BEACON",
+        evidenceId: "ABL-COMPLETION-01-STAGE-C",
+      },
+    });
+    expect(launchState.evidenceDigest).toMatch(/^0x[0-9a-f]{64}$/);
+
+    const shortSoak = { ...evidence(), endedAt: "2026-08-24T23:00:00.000Z" };
+    expect(() =>
+      createReadOnlyBeaconLaunchState(
+        policy,
+        shortSoak,
+        "2026-08-25T00:01:00.000Z",
+      ),
+    ).toThrow("Stage C private soak has not passed");
   });
 
   it("fails only the observed Stage C criteria without reopening earlier stages", () => {

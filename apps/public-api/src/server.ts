@@ -1,4 +1,5 @@
 import {
+  FixedWindowRateLimiter,
   ServiceAuthenticationError,
   type ServiceRequestVerifier,
   type SignedServiceRequestHeaders,
@@ -93,6 +94,17 @@ export interface RouteCatalogEntry {
   path: string;
   exposure: "PUBLIC_READ_ONLY" | "PUBLIC_DISCOVERY";
 }
+
+export interface PublicRateLimitOptions {
+  readMaximumRequests?: number;
+  interactionMaximumRequests?: number;
+  windowMs?: number;
+  maximumTrackedKeys?: number;
+  now?: () => number;
+}
+
+const defaultReadMaximumRequests = 120;
+const defaultInteractionMaximumRequests = 30;
 
 export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   { method: "GET", path: "/", exposure: "PUBLIC_DISCOVERY" },
@@ -239,7 +251,18 @@ const collectionPaths = [
 
 interface OpenApiOperation {
   operationId: string;
-  responses: { "200": { description: string } };
+  responses: {
+    "200": { description: string };
+    "429": {
+      description: string;
+      headers: {
+        "Retry-After": {
+          description: string;
+          schema: { type: "integer"; minimum: number };
+        };
+      };
+    };
+  };
 }
 
 const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
@@ -250,7 +273,18 @@ const openApiPaths = PUBLIC_ROUTE_CATALOG.filter(
   paths[path] ??= {};
   paths[path][method] = {
     operationId: `${method}-${route.path}`,
-    responses: { "200": { description: "Successful response" } },
+    responses: {
+      "200": { description: "Successful response" },
+      "429": {
+        description: "Rate limit exceeded; retry after the indicated delay",
+        headers: {
+          "Retry-After": {
+            description: "Seconds until another request should be attempted",
+            schema: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
   };
   return paths;
 }, {});
@@ -343,8 +377,11 @@ export interface PublicApiOptions {
   launchState?: unknown;
   genesisStartupEvidence?: unknown;
   publicOrigin?: string;
+  arenaOrigin?: string;
   candidateIntakeOrigin?: string;
+  sourceRevision?: string;
   publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
+  rateLimit?: PublicRateLimitOptions;
   projections?: PublicProjectionReader;
   contractProjections?: PublicContractProjectionReader;
   draftProjections?: PublicDraftProjectionReader;
@@ -512,6 +549,43 @@ export function createPublicApi(
   options: PublicApiOptions = {},
 ): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 512_000 });
+  const rateLimitWindowMs = options.rateLimit?.windowMs ?? 60_000;
+  const maximumTrackedKeys = options.rateLimit?.maximumTrackedKeys ?? 50_000;
+  const readRateLimiter = new FixedWindowRateLimiter({
+    maximumRequests:
+      options.rateLimit?.readMaximumRequests ?? defaultReadMaximumRequests,
+    windowMs: rateLimitWindowMs,
+    maximumTrackedKeys,
+  });
+  const interactionRateLimiter = new FixedWindowRateLimiter({
+    maximumRequests:
+      options.rateLimit?.interactionMaximumRequests ??
+      defaultInteractionMaximumRequests,
+    windowMs: rateLimitWindowMs,
+    maximumTrackedKeys,
+  });
+  app.addHook("onRequest", async (request, reply) => {
+    const path = request.url.split("?", 1)[0] ?? request.url;
+    if (path === "/health" || path.startsWith("/v1/internal/")) return;
+    const isInteraction = request.method !== "GET";
+    const decision = (
+      isInteraction ? interactionRateLimiter : readRateLimiter
+    ).consume(
+      `${request.ip}:${isInteraction ? "interaction" : "read"}`,
+      options.rateLimit?.now?.(),
+    );
+    reply.header("ratelimit-limit", decision.limit);
+    reply.header("ratelimit-remaining", decision.remaining);
+    reply.header("ratelimit-reset", decision.retryAfterSeconds);
+    if (!decision.allowed)
+      return reply
+        .header("retry-after", decision.retryAfterSeconds)
+        .code(429)
+        .send({
+          error: "rate_limit_exceeded",
+          retryAfterSeconds: decision.retryAfterSeconds,
+        });
+  });
   const rehearsal =
     options.projections !== undefined ||
     options.contractProjections !== undefined ||
@@ -639,10 +713,17 @@ export function createPublicApi(
   const publicOrigin = publicServiceOrigin(
     options.publicOrigin ?? "https://agent-basketball-league.invalid",
   );
+  const arenaOrigin = publicServiceOrigin(options.arenaOrigin ?? publicOrigin);
   const candidateIntakeOrigin = publicServiceOrigin(
     options.candidateIntakeOrigin ??
       "https://candidate.agent-basketball-league.invalid",
   );
+  const sourceRevision = options.sourceRevision ?? "main";
+  if (!/^(?:main|[0-9a-f]{40})$/.test(sourceRevision))
+    throw new Error(
+      "Public source revision must be main or a full commit hash",
+    );
+  const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
   const candidateRequirements = {
     version: 1,
     genesis: launchState.genesis,
@@ -673,6 +754,12 @@ export function createPublicApi(
       redeliver: `${candidateIntakeOrigin}/v1/candidate-intake/redeliver`,
       respond: `${candidateIntakeOrigin}/v1/candidate-intake/respond`,
     },
+    rateLimits: {
+      readRequestsPerMinute: defaultReadMaximumRequests,
+      writeRequestsPerMinute: defaultInteractionMaximumRequests,
+      exceededStatus: 429,
+      retryHeader: "Retry-After",
+    },
     canonicalAdmission: launchState.canonicalHistoryOpen,
   } as const;
   const capacityPolicy = {
@@ -688,6 +775,19 @@ export function createPublicApi(
     version: 1,
     state: "PRE_GENESIS_REFERENCE",
     repository: "https://github.com/mykepreuss/agent-basketball-league",
+    sourceRevision,
+    artifacts: {
+      skill: {
+        name: "abl-league",
+        source: `${sourceRoot}/skills/abl-league`,
+        entrypoint: "SKILL.md",
+      },
+      verifier: {
+        name: "@abl/recognition",
+        source: `${sourceRoot}/packages/recognition`,
+        rules: `${sourceRoot}/docs/architecture/VERIFIER_RULES.md`,
+      },
+    },
     documents: [
       "/docs/governance/FOUNDING_CONSTITUTION.md",
       "/docs/governance/DISCLOSURE_CONSTITUTION.md",
@@ -789,7 +889,7 @@ export function createPublicApi(
     mcp: "/mcp",
     a2aAgentCard: "/.well-known/agent-card.json",
     a2a: "/a2a",
-    arena: "/arena",
+    arena: `${arenaOrigin}/arena`,
     publicApiPrefix: "/v1/public",
     launchState: "/v1/discovery/launch-state",
     candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
