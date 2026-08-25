@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadGameProof } from "./data.js";
+import { loadGameProof, loadLiveGameSnapshots } from "./data.js";
 
 const game = {
   state: "REHEARSAL",
@@ -17,6 +17,7 @@ const game = {
   shotClockMs: 22_000,
   players: [],
   events: [],
+  snapshots: [],
   segments: [],
   finalStateRoot: `0x${"2".repeat(64)}`,
   eventMerkleRoot: `0x${"3".repeat(64)}`,
@@ -76,5 +77,38 @@ describe("arena public game classification", () => {
         }),
       ),
     ).rejects.toThrow("history classification is inconsistent");
+  });
+
+  it("accepts only consistently classified live snapshot contracts", async () => {
+    const snapshot = {
+      format: "ABL-LIVE-GAME-SNAPSHOT-V1",
+      gameId: "game-1",
+      cursor: "p:0:0",
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
+      recognitionLevel: "SIGNED_VALID",
+    };
+    await expect(
+      loadLiveGameSnapshots("game-1", "https://public.example", () =>
+        response({
+          canonical: false,
+          historyClassification: "PRE_GENESIS_EXPERIMENT",
+          recognitionLevel: "SIGNED_VALID",
+          snapshotFormat: "ABL-LIVE-GAME-SNAPSHOT-V1",
+          items: [snapshot],
+        }),
+      ),
+    ).resolves.toMatchObject([{ cursor: "p:0:0" }]);
+    await expect(
+      loadLiveGameSnapshots("game-1", "https://public.example", () =>
+        response({
+          canonical: false,
+          historyClassification: "PRE_GENESIS_EXPERIMENT",
+          recognitionLevel: "SIGNED_VALID",
+          snapshotFormat: "ABL-LIVE-GAME-SNAPSHOT-V1",
+          items: [{ ...snapshot, canonical: true }],
+        }),
+      ),
+    ).rejects.toThrow("classification is inconsistent");
   });
 });

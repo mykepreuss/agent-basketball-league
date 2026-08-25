@@ -84,7 +84,7 @@ beforeAll(async () => {
     broadcastStartedAt: at,
     broadcastIntervalMs: 1,
   });
-});
+}, 30_000);
 
 function completionEvidence() {
   const replay = replayRoleCompleteFoundingExhibition(finalizedGame);

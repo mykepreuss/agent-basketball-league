@@ -1,5 +1,6 @@
 import {
   REHEARSAL_RECOGNITION_DOMAIN,
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
   createRehearsalPlayerBodies,
   runFirstPossessionRehearsal,
   type CognitionReceipt,
@@ -158,6 +159,7 @@ export async function createStagingPossessionCommand(input: {
       stateRoot: event.stateRoot,
       eventHash: event.eventHash,
     })),
+    snapshots: result.snapshots,
     segments: result.segments,
     finalStateRoot: result.finalStateRoot,
     eventMerkleRoot: result.eventMerkleRoot,
@@ -176,7 +178,7 @@ export async function createStagingPossessionCommand(input: {
     previousEventHash: null,
     payload: { source, decisionProof: rehearsal.decisionProof },
     stateRoot: result.finalStateRoot,
-    schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+    schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
     timestamp,
   });
   return {

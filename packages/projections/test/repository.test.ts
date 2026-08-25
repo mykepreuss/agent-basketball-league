@@ -25,6 +25,7 @@ function projection(): PublicGameProjection {
     shotClockMs: 18_000,
     players: [],
     events: [],
+    snapshots: [],
     segments: [],
     finalStateRoot: hash,
     eventMerkleRoot: hash,

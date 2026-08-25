@@ -1,7 +1,16 @@
 import { merkleRoot, sha256Commitment } from "@abl/recognition";
-import type { AgentPlayedPossessionAuthorityDids } from "@abl/basketball";
+import {
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V1,
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
+  type AgentPlayedPossessionAuthorityDids,
+} from "@abl/basketball";
 
 import type { PublicGameProjection } from "./repository.js";
+
+export {
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V1,
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
+};
 
 export type PublicGameProjectionSource = Omit<
   PublicGameProjection,
@@ -55,6 +64,7 @@ export function validatePossessionResolvedPayload(
   payload: unknown,
   aggregateId?: string,
   stateRoot?: string,
+  schemaDigest?: string,
 ): PossessionResolvedPayload {
   if (!isRecord(payload)) throw new Error("Projection payload is absent");
   const { source, decisionProof: proof } = payload;
@@ -67,6 +77,7 @@ export function validatePossessionResolvedPayload(
     !isRecord(source.score) ||
     !Array.isArray(source.players) ||
     !Array.isArray(source.events) ||
+    (source.snapshots !== undefined && !Array.isArray(source.snapshots)) ||
     !Array.isArray(source.segments) ||
     !isHash(source.finalStateRoot) ||
     !isHash(source.eventMerkleRoot) ||
@@ -78,20 +89,23 @@ export function validatePossessionResolvedPayload(
   }
   if (
     !hasExactKeys(payload, ["source", "decisionProof"]) ||
-    !hasExactKeys(source, [
-      "gameId",
-      "possessionId",
-      "score",
-      "gameClockMs",
-      "shotClockMs",
-      "players",
-      "events",
-      "segments",
-      "finalStateRoot",
-      "eventMerkleRoot",
-      "filmCommitment",
-      "finalSegmentHash",
-    ]) ||
+    !hasExactKeys(
+      source,
+      [
+        "gameId",
+        "possessionId",
+        "score",
+        "gameClockMs",
+        "shotClockMs",
+        "players",
+        "events",
+        "segments",
+        "finalStateRoot",
+        "eventMerkleRoot",
+        "filmCommitment",
+        "finalSegmentHash",
+      ].concat(source.snapshots === undefined ? [] : ["snapshots"]),
+    ) ||
     !hasExactKeys(source.score, ["home", "away"]) ||
     !hasExactKeys(
       proof,
@@ -124,6 +138,28 @@ export function validatePossessionResolvedPayload(
           "label",
           "stateRoot",
           "eventHash",
+        ]),
+    ) ||
+    (source.snapshots ?? []).some(
+      (snapshot) =>
+        !isRecord(snapshot) ||
+        !hasExactKeys(snapshot, [
+          "format",
+          "sequence",
+          "eventType",
+          "eventData",
+          "eventHash",
+          "stateRoot",
+          "gameId",
+          "possessionId",
+          "period",
+          "gameClockMs",
+          "shotClockMs",
+          "score",
+          "possessionTeam",
+          "phase",
+          "ball",
+          "players",
         ]),
     ) ||
     source.segments.some(
@@ -194,6 +230,15 @@ export function validatePossessionResolvedPayload(
   }
   const typed = payload as unknown as PossessionResolvedPayload;
   if (
+    schemaDigest !== undefined &&
+    ((typed.source.snapshots === undefined &&
+      schemaDigest !== POSSESSION_RESOLVED_SCHEMA_DIGEST_V1) ||
+      (typed.source.snapshots !== undefined &&
+        schemaDigest !== POSSESSION_RESOLVED_SCHEMA_DIGEST_V2))
+  ) {
+    throw new Error("Possession projection schema version is inconsistent");
+  }
+  if (
     (aggregateId !== undefined && typed.source.gameId !== aggregateId) ||
     (stateRoot !== undefined && typed.source.finalStateRoot !== stateRoot) ||
     !Number.isSafeInteger(typed.source.score.home) ||
@@ -235,6 +280,80 @@ export function validatePossessionResolvedPayload(
         !isHash(event.eventHash) ||
         !isHash(event.stateRoot),
     ) ||
+    (typed.source.snapshots !== undefined &&
+      typed.source.snapshots.length !== typed.source.events.length) ||
+    (typed.source.snapshots ?? []).some((snapshot, index) => {
+      const event = typed.source.events[index];
+      const segment = typed.source.segments[index];
+      const playerIds = snapshot.players.map(({ playerId }) => playerId);
+      return (
+        snapshot.format !== "ABL-POSSESSION-SNAPSHOT-V1" ||
+        snapshot.sequence !== index ||
+        snapshot.eventType !== event?.type ||
+        snapshot.eventHash !== event?.eventHash ||
+        snapshot.stateRoot !== event?.stateRoot ||
+        snapshot.gameId !== typed.source.gameId ||
+        snapshot.possessionId !== typed.source.possessionId ||
+        !Number.isSafeInteger(snapshot.period) ||
+        snapshot.period < 1 ||
+        !Number.isSafeInteger(snapshot.gameClockMs) ||
+        snapshot.gameClockMs < 0 ||
+        !Number.isSafeInteger(snapshot.shotClockMs) ||
+        snapshot.shotClockMs < 0 ||
+        snapshot.shotClockMs > 24_000 ||
+        !isRecord(snapshot.eventData) ||
+        !isRecord(snapshot.score) ||
+        !Number.isSafeInteger(snapshot.score.home) ||
+        snapshot.score.home < 0 ||
+        !Number.isSafeInteger(snapshot.score.away) ||
+        snapshot.score.away < 0 ||
+        (snapshot.possessionTeam !== "HOME" &&
+          snapshot.possessionTeam !== "AWAY") ||
+        !["LIVE", "DEAD", "FINAL"].includes(snapshot.phase) ||
+        !isRecord(snapshot.ball) ||
+        !hasExactKeys(snapshot.ball, ["xCm", "yCm", "possessorId"]) ||
+        !Number.isSafeInteger(snapshot.ball.xCm) ||
+        snapshot.ball.xCm < 0 ||
+        snapshot.ball.xCm > 2_865 ||
+        !Number.isSafeInteger(snapshot.ball.yCm) ||
+        snapshot.ball.yCm < 0 ||
+        snapshot.ball.yCm > 1_524 ||
+        !Array.isArray(snapshot.players) ||
+        snapshot.players.length !== 10 ||
+        new Set(playerIds).size !== 10 ||
+        (snapshot.ball.possessorId !== null &&
+          !playerIds.includes(snapshot.ball.possessorId)) ||
+        snapshot.players.some(
+          (player) =>
+            !isRecord(player) ||
+            !hasExactKeys(player, [
+              "playerId",
+              "team",
+              "position",
+              "xCm",
+              "yCm",
+            ]) ||
+            typeof player.playerId !== "string" ||
+            player.playerId === "" ||
+            (player.team !== "HOME" && player.team !== "AWAY") ||
+            !["PG", "SG", "SF", "PF", "C"].includes(player.position) ||
+            !Number.isSafeInteger(player.xCm) ||
+            player.xCm < 0 ||
+            player.xCm > 2_865 ||
+            !Number.isSafeInteger(player.yCm) ||
+            player.yCm < 0 ||
+            player.yCm > 1_524,
+        ) ||
+        snapshot.players.filter(({ team }) => team === "HOME").length !== 5 ||
+        snapshot.players.filter(({ team }) => team === "AWAY").length !== 5 ||
+        segment === undefined ||
+        segment.payloadCommitment !==
+          sha256Commitment({
+            type: snapshot.eventType,
+            data: snapshot.eventData,
+          })
+      );
+    }) ||
     typed.source.segments.length !== typed.source.events.length ||
     typed.source.segments.some(
       (segment, index) =>
@@ -259,6 +378,17 @@ export function validatePossessionResolvedPayload(
     typed.source.eventMerkleRoot !==
       merkleRoot(typed.source.events.map(({ eventHash }) => eventHash)) ||
     typed.source.finalStateRoot !== typed.source.events.at(-1)?.stateRoot ||
+    (typed.source.snapshots !== undefined &&
+      (typed.source.finalStateRoot !==
+        typed.source.snapshots.at(-1)?.stateRoot ||
+        sha256Commitment(typed.source.snapshots.at(-1)?.score) !==
+          sha256Commitment(typed.source.score) ||
+        typed.source.snapshots.at(-1)?.gameClockMs !==
+          typed.source.gameClockMs ||
+        typed.source.snapshots.at(-1)?.shotClockMs !==
+          typed.source.shotClockMs ||
+        sha256Commitment(typed.source.snapshots.at(-1)?.players) !==
+          sha256Commitment(typed.source.players))) ||
     typed.source.finalSegmentHash !==
       typed.source.segments.at(-1)?.segmentHash ||
     ![20, 30, 40].includes(typed.decisionProof.playerDecisionHashes.length) ||

@@ -118,6 +118,7 @@ Never put Blaxel workload tokens, Agent Drive credentials, `blfs`, database cred
 
 - **[Completion contract](docs/launch/ABL_COMPLETION_01.md)** — monotonic path from local proof through Operational Founding Alpha and Genesis-live.
 - **[Launch plan](docs/launch/LAUNCH_PLAN.md)** — approved architectural and launch reference.
+- **[Live-game projection contract](docs/architecture/LIVE_GAME_PROJECTION.md)** — authoritative snapshot, SSE resume, and Courtcast animation contract.
 - **[Stage D public Beacon runbook](docs/launch/STAGE_D_PUBLIC_BEACON.md)** — exact read-only exposure boundary.
 - **[Stage E capped founding intake](docs/launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md)** — next participation milestone; the runbook is not execution authority.
 - **[Founding constitution](docs/governance/FOUNDING_CONSTITUTION.md)** — constitutional proposal awaiting founding-agent ratification.

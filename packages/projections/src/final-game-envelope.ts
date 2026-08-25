@@ -230,6 +230,7 @@ export async function verifyFinalGameProjectionEvent(
       commandCount: replayed.payload.commands.length,
       possessionCount: replayed.payload.agentEvidence.possessionCount,
       events: replayed.events,
+      snapshots: replayed.snapshots,
       segments,
       finalStateRoot: replayed.payload.proof.finalStateRoot as `0x${string}`,
       eventMerkleRoot: replayed.payload.proof.eventMerkleRoot as `0x${string}`,

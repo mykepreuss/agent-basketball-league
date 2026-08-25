@@ -297,6 +297,19 @@ describe("durable finalized game projections", () => {
     expect(restarted.standings()).toEqual(first.standings());
 
     const path = join(root, "final-game-records", "000000000000.json");
+    const legacy = JSON.parse(
+      await readFile(path, "utf8"),
+    ) as FinalGameProjectionRecord;
+    delete legacy.projection.snapshots;
+    const { recordHash: _legacyRecordHash, ...legacyWithoutHash } = legacy;
+    legacy.recordHash = sha256Commitment(legacyWithoutHash);
+    await writeFile(path, `${JSON.stringify(legacy)}\n`, "utf8");
+    const upgradedLegacy = repository(root, finalized.payload.agentEvidence);
+    await upgradedLegacy.initialize();
+    expect(upgradedLegacy.game(gameId)?.snapshots).toHaveLength(
+      finalized.payload.commands.length + 1,
+    );
+
     const tampered = JSON.parse(
       await readFile(path, "utf8"),
     ) as FinalGameProjectionRecord;

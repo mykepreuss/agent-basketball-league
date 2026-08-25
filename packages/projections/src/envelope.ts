@@ -172,6 +172,7 @@ export async function verifyProjectionEvent(
       envelope.event.payload,
       envelope.event.aggregateId,
       envelope.event.stateRoot,
+      envelope.event.schemaDigest,
     );
   } catch {
     throw new ProjectionValidationError(

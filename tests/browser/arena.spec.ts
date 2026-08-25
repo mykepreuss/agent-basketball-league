@@ -67,11 +67,15 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
       "Latest verified action",
     );
     await expect(page.locator(".players > li")).toHaveCount(10);
+    await expect(page.locator(".live-court")).toBeVisible();
+    await expect(page.locator(".live-ball")).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Courtcast playback" }),
+    ).toBeVisible();
+    await expect(page.locator("main button")).toHaveCount(4);
   }
   await expect(
-    page.locator(
-      "main button, main input, main select, main textarea, main form",
-    ),
+    page.locator("main input, main select, main textarea, main form"),
   ).toHaveCount(0);
 
   const overflow = await page.evaluate(() => ({

@@ -13,6 +13,7 @@ import {
   replayFullGame,
   type FullGameEvent,
   type FullGameInput,
+  type FullGameSnapshot,
   type FullGameState,
   type GameCommand,
 } from "./full-game.js";
@@ -568,6 +569,7 @@ export function createAgentPlayedGameEvidence(input: {
 export function replayFinalizedGamePayload(input: unknown): {
   payload: FinalizedGamePayload;
   events: readonly FullGameEvent[];
+  snapshots: readonly FullGameSnapshot[];
   state: FullGameState;
 } {
   const payload = FinalizedGamePayloadSchema.parse(input);
@@ -614,7 +616,12 @@ export function replayFinalizedGamePayload(input: unknown): {
   ) {
     throw new Error("Finalized game does not replay exactly to a final state");
   }
-  return { payload, events: replay.events, state: replay.state };
+  return {
+    payload,
+    events: replay.events,
+    snapshots: replay.snapshots,
+    state: replay.state,
+  };
 }
 
 export function replayRoleCompleteFoundingExhibition(input: unknown): {

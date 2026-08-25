@@ -21,6 +21,7 @@ export * from "./founding-decision-repository.js";
 export * from "./founding-repository.js";
 export * from "./governance-envelope.js";
 export * from "./governance-repository.js";
+export * from "./live-game.js";
 export * from "./model-envelope.js";
 export * from "./model-repository.js";
 export * from "./payload.js";

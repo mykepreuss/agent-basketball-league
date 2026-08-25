@@ -91,6 +91,17 @@ export interface FullGameEvent {
   eventHash: `0x${string}`;
 }
 
+export interface FullGameSnapshot {
+  format: "ABL-FULL-GAME-SNAPSHOT-V1";
+  sequence: number;
+  event: FullGameEvent;
+  state: FullGameState;
+}
+
+export interface FullGameEngineOptions {
+  captureSnapshots?: boolean;
+}
+
 export interface FullGameInput {
   gameId: string;
   roster: Record<Lowercase<Team>, readonly string[]>;
@@ -123,10 +134,14 @@ export class FullGameEngine {
   readonly #commands: GameCommand[] = [];
   readonly #events: FullGameEvent[] = [];
   readonly #stateBeforeEvents = new Map<number, FullGameState>();
+  readonly #snapshots: FullGameSnapshot[] | null;
   #state: FullGameState;
   #pendingChallenge: { team: Team; targetEventSequence: number } | null = null;
 
-  public constructor(input: FullGameInput) {
+  public constructor(
+    input: FullGameInput,
+    options: FullGameEngineOptions = {},
+  ) {
     const allPlayers = [...input.roster.home, ...input.roster.away];
     assertDistinct(allPlayers, "Game roster");
     for (const team of ["HOME", "AWAY"] as const) {
@@ -142,6 +157,7 @@ export class FullGameEngine {
         throw new Error("Active player is absent from roster");
     }
     this.input = structuredClone(input);
+    this.#snapshots = options.captureSnapshots === true ? [] : null;
     this.#state = {
       gameId: input.gameId,
       period: 1,
@@ -198,6 +214,7 @@ export class FullGameEngine {
     } catch (error) {
       this.#state = stateBefore;
       this.#events.splice(eventCountBefore);
+      this.#snapshots?.splice(eventCountBefore);
       this.#pendingChallenge = pendingChallengeBefore;
       throw error;
     }
@@ -609,7 +626,7 @@ export class FullGameEngine {
       previousEventHash,
       stateRoot,
     });
-    this.#events.push({
+    const event: FullGameEvent = {
       sequence,
       type,
       period: this.#state.period,
@@ -618,6 +635,13 @@ export class FullGameEngine {
       previousEventHash,
       stateRoot,
       eventHash,
+    };
+    this.#events.push(event);
+    this.#snapshots?.push({
+      format: "ABL-FULL-GAME-SNAPSHOT-V1",
+      sequence,
+      event: structuredClone(event),
+      state: structuredClone(this.#state),
     });
   }
 
@@ -627,6 +651,10 @@ export class FullGameEngine {
 
   public events(): readonly FullGameEvent[] {
     return structuredClone(this.#events);
+  }
+
+  public snapshots(): readonly FullGameSnapshot[] {
+    return structuredClone(this.#snapshots ?? []);
   }
 
   public commands(): readonly GameCommand[] {
@@ -653,14 +681,23 @@ export function replayFullGame(
   commands: readonly GameCommand[],
   expected: ReturnType<FullGameEngine["proof"]>,
 ) {
-  const replay = new FullGameEngine(input);
-  for (const command of commands) replay.apply(command);
-  const proof = replay.proof();
+  const timeline = replayFullGameTimeline(input, commands);
+  const proof = timeline.engine.proof();
   return {
     exact: sha256Commitment(proof) === sha256Commitment(expected),
     proof,
-    state: replay.snapshot(),
-    events: replay.events(),
+    state: timeline.engine.snapshot(),
+    events: timeline.engine.events(),
+    snapshots: timeline.snapshots,
     inferenceInvocations: 0 as const,
   };
+}
+
+export function replayFullGameTimeline(
+  input: FullGameInput,
+  commands: readonly GameCommand[],
+): { engine: FullGameEngine; snapshots: readonly FullGameSnapshot[] } {
+  const replay = new FullGameEngine(input, { captureSnapshots: true });
+  for (const command of commands) replay.apply(command);
+  return { engine: replay, snapshots: replay.snapshots() };
 }

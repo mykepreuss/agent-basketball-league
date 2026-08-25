@@ -1,6 +1,7 @@
 import type {
   PublicFinalizedGameProjection,
   PublicGameProjection,
+  PublicLiveGameSnapshot,
 } from "@abl/projections";
 import {
   DEFAULT_FOUNDING_COHORT_STATE,
@@ -38,12 +39,26 @@ export type PublicArenaGame =
   | PublicArenaPossessionGame
   | PublicArenaFinalizedGame;
 
+export type PublicArenaLiveSnapshot = Omit<
+  PublicLiveGameSnapshot,
+  "canonical"
+> &
+  PublicArenaHistoryStatus;
+
 interface GamesResponse {
   state: string;
   canonical: boolean;
   historyClassification: PublicArenaHistoryClassification;
   recognitionLevel: PublicArenaHistoryStatus["recognitionLevel"];
   items: PublicArenaGame[];
+}
+
+interface LiveSnapshotsResponse {
+  canonical: boolean;
+  historyClassification: PublicArenaHistoryClassification;
+  recognitionLevel: PublicArenaHistoryStatus["recognitionLevel"];
+  snapshotFormat: "ABL-LIVE-GAME-SNAPSHOT-V1";
+  items: PublicArenaLiveSnapshot[];
 }
 
 export type PublicArenaLaunchState = ReturnType<typeof LaunchStateSchema.parse>;
@@ -151,4 +166,36 @@ export async function loadPossessionProof(
     throw new Error("The latest public game is a finalized-game archive");
   }
   return projection;
+}
+
+export async function loadLiveGameSnapshots(
+  gameId: string,
+  baseUrl = process.env.ABL_PUBLIC_API_URL ?? "http://127.0.0.1:8080",
+  fetcher: typeof fetch = fetch,
+  previewToken = process.env.ABL_PUBLIC_API_PREVIEW_TOKEN,
+): Promise<readonly PublicArenaLiveSnapshot[]> {
+  const response = await fetcher(
+    `${baseUrl}/v1/public/games/${encodeURIComponent(gameId)}/snapshots?limit=120`,
+    {
+      cache: "no-store",
+      headers: requestHeaders(previewToken),
+    },
+  );
+  if (!response.ok)
+    throw new Error(`Live game snapshot request failed: ${response.status}`);
+  const payload = (await response.json()) as LiveSnapshotsResponse;
+  if (payload.snapshotFormat !== "ABL-LIVE-GAME-SNAPSHOT-V1")
+    throw new Error("Live game snapshot contract is unsupported");
+  if (
+    payload.items.some(
+      (snapshot) =>
+        snapshot.gameId !== gameId ||
+        snapshot.historyClassification !== payload.historyClassification ||
+        snapshot.canonical !== payload.canonical ||
+        snapshot.recognitionLevel !== payload.recognitionLevel,
+    )
+  ) {
+    throw new Error("Live game snapshot classification is inconsistent");
+  }
+  return payload.items;
 }

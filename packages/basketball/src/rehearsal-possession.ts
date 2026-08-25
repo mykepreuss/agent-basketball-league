@@ -233,6 +233,7 @@ export interface FirstPossessionRehearsalOptions {
   refereeCareerNumbers?: readonly number[];
   windowCount?: 2 | 3 | 4;
   windowDurationMs?: number;
+  captureSnapshots?: boolean;
 }
 
 export async function runFirstPossessionRehearsal(
@@ -488,7 +489,12 @@ export async function runFirstPossessionRehearsal(
   };
   return {
     input,
-    result: await resolvePossession(input),
+    result: await resolvePossession(
+      input,
+      options.captureSnapshots === undefined
+        ? {}
+        : { captureSnapshots: options.captureSnapshots },
+    ),
     bodies,
     decisionProof: {
       playerDecisionHashes: windows.flatMap(({ decisions }) =>

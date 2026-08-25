@@ -79,6 +79,7 @@ export async function runAgentPlayedExhibition(
       ...(playerStates === undefined ? {} : { playerStates }),
       windowCount: 2,
       windowDurationMs: Math.trunc(elapsed / 2),
+      captureSnapshots: false,
     });
     const elapsedByWindows = Math.trunc(elapsed / 2) * 2;
     engine.apply({ type: "TICK", milliseconds: elapsedByWindows });

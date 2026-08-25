@@ -1,9 +1,19 @@
-import type { CanonicalEvent } from "@abl/recognition";
+import { sha256Commitment, type CanonicalEvent } from "@abl/recognition";
 import { z } from "zod";
 
 const Sha256HexSchema = z
   .string()
   .regex(/^0x[0-9a-f]{64}$/) as z.ZodType<`0x${string}`>;
+
+export const POSSESSION_RESOLVED_SCHEMA_DIGEST_V1 = sha256Commitment(
+  "PossessionResolved:1.0.0",
+);
+export const POSSESSION_RESOLVED_SCHEMA_DIGEST_V2 = sha256Commitment({
+  protocol: "abl-possession-resolved",
+  version: 2,
+  snapshotFormat: "ABL-POSSESSION-SNAPSHOT-V1",
+  snapshotStateBinding: "EVENT_HASH_STATE_ROOT_AND_SEGMENT_COMMITMENT",
+});
 
 export const TeamSchema = z.enum(["HOME", "AWAY"]);
 export type Team = z.infer<typeof TeamSchema>;
@@ -291,4 +301,25 @@ export interface PublicPossessionSegment {
   stateRoot: `0x${string}`;
   payloadCommitment: `0x${string}`;
   segmentHash: `0x${string}`;
+}
+
+export interface PublicPossessionSnapshot {
+  format: "ABL-POSSESSION-SNAPSHOT-V1";
+  sequence: number;
+  eventType: ResolutionEvent["type"];
+  eventData: ResolutionEvent["data"];
+  eventHash: `0x${string}`;
+  stateRoot: `0x${string}`;
+  gameId: string;
+  possessionId: string;
+  period: number;
+  gameClockMs: number;
+  shotClockMs: number;
+  score: { home: number; away: number };
+  possessionTeam: Team;
+  phase: BasketballState["phase"];
+  ball: BasketballState["ball"];
+  players: Array<
+    Pick<PlayerState, "playerId" | "team" | "position" | "xCm" | "yCm">
+  >;
 }

@@ -45,6 +45,7 @@ export async function createRehearsalPossessionProjection({
       stateRoot: event.stateRoot,
       eventHash: event.eventHash,
     })),
+    snapshots: result.snapshots,
     segments: result.segments,
     finalStateRoot: result.finalStateRoot,
     eventMerkleRoot: result.eventMerkleRoot,

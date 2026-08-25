@@ -6,6 +6,7 @@ import type {
   BroadcastSegmentRecord,
   FinalizedGameScheduleEvidence,
   FullGameEvent,
+  FullGameSnapshot,
 } from "@abl/basketball";
 import { sha256Commitment } from "@abl/recognition";
 
@@ -34,6 +35,7 @@ export interface PublicFinalizedGameProjection {
   commandCount: number;
   possessionCount: number;
   events: readonly FullGameEvent[];
+  snapshots?: readonly FullGameSnapshot[];
   segments: readonly BroadcastSegmentRecord[];
   finalStateRoot: `0x${string}`;
   eventMerkleRoot: `0x${string}`;
@@ -242,6 +244,12 @@ export class FilePublicFinalGameProjectionRepository
           record.authorization,
           record.projection.projectedAt,
         );
+        const verifiedProjectionForRecord =
+          record.projection.snapshots === undefined
+            ? (({ snapshots: _snapshots, ...legacy }) => legacy)(
+                verified.projection,
+              )
+            : verified.projection;
         if (
           record.cursor !== records.length ||
           filename !== `${String(record.cursor).padStart(12, "0")}.json` ||
@@ -254,13 +262,19 @@ export class FilePublicFinalGameProjectionRepository
               authorization: record.authorization,
             }) ||
           sha256Commitment(record.projection) !==
-            sha256Commitment(verified.projection) ||
+            sha256Commitment(verifiedProjectionForRecord) ||
           eventCursors.has(verified.event.eventHash) ||
           gameIds.has(verified.event.aggregateId)
         ) {
           throw new Error("Public finalized game chain is corrupt");
         }
-        records.push(structuredClone(record));
+        records.push(
+          structuredClone(
+            record.projection.snapshots === undefined
+              ? { ...record, projection: verified.projection }
+              : record,
+          ),
+        );
         eventCursors.set(verified.event.eventHash, record.cursor);
         gameIds.add(verified.event.aggregateId);
       }

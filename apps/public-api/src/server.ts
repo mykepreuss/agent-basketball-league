@@ -8,6 +8,8 @@ import {
   PROJECTION_APPEND_CAPABILITY,
   PROJECTION_APPEND_PATH,
   ProjectionVersionConflictError,
+  buildLiveGameSnapshots,
+  liveGameSnapshotsAfter,
   projectionEnvelopeBytes,
   verifyCaseProjectionEvent,
   verifyContractProjectionEvent,
@@ -46,6 +48,7 @@ import {
   type PublicFoundingConventionProjectionReader,
   type PublicFoundingConventionProjectionWriter,
   type PublicGameProjection,
+  type PublicLiveGameSnapshot,
   type PublicGovernanceProjectionReader,
   type PublicGovernanceProjectionWriter,
   type PublicModelProjectionReader,
@@ -235,6 +238,11 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   {
     method: "GET",
     path: "/v1/public/games/:id/segments/:segment",
+    exposure: "PUBLIC_READ_ONLY",
+  },
+  {
+    method: "GET",
+    path: "/v1/public/games/:id/snapshots",
     exposure: "PUBLIC_READ_ONLY",
   },
   {
@@ -2692,25 +2700,116 @@ export function createPublicApi(
       });
     },
   );
+  function liveSnapshots(gameId: string): readonly PublicLiveGameSnapshot[] {
+    return buildLiveGameSnapshots({
+      possessionRecords: options.projections?.gameRecords(gameId) ?? [],
+      ...(options.finalGameProjections?.game(gameId) === undefined
+        ? {}
+        : { finalizedGame: options.finalGameProjections.game(gameId)! }),
+    });
+  }
+  app.get<{
+    Params: { id: string };
+    Querystring: { after?: string; limit?: string };
+  }>("/v1/public/games/:id/snapshots", async (request, reply) => {
+    const snapshots = liveSnapshots(request.params.id);
+    const limit = /^\d+$/.test(request.query.limit ?? "")
+      ? Math.min(500, Math.max(1, Number.parseInt(request.query.limit!, 10)))
+      : 120;
+    let selected: readonly PublicLiveGameSnapshot[];
+    try {
+      const after = request.query.after;
+      const available = liveGameSnapshotsAfter(snapshots, after);
+      selected =
+        after === undefined
+          ? available.slice(-limit)
+          : available.slice(0, limit);
+    } catch {
+      return reply.code(409).send({
+        error: "live_cursor_not_found",
+        gameId: request.params.id,
+      });
+    }
+    return {
+      state,
+      gameId: request.params.id,
+      canonical: canonicalHistoryOpen,
+      authoritative: canonicalHistoryOpen,
+      historyClassification,
+      recognitionLevel: launchState.recognitionLevel,
+      snapshotFormat: "ABL-LIVE-GAME-SNAPSHOT-V1",
+      items: classifyPublicItems({
+        items: selected,
+        canonicalHistoryOpen,
+        historyClassification,
+        recognitionLevel: launchState.recognitionLevel,
+      }),
+      nextCursor: selected.at(-1)?.cursor ?? null,
+    };
+  });
   app.get<{ Params: { id: string } }>(
     "/v1/public/games/:id/live",
     async (request, reply) => {
-      const projection =
-        options.finalGameProjections?.game(request.params.id) ??
-        options.projections?.game(request.params.id);
-      const publicProjection = classifyPublicValue({
-        value: projection ?? {
+      const query = request.query as { after?: string };
+      const lastEventId = request.headers["last-event-id"];
+      const cursor =
+        typeof lastEventId === "string" && lastEventId !== ""
+          ? lastEventId
+          : query.after;
+      let snapshots: readonly PublicLiveGameSnapshot[];
+      try {
+        const available = liveGameSnapshotsAfter(
+          liveSnapshots(request.params.id),
+          cursor,
+        );
+        snapshots = cursor === undefined ? available.slice(-120) : available;
+      } catch {
+        return reply.code(409).send({
+          error: "live_cursor_not_found",
+          gameId: request.params.id,
+        });
+      }
+      const frames = snapshots
+        .map((snapshot) => {
+          const publicSnapshot = classifyPublicValue({
+            value: snapshot,
+            canonicalHistoryOpen,
+            historyClassification,
+            recognitionLevel: launchState.recognitionLevel,
+          });
+          return `id: ${snapshot.cursor}\nevent: snapshot\ndata: ${JSON.stringify(publicSnapshot)}\n\n`;
+        })
+        .join("");
+      const projection = options.finalGameProjections?.game(
+        request.params.id,
+      ) ??
+        options.projections?.game(request.params.id) ?? {
           state,
           gameId: request.params.id,
           canonical: canonicalHistoryOpen,
-        },
+        };
+      const projectionState =
+        "snapshots" in projection
+          ? (({ snapshots: _snapshots, ...summary }) => summary)(projection)
+          : projection;
+      const publicProjection = classifyPublicValue({
+        value: projectionState,
         canonicalHistoryOpen,
         historyClassification,
         recognitionLevel: launchState.recognitionLevel,
       });
+      const stateFrame = `event: state\ndata: ${JSON.stringify(publicProjection)}\n\n`;
+      const headCursor = snapshots.at(-1)?.cursor ?? cursor ?? null;
       return reply
+        .headers({
+          "cache-control": "no-cache, no-transform",
+          connection: "keep-alive",
+          "x-accel-buffering": "no",
+        })
         .type("text/event-stream; charset=utf-8")
-        .send(`event: state\ndata: ${JSON.stringify(publicProjection)}\n\n`);
+        .send(
+          `retry: 1500\n${stateFrame}${frames}event: heartbeat\ndata: ${JSON.stringify({ cursor: headCursor, content: null })}\n\n`,
+        );
     },
   );
   return app;

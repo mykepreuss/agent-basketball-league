@@ -16,6 +16,7 @@ import {
   type CognitionReceipt,
   type DecisionAuthorization,
   type PossessionAuthorities,
+  type PublicPossessionSnapshot,
   type PublicPossessionSegment,
   type RefereeDecision,
   type RefereeDecisionBody,
@@ -167,6 +168,7 @@ function validateAuthorities(authorities: PossessionAuthorities): void {
 export interface PossessionResult {
   finalState: BasketballState;
   events: ResolutionEvent[];
+  snapshots: PublicPossessionSnapshot[];
   segments: PublicPossessionSegment[];
   eventMerkleRoot: `0x${string}`;
   finalStateRoot: `0x${string}`;
@@ -201,18 +203,44 @@ function distanceSquared(
 
 function appendEvent(
   events: ResolutionEvent[],
+  snapshots: PublicPossessionSnapshot[] | null,
   state: BasketballState,
   type: ResolutionEvent["type"],
   data: ResolutionEvent["data"],
 ): void {
   const root = stateRoot(state);
   const sequence = events.length;
-  events.push({
+  const event: ResolutionEvent = {
     sequence,
     type,
     data,
     stateRoot: root,
     eventHash: sha256Commitment({ sequence, type, data, stateRoot: root }),
+  };
+  events.push(event);
+  snapshots?.push({
+    format: "ABL-POSSESSION-SNAPSHOT-V1",
+    sequence,
+    eventType: type,
+    eventData: structuredClone(data),
+    eventHash: event.eventHash,
+    stateRoot: root,
+    gameId: state.gameId,
+    possessionId: state.possessionId,
+    period: state.quarter,
+    gameClockMs: state.gameClockMs,
+    shotClockMs: state.shotClockMs,
+    score: structuredClone(state.score),
+    possessionTeam: state.possessionTeam,
+    phase: state.phase,
+    ball: structuredClone(state.ball),
+    players: state.players.map(({ playerId, team, position, xCm, yCm }) => ({
+      playerId,
+      team,
+      position,
+      xCm,
+      yCm,
+    })),
   });
 }
 
@@ -347,6 +375,7 @@ function publicSegments(
 
 export async function resolvePossession(
   input: PossessionInput,
+  options: { captureSnapshots?: boolean } = {},
 ): Promise<PossessionResult> {
   if (input.windows.length < 2 || input.windows.length > 4)
     throw new Error("A possession requires two to four decision windows");
@@ -361,6 +390,8 @@ export async function resolvePossession(
   validateAuthorities(input.authorities);
   const state = structuredClone(input.initialState);
   const events: ResolutionEvent[] = [];
+  const snapshots: PublicPossessionSnapshot[] | null =
+    options.captureSnapshots === false ? null : [];
   const random = new CounterRandom(input.randomSeed);
   const usedAuthorizations = new Set<string>();
   for (const [windowIndex, window] of input.windows.entries()) {
@@ -394,7 +425,7 @@ export async function resolvePossession(
         ballHandlerOutOfBounds.team === "HOME" ? "AWAY" : "HOME";
       state.ball.possessorId = null;
       state.phase = "DEAD";
-      appendEvent(events, state, "OUT_OF_BOUNDS", {
+      appendEvent(events, snapshots, state, "OUT_OF_BOUNDS", {
         playerId: ballHandlerOutOfBounds.playerId,
         team: ballHandlerOutOfBounds.team,
         derivedFromFixedPointMovement: true,
@@ -429,7 +460,7 @@ export async function resolvePossession(
       );
       const completed = random.nextBps() < completionBps;
       if (completed) state.ball.possessorId = target.playerId;
-      appendEvent(events, state, "PASS", {
+      appendEvent(events, snapshots, state, "PASS", {
         from: possessor.playerId,
         to: target.playerId,
         completed,
@@ -464,7 +495,7 @@ export async function resolvePossession(
         if (possessor.team === "HOME") state.score.home += points;
         else state.score.away += points;
       }
-      appendEvent(events, state, "SHOT", {
+      appendEvent(events, snapshots, state, "SHOT", {
         shooter: possessor.playerId,
         shot: ballIntent.shot,
         made,
@@ -483,7 +514,7 @@ export async function resolvePossession(
         const rebounder =
           candidates[random.nextBps() % Math.min(3, candidates.length)]!;
         state.ball.possessorId = rebounder.playerId;
-        appendEvent(events, state, "REBOUND", {
+        appendEvent(events, snapshots, state, "REBOUND", {
           playerId: rebounder.playerId,
           team: rebounder.team,
         });
@@ -500,7 +531,7 @@ export async function resolvePossession(
     state.gameClockMs = Math.max(0, state.gameClockMs - windowDurationMs);
     state.shotClockMs = Math.max(0, state.shotClockMs - windowDurationMs);
     state.window = windowIndex + 1;
-    appendEvent(events, state, "WINDOW_RESOLVED", {
+    appendEvent(events, snapshots, state, "WINDOW_RESOLVED", {
       window: windowIndex,
       decisionCount: decisions.size,
     });
@@ -603,7 +634,7 @@ export async function resolvePossession(
       usedAuthorizations,
     });
   }
-  appendEvent(events, state, "OFFICIAL_RULING", {
+  appendEvent(events, snapshots, state, "OFFICIAL_RULING", {
     refereeCalls: input.refereeDecisions.length,
     replayRulings: input.replayDecisions.length,
     reversed: input.replayDecisions.some(
@@ -611,7 +642,7 @@ export async function resolvePossession(
     ),
   });
   state.phase = "FINAL";
-  appendEvent(events, state, "POSSESSION_FINAL", {
+  appendEvent(events, snapshots, state, "POSSESSION_FINAL", {
     randomCounter: random.counter.toString(),
     inputAcceptedWinner: false,
   });
@@ -619,6 +650,7 @@ export async function resolvePossession(
   return {
     finalState: state,
     events,
+    snapshots: snapshots ?? [],
     segments,
     eventMerkleRoot: merkleRoot(events.map((event) => event.eventHash)),
     finalStateRoot: stateRoot(state),

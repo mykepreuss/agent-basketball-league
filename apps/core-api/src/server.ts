@@ -592,6 +592,7 @@ export function createLiveCoreApi(
             event.payload,
             event.aggregateId,
             event.stateRoot,
+            event.schemaDigest,
           );
         } catch (error) {
           throw commandValidationError(

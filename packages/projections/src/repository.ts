@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { sha256Commitment } from "@abl/recognition";
+import type { PublicPossessionSnapshot } from "@abl/basketball";
 
 import type { ProjectionEventEnvelope } from "./envelope.js";
 import { writeImmutableJson } from "./immutable-json.js";
@@ -44,6 +45,7 @@ export interface PublicGameProjection {
   shotClockMs: number;
   players: PublicPlayerProjection[];
   events: PublicEventProjection[];
+  snapshots?: PublicPossessionSnapshot[];
   segments: PublicSegmentProjection[];
   finalStateRoot: `0x${string}`;
   eventMerkleRoot: `0x${string}`;
@@ -63,6 +65,7 @@ export interface ProjectionRecord {
 export interface PublicProjectionReader {
   refresh(): Promise<void>;
   events(afterCursor?: number): readonly ProjectionRecord[];
+  gameRecords(gameId: string): readonly ProjectionRecord[];
   games(): readonly PublicGameProjection[];
   game(gameId: string): PublicGameProjection | undefined;
   cursor(gameId: string):
@@ -289,6 +292,12 @@ export class FilePublicProjectionRepository
   public events(afterCursor = -1): readonly ProjectionRecord[] {
     return structuredClone(
       this.#records.filter(({ cursor }) => cursor > afterCursor),
+    );
+  }
+
+  public gameRecords(gameId: string): readonly ProjectionRecord[] {
+    return structuredClone(
+      this.#records.filter(({ projection }) => projection.gameId === gameId),
     );
   }
 

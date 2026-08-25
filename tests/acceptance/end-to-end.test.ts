@@ -142,6 +142,7 @@ import {
   type ModelProjectionEventEnvelope,
   type ProjectionEventEnvelope,
   type PublicGameProjectionSource,
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
   type PublicCaseProjectionReader,
   type SocialProjectionEventEnvelope,
 } from "../../packages/projections/src/index.js";
@@ -195,6 +196,7 @@ describe("complete local acceptance", () => {
         stateRoot: event.stateRoot,
         eventHash: event.eventHash,
       })),
+      snapshots: result.snapshots,
       segments: result.segments,
       finalStateRoot: result.finalStateRoot,
       eventMerkleRoot: result.eventMerkleRoot,
@@ -214,7 +216,7 @@ describe("complete local acceptance", () => {
       previousEventHash: null,
       payload: { source, decisionProof: rehearsal.decisionProof },
       stateRoot: result.finalStateRoot,
-      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
       timestamp: "2026-08-13T10:05:00.000Z",
     });
     const signature = await signCanonicalEvent(
@@ -357,7 +359,7 @@ describe("complete local acceptance", () => {
       previousEventHash: event.eventHash,
       payload: { source, decisionProof: rehearsal.decisionProof },
       stateRoot: result.finalStateRoot,
-      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
       timestamp: "2026-08-13T10:03:59.000Z",
     });
     expect(
@@ -396,7 +398,7 @@ describe("complete local acceptance", () => {
         decisionProof: rehearsal.decisionProof,
       },
       stateRoot: result.finalStateRoot,
-      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
       timestamp: "2026-08-13T10:05:00.000Z",
     });
     expect(
@@ -435,7 +437,7 @@ describe("complete local acceptance", () => {
         decisionProof: rehearsal.decisionProof,
       },
       stateRoot: result.finalStateRoot,
-      schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
+      schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
       timestamp: "2026-08-13T10:05:00.000Z",
     });
     expect(
@@ -3478,6 +3480,7 @@ describe("complete local acceptance", () => {
       "GET /v1/public/models/concentration",
       "GET /v1/public/games/:id/cursor",
       "GET /v1/public/games/:id/segments/:segment",
+      "GET /v1/public/games/:id/snapshots",
       "GET /v1/public/games/:id/live",
       "POST /v1/safety/actions",
       "GET /v1/safety/actions",

@@ -1,14 +1,15 @@
-import type { CSSProperties } from "react";
-
 import {
   closedArenaLaunchState,
   loadGameProof,
+  loadLiveGameSnapshots,
   loadLaunchState,
   type PublicArenaFinalizedGame,
   type PublicArenaGame,
   type PublicArenaLaunchState,
+  type PublicArenaLiveSnapshot,
   type PublicArenaPossessionGame,
 } from "./data";
+import { LiveCourtcast } from "./live-courtcast";
 
 type FullGameEvent = PublicArenaFinalizedGame["events"][number];
 
@@ -204,7 +205,11 @@ function FoundingCohort({
 
 function PossessionArchive({
   game,
-}: Readonly<{ game: PublicArenaPossessionGame }>) {
+  liveSnapshots,
+}: Readonly<{
+  game: PublicArenaPossessionGame;
+  liveSnapshots: readonly PublicArenaLiveSnapshot[];
+}>) {
   const latestEvent = game.events.at(-1);
   return (
     <>
@@ -242,31 +247,11 @@ function PossessionArchive({
           <div className="section-label">
             <span>01</span> Courtcast · resolved possession
           </div>
-          <div
-            className="court"
-            aria-label="Final fixed-point player positions"
-          >
-            <CourtLines />
-            <ol className="players">
-              {game.players.map((player) => (
-                <li
-                  className={`player ${player.team.toLowerCase()}`}
-                  key={player.playerId}
-                  style={
-                    {
-                      "--x": `${(player.xCm / 2865) * 100}%`,
-                      "--y": `${(player.yCm / 1524) * 100}%`,
-                    } as CSSProperties
-                  }
-                  title={`${player.playerId} · ${player.position} · ${player.xCm},${player.yCm}cm`}
-                >
-                  <b>{player.playerId}</b>
-                  <small>{player.position}</small>
-                </li>
-              ))}
-            </ol>
-          </div>
-          {latestEvent === undefined ? null : (
+          <LiveCourtcast
+            gameId={game.gameId}
+            initialSnapshots={liveSnapshots}
+          />
+          {liveSnapshots.length > 0 || latestEvent === undefined ? null : (
             <div className="latest-action" aria-label="Latest verified action">
               <span>Latest verified action</span>
               <strong>{latestEvent.type.replaceAll("_", " ")}</strong>
@@ -327,22 +312,13 @@ function PossessionArchive({
   );
 }
 
-function CourtLines() {
-  return (
-    <>
-      <div className="half-line" />
-      <div className="center-circle" />
-      <div className="paint paint-left" />
-      <div className="paint paint-right" />
-      <div className="hoop hoop-left" />
-      <div className="hoop hoop-right" />
-    </>
-  );
-}
-
 function FinalizedGameArchive({
   game,
-}: Readonly<{ game: PublicArenaFinalizedGame }>) {
+  liveSnapshots,
+}: Readonly<{
+  game: PublicArenaFinalizedGame;
+  liveSnapshots: readonly PublicArenaLiveSnapshot[];
+}>) {
   const recentEvents = game.events.slice(-12);
   const periods = finalizedPeriodScores(game);
   const homeName = game.competition?.homeClubId ?? "HOME";
@@ -417,16 +393,10 @@ function FinalizedGameArchive({
           <div className="section-label">
             <span>01</span> replay-verified final state
           </div>
-          <div className="court archive-court" aria-label="Final game archive">
-            <CourtLines />
-            <div className="final-court-mark">
-              <span>{game.possessionCount} possessions</span>
-              <strong>
-                {game.score.home}—{game.score.away}
-              </strong>
-              <small>{game.commandCount} deterministic commands</small>
-            </div>
-          </div>
+          <LiveCourtcast
+            gameId={game.gameId}
+            initialSnapshots={liveSnapshots}
+          />
           <div className="court-caption">
             <p>
               <strong>{game.possessionCount} possessions</strong> were played by
@@ -587,13 +557,16 @@ export default async function ArenaPage() {
       </main>
     );
   }
+  const liveSnapshots = await loadLiveGameSnapshots(game.gameId).catch(
+    () => [],
+  );
   return (
     <main>
       <ExperimentBanner launchState={launchState} />
       {isFinalizedGame(game) ? (
-        <FinalizedGameArchive game={game} />
+        <FinalizedGameArchive game={game} liveSnapshots={liveSnapshots} />
       ) : (
-        <PossessionArchive game={game} />
+        <PossessionArchive game={game} liveSnapshots={liveSnapshots} />
       )}
       <FoundingCohort
         launchState={launchState}

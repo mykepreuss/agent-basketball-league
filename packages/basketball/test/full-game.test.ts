@@ -205,9 +205,17 @@ describe("complete deterministic exhibition rules", () => {
       period: 5,
       score: { home: 5, away: 2 },
     });
-    expect(
-      replayFullGame(exhibition.input, exhibition.commands, exhibition.proof),
-    ).toMatchObject({ exact: true, inferenceInvocations: 0 });
+    const replay = replayFullGame(
+      exhibition.input,
+      exhibition.commands,
+      exhibition.proof,
+    );
+    expect(replay).toMatchObject({ exact: true, inferenceInvocations: 0 });
+    expect(replay.snapshots).toHaveLength(replay.events.length);
+    for (const snapshot of replay.snapshots) {
+      expect(snapshot.sequence).toBe(snapshot.event.sequence);
+      expect(sha256Commitment(snapshot.state)).toBe(snapshot.event.stateRoot);
+    }
   });
 
   it("requires independently registered schedule evidence for league standings", async () => {

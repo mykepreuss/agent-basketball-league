@@ -457,6 +457,16 @@ describe("first independently verifiable possession", () => {
     expect(result.eventMerkleRoot).toMatch(/^0x[0-9a-f]{64}$/);
     expect(result.events.some((event) => event.type === "SHOT")).toBe(true);
     expect(result.events.at(-1)?.data.inputAcceptedWinner).toBe(false);
+    expect(result.snapshots).toHaveLength(result.events.length);
+    expect(
+      result.snapshots.every(
+        (snapshot, index) =>
+          snapshot.sequence === index &&
+          snapshot.eventHash === result.events[index]?.eventHash &&
+          snapshot.stateRoot === result.events[index]?.stateRoot &&
+          snapshot.players.length === 10,
+      ),
+    ).toBe(true);
     expect(
       result.segments.every(
         (segment, index) =>

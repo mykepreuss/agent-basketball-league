@@ -300,7 +300,7 @@ describe("public API", () => {
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const openApiBody = openApi.json();
     const paths = openApiBody.paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(32);
+    expect(Object.keys(paths)).toHaveLength(33);
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     expect(paths["/"]).toMatchObject({
       get: {
@@ -2252,6 +2252,36 @@ describe("public API", () => {
       '"historyClassification":"PRE_GENESIS_EXPERIMENT"',
     );
     expect(live.body).not.toContain('"canonical":true');
+    expect(live.body).toContain("event: snapshot");
+    expect(live.body).toContain('"format":"ABL-LIVE-GAME-SNAPSHOT-V1"');
+    const snapshots = (
+      await app.inject({
+        method: "GET",
+        url: `/v1/public/games/${gameId}/snapshots?limit=3`,
+      })
+    ).json();
+    expect(snapshots).toMatchObject({
+      snapshotFormat: "ABL-LIVE-GAME-SNAPSHOT-V1",
+      canonical: false,
+      historyClassification: "PRE_GENESIS_EXPERIMENT",
+    });
+    expect(snapshots.items).toHaveLength(3);
+    const resumeCursor = snapshots.items[0].cursor as string;
+    const resumed = await app.inject({
+      method: "GET",
+      url: `/v1/public/games/${gameId}/live`,
+      headers: { "last-event-id": resumeCursor },
+    });
+    expect(resumed.body).not.toContain(`id: ${resumeCursor}\n`);
+    expect(resumed.body).toContain("event: snapshot");
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/public/games/${gameId}/live?after=missing-cursor`,
+        })
+      ).statusCode,
+    ).toBe(409);
     expect(
       (
         await app.inject({
