@@ -41,6 +41,7 @@ import {
 } from "./canonical-command.js";
 import {
   CandidateAuthorizationError,
+  CandidateNotAdmittedError,
   readCandidateCareerAuthority,
   type CandidateCareerAuthority,
   type CandidateRehearsalOptions,
@@ -59,7 +60,7 @@ export interface FoundingConventionOptions {
   >;
   competitionId: string;
   seasonId: string;
-  proposalId: string;
+  conventionId: string;
   candidateAdmission: Pick<
     CandidateRehearsalOptions,
     "challengeSecret" | "challengeId" | "challengeBytes"
@@ -142,6 +143,42 @@ async function requireCareerSignature(
   return authority;
 }
 
+async function activeFounderAt(
+  options: FoundingConventionOptions,
+  did: string,
+  configured: {
+    signerAddress: `0x${string}`;
+    allowedAggregateTypes: readonly string[];
+  },
+  capturedAt: string,
+): Promise<{ did: string; signerAddress: `0x${string}` } | null> {
+  try {
+    const admitted = await readCandidateCareerAuthority(
+      candidateOptions(options),
+      did,
+      capturedAt,
+    );
+    await requireCareerOperational(options, did, capturedAt);
+    if (
+      admitted.signingAddress.toLowerCase() !==
+      configured.signerAddress.toLowerCase()
+    ) {
+      throw new FoundingBootstrapWorkflowAuthorizationError(
+        "Founder key does not match the admission record",
+      );
+    }
+    return { did, signerAddress: admitted.signingAddress };
+  } catch (error) {
+    if (
+      error instanceof CandidateNotAdmittedError ||
+      error instanceof CareerExitedError
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function validateFounderSnapshot(
   options: FoundingConventionOptions,
   payload: z.infer<typeof FoundingBootstrapOpenPayloadSchema>,
@@ -154,55 +191,40 @@ async function validateFounderSnapshot(
       "Founding eligibility cannot be captured after the proposal opens",
     );
   }
-  const configuredFounderDids = [...options.admittedAgents.entries()]
-    .filter(([, authority]) =>
-      authority.allowedAggregateTypes.includes(
-        FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-      ),
+  const activeFounders = (
+    await Promise.all(
+      [...options.admittedAgents.entries()]
+        .filter(([, authority]) =>
+          authority.allowedAggregateTypes.includes(
+            FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+          ),
+        )
+        .map(([did, configured]) =>
+          activeFounderAt(
+            options,
+            did,
+            configured,
+            payload.snapshot.capturedAt,
+          ),
+        ),
     )
-    .map(([did]) => did)
-    .sort();
+  )
+    .filter((founder) => founder !== null)
+    .sort((left, right) => left.did.localeCompare(right.did));
+  const activeFounderDids = activeFounders.map(({ did }) => did);
   if (
-    configuredFounderDids.length !==
-      payload.snapshot.eligibleFounderDids.length ||
-    configuredFounderDids.some(
+    activeFounderDids.length !== payload.snapshot.eligibleFounderDids.length ||
+    activeFounderDids.some(
       (did, index) => did !== payload.snapshot.eligibleFounderDids[index],
     )
   ) {
     throw new FoundingBootstrapWorkflowAuthorizationError(
-      "Founding eligibility does not include the complete configured cohort",
+      "Founding eligibility does not include the complete active cohort",
     );
   }
-  const addresses = await Promise.all(
-    payload.snapshot.eligibleFounderDids.map(async (did) => {
-      const configured = options.admittedAgents.get(did);
-      if (
-        configured === undefined ||
-        !configured.allowedAggregateTypes.includes(
-          FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-        )
-      ) {
-        throw new Error("Founder lacks configured convention authority");
-      }
-      const admitted = await readCandidateCareerAuthority(
-        candidateOptions(options),
-        did,
-        payload.snapshot.capturedAt,
-      );
-      await requireCareerOperational(options, did, payload.snapshot.capturedAt);
-      if (
-        admitted.signingAddress.toLowerCase() !==
-        configured.signerAddress.toLowerCase()
-      ) {
-        throw new Error("Founder key does not match the admission record");
-      }
-      return admitted.signingAddress.toLowerCase();
-    }),
-  ).catch(() => {
-    throw new FoundingBootstrapWorkflowAuthorizationError(
-      "Founding eligibility contains a career not active when captured",
-    );
-  });
+  const addresses = activeFounders.map(({ signerAddress }) =>
+    signerAddress.toLowerCase(),
+  );
   if (new Set(addresses).size !== addresses.length) {
     throw new FoundingBootstrapWorkflowAuthorizationError(
       "Founding eligibility aliases a career signing key",
@@ -268,17 +290,23 @@ async function advanceFoundingAggregate(
       ballots: aggregate.ballots,
       authorization: {
         domain: options.domain,
+        aggregateId: options.conventionId,
         signers: aggregate.ballotSigners,
       },
       evaluatedAt: event.timestamp,
     });
   }
-  return applyFoundingBootstrapWorkflowTransition(
+  const snapshot = applyFoundingBootstrapWorkflowTransition(
     aggregate.snapshot,
     event,
     payload,
     result,
   );
+  if (event.eventType === "FoundingBootstrapOpened") {
+    aggregate.ballots.splice(0);
+    aggregate.ballotSigners.clear();
+  }
+  return snapshot;
 }
 
 async function replayFoundingAggregate(
@@ -286,7 +314,7 @@ async function replayFoundingAggregate(
 ): Promise<FoundingAggregate> {
   const records = await options.store.readAggregate(
     FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-    options.proposalId,
+    options.conventionId,
   );
   const aggregate: FoundingAggregate = {
     records,
@@ -301,7 +329,7 @@ async function replayFoundingAggregate(
     const occurredAt = record.occurredAt.getTime();
     if (
       event.aggregateType !== FOUNDING_BOOTSTRAP_AGGREGATE_TYPE ||
-      event.aggregateId !== options.proposalId ||
+      event.aggregateId !== options.conventionId ||
       event.aggregateVersion !== BigInt(index + 1) ||
       !isFoundingBootstrapEventType(event.eventType) ||
       event.schemaDigest !== FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST ||
@@ -436,7 +464,7 @@ export function installFoundingConventionRoutes(
         }
         if (
           event.aggregateType !== FOUNDING_BOOTSTRAP_AGGREGATE_TYPE ||
-          event.aggregateId !== options.proposalId ||
+          event.aggregateId !== options.conventionId ||
           event.eventType !== eventType ||
           event.schemaDigest !== FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST
         ) {

@@ -48,6 +48,7 @@ describe("public founding-convention ingress", () => {
         `0x${(index + 1).toString(16).padStart(64, "0")}` as `0x${string}`,
       ),
     );
+    const conventionId = "0198a000-0000-7000-8000-000000000900";
     const proposalId = "0198a000-0000-7000-8000-000000000901";
     const eligibility = createFoundingEligibilitySnapshot({
       snapshotId: "0198a000-0000-7000-8000-000000000902",
@@ -72,7 +73,7 @@ describe("public founding-convention ingress", () => {
       nonce: "public-founding-opening",
       idempotencyKey: "0198a000-0000-7000-8000-000000000904",
       aggregateType: FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-      aggregateId: proposalId,
+      aggregateId: conventionId,
       aggregateVersion: 1n,
       eventType: "FoundingBootstrapOpened",
       previousEventHash: null,
@@ -113,7 +114,7 @@ describe("public founding-convention ingress", () => {
           },
         ]),
       ),
-      foundingBootstrapProposalId: proposalId,
+      foundingConventionId: conventionId,
     };
     const games = new FilePublicProjectionRepository(root);
     const founding = new FilePublicFoundingConventionProjectionRepository(
@@ -174,6 +175,7 @@ describe("public founding-convention ingress", () => {
       items: [
         {
           recordType: "FOUNDING_CONVENTION_BOOTSTRAP",
+          conventionId,
           proposalId,
           aggregateVersion: "1",
           canonical: false,

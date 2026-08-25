@@ -108,6 +108,7 @@ export interface SignedFoundingBootstrapBallot {
 
 export interface FoundingBootstrapAuthorizationContext {
   domain: TypedDataDomain;
+  aggregateId: string;
   signers: ReadonlyMap<string, `0x${string}`>;
 }
 
@@ -338,7 +339,7 @@ export async function evaluateFoundingBootstrap(input: {
       signed.signerAddress.toLowerCase() !== recoveredSigner.toLowerCase() ||
       event.actorDid !== ballot.voterDid ||
       event.aggregateType !== "founding-convention-bootstrap" ||
-      event.aggregateId !== input.proposal.proposalId ||
+      event.aggregateId !== input.authorization.aggregateId ||
       event.aggregateVersion < 1n ||
       event.eventType !== "FoundingBootstrapBallotCast" ||
       event.timestamp !== ballot.castAt ||

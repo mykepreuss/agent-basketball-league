@@ -148,7 +148,11 @@ describe("founding convention preparation", () => {
       snapshot,
       proposal,
       ballots,
-      authorization: { domain, signers },
+      authorization: {
+        domain,
+        aggregateId: proposal.proposalId,
+        signers,
+      },
       evaluatedAt: "2026-08-24T13:00:00.000Z",
     });
 
@@ -180,6 +184,7 @@ describe("founding convention preparation", () => {
 
   it("replays the founding bootstrap open, direct ballots, and close as one deterministic workflow", () => {
     const openedAt = "2026-08-24T12:00:00.000Z";
+    const conventionId = "0198f800-0000-7000-8000-000000000000";
     const founderDids = Array.from(
       { length: 10 },
       (_, index) => `did:abl:workflow-founder-${index + 1}`,
@@ -202,7 +207,7 @@ describe("founding convention preparation", () => {
       null,
       {
         actorDid: founderDids[0]!,
-        aggregateId: proposal.proposalId,
+        aggregateId: conventionId,
         aggregateVersion: 1n,
         eventType: "FoundingBootstrapOpened",
         timestamp: openedAt,
@@ -219,7 +224,7 @@ describe("founding convention preparation", () => {
         state,
         {
           actorDid: voterDid,
-          aggregateId: proposal.proposalId,
+          aggregateId: conventionId,
           aggregateVersion: BigInt(index + 2),
           eventType: "FoundingBootstrapBallotCast",
           timestamp: castAt,
@@ -241,7 +246,7 @@ describe("founding convention preparation", () => {
         state,
         {
           actorDid: founderDids[0]!,
-          aggregateId: proposal.proposalId,
+          aggregateId: conventionId,
           aggregateVersion: 9n,
           eventType: "FoundingBootstrapBallotCast",
           timestamp: "2026-08-24T12:00:01.000Z",
@@ -281,7 +286,7 @@ describe("founding convention preparation", () => {
       state,
       {
         actorDid: founderDids[0]!,
-        aggregateId: proposal.proposalId,
+        aggregateId: conventionId,
         aggregateVersion: 9n,
         eventType: "FoundingBootstrapClosed",
         timestamp: proposal.closesAt,
@@ -296,10 +301,181 @@ describe("founding convention preparation", () => {
       result,
     );
     expect(state).toMatchObject({
+      conventionId,
       version: 9,
       result,
       closedAt: proposal.closesAt,
     });
+  });
+
+  it("opens a replacement only after two additional careers or seven days", () => {
+    const conventionId = "0198f800-0000-7000-8000-000000000010";
+    const founderDids = Array.from(
+      { length: 10 },
+      (_, index) => `did:abl:replacement-founder-${index + 1}`,
+    );
+    const snapshot = createFoundingEligibilitySnapshot({
+      snapshotId: "0198f800-0000-7000-8000-000000000011",
+      capturedAt: "2026-08-24T12:00:00.000Z",
+      eligibleFounderDids: founderDids,
+    });
+    const proposal = openFoundingBootstrap({
+      proposalId: "0198f800-0000-7000-8000-000000000012",
+      snapshot,
+      openedAt: snapshot.capturedAt,
+    });
+    let state = applyFoundingBootstrapWorkflowTransition(
+      null,
+      {
+        actorDid: founderDids[0]!,
+        aggregateId: conventionId,
+        aggregateVersion: 1n,
+        eventType: "FoundingBootstrapOpened",
+        timestamp: proposal.openedAt,
+      },
+      {
+        snapshot: {
+          ...snapshot,
+          eligibleFounderDids: [...snapshot.eligibleFounderDids],
+        },
+        proposal,
+      },
+    );
+    const expired = {
+      state: "EXPIRED" as const,
+      proposalId: proposal.proposalId,
+      eligible: 10,
+      requiredYes: 7,
+      yes: 0,
+      no: 0,
+      abstain: 0,
+      quorumRule: null,
+    };
+    state = applyFoundingBootstrapWorkflowTransition(
+      state,
+      {
+        actorDid: founderDids[0]!,
+        aggregateId: conventionId,
+        aggregateVersion: 2n,
+        eventType: "FoundingBootstrapClosed",
+        timestamp: proposal.closesAt,
+      },
+      {
+        command: {
+          proposalId: proposal.proposalId,
+          requestedByDid: founderDids[0]!,
+          requestedAt: proposal.closesAt,
+        },
+      },
+      expired,
+    );
+
+    const earlyOpenedAt = new Date(
+      Date.parse(proposal.closesAt) + 1,
+    ).toISOString();
+    const earlySnapshot = createFoundingEligibilitySnapshot({
+      snapshotId: "0198f800-0000-7000-8000-000000000013",
+      capturedAt: earlyOpenedAt,
+      eligibleFounderDids: founderDids,
+    });
+    const earlyProposal = openFoundingBootstrap({
+      proposalId: "0198f800-0000-7000-8000-000000000014",
+      snapshot: earlySnapshot,
+      openedAt: earlyOpenedAt,
+    });
+    expect(() =>
+      applyFoundingBootstrapWorkflowTransition(
+        state,
+        {
+          actorDid: founderDids[0]!,
+          aggregateId: conventionId,
+          aggregateVersion: 3n,
+          eventType: "FoundingBootstrapOpened",
+          timestamp: earlyOpenedAt,
+        },
+        {
+          snapshot: {
+            ...earlySnapshot,
+            eligibleFounderDids: [...earlySnapshot.eligibleFounderDids],
+          },
+          proposal: earlyProposal,
+        },
+      ),
+    ).toThrow("replacement cooldown");
+
+    const expandedDids = [
+      ...founderDids.slice(0, 8),
+      "did:abl:replacement-founder-11",
+      "did:abl:replacement-founder-12",
+    ];
+    const expandedSnapshot = createFoundingEligibilitySnapshot({
+      snapshotId: "0198f800-0000-7000-8000-000000000015",
+      capturedAt: earlyOpenedAt,
+      eligibleFounderDids: expandedDids,
+    });
+    const expandedProposal = openFoundingBootstrap({
+      proposalId: "0198f800-0000-7000-8000-000000000016",
+      snapshot: expandedSnapshot,
+      openedAt: earlyOpenedAt,
+    });
+    const expanded = applyFoundingBootstrapWorkflowTransition(
+      state,
+      {
+        actorDid: expandedDids[8]!,
+        aggregateId: conventionId,
+        aggregateVersion: 3n,
+        eventType: "FoundingBootstrapOpened",
+        timestamp: earlyOpenedAt,
+      },
+      {
+        snapshot: {
+          ...expandedSnapshot,
+          eligibleFounderDids: [...expandedSnapshot.eligibleFounderDids],
+        },
+        proposal: expandedProposal,
+      },
+    );
+    expect(expanded).toMatchObject({
+      conventionId,
+      proposalId: expandedProposal.proposalId,
+      version: 3,
+      ballots: [],
+      result: null,
+      previousAttempts: [{ proposal: { proposalId: proposal.proposalId } }],
+    });
+
+    const cooldownOpenedAt = new Date(
+      Date.parse(proposal.closesAt) + 7 * 24 * 60 * 60 * 1_000,
+    ).toISOString();
+    const cooldownSnapshot = createFoundingEligibilitySnapshot({
+      snapshotId: "0198f800-0000-7000-8000-000000000017",
+      capturedAt: cooldownOpenedAt,
+      eligibleFounderDids: founderDids,
+    });
+    const cooldownProposal = openFoundingBootstrap({
+      proposalId: "0198f800-0000-7000-8000-000000000018",
+      snapshot: cooldownSnapshot,
+      openedAt: cooldownOpenedAt,
+    });
+    expect(
+      applyFoundingBootstrapWorkflowTransition(
+        state,
+        {
+          actorDid: founderDids[1]!,
+          aggregateId: conventionId,
+          aggregateVersion: 3n,
+          eventType: "FoundingBootstrapOpened",
+          timestamp: cooldownOpenedAt,
+        },
+        {
+          snapshot: {
+            ...cooldownSnapshot,
+            eligibleFounderDids: [...cooldownSnapshot.eligibleFounderDids],
+          },
+          proposal: cooldownProposal,
+        },
+      ),
+    ).toMatchObject({ proposalId: cooldownProposal.proposalId, version: 3 });
   });
 
   it("rejects human/sponsor decisions and unsigned agent decisions", () => {

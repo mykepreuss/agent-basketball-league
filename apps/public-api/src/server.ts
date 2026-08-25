@@ -387,7 +387,7 @@ export interface PublicApiOptions {
     freeAgencyWindow?: { opensAt: string; closesAt: string };
     tradeAccessEvidence?: TradeAccessEvidenceReader;
     governanceEligibilitySnapshotDigest?: string;
-    foundingBootstrapProposalId?: string | undefined;
+    foundingConventionId?: string | undefined;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
     resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
@@ -1387,7 +1387,7 @@ export function createPublicApi(
             FOUNDING_BOOTSTRAP_AGGREGATE_TYPE
           ) {
             if (
-              projectionIngress.foundingBootstrapProposalId === undefined ||
+              projectionIngress.foundingConventionId === undefined ||
               projectionIngress.foundingWriter === undefined
             ) {
               throw new ServiceAuthenticationError(
@@ -1396,8 +1396,7 @@ export function createPublicApi(
             }
             const verified = await verifyFoundingProjectionEvent(request.body, {
               ...projectionIngress,
-              foundingBootstrapProposalId:
-                projectionIngress.foundingBootstrapProposalId,
+              foundingConventionId: projectionIngress.foundingConventionId,
             });
             if (
               headers["x-abl-expected-version"] !== verified.expectedVersion

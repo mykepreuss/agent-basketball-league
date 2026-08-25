@@ -203,7 +203,7 @@ export interface LiveCoreApiOptions {
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
   governance?: Pick<GovernanceRehearsalOptions, "eligibilitySnapshot">;
-  foundingConvention?: Pick<FoundingConventionOptions, "proposalId">;
+  foundingConvention?: Pick<FoundingConventionOptions, "conventionId">;
   resources?: Pick<ResourceScheduleRehearsalOptions, "governance">;
   releases?: Pick<
     ReleaseRehearsalOptions,
@@ -753,7 +753,7 @@ export function createLiveCoreApi(
       seasonId: options.seasonId,
       now,
       candidateAdmission,
-      proposalId: foundingConvention.proposalId,
+      conventionId: foundingConvention.conventionId,
     });
   }
   if (

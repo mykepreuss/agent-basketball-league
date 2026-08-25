@@ -157,7 +157,7 @@ export class PublicProjectionWorker {
   readonly #authority: ProjectionVerificationAuthority;
   readonly #contractClubGovernors: Readonly<Record<string, string>> | undefined;
   readonly #governanceEligibilitySnapshotDigest: string | undefined;
-  readonly #foundingBootstrapProposalId: string | undefined;
+  readonly #foundingConventionId: string | undefined;
   readonly #caseTribunalDids: readonly string[] | undefined;
   readonly #caseAppellateDids: readonly string[] | undefined;
   readonly #resourceScheduleRatification:
@@ -205,7 +205,7 @@ export class PublicProjectionWorker {
       now?: () => Date;
       contractClubGovernors?: Readonly<Record<string, string>>;
       governanceEligibilitySnapshotDigest?: string;
-      foundingBootstrapProposalId?: string;
+      foundingConventionId?: string;
       caseTribunalDids?: readonly string[];
       caseAppellateDids?: readonly string[];
       resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
@@ -304,7 +304,7 @@ export class PublicProjectionWorker {
     this.#contractClubGovernors = input.contractClubGovernors;
     this.#governanceEligibilitySnapshotDigest =
       input.governanceEligibilitySnapshotDigest;
-    this.#foundingBootstrapProposalId = input.foundingBootstrapProposalId;
+    this.#foundingConventionId = input.foundingConventionId;
     this.#caseTribunalDids = input.caseTribunalDids;
     this.#caseAppellateDids = input.caseAppellateDids;
     this.#resourceScheduleRatification = input.resourceScheduleRatification;
@@ -401,13 +401,13 @@ export class PublicProjectionWorker {
   async #publishGovernance(event: ProjectionOutboxEvent): Promise<void> {
     if (event.aggregateType === FOUNDING_BOOTSTRAP_AGGREGATE_TYPE) {
       const envelope = foundingProjectionEnvelopeFromOutbox(event);
-      if (this.#foundingBootstrapProposalId === undefined)
+      if (this.#foundingConventionId === undefined)
         throw new Error(
           "Founding-convention projection authority is not configured",
         );
       const verified = await verifyFoundingProjectionEvent(envelope, {
         ...this.#authority,
-        foundingBootstrapProposalId: this.#foundingBootstrapProposalId,
+        foundingConventionId: this.#foundingConventionId,
       });
       if (this.#destination.sink === undefined) {
         if (this.#destination.foundingWriter === undefined)

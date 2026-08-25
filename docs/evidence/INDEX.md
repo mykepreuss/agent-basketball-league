@@ -6,14 +6,14 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | ------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Active completion contract                  | Monotonic path through Operational Founding Alpha and Genesis                      | `../launch/ABL_COMPLETION_01.md`                                                       |
 | Private integrated staging                  | Pass; temporary proof resources torn down                                          | `ABL-COMPLETION-01-STAGE-B.md`, `ABL-COMPLETION-01-STAGE-B.json`                       |
-| Current launch stage                        | `READ_ONLY_BEACON`; persistent topology approval required                          | `launch-ledger.json`                                                                   |
-| Stage C persistent-service readiness        | Local resource/monitoring/rollback contract passed; provider mutation gated        | `ABL-COMPLETION-01-STAGE-C-LOCAL.md`, `ABL-COMPLETION-01-STAGE-C-LOCAL.json`           |
-| Stage C provider preflight                  | Read-only pass; USD 21.9084/month projection; approval and CLI login required      | `ABL-COMPLETION-01-STAGE-C-PREFLIGHT.md`                                               |
-| Stage C executable deployment               | Exact 13-workload map and 13-image package reproduced twice on Node 24.18.0        | `ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.md`, `ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.json` |
+| Current launch stage                        | `READ_ONLY_BEACON`; persistent private soak in progress                            | `launch-ledger.json`                                                                   |
+| Stage C persistent-service readiness        | Local contract passed; private single-workspace deployment retained and monitored | `ABL-COMPLETION-01-STAGE-C-LOCAL.md`, `ABL-COMPLETION-01-STAGE-C-LOCAL.json`           |
+| Stage C provider preflight                  | Historical read-only pass accepted for the approved recurring-capacity deployment | `ABL-COMPLETION-01-STAGE-C-PREFLIGHT.md`                                               |
+| Stage C executable deployment               | Exact 13-workload set deployed privately; recovery exercises passed; soak active   | `ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.md`, `ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.json` |
 | Canonical launch reference                  | Approved reference; execution approval gated                                       | `docs/launch/LAUNCH_PLAN.md`                                                           |
 | Existing implementation reuse map           | Authoritative launch foundation; no rewrite                                        | `docs/launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation`          |
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                                | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
-| Founding Alpha implementation source freeze | 435 existing and launch-layer implementation files frozen                          | `founding-alpha-source-freeze.json`                                                    |
+| Founding Alpha implementation source freeze | 463 existing and launch-layer implementation files frozen                          | `founding-alpha-source-freeze.json`                                                    |
 | Founding Alpha private-run packet           | Historical input to the completed private-staging proof                            | `../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md`, `infra/blaxel/founding-alpha-private`     |
 | Founding Alpha provider preflight           | Historical Preflight 12; superseded by Stage B acceptance                          | `FOUNDING_ALPHA_PREFLIGHT_12.md`                                                       |
 | Founding Alpha R01-02 execution gate        | Failed closed before provider mutation; packaging determinism corrected locally    | `FOUNDING-ALPHA-R01-02-FAILED-CLOSED.md`                                               |
@@ -29,8 +29,8 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Founding cohort capacity                    | Local deterministic allocation implemented                                         | `@abl/schemas`, `@abl/launch`, `@abl/candidate-edge`                                   |
 | Gate 0/1 launch reconciliation              | Historical local evidence; live gates preserved                                    | `docs/launch/GATE_0_1_TRACEABILITY.md`, `GATE-01.md`                                   |
 | Gate 2 private staging                      | Historical; four runs failed closed and tore down                                  | Four failed-run records and `GATE-02-PREFLIGHT-04.md`                                  |
-| Derived launch ledger                       | Stage B complete; Stage C approval is the single current blocker                   | `launch-ledger.json`, `docs/launch/launch-ledger.source.json`                          |
-| Last recorded Blaxel inspection             | Stage B proof passed; exact temporary teardown and clean inventory verified        | `ABL-COMPLETION-01-STAGE-B.md`                                                         |
+| Derived launch ledger                       | Stage B complete; Stage C continuous private-soak evidence is the current blocker  | `launch-ledger.json`, `docs/launch/launch-ledger.source.json`                          |
+| Last recorded Blaxel execution              | Stage C private deployment and exercises passed; continuous soak remains active    | `ABL-COMPLETION-01-STAGE-C-DEPLOYMENT.md`                                              |
 | Authoritative-plan integrity                | Pass                                                                               | Plan/objective hashes in `PLATFORM_VERIFICATION.md`                                    |
 | Workspace/tooling inspection                | Pass with staging blockers                                                         | `PLATFORM_VERIFICATION.md`                                                             |
 | Dependency and image locks                  | Dependency pass; image source locked                                               | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs                                            |
@@ -60,9 +60,9 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Capacity/SLOs                               | Local 2x + loopback HTTP pass; live gate                                           | `PHASE-10.md`; k6 profile; reservations not requested                                  |
 | Arena browser automation                    | Desktop/mobile production Chromium pass                                            | `PHASE-04.md`, `PHASE-10.md`; Playwright suite                                         |
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                     | `PHASE-05.md`, continuity/exit tests                                                   |
-| Founding convention                         | Packet ready; live-agent gate                                                      | `PHASE-11.md`, blank decision packet                                                   |
+| Founding convention                         | Signed bootstrap and replacement path passes locally; live-agent gate              | `PHASE-11.md`, genesis/core/projection/public/MCP suites                               |
 | Genesis readiness                           | Local bundle ready; gated                                                          | `PHASE-11.md`, release/deployment/cost/risk bundle                                     |
-| Final local acceptance                      | 395 assertions across 83 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
+| Final local acceptance                      | 398 assertions across 83 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
 
 ## Known limitations and external dependencies
 

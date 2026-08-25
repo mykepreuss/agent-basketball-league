@@ -25,6 +25,7 @@ export interface PublicFoundingConventionProjection {
   canonical: false;
   recognitionLevel: "SIGNED_VALID";
   recordType: "FOUNDING_CONVENTION_BOOTSTRAP";
+  conventionId: string;
   proposalId: string;
   aggregateVersion: string;
   canonicalEventHash: `0x${string}`;
@@ -34,6 +35,7 @@ export interface PublicFoundingConventionProjection {
   ballots: FoundingBootstrapWorkflowSnapshot["ballots"];
   result: FoundingBootstrapWorkflowSnapshot["result"];
   closedAt: string | null;
+  previousAttempts: FoundingBootstrapWorkflowSnapshot["previousAttempts"];
   directBallotsOnly: true;
   humanVotingAllowed: false;
   projectedAt: string;
@@ -108,6 +110,7 @@ function publicProjection(
     canonical: false,
     recognitionLevel: "SIGNED_VALID",
     recordType: "FOUNDING_CONVENTION_BOOTSTRAP",
+    conventionId: snapshot.conventionId,
     proposalId: snapshot.proposalId,
     aggregateVersion: snapshot.version.toString(),
     canonicalEventHash: eventHash as `0x${string}`,
@@ -117,6 +120,7 @@ function publicProjection(
     ballots: structuredClone(snapshot.ballots),
     result: structuredClone(snapshot.result),
     closedAt: snapshot.closedAt,
+    previousAttempts: structuredClone(snapshot.previousAttempts),
     directBallotsOnly: true,
     humanVotingAllowed: false,
     projectedAt: canonicalProjectedAt(projectedAt),
@@ -143,8 +147,11 @@ async function advanceFounding(
   verified: VerifiedFoundingProjectionEvent,
   domain: TypedDataDomain,
 ): Promise<FoundingReplayState> {
-  const ballots = current === undefined ? [] : [...current.ballots];
-  const ballotSigners = new Map(current?.ballotSigners ?? []);
+  const opened = verified.event.eventType === "FoundingBootstrapOpened";
+  const ballots = current === undefined || opened ? [] : [...current.ballots];
+  const ballotSigners = new Map(
+    current === undefined || opened ? [] : current.ballotSigners,
+  );
   let result = null;
   if (verified.event.eventType === "FoundingBootstrapBallotCast") {
     const ballot = FoundingBootstrapBallotPayloadSchema.parse(
@@ -170,7 +177,11 @@ async function advanceFounding(
       snapshot: current.snapshot.snapshot,
       proposal: current.snapshot.proposal,
       ballots,
-      authorization: { domain, signers: ballotSigners },
+      authorization: {
+        domain,
+        aggregateId: verified.event.aggregateId,
+        signers: ballotSigners,
+      },
       evaluatedAt: verified.event.timestamp,
     });
   }
@@ -261,8 +272,8 @@ export class FilePublicFoundingConventionProjectionRepository
         ) as FoundingProjectionRecord;
         const priorRecord = records.at(-1);
         const verified = await this.#verify(record.authorization);
-        const proposalId = verified.event.aggregateId;
-        const priorState = states.get(proposalId);
+        const conventionId = verified.event.aggregateId;
+        const priorState = states.get(conventionId);
         if (
           record.cursor !== records.length ||
           filename !== `${String(record.cursor).padStart(12, "0")}.json` ||
@@ -276,7 +287,7 @@ export class FilePublicFoundingConventionProjectionRepository
             }) ||
           eventCursors.has(verified.event.eventHash) ||
           verified.event.previousEventHash !==
-            (lastEventHashes.get(proposalId) ?? null)
+            (lastEventHashes.get(conventionId) ?? null)
         ) {
           throw new Error(
             "Public founding-convention chain is corrupt or noncanonical",
@@ -295,8 +306,8 @@ export class FilePublicFoundingConventionProjectionRepository
           );
         records.push(structuredClone(record));
         eventCursors.set(verified.event.eventHash, record.cursor);
-        states.set(proposalId, state);
-        lastEventHashes.set(proposalId, verified.event.eventHash);
+        states.set(conventionId, state);
+        lastEventHashes.set(conventionId, verified.event.eventHash);
       }
 
       this.#records.splice(0, this.#records.length, ...records);
@@ -304,11 +315,11 @@ export class FilePublicFoundingConventionProjectionRepository
       for (const [eventHash, cursor] of eventCursors)
         this.#eventCursors.set(eventHash, cursor);
       this.#states.clear();
-      for (const [proposalId, state] of states)
-        this.#states.set(proposalId, state);
+      for (const [conventionId, state] of states)
+        this.#states.set(conventionId, state);
       this.#lastEventHashes.clear();
-      for (const [proposalId, eventHash] of lastEventHashes)
-        this.#lastEventHashes.set(proposalId, eventHash);
+      for (const [conventionId, eventHash] of lastEventHashes)
+        this.#lastEventHashes.set(conventionId, eventHash);
     });
   }
 
@@ -323,8 +334,8 @@ export class FilePublicFoundingConventionProjectionRepository
       if (priorCursor !== undefined)
         return structuredClone(this.#records[priorCursor]!);
 
-      const proposalId = verified.event.aggregateId;
-      const priorState = this.#states.get(proposalId);
+      const conventionId = verified.event.aggregateId;
+      const priorState = this.#states.get(conventionId);
       const actual = BigInt(priorState?.snapshot.version ?? 0);
       const claimedExpected = parseVersion(
         expectedVersion ?? verified.expectedVersion,
@@ -340,7 +351,7 @@ export class FilePublicFoundingConventionProjectionRepository
       }
       if (
         verified.event.previousEventHash !==
-        (this.#lastEventHashes.get(proposalId) ?? null)
+        (this.#lastEventHashes.get(conventionId) ?? null)
       ) {
         throw new ProjectionVersionConflictError(
           "Founding-convention previous event hash is invalid",
@@ -374,8 +385,8 @@ export class FilePublicFoundingConventionProjectionRepository
       );
       this.#records.push(record);
       this.#eventCursors.set(verified.event.eventHash, record.cursor);
-      this.#states.set(proposalId, state);
-      this.#lastEventHashes.set(proposalId, verified.event.eventHash);
+      this.#states.set(conventionId, state);
+      this.#lastEventHashes.set(conventionId, verified.event.eventHash);
       return structuredClone(record);
     });
   }
@@ -383,7 +394,7 @@ export class FilePublicFoundingConventionProjectionRepository
   public foundingConvention(): readonly PublicFoundingConventionProjection[] {
     const latest = new Map<string, PublicFoundingConventionProjection>();
     for (const { projection } of this.#records)
-      latest.set(projection.proposalId, projection);
+      latest.set(projection.conventionId, projection);
     return structuredClone([...latest.values()]);
   }
 }

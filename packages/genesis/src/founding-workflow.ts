@@ -89,9 +89,14 @@ export const FoundingBootstrapClosePayloadSchema = z.strictObject({
 
 export const FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
   protocol: "abl-founding-convention-bootstrap-workflow",
-  version: 1,
+  version: 2,
   aggregateType: FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
   eventTypes: FOUNDING_BOOTSTRAP_EVENT_TYPES,
+  replacementPolicy: {
+    additionalFounders: 2,
+    cooldownDays: 7,
+    parallelProposalsAllowed: false,
+  },
   directParticipationOnly: true,
   humanVotingAllowed: false,
 });
@@ -115,15 +120,21 @@ export interface FoundingBootstrapWorkflowEvent {
   timestamp: string;
 }
 
-export interface FoundingBootstrapWorkflowSnapshot {
-  proposalId: string;
-  version: number;
-  lastTransitionAt: string;
+export interface FoundingBootstrapAttempt {
   snapshot: FoundingEligibilitySnapshot;
   proposal: FoundingBootstrapProposal;
   ballots: FoundingBootstrapBallot[];
   result: FoundingBootstrapResult | null;
   closedAt: string | null;
+}
+
+export interface FoundingBootstrapWorkflowSnapshot
+  extends FoundingBootstrapAttempt {
+  conventionId: string;
+  proposalId: string;
+  version: number;
+  lastTransitionAt: string;
+  previousAttempts: FoundingBootstrapAttempt[];
 }
 
 export class FoundingBootstrapWorkflowAuthorizationError extends Error {
@@ -190,7 +201,7 @@ export function foundingBootstrapWorkflowStateRoot(
   snapshot: FoundingBootstrapWorkflowSnapshot,
 ): Hex {
   return sha256Commitment({
-    format: "ABL-FOUNDING-BOOTSTRAP-STATE-V1",
+    format: "ABL-FOUNDING-BOOTSTRAP-STATE-V2",
     ...snapshot,
   });
 }
@@ -202,7 +213,6 @@ function openWorkflow(
   const opened = deterministicOpen(payload);
   if (
     event.aggregateVersion !== 1n ||
-    event.aggregateId !== opened.proposal.proposalId ||
     event.timestamp !== opened.proposal.openedAt ||
     !opened.snapshot.eligibleFounderDids.includes(event.actorDid)
   ) {
@@ -211,6 +221,7 @@ function openWorkflow(
     );
   }
   return {
+    conventionId: event.aggregateId,
     proposalId: opened.proposal.proposalId,
     version: 1,
     lastTransitionAt: event.timestamp,
@@ -219,6 +230,73 @@ function openWorkflow(
     ballots: [],
     result: null,
     closedAt: null,
+    previousAttempts: [],
+  };
+}
+
+function currentAttempt(
+  snapshot: FoundingBootstrapWorkflowSnapshot,
+): FoundingBootstrapAttempt {
+  return structuredClone({
+    snapshot: snapshot.snapshot,
+    proposal: snapshot.proposal,
+    ballots: snapshot.ballots,
+    result: snapshot.result,
+    closedAt: snapshot.closedAt,
+  });
+}
+
+function openReplacement(
+  current: FoundingBootstrapWorkflowSnapshot,
+  event: FoundingBootstrapWorkflowEvent,
+  payload: FoundingBootstrapOpenPayload,
+): FoundingBootstrapWorkflowSnapshot {
+  const opened = deterministicOpen(payload);
+  const priorResult = current.result;
+  if (
+    priorResult === null ||
+    priorResult.state === "OPEN" ||
+    priorResult.state === "ADOPTED" ||
+    event.timestamp !== opened.proposal.openedAt ||
+    !opened.snapshot.eligibleFounderDids.includes(event.actorDid)
+  ) {
+    throw new FoundingBootstrapWorkflowAuthorizationError(
+      "Founding bootstrap replacement is not authorized",
+    );
+  }
+  const priorProposalIds = new Set([
+    current.proposalId,
+    ...current.previousAttempts.map(({ proposal }) => proposal.proposalId),
+  ]);
+  const priorFounders = new Set(current.snapshot.eligibleFounderDids);
+  const hasTwoAdditionalFounders =
+    opened.snapshot.eligibleFounderDids.filter((did) => !priorFounders.has(did))
+      .length >= 2;
+  const sevenDaysElapsed =
+    canonicalInstant(opened.proposal.openedAt) >=
+    canonicalInstant(current.proposal.closesAt) + 7 * 24 * 60 * 60 * 1_000;
+  if (
+    priorProposalIds.has(opened.proposal.proposalId) ||
+    (!hasTwoAdditionalFounders && !sevenDaysElapsed)
+  ) {
+    throw new FoundingBootstrapWorkflowValidationError(
+      "Founding bootstrap replacement cooldown is not satisfied",
+    );
+  }
+  return {
+    conventionId: current.conventionId,
+    proposalId: opened.proposal.proposalId,
+    version: current.version + 1,
+    lastTransitionAt: event.timestamp,
+    snapshot: opened.snapshot,
+    proposal: opened.proposal,
+    ballots: [],
+    result: null,
+    closedAt: null,
+    previousAttempts: [
+      ...structuredClone(current.previousAttempts),
+      currentAttempt(current),
+    ],
   };
 }
 
@@ -240,7 +318,7 @@ export function applyFoundingBootstrapWorkflowTransition(
   }
   if (
     event.aggregateVersion !== BigInt(current.version + 1) ||
-    event.aggregateId !== current.proposalId ||
+    event.aggregateId !== current.conventionId ||
     canonicalInstant(event.timestamp) <
       canonicalInstant(current.lastTransitionAt)
   ) {
@@ -248,14 +326,16 @@ export function applyFoundingBootstrapWorkflowTransition(
       "Founding bootstrap aggregate sequence is invalid",
     );
   }
+  if (event.eventType === "FoundingBootstrapOpened") {
+    return openReplacement(
+      current,
+      event,
+      FoundingBootstrapOpenPayloadSchema.parse(payload),
+    );
+  }
   const next = structuredClone(current);
   next.version += 1;
   next.lastTransitionAt = event.timestamp;
-
-  if (event.eventType === "FoundingBootstrapOpened")
-    throw new FoundingBootstrapWorkflowValidationError(
-      "Founding bootstrap is already open",
-    );
   if (event.eventType === "FoundingBootstrapBallotCast") {
     if (next.result !== null)
       throw new FoundingBootstrapWorkflowValidationError(

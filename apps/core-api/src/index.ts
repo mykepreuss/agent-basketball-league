@@ -338,10 +338,10 @@ const app =
         const candidateAdmission = {
           challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
         };
-        const foundingBootstrapProposalId =
-          process.env.ABL_FOUNDING_BOOTSTRAP_PROPOSAL_ID === undefined
+        const foundingConventionId =
+          process.env.ABL_FOUNDING_CONVENTION_ID === undefined
             ? undefined
-            : z.uuid().parse(process.env.ABL_FOUNDING_BOOTSTRAP_PROPOSAL_ID);
+            : z.uuid().parse(process.env.ABL_FOUNDING_CONVENTION_ID);
         const competitionId = required("ABL_COMPETITION_ID");
         const seasonId = required("ABL_SEASON_ID");
         const economyId = `${competitionId}:${seasonId}`;
@@ -378,9 +378,9 @@ const app =
           governanceEligibilitySnapshotDigest: sha256Commitment(
             governanceEligibilitySnapshot,
           ),
-          ...(foundingBootstrapProposalId === undefined
+          ...(foundingConventionId === undefined
             ? {}
-            : { foundingBootstrapProposalId }),
+            : { foundingConventionId }),
           caseTribunalDids,
           caseAppellateDids,
           resourceScheduleRatification,
@@ -493,11 +493,11 @@ const app =
           governance: {
             eligibilitySnapshot: governanceEligibilitySnapshot,
           },
-          ...(foundingBootstrapProposalId === undefined
+          ...(foundingConventionId === undefined
             ? {}
             : {
                 foundingConvention: {
-                  proposalId: foundingBootstrapProposalId,
+                  conventionId: foundingConventionId,
                 },
               }),
           artifacts: {

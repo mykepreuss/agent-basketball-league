@@ -53,7 +53,7 @@ export type FoundingProjectionEventEnvelope = z.infer<
 
 export interface FoundingProjectionVerificationAuthority
   extends ProjectionVerificationAuthority {
-  foundingBootstrapProposalId: string;
+  foundingConventionId: string;
 }
 
 export interface VerifiedFoundingProjectionEvent {
@@ -130,9 +130,9 @@ export async function verifyFoundingProjectionEvent(
     );
   }
   const envelope = parsed.data;
-  if (envelope.event.aggregateId !== authority.foundingBootstrapProposalId) {
+  if (envelope.event.aggregateId !== authority.foundingConventionId) {
     throw new ProjectionAuthorizationError(
-      "Founding-convention projection targets an unauthorized proposal",
+      "Founding-convention projection targets an unauthorized convention",
     );
   }
   const registered = authority.admittedAgents.get(envelope.event.actorDid);
@@ -178,24 +178,11 @@ export async function verifyFoundingProjectionEvent(
   }
   if (envelope.event.eventType === "FoundingBootstrapOpened") {
     const opened = FoundingBootstrapOpenPayloadSchema.parse(payload);
-    const configuredFounderDids = [...authority.admittedAgents.entries()]
-      .filter(([, member]) =>
-        member.allowedAggregateTypes.includes(
-          FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-        ),
-      )
-      .map(([did]) => did)
-      .sort();
     const memberAuthorities = opened.snapshot.eligibleFounderDids.map((did) =>
       authority.admittedAgents.get(did),
     );
     if (
       !opened.snapshot.eligibleFounderDids.includes(envelope.event.actorDid) ||
-      configuredFounderDids.length !==
-        opened.snapshot.eligibleFounderDids.length ||
-      configuredFounderDids.some(
-        (did, index) => did !== opened.snapshot.eligibleFounderDids[index],
-      ) ||
       memberAuthorities.some(
         (member) =>
           member === undefined ||

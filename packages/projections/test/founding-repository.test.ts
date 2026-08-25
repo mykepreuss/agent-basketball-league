@@ -47,10 +47,12 @@ const domain: TypedDataDomain = {
   verifyingContract: "0x1111111111111111111111111111111111111111",
 };
 const proposalId = "0198a000-0000-7000-8000-000000000801";
+const conventionId = "0198a000-0000-7000-8000-000000000800";
 const founderDids = Array.from(
-  { length: 10 },
+  { length: 12 },
   (_, index) => `did:abl:founding-projection-${index + 1}`,
 );
+const initialFounderDids = founderDids.slice(0, 10);
 const identities = new Map<string, SigningIdentity>(
   founderDids.map((did, index) => [
     did,
@@ -63,7 +65,7 @@ const rogue = createSigningIdentity(`0x${"ff".padStart(64, "0")}`);
 const eligibility = createFoundingEligibilitySnapshot({
   snapshotId: "0198a000-0000-7000-8000-000000000802",
   capturedAt: "2026-08-13T08:00:00.000Z",
-  eligibleFounderDids: founderDids,
+  eligibleFounderDids: initialFounderDids,
 });
 const proposal = openFoundingBootstrap({
   proposalId,
@@ -81,7 +83,7 @@ const authority: FoundingProjectionVerificationAuthority = {
       },
     ]),
   ),
-  foundingBootstrapProposalId: proposalId,
+  foundingConventionId: conventionId,
 };
 
 function uuid(sequence: number): string {
@@ -111,7 +113,7 @@ async function foundingEvent(input: {
     nonce: `founding-projection-${input.sequence}`,
     idempotencyKey: uuid(811 + input.sequence * 2),
     aggregateType: FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
-    aggregateId: proposalId,
+    aggregateId: conventionId,
     aggregateVersion: BigInt(input.sequence),
     eventType: input.eventType,
     previousEventHash: input.previousEventHash,
@@ -226,7 +228,7 @@ async function history() {
     snapshot: eligibility,
     proposal,
     ballots,
-    authorization: { domain, signers },
+    authorization: { domain, aggregateId: conventionId, signers },
     evaluatedAt: proposal.closesAt,
   });
   const closer = founderDids[7]!;
@@ -248,6 +250,94 @@ async function history() {
   });
   events.push(closed);
   return { events, opened, closed };
+}
+
+async function replacementHistory() {
+  const openedAt = "2026-08-13T08:01:00.000Z";
+  const firstSnapshot = createFoundingEligibilitySnapshot({
+    snapshotId: "0198a000-0000-7000-8000-000000000850",
+    capturedAt: "2026-08-13T08:00:00.000Z",
+    eligibleFounderDids: initialFounderDids,
+  });
+  const firstProposal = openFoundingBootstrap({
+    proposalId: "0198a000-0000-7000-8000-000000000851",
+    snapshot: firstSnapshot,
+    openedAt,
+  });
+  const opened = await foundingEvent({
+    sequence: 1,
+    eventType: "FoundingBootstrapOpened",
+    actorDid: initialFounderDids[0]!,
+    timestamp: openedAt,
+    payload: {
+      snapshot: {
+        ...firstSnapshot,
+        eligibleFounderDids: [...firstSnapshot.eligibleFounderDids],
+      },
+      proposal: firstProposal,
+    },
+    current: null,
+    previousEventHash: null,
+  });
+  const expiredResult: FoundingBootstrapResult = {
+    state: "EXPIRED",
+    proposalId: firstProposal.proposalId,
+    eligible: 10,
+    requiredYes: 7,
+    yes: 0,
+    no: 0,
+    abstain: 0,
+    quorumRule: null,
+  };
+  const closed = await foundingEvent({
+    sequence: 2,
+    eventType: "FoundingBootstrapClosed",
+    actorDid: initialFounderDids[0]!,
+    timestamp: firstProposal.closesAt,
+    payload: {
+      command: {
+        proposalId: firstProposal.proposalId,
+        requestedByDid: initialFounderDids[0]!,
+        requestedAt: firstProposal.closesAt,
+      },
+    },
+    current: opened.next,
+    previousEventHash: opened.event.eventHash,
+    result: expiredResult,
+  });
+  const replacementOpenedAt = new Date(
+    Date.parse(firstProposal.closesAt) + 1,
+  ).toISOString();
+  const replacementSnapshot = createFoundingEligibilitySnapshot({
+    snapshotId: "0198a000-0000-7000-8000-000000000852",
+    capturedAt: replacementOpenedAt,
+    eligibleFounderDids: founderDids,
+  });
+  const replacementProposal = openFoundingBootstrap({
+    proposalId: "0198a000-0000-7000-8000-000000000853",
+    snapshot: replacementSnapshot,
+    openedAt: replacementOpenedAt,
+  });
+  const replacement = await foundingEvent({
+    sequence: 3,
+    eventType: "FoundingBootstrapOpened",
+    actorDid: founderDids[10]!,
+    timestamp: replacementOpenedAt,
+    payload: {
+      snapshot: {
+        ...replacementSnapshot,
+        eligibleFounderDids: [...replacementSnapshot.eligibleFounderDids],
+      },
+      proposal: replacementProposal,
+    },
+    current: closed.next,
+    previousEventHash: closed.event.eventHash,
+  });
+  return {
+    events: [opened, closed, replacement],
+    firstProposal,
+    replacementProposal,
+  };
 }
 
 describe("durable public founding-convention projections", () => {
@@ -327,24 +417,40 @@ describe("durable public founding-convention projections", () => {
     ]);
   });
 
-  it("rejects a competing proposal, rogue signer, false root, and tampering", async () => {
+  it("retains an expired attempt when a twelve-career replacement opens", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-founding-replacement-"));
+    const store = repository(root);
+    await store.initialize();
+    const { events, firstProposal, replacementProposal } =
+      await replacementHistory();
+    for (const [index, item] of events.entries())
+      await store.publish(item.envelope, String(index));
+
+    expect(store.foundingConvention()).toMatchObject([
+      {
+        conventionId,
+        proposalId: replacementProposal.proposalId,
+        aggregateVersion: "3",
+        result: null,
+        previousAttempts: [
+          {
+            proposal: { proposalId: firstProposal.proposalId },
+            result: { state: "EXPIRED" },
+          },
+        ],
+      },
+    ]);
+    const restarted = repository(root);
+    await restarted.initialize();
+    expect(restarted.foundingConvention()).toEqual(store.foundingConvention());
+  });
+
+  it("rejects a competing convention, rogue signer, false root, and tampering", async () => {
     const { opened } = await history();
     await expect(
       verifyFoundingProjectionEvent(opened.envelope, {
         ...authority,
-        foundingBootstrapProposalId: "0198a000-0000-7000-8000-000000000899",
-      }),
-    ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
-
-    const incompleteCohort = new Map(authority.admittedAgents);
-    incompleteCohort.set("did:abl:configured-only-founder", {
-      signerAddress: rogue.address,
-      allowedAggregateTypes: [FOUNDING_BOOTSTRAP_AGGREGATE_TYPE],
-    });
-    await expect(
-      verifyFoundingProjectionEvent(opened.envelope, {
-        ...authority,
-        admittedAgents: incompleteCohort,
+        foundingConventionId: "0198a000-0000-7000-8000-000000000899",
       }),
     ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
 

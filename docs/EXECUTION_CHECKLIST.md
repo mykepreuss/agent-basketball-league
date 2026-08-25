@@ -1,6 +1,6 @@
 # ABL execution checklist
 
-Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Frozen launch-plan digest: `0x5bda34a57ebf0b90ed1aafd34ef9c452773574eb8d921b60b43999bb6feb18a4`. Frozen implementation-source digest: `0x3ed3766dc23385386fc589ceec3b76b6e512f31364f59f03767b7d29304f6068`.
+Authoritative plan: [`docs/launch/LAUNCH_PLAN.md`](./launch/LAUNCH_PLAN.md). Current launch-plan digest: `0xf8b9f925ddedc198e0f3bd1ce01e9a29689b38384465d444d083d6467bbe49d9`. Current implementation-source digest: `0x642fcc43bfa02b410198800cd28727e771ab46c6d2c1f77ec2a8a17c0a71446b`.
 
 A phase closes only when behavior works, focused and full tests pass, documentation is current, and evidence is recorded. `[~]` denotes the single active phase; `[!]` denotes an external or approval gate while safe local work continues.
 
@@ -25,6 +25,14 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Package the previously missing safety-gateway and PostgreSQL clean-room recovery-verifier images; make the Job compare every public table and database catalog without logging credentials or row content.
 - [x] Apply the recurring-capacity approval by reusing the existing workspace, creating the persistent Neon project, and deploying only the declared private workloads beneath the USD 25/month ceiling.
 
+### Founding convention local readiness — 2026-08-24
+
+- [x] Implement one durable convention aggregate whose first bootstrap and every sequential replacement are opened, voted, and closed only by admitted operational careers through direct EIP-712 signatures.
+- [x] Require a complete 10–20 career snapshot derived from candidate and exit history, a 72-hour ballot window, two-thirds approval, at least seven YES votes, no human voting, and no delegation.
+- [x] Preserve failed and expired attempts in the same replayable chain; allow a replacement only after two newly admitted careers appear in the active snapshot or seven days pass, while rejecting parallel or post-adoption replacements.
+- [x] Deliver the signed event/outbox chain to an independently verified durable public projection, launch-state API, and fixed-route government MCP without claiming canonical history.
+- [ ] Exercise the convention with live founding careers after public intake reaches the ten-career floor; local fixtures do not make founding decisions.
+
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 
 ## Historical Founding Alpha implementation — 2026-08-22 [x]
@@ -38,7 +46,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Add the live Blaxel Sandbox control-plane adapter behind exact authorization and per-application bindings; retain dry-run as the default, require a matching immutable per-career fixed-broker Sandbox, and prohibit mutable images, extra kernel arguments, Drive mounts, and raw provider credentials.
 - [x] Replace the ordinary career image's advanced proxy/iptables/CA initialization with the reviewed Sandbox body profile; preserve the former work under the inactive future untrusted-code profile.
 - [x] Add an approval-gated Agent Drive topology applicator without executing it.
-- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 366 passing assertions across 78 files and 113 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
+- [x] Finish platform-contract review, local simplification, exact Node 24.18.0 verification, evidence regeneration, and final diff review; the current correction records 398 passing assertions across 83 files and 118 uncached tasks in `docs/evidence/FOUNDING_ALPHA_LOCAL.md`.
 - [x] Refresh read-only Blaxel and Neon inventories, current costs, quota, privacy, region, and feature support after the source freeze; record `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_01.md` without provider mutation.
 - [x] Reject the stale first `ABL-FOUNDING-ALPHA-R01` authorization before mutation, rerun merged-tree evidence and provider drift checks, and record the replacement bindings in `docs/evidence/FOUNDING_ALPHA_PREFLIGHT_02.md`.
 - [x] Fail `ABL-FOUNDING-ALPHA-R01-02` closed before provider mutation when fresh image packaging exposed output-path-sensitive pnpm metadata; remove that deployment-only metadata and reproduce byte-identical contexts beneath `/tmp` and `/private/tmp`.

@@ -240,7 +240,7 @@ function projectionAuthority(): {
   finalizedGameScheduleEvidence: FinalizedGameScheduleEvidenceReader;
   developmentConferenceId: string;
   developmentCharterAuthorityDid: string;
-  foundingBootstrapProposalId: string | undefined;
+  foundingConventionId: string | undefined;
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -252,10 +252,10 @@ function projectionAuthority(): {
     .string()
     .regex(/^0x[0-9a-f]{64}$/)
     .parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST"));
-  const foundingBootstrapProposalId =
-    process.env.ABL_FOUNDING_BOOTSTRAP_PROPOSAL_ID === undefined
+  const foundingConventionId =
+    process.env.ABL_FOUNDING_CONVENTION_ID === undefined
       ? undefined
-      : z.uuid().parse(process.env.ABL_FOUNDING_BOOTSTRAP_PROPOSAL_ID);
+      : z.uuid().parse(process.env.ABL_FOUNDING_CONVENTION_ID);
   const draftAuthorityDid = z
     .string()
     .startsWith("did:")
@@ -393,7 +393,7 @@ function projectionAuthority(): {
     finalizedGameScheduleEvidence,
     developmentConferenceId,
     developmentCharterAuthorityDid,
-    foundingBootstrapProposalId,
+    foundingConventionId,
   };
 }
 
@@ -481,15 +481,15 @@ if (projectionRoot !== undefined) {
         verifyElectionProjectionEvent(authorization, runtimeAuthority),
     },
   );
-  if (runtimeAuthority.foundingBootstrapProposalId !== undefined) {
-    const proposalId = runtimeAuthority.foundingBootstrapProposalId;
+  if (runtimeAuthority.foundingConventionId !== undefined) {
+    const conventionId = runtimeAuthority.foundingConventionId;
     foundingConventionProjections =
       new FilePublicFoundingConventionProjectionRepository(projectionRoot, {
         domain: runtimeAuthority.domain,
         verifyAuthorization: async (authorization) =>
           verifyFoundingProjectionEvent(authorization, {
             ...runtimeAuthority,
-            foundingBootstrapProposalId: proposalId,
+            foundingConventionId: conventionId,
           }),
       });
   }
@@ -722,11 +722,11 @@ if (
     governanceWriter: governanceProjections,
     electionWriter: electionProjections,
     ...(foundingConventionProjections === undefined ||
-    authority.foundingBootstrapProposalId === undefined
+    authority.foundingConventionId === undefined
       ? {}
       : {
           foundingWriter: foundingConventionProjections,
-          foundingBootstrapProposalId: authority.foundingBootstrapProposalId,
+          foundingConventionId: authority.foundingConventionId,
         }),
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,

@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x10a75b0b292f22eca34296597f8064ab966b060d4a158990e8dc5227811b7183",
+    "evidenceDigest": "0xa69431ea09b88b0983a31338ce13779e5629a950ee4c0fd83aead9b640f14e0d",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -177,17 +177,17 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x35181643e8fca651b4f9cccbd8ae94f2ae577728880942a19b962a19f3ed6893",
+      "digest": "0x9136a9cfee8c675fc361a48225742d9ffbc0907b3135565f97d8d518f226be06",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0xc26c251d6cc173d0823c3b837417d59fb1aa1e80aadc866ab32d8962476c4ca7",
+      "digest": "0x2313d866d030aa97d611e373e86a819d57ac2690b680b4528255a71644c6d8e8",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0x0e8a8fa2e4a709b92469c1bdae88b9b0cdf33ba417ce16fa28c1299a2a1c3e06",
+      "digest": "0x976707b56090d64db140044a834a61d2126bb8de971542249f199eab327b2486",
       "verification": "PASSED"
     },
     {
@@ -197,12 +197,12 @@
     },
     {
       "evidenceId": "public-api-implementation",
-      "digest": "0xebe439ca92d62f22495b1d70a4ba926d06e683114d2ecfa2d8d8cd37fc684d78",
+      "digest": "0xc2bf6c2317bfcb4fc284a01237dfecdd3450fdf623481eb3214fc25d52308927",
       "verification": "PASSED"
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0x18d40bac777ddb03ae00d268de00de63d6fd523869a845ff896bf8f1d1dfe42c",
+      "digest": "0xbb5a59c240b82f878eb6fa529cfc033bf1b3045b1e044eb1f47dbb20b9464d58",
       "verification": "PASSED"
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0xb083ce87bdf9ab54ec3be9a2e9b41644dca425acc79bcbfb5be8406f7c05b4aa",
+      "digest": "0x08e9a0610efb1ce157e4531a0ef576698cdad3b1c97755b81b63bbb66aa7d2de",
       "verification": "PASSED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x5f7e1b4e2cbe2c27e5bd4b6e092be665ef53f8347902461baf75cc3adcf53c8b"
+  "ledgerDigest": "0x0fb03e6efe3b15167f48c3f72b5cf28025091d2dbfd8159eeabc0fc1fa59d25c"
 }
