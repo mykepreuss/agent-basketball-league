@@ -120,6 +120,45 @@ function evidence() {
   } as const;
 }
 
+function collectorInputs() {
+  const complete = evidence();
+  return {
+    samples: {
+      stage: complete.stage,
+      releaseId: complete.releaseId,
+      workspace: complete.workspaces[0],
+      publicExposure: complete.publicExposure,
+      startedAt: complete.startedAt,
+      updatedAt: complete.endedAt,
+      failedRuns: 0,
+      services: Object.fromEntries(
+        complete.services.map(({ service, ...observation }) => [
+          service,
+          observation,
+        ]),
+      ),
+      secretValuesRecorded: false,
+    },
+    exercises: {
+      stage: complete.stage,
+      releaseId: complete.releaseId,
+      workspace: complete.workspaces[0],
+      publicExposure: complete.publicExposure,
+      exercises: complete.exercises,
+      incidents: complete.incidents,
+      recovery: complete.recovery,
+      secretValuesRecorded: false,
+    },
+    metrics: {
+      releaseId: complete.releaseId,
+      measuredAt: complete.endedAt,
+      ...complete.metrics,
+      finalProviderReadback: true,
+      secretValuesRecorded: false,
+    },
+  } as const;
+}
+
 describe("persistent private soak", () => {
   it("keeps the checked-in policy and resource plan on the single-workspace boundary", async () => {
     const repositoryRoot = new URL("../../../", import.meta.url);
