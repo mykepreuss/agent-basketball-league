@@ -118,7 +118,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Threat-model administrator, provider, sponsor, model, key, storage, telemetry, context, network, and recovery compromise.
 - [x] Pass schema strictness, classification coverage, and constitutional invariant tests; record evidence.
 
-## 2. Four-workspace Blaxel foundation [!]
+## 2. Single-workspace Blaxel foundation [~]
 
 - [x] Define `agent-basketball-league` as the physical workspace and private, core, public, and integration roles as logical trust domains with explicit responsibilities and prohibited access.
 - [x] Define least-privilege cross-service identities, signed requests, nonces, expected versions, and allowlists.
@@ -133,7 +133,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [!] Obtain the four production Blaxel workspaces. The temporary `agent-basketball-league` workspace and active Drive entitlement do not replace the production topology or a live Drive proof.
+- [~] Complete the persistent single-workspace operational proof. The services, credential rotation, clean-room recovery, private previews, and logical trust-domain boundaries are live-proved; the deterministic 24-hour private soak remains in progress.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.

@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/foundation": "workspace:*",
     "@abl/launch": "workspace:*",
     "@abl/schemas": "workspace:*",
     "fastify": "catalog:",

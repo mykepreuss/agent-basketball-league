@@ -1,11 +1,16 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
-import { CANDIDATE_EDGE_ROUTE_CATALOG } from "./server.js";
+import {
+  CANDIDATE_EDGE_ROUTE_CATALOG,
+  installCandidateRateLimit,
+  type CandidateRateLimitOptions,
+} from "./server.js";
 
 export interface CandidateGatewayOptions {
   storeOrigin: string;
   previewToken: string;
   fetchImplementation?: typeof fetch;
+  rateLimit?: CandidateRateLimitOptions;
 }
 
 export function createCandidateGateway(
@@ -29,6 +34,7 @@ export function createCandidateGateway(
     throw new Error("Candidate store preview token is invalid");
   const fetchImplementation = options.fetchImplementation ?? fetch;
   const app = Fastify({ logger: false, bodyLimit: 1_200_000 });
+  installCandidateRateLimit(app, options.rateLimit);
 
   app.addHook("onSend", async (_request, reply) => {
     reply.header("cache-control", "no-store");
