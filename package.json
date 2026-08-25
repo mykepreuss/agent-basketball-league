@@ -33,6 +33,7 @@
     "staging:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:prepare-runtime": "tsx scripts/prepare-private-staging-runtime.ts",
     "stage-c:assess-soak": "tsx scripts/assess-persistent-soak.ts",
+    "stage-c:finalize-soak": "tsx scripts/finalize-persistent-soak.ts",
     "stage-c:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "stage-c:validate-deployment": "tsx scripts/validate-persistent-deployment.ts",
     "stage-d:validate-beacon": "tsx scripts/validate-public-beacon.ts",

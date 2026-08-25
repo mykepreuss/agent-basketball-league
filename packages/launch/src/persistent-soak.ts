@@ -136,6 +136,116 @@ export type PersistentSoakEvidence = z.infer<
   typeof PersistentSoakEvidenceSchema
 >;
 
+const PersistentSoakSamplesSchema = z.object({
+  stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
+  releaseId: z.string().min(1).max(200),
+  workspace: PersistentWorkspaceSchema,
+  publicExposure: z.literal("NONE"),
+  startedAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+  failedRuns: z.number().int().nonnegative(),
+  services: z.record(
+    z.string().min(1).max(100),
+    z.object({
+      samples: z.number().int().positive(),
+      failures: z.number().int().nonnegative(),
+      maximumLatencyMs: z.number().int().nonnegative(),
+      maximumSampleGapSeconds: z.number().int().nonnegative(),
+    }),
+  ),
+  secretValuesRecorded: z.literal(false),
+});
+
+const PersistentSoakExercisesSchema = z.object({
+  stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
+  releaseId: z.string().min(1).max(200),
+  workspace: PersistentWorkspaceSchema,
+  publicExposure: z.literal("NONE"),
+  exercises: PersistentSoakEvidenceSchema.shape.exercises,
+  incidents: PersistentSoakEvidenceSchema.shape.incidents,
+  recovery: PersistentSoakEvidenceSchema.shape.recovery,
+  secretValuesRecorded: z.literal(false),
+});
+
+const PersistentSoakMetricsSchema =
+  PersistentSoakEvidenceSchema.shape.metrics.extend({
+    releaseId: z.string().min(1).max(200),
+    measuredAt: z.iso.datetime({ offset: true }),
+    finalProviderReadback: z.literal(true),
+    secretValuesRecorded: z.literal(false),
+  });
+
+export function composePersistentSoakEvidence(input: {
+  policy: unknown;
+  samples: unknown;
+  exercises: unknown;
+  metrics: unknown;
+}): PersistentSoakEvidence {
+  const policy = PersistentSoakPolicySchema.parse(input.policy);
+  const samples = PersistentSoakSamplesSchema.parse(input.samples);
+  const exercises = PersistentSoakExercisesSchema.parse(input.exercises);
+  const metrics = PersistentSoakMetricsSchema.parse(input.metrics);
+  if (
+    new Set([samples.releaseId, exercises.releaseId, metrics.releaseId])
+      .size !== 1
+  )
+    throw new Error("Stage C evidence release IDs do not match");
+  if (
+    samples.stage !== policy.stage ||
+    exercises.stage !== policy.stage ||
+    samples.workspace !== policy.requiredWorkspaces[0] ||
+    exercises.workspace !== samples.workspace
+  )
+    throw new Error("Stage C evidence boundary does not match the policy");
+  const serviceFailures = Object.values(samples.services).reduce(
+    (total, service) => total + service.failures,
+    0,
+  );
+  if (
+    serviceFailures < samples.failedRuns ||
+    serviceFailures > samples.failedRuns * Object.keys(samples.services).length
+  )
+    throw new Error(
+      "Stage C aggregate and per-service failures are inconsistent",
+    );
+
+  return PersistentSoakEvidenceSchema.parse({
+    version: 1,
+    evidenceClass: "LIVE_PRIVATE_SOAK",
+    stage: policy.stage,
+    releaseId: samples.releaseId,
+    startedAt: samples.startedAt,
+    endedAt: samples.updatedAt,
+    publicExposure: "NONE",
+    workspaces: policy.requiredWorkspaces,
+    services: policy.requiredServices.map((required) => {
+      const observed = samples.services[required.service];
+      if (observed === undefined)
+        throw new Error(`Missing service sample: ${required.service}`);
+      return {
+        ...required,
+        ...observed,
+        errorRate: observed.failures / observed.samples,
+      };
+    }),
+    exercises: exercises.exercises,
+    incidents: exercises.incidents,
+    metrics: {
+      maximumProjectionLagMs: metrics.maximumProjectionLagMs,
+      maximumQueueDepth: metrics.maximumQueueDepth,
+      candidateProvisioningFailures: metrics.candidateProvisioningFailures,
+      projectedMonthlyCostUsd: metrics.projectedMonthlyCostUsd,
+      observedCostUsd: metrics.observedCostUsd,
+      blaxelBalanceUsd: metrics.blaxelBalanceUsd,
+      automaticTopUp: metrics.automaticTopUp,
+      publicIngressRequests: metrics.publicIngressRequests,
+      canonicalClaims: metrics.canonicalClaims,
+      genesisClaims: metrics.genesisClaims,
+    },
+    recovery: exercises.recovery,
+  });
+}
+
 function sameMembers(left: readonly string[], right: readonly string[]) {
   return (
     new Set(left).size === left.length &&
