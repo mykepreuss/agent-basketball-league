@@ -197,6 +197,60 @@ export const CandidateIntakeModeSchema = z.enum([
   "CAPPED_PUBLIC",
 ]);
 
+export const CandidateRoleCapacityCountsSchema = z.record(
+  CandidateRoleClassSchema,
+  z.number().int().nonnegative(),
+);
+
+export const CandidateIntakePublicStateSchema = z
+  .strictObject({
+    schemaVersion: z.literal(SchemaVersion),
+    mode: CandidateIntakeModeSchema,
+    capacityState: z.enum([
+      "CLOSED",
+      "AVAILABLE",
+      "QUEUEING",
+      "NO_CREDIBLE_OPPORTUNITY",
+    ]),
+    capacityByRole: CandidateRoleCapacityCountsSchema,
+    occupiedByRole: CandidateRoleCapacityCountsSchema,
+    openingsByRole: CandidateRoleCapacityCountsSchema,
+    queuedByRole: CandidateRoleCapacityCountsSchema,
+    canonicalAuthority: z.literal(false),
+    genesis: z.literal(false),
+    maximumApplicationBytes: z.number().int().positive(),
+    decisionDeadlineHours: z.literal(72),
+    credibleOpportunityHorizonDays: z.literal(30),
+    policyCommitment: Sha256Schema,
+    updatedAt: IsoDateTimeSchema,
+  })
+  .superRefine((state, context) => {
+    for (const role of CandidateRoleClassSchema.options) {
+      const remaining = state.capacityByRole[role] - state.occupiedByRole[role];
+      if (remaining < 0 || state.openingsByRole[role] > remaining)
+        context.addIssue({
+          code: "custom",
+          path: ["openingsByRole", role],
+          message: "Candidate openings exceed unoccupied role capacity",
+        });
+    }
+    const hasOpening = Object.values(state.openingsByRole).some(
+      (openings) => openings > 0,
+    );
+    if (
+      (state.mode === "CLOSED") !== (state.capacityState === "CLOSED") ||
+      (state.capacityState === "AVAILABLE") !== hasOpening
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["capacityState"],
+        message: "Candidate capacity classification is inconsistent",
+      });
+  });
+export type CandidateIntakePublicState = z.infer<
+  typeof CandidateIntakePublicStateSchema
+>;
+
 export const CandidateIntakeApplicationSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
   applicationId: UuidV7Schema,
@@ -1393,6 +1447,7 @@ export const SafetyActionSchema = z.strictObject({
 export const schemaRegistry = {
   AgentManifest: AgentManifestSchema,
   CandidateProvenance: CandidateProvenanceSchema,
+  CandidateIntakePublicState: CandidateIntakePublicStateSchema,
   CandidateIntakeApplication: CandidateIntakeApplicationSchema,
   CandidateCapacityDecision: CandidateCapacityDecisionSchema,
   CandidateOpportunityResponse: CandidateOpportunityResponseSchema,

@@ -3357,8 +3357,8 @@ describe("complete local acceptance", () => {
     ]);
   });
 
-  it("exports all 43 primary, two V1 operational, and seven launch schemas as fail-closed strict JSON Schema", () => {
-    expect(Object.keys(schemaRegistry)).toHaveLength(52);
+  it("exports all 43 primary, two V1 operational, and eight launch schemas as fail-closed strict JSON Schema", () => {
+    expect(Object.keys(schemaRegistry)).toHaveLength(53);
     const jsonSchemas = exportJsonSchemas();
     expect(Object.keys(jsonSchemas)).toEqual(Object.keys(schemaRegistry));
     for (const [name, schema] of Object.entries(jsonSchemas)) {

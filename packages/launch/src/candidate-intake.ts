@@ -6,12 +6,15 @@ import {
   AgentManifestSchema,
   CandidateCapacityDecisionSchema,
   CandidateIntakeApplicationSchema,
+  CandidateIntakePublicStateSchema,
   CandidateIntakeStatusSchema,
   CandidateOpportunityResponseSchema,
   CandidateProvenanceSchema,
   CandidateProvisioningReceiptSchema,
+  CandidateRoleCapacityCountsSchema,
   SchemaVersion,
   SignedCanonicalCommandSchema,
+  type CandidateIntakePublicState,
 } from "@abl/schemas";
 import {
   recoverCanonicalEventSigner,
@@ -181,6 +184,19 @@ export function parseCandidateIntakePolicy(
   return { ...policy, policyCommitment: sha256Commitment(policy) };
 }
 
+function roleCounts(
+  count: (roleClass: CandidateRoleClass) => number,
+): Record<CandidateRoleClass, number> {
+  return CandidateRoleCapacityCountsSchema.parse(
+    Object.fromEntries(
+      CandidateRoleClass.options.map((roleClass) => [
+        roleClass,
+        count(roleClass),
+      ]),
+    ),
+  );
+}
+
 export class CandidateIntakeService {
   readonly #challengeSecret: Uint8Array;
   readonly #repository: CandidateIntakeRepository;
@@ -206,24 +222,76 @@ export class CandidateIntakeService {
     this.#now = input.now ?? Date.now;
   }
 
-  intakeState(): {
-    mode: CandidateIntakePolicy["mode"];
-    canonicalAuthority: false;
-    genesis: false;
-    maximumApplicationBytes: number;
-    decisionDeadlineHours: 72;
-    credibleOpportunityHorizonDays: 30;
-    policyCommitment: Hex;
-  } {
-    return {
+  intakeState(): Promise<CandidateIntakePublicState> {
+    return this.#serialize(() => this.#intakeStateSerially());
+  }
+
+  async #intakeStateSerially(): Promise<CandidateIntakePublicState> {
+    const now = this.#now();
+    await this.#reconcileCapacity(now);
+    const records = await this.#repository.list();
+    const capacityByRole = roleCounts(
+      (roleClass) => this.#policy.roleCapacity[roleClass] ?? 0,
+    );
+    const occupiedByRole = roleCounts(
+      (roleClass) =>
+        records.filter(
+          (record) =>
+            record.decision.roleClass === roleClass &&
+            candidateOccupiesCapacity(record, now),
+        ).length,
+    );
+    const queuedByRole = roleCounts(
+      (roleClass) =>
+        records.filter(
+          (record) =>
+            record.decision.roleClass === roleClass &&
+            record.status.state === "QUEUED",
+        ).length,
+    );
+    const credibleOpportunityByRole = Object.fromEntries(
+      CandidateRoleClass.options.map((roleClass) => {
+        const candidate = this.#policy.credibleOpportunityAt[roleClass];
+        const opportunityAt =
+          candidate === undefined
+            ? null
+            : parseCanonicalInstant(candidate, "Credible opportunity");
+        return [
+          roleClass,
+          opportunityAt !== null &&
+            opportunityAt >= now &&
+            opportunityAt <= now + OPPORTUNITY_HORIZON_MS,
+        ];
+      }),
+    ) as Record<CandidateRoleClass, boolean>;
+    const openingsByRole = roleCounts((roleClass) =>
+      this.#policy.mode !== "CLOSED" && credibleOpportunityByRole[roleClass]
+        ? Math.max(0, capacityByRole[roleClass] - occupiedByRole[roleClass])
+        : 0,
+    );
+    let capacityState: CandidateIntakePublicState["capacityState"];
+    if (this.#policy.mode === "CLOSED") capacityState = "CLOSED";
+    else if (Object.values(openingsByRole).some((openings) => openings > 0))
+      capacityState = "AVAILABLE";
+    else if (Object.values(credibleOpportunityByRole).some(Boolean))
+      capacityState = "QUEUEING";
+    else capacityState = "NO_CREDIBLE_OPPORTUNITY";
+    return CandidateIntakePublicStateSchema.parse({
+      schemaVersion: SchemaVersion,
       mode: this.#policy.mode,
+      capacityState,
+      capacityByRole,
+      occupiedByRole,
+      openingsByRole,
+      queuedByRole,
       canonicalAuthority: false,
       genesis: false,
       maximumApplicationBytes: MAX_REGISTRATION_BYTES,
       decisionDeadlineHours: 72,
       credibleOpportunityHorizonDays: 30,
       policyCommitment: this.#policy.policyCommitment,
-    };
+      updatedAt: new Date(now).toISOString(),
+    });
   }
 
   issueChallenge(candidateDid: string): CandidateChallenge {
@@ -420,8 +488,7 @@ export class CandidateIntakeService {
     );
   }
 
-  async #reconcileCapacity(): Promise<void> {
-    const now = this.#now();
+  async #reconcileCapacity(now = this.#now()): Promise<void> {
     for (const record of await this.#repository.list())
       await this.#repository.expireOffer(record.application.applicationId, now);
     const records = [...(await this.#repository.list())].sort((left, right) =>

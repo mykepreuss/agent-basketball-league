@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0xf067538f3b5a86f9200bd15c0782c94fe455dc40c60dff5e04e06f046e665772",
+    "evidenceDigest": "0xc6c38447c4b2349427aaf8b1739e56b6072fd5d86379e9d91fc94a447105037f",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -177,12 +177,12 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x5e17ea6a379e9e39fd2b5aa41f4defeda6dee2ac1d87ef9f80c9b7a40866f239",
+      "digest": "0x8cf2b7898ea19c9f3294d1f9677557b3c88117863d36350124aadb810ad79068",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0xd056697547c60b7b04c6a04818e11167bb12e8ec0074708c3208d914215ea6a6",
+      "digest": "0xf716d2e5722d3ad6c3d72b10aa91197c683a1b7f4f885d6e08335fd3c23237c8",
       "verification": "PASSED"
     },
     {
@@ -197,12 +197,12 @@
     },
     {
       "evidenceId": "public-api-implementation",
-      "digest": "0x5e3ee6ad1d0a7d90a77f84449682a6d3cc83904d0b448d018ccfa043c88041a1",
+      "digest": "0x15f0b5d7ac9193db7c8af2884fe2ee65ddc032681fbe44c10c2c1e4abb07ba82",
       "verification": "PASSED"
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0x12b3faa41353f4333e2c4df3f2fbce0fc5c003770afe26fe675437014631b85e",
+      "digest": "0xbdb2790a1916431adf799f4d95aad0ddc8de155aa1e1a1a41291f30ee7e24bcf",
       "verification": "PASSED"
     },
     {
@@ -212,12 +212,12 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0xd0fb1f37c0184ca5a85c4e34e6e47b432e3b3a451ee986c07bcf1b87a4290ef1",
+      "digest": "0xf142fb20ae69bca95a935a87d34a1d3a27e46cbe1a1879a12050c102f4da3e58",
       "verification": "PASSED"
     },
     {
       "evidenceId": "candidate-edge-implementation",
-      "digest": "0x4b33e6bd1b4e69b69319cb2f7f59922f9a8395abdefa461409628fbc6ff951eb",
+      "digest": "0xe7dec2f14a6d6d08baba3070cd657aaba81aac72e6c03c26293bf230e5f206e8",
       "verification": "PASSED"
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0xc13b073d9c965d6fe6a6cc2ed0e015398f0ecdf98887037be188b4efc44584c7",
+      "digest": "0x499b10e3b02f6314bb18b7abfe022dca0f815a5e9e8b3b7b1acc4575d6125dd0",
       "verification": "PASSED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xb306d2e644b199e2d220660408857a7fcff744c65d92c18cc09cb54d243a90bf"
+  "ledgerDigest": "0x1c74fb67ee33dbea5bf121b5e0851400aa0f4561cccbf7579f192965cce5238f"
 }

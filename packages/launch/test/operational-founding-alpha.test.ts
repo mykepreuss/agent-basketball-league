@@ -6,6 +6,7 @@ import {
   assessOperationalFoundingAlpha,
   assessPersistentSoak,
   assessPublicBeaconSoak,
+  createFoundingIntakeLaunchState,
 } from "../src/index.js";
 
 const releaseCommit = "b".repeat(40);
@@ -392,6 +393,65 @@ function inputs(evidence: unknown = operationalEvidence()) {
 }
 
 describe("Operational Founding Alpha completion", () => {
+  it("opens invite-only intake after Stage D and requires admission before capped public intake", () => {
+    const acceptedAt = "2026-08-26T00:10:00.000Z";
+    expect(
+      createFoundingIntakeLaunchState({
+        stageDPolicy,
+        stageDEvidence,
+        mode: "INVITE_ONLY",
+        acceptedAt,
+      }),
+    ).toMatchObject({
+      launchStage: "PRIVATE_FOUNDING_ALPHA",
+      publicExposure: "CANDIDATE_INTAKE",
+      candidateIntake: {
+        mode: "INVITE_ONLY",
+        capacityState: "NO_CREDIBLE_OPPORTUNITY",
+      },
+      foundingConvention: { liveFounders: 0 },
+      blockingReasons: [
+        "First externally operated founding admission is pending",
+      ],
+    });
+    expect(() =>
+      createFoundingIntakeLaunchState({
+        stageDPolicy,
+        stageDEvidence,
+        mode: "CAPPED_PUBLIC",
+        acceptedAt,
+      }),
+    ).toThrow("requires the first external admission");
+    expect(() =>
+      createFoundingIntakeLaunchState({
+        stageDPolicy,
+        stageDEvidence,
+        mode: "INVITE_ONLY",
+        acceptedAt: "2026-08-25T23:59:59.000Z",
+      }),
+    ).toThrow("predates the public Beacon");
+
+    const firstAdmission = operationalEvidence().externalAdmission;
+    expect(
+      createFoundingIntakeLaunchState({
+        stageDPolicy,
+        stageDEvidence,
+        mode: "CAPPED_PUBLIC",
+        acceptedAt,
+        firstAdmission,
+      }),
+    ).toMatchObject({
+      launchStage: "CAPPED_FOUNDING_INTAKE",
+      candidateIntake: { mode: "CAPPED_PUBLIC" },
+      foundingCohort: {
+        admitted: { PLAYER: 1 },
+        openings: { PLAYER: 9 },
+      },
+      foundingConvention: { liveFounders: 1 },
+      blockingReasons: [],
+    });
+  });
+
   it("passes exactly one live external admission on the accepted public release", () => {
     expect(assessOperationalFoundingAlpha(inputs())).toMatchObject({
       status: "PASS",

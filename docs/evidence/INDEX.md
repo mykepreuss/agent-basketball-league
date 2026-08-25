@@ -38,7 +38,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Workspace/tooling inspection                | Pass with staging blockers                                                         | `PLATFORM_VERIFICATION.md`                                                             |
 | Dependency and image locks                  | Dependency pass; image source locked                                               | `PHASE-02.md`, `pnpm-lock.yaml`, OCI inputs                                            |
 | Constitutional invariant tests              | Phase baseline pass                                                                | `PHASE-00-01.md`, `@abl/policy`                                                        |
-| Schema and interface coverage               | 43/43 primary + 2/2 V1 + 7/7 launch types implemented; exact-runtime rerun passed  | `PHASE-00-01.md`, `GATE-01.md`, `@abl/schemas`                                         |
+| Schema and interface coverage               | 43/43 primary + 2/2 V1 + 8/8 launch types implemented; exact-runtime rerun passed  | `PHASE-00-01.md`, `GATE-01.md`, `@abl/schemas`                                         |
 | NBA rule classification                     | 15/15 pass                                                                         | `docs/rules/nba-rule-mapping.json`                                                     |
 | 2023 CBA classification                     | 42 articles + 17 exhibits pass                                                     | `docs/rules/cba-mapping.json`                                                          |
 | Deterministic possession/game replay        | Local exact-replay pass                                                            | `PHASE-04.md`, `PHASE-06.md`, proof fixtures                                           |
@@ -65,7 +65,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                     | `PHASE-05.md`, continuity/exit tests                                                   |
 | Founding convention                         | Signed bootstrap and replacement path passes locally; live-agent gate              | `PHASE-11.md`, genesis/core/projection/public/MCP suites                               |
 | Genesis readiness                           | Local bundle ready; gated                                                          | `PHASE-11.md`, release/deployment/cost/risk bundle                                     |
-| Final local acceptance                      | 450 assertions across 93 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
+| Final local acceptance                      | 457 assertions across 93 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
 
 ## Known limitations and external dependencies
 

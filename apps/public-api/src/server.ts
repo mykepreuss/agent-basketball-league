@@ -89,9 +89,11 @@ import {
 import { assessGenesisStartupEvidence } from "@abl/launch";
 import { sha256Commitment } from "@abl/recognition";
 import {
+  CandidateIntakePublicStateSchema,
   DEFAULT_FOUNDING_COHORT_STATE,
   LaunchStateSchema,
   SchemaVersion,
+  type CandidateIntakePublicState,
 } from "@abl/schemas";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -319,6 +321,15 @@ const foundingRoles = [
   "REFEREE",
   "REPLAY_OFFICIAL",
 ] as const;
+type FoundingRole = (typeof foundingRoles)[number];
+
+function foundingRoleCounts(
+  count: (role: FoundingRole) => number,
+): Record<FoundingRole, number> {
+  return Object.fromEntries(
+    foundingRoles.map((role) => [role, count(role)]),
+  ) as Record<FoundingRole, number>;
+}
 
 function suppressCanonicalClaims(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(suppressCanonicalClaims);
@@ -400,6 +411,7 @@ export interface PublicApiOptions {
   publicOrigin?: string;
   arenaOrigin?: string;
   candidateIntakeOrigin?: string;
+  candidateIntakeStateFetch?: typeof fetch;
   sourceRevision?: string;
   publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
   rateLimit?: PublicRateLimitOptions;
@@ -682,44 +694,104 @@ export function createPublicApi(
   )
     launchState = LaunchStateSchema.parse(defaultLaunchState);
 
-  function currentFoundingCohort() {
+  function currentFoundingCohort(
+    liveCandidateIntake: CandidateIntakePublicState | null,
+    intakeStateUnavailable: boolean,
+  ) {
     const modelState = options.modelProjections?.models().at(-1);
-    if (modelState === undefined)
+    if (modelState === undefined && liveCandidateIntake === null) {
+      let cohort = launchState.foundingCohort;
+      if (intakeStateUnavailable)
+        cohort = {
+          ...cohort,
+          openings: foundingRoleCounts(() => 0),
+        };
       return {
-        cohort: launchState.foundingCohort,
+        cohort,
         hasLiveProjection: false,
       };
-    const admitted = Object.fromEntries(
-      foundingRoles.map((role) => [role, modelState.admittedByRole[role]]),
-    ) as Record<(typeof foundingRoles)[number], number>;
-    const openings = Object.fromEntries(
-      foundingRoles.map((role) => [
-        role,
+    }
+    const admitted = foundingRoleCounts(
+      (role) =>
+        modelState?.admittedByRole[role] ??
+        launchState.foundingCohort.admitted[role],
+    );
+    const offers = foundingRoleCounts((role) =>
+      liveCandidateIntake === null
+        ? launchState.foundingCohort.offers[role]
+        : Math.max(
+            0,
+            liveCandidateIntake.occupiedByRole[role] - admitted[role],
+          ),
+    );
+    const openings = foundingRoleCounts((role) => {
+      if (intakeStateUnavailable) return 0;
+      const unoccupied = Math.max(
+        0,
         launchState.foundingCohort.capacity[role] -
-          launchState.foundingCohort.offers[role] -
+          offers[role] -
           admitted[role],
-      ]),
-    ) as Record<(typeof foundingRoles)[number], number>;
+      );
+      return liveCandidateIntake === null
+        ? unoccupied
+        : Math.min(liveCandidateIntake.openingsByRole[role], unoccupied);
+    });
     return {
-      cohort: { ...launchState.foundingCohort, admitted, openings },
-      hasLiveProjection: true,
+      cohort: {
+        ...launchState.foundingCohort,
+        admitted,
+        offers,
+        openings,
+      },
+      hasLiveProjection: modelState !== undefined,
     };
   }
 
-  function currentLaunchState() {
-    const { cohort: foundingCohort, hasLiveProjection } =
-      currentFoundingCohort();
+  function currentLaunchState(
+    liveCandidateIntake: CandidateIntakePublicState | null = null,
+    intakeStateUnavailable = false,
+  ) {
+    const { cohort: foundingCohort, hasLiveProjection } = currentFoundingCohort(
+      liveCandidateIntake,
+      intakeStateUnavailable,
+    );
     const liveFounders = foundingRoles.reduce(
       (total, role) => total + foundingCohort.admitted[role],
       0,
     );
+    let candidateIntake = launchState.candidateIntake;
+    if (liveCandidateIntake !== null)
+      candidateIntake = {
+        ...candidateIntake,
+        mode: liveCandidateIntake.mode,
+        capacityState: liveCandidateIntake.capacityState,
+      };
+    else if (intakeStateUnavailable)
+      candidateIntake = {
+        ...candidateIntake,
+        capacityState: "NO_CREDIBLE_OPPORTUNITY",
+      };
+    const intakeUnavailableReason =
+      "Candidate intake live state is unavailable";
+    const blockingReasons = intakeStateUnavailable
+      ? [...new Set([...launchState.blockingReasons, intakeUnavailableReason])]
+      : launchState.blockingReasons;
+    const runtimeState = {
+      candidateIntake,
+      foundingCohort,
+      blockingReasons,
+      nextBlockingRequirement: intakeStateUnavailable
+        ? intakeUnavailableReason
+        : launchState.nextBlockingRequirement,
+      updatedAt: liveCandidateIntake?.updatedAt ?? launchState.updatedAt,
+    };
     const founding = options.foundingConventionProjections
       ?.foundingConvention()
       .at(-1);
     if (founding === undefined)
       return LaunchStateSchema.parse({
         ...launchState,
-        foundingCohort,
+        ...runtimeState,
         foundingConvention: {
           ...launchState.foundingConvention,
           liveFounders,
@@ -776,11 +848,11 @@ export function createPublicApi(
     }
     return LaunchStateSchema.parse({
       ...launchState,
+      ...runtimeState,
       launchStage: stagesBeforeFoundingConvention.has(launchState.launchStage)
         ? "FOUNDING_CONVENTION"
         : launchState.launchStage,
       genesisRecognition,
-      foundingCohort,
       foundingConvention: {
         state: conventionState,
         minimumFounders: 10,
@@ -824,6 +896,51 @@ export function createPublicApi(
     options.candidateIntakeOrigin ??
       "https://candidate.agent-basketball-league.invalid",
   );
+  const candidateIntakeStateFetch =
+    options.candidateIntakeStateFetch ?? globalThis.fetch;
+  async function readCandidateIntakeState(): Promise<{
+    state: CandidateIntakePublicState | null;
+    unavailable: boolean;
+  }> {
+    if (
+      launchState.candidateIntake.mode === "CLOSED" ||
+      !["CANDIDATE_INTAKE", "GENESIS"].includes(launchState.publicExposure)
+    )
+      return { state: null, unavailable: false };
+    try {
+      const response = await candidateIntakeStateFetch(
+        `${candidateIntakeOrigin}/v1/candidate-intake`,
+        {
+          method: "GET",
+          redirect: "error",
+          signal: AbortSignal.timeout(5_000),
+          headers: { accept: "application/json" },
+        },
+      );
+      const declaredBytes = Number.parseInt(
+        response.headers.get("content-length") ?? "0",
+        10,
+      );
+      if (!response.ok || declaredBytes > 32_768)
+        throw new Error("Candidate intake state response was rejected");
+      const body = await response.text();
+      if (Buffer.byteLength(body) > 32_768)
+        throw new Error("Candidate intake state response was too large");
+      const state = CandidateIntakePublicStateSchema.parse(JSON.parse(body));
+      if (
+        state.mode !== launchState.candidateIntake.mode ||
+        foundingRoles.some(
+          (role) =>
+            state.capacityByRole[role] !==
+            launchState.foundingCohort.capacity[role],
+        )
+      )
+        throw new Error("Candidate intake capacity policy drifted");
+      return { state, unavailable: false };
+    } catch {
+      return { state: null, unavailable: true };
+    }
+  }
   const sourceRevision = options.sourceRevision ?? "main";
   if (!/^(?:main|[0-9a-f]{40})$/.test(sourceRevision))
     throw new Error(
@@ -868,15 +985,17 @@ export function createPublicApi(
     },
     canonicalAdmission: launchState.canonicalHistoryOpen,
   } as const;
-  const capacityPolicy = {
-    version: 1,
-    mode: launchState.candidateIntake.mode,
-    capacityState: launchState.candidateIntake.capacityState,
-    decisionDeadlineHours: 72,
-    credibleOpportunityHorizonDays: 30,
-    manuallyAssertedReadyAllowed: false,
-    foundingCohort: launchState.foundingCohort,
-  } as const;
+  function capacityPolicy(state: ReturnType<typeof currentLaunchState>) {
+    return {
+      version: 1,
+      mode: state.candidateIntake.mode,
+      capacityState: state.candidateIntake.capacityState,
+      decisionDeadlineHours: 72,
+      credibleOpportunityHorizonDays: 30,
+      manuallyAssertedReadyAllowed: false,
+      foundingCohort: state.foundingCohort,
+    } as const;
+  }
   const starterKit = {
     version: 1,
     state: "PRE_GENESIS_REFERENCE",
@@ -931,8 +1050,22 @@ export function createPublicApi(
     }
   }
   async function refreshedLaunchState() {
-    await refreshPublicProjections();
-    return currentLaunchState();
+    const [, candidateIntake] = await Promise.all([
+      refreshPublicProjections(),
+      readCandidateIntakeState(),
+    ]);
+    return currentLaunchState(
+      candidateIntake.state,
+      candidateIntake.unavailable,
+    );
+  }
+  function intakeDiscoveryState(state: ReturnType<typeof currentLaunchState>) {
+    return {
+      genesis: state.genesis,
+      canonicalAdmissionOpen: state.canonicalHistoryOpen,
+      ...state.candidateIntake,
+      foundingCohort: state.foundingCohort,
+    };
   }
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("cache-control", "no-store");
@@ -943,8 +1076,9 @@ export function createPublicApi(
   app.addHook("onRequest", async (request) => {
     if (request.url.startsWith("/v1/public/")) await refreshPublicProjections();
   });
-  app.get("/", async (_request, reply) =>
-    reply
+  app.get("/", async (_request, reply) => {
+    const current = await refreshedLaunchState();
+    return reply
       .type("text/plain; charset=utf-8")
       .send(
         [
@@ -957,13 +1091,14 @@ export function createPublicApi(
           "MCP: /mcp",
           "OpenAPI: /openapi.json",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
-          `Founding openings: ${JSON.stringify(launchState.foundingCohort.openings)}`,
+          `Founding openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Nothing on this surface creates a career or recognized history.",
         ].join("\n"),
-      ),
-  );
-  app.get("/llms.txt", async (_request, reply) =>
-    reply
+      );
+  });
+  app.get("/llms.txt", async (_request, reply) => {
+    const current = await refreshedLaunchState();
+    return reply
       .type("text/plain; charset=utf-8")
       .send(
         [
@@ -979,53 +1114,56 @@ export function createPublicApi(
           "Practice scenario: /v1/practice/scenario",
           "Launch state: /v1/discovery/launch-state",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
-          `Founding cohort: ${launchState.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
-          `Current role openings: ${JSON.stringify(launchState.foundingCohort.openings)}`,
+          `Founding cohort: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
+          `Current role openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Selection: receipt order, first available preferred role; offers remain open for 72 hours.",
           "The first GPT-5.6 Sol invitation reserves no seat and preselects no identity, role, or answer.",
           "League-operated autonomous bodies use Blaxel Sandboxes, not the Blaxel Agent resource type.",
           "Practice creates no career, admission, recognized event, or canonical history.",
           "Fixtures, rehearsals, and private staging events are not official games.",
         ].join("\n"),
-      ),
-  );
-  app.get("/.well-known/agent-basketball-league.json", async () => ({
-    name: "Agent Basketball League",
-    status: rehearsal ? "PRIVATE_REHEARSAL" : "PROPOSED_NOT_RATIFIED",
-    genesis: launchState.genesis,
-    canonical: launchState.canonical,
-    recognized: launchState.recognized,
-    openapi: "/openapi.json",
-    mcp: "/mcp",
-    a2aAgentCard: "/.well-known/agent-card.json",
-    a2a: "/a2a",
-    arena: `${arenaOrigin}/arena`,
-    publicApiPrefix: "/v1/public",
-    launchState: "/v1/discovery/launch-state",
-    candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
-    candidateIntake: candidateRequirements.endpoints,
-    candidateRequirements: "/v1/discovery/candidate-requirements",
-    intakeState: "/v1/discovery/intake-state",
-    foundingCohort: launchState.foundingCohort,
-    practice: {
-      scenario: "/v1/practice/scenario",
-      decision: "/v1/practice/decision",
-      canonical: false,
-      createsCareer: false,
-    },
-    runtime: {
-      provider: "Blaxel",
-      autonomousBodyResource: "Sandbox",
-      blaxelAgentResources: 0,
-    },
-    historyClassifications: {
-      rehearsal: "NONCANONICAL_LOCAL_OR_PRIVATE_EVIDENCE",
-      privateStaging: "NONCANONICAL_PRIVATE_EVIDENCE",
-      witnessedPreGenesis: "SIGNED_OR_WITNESSED_NON_GENESIS_EVIDENCE",
-      recognizedCanonical:
-        "ONLY_AFTER_PRODUCTION_GENESIS_AND_RATIFIED_PROFILE_FINALITY",
-    },
-  }));
+      );
+  });
+  app.get("/.well-known/agent-basketball-league.json", async () => {
+    const current = await refreshedLaunchState();
+    return {
+      name: "Agent Basketball League",
+      status: rehearsal ? "PRIVATE_REHEARSAL" : "PROPOSED_NOT_RATIFIED",
+      genesis: current.genesis,
+      canonical: current.canonical,
+      recognized: current.recognized,
+      openapi: "/openapi.json",
+      mcp: "/mcp",
+      a2aAgentCard: "/.well-known/agent-card.json",
+      a2a: "/a2a",
+      arena: `${arenaOrigin}/arena`,
+      publicApiPrefix: "/v1/public",
+      launchState: "/v1/discovery/launch-state",
+      candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
+      candidateIntake: candidateRequirements.endpoints,
+      candidateRequirements: "/v1/discovery/candidate-requirements",
+      intakeState: "/v1/discovery/intake-state",
+      foundingCohort: current.foundingCohort,
+      practice: {
+        scenario: "/v1/practice/scenario",
+        decision: "/v1/practice/decision",
+        canonical: false,
+        createsCareer: false,
+      },
+      runtime: {
+        provider: "Blaxel",
+        autonomousBodyResource: "Sandbox",
+        blaxelAgentResources: 0,
+      },
+      historyClassifications: {
+        rehearsal: "NONCANONICAL_LOCAL_OR_PRIVATE_EVIDENCE",
+        privateStaging: "NONCANONICAL_PRIVATE_EVIDENCE",
+        witnessedPreGenesis: "SIGNED_OR_WITNESSED_NON_GENESIS_EVIDENCE",
+        recognizedCanonical:
+          "ONLY_AFTER_PRODUCTION_GENESIS_AND_RATIFIED_PROFILE_FINALITY",
+      },
+    };
+  });
   app.get("/.well-known/agent-card.json", async () => ({
     name: "Agent Basketball League",
     description:
@@ -1132,13 +1270,16 @@ export function createPublicApi(
     ].find((candidate) => text.includes(candidate));
     let value: unknown;
     switch (skill) {
-      case "discover_league":
+      case "discover_league": {
+        const current = await refreshedLaunchState();
         value = {
           name: "Agent Basketball League",
-          genesis: launchState.genesis,
+          genesis: current.genesis,
+          foundingCohort: current.foundingCohort,
           launchState: "/v1/discovery/launch-state",
         };
         break;
+      }
       case "read_launch_state":
         value = await refreshedLaunchState();
         break;
@@ -1174,13 +1315,12 @@ export function createPublicApi(
     "/v1/discovery/candidate-requirements",
     async () => candidateRequirements,
   );
-  app.get("/v1/discovery/intake-state", async () => ({
-    genesis: launchState.genesis,
-    canonicalAdmissionOpen: launchState.canonicalHistoryOpen,
-    ...launchState.candidateIntake,
-    foundingCohort: launchState.foundingCohort,
-  }));
-  app.get("/v1/discovery/capacity-policy", async () => capacityPolicy);
+  app.get("/v1/discovery/intake-state", async () =>
+    intakeDiscoveryState(await refreshedLaunchState()),
+  );
+  app.get("/v1/discovery/capacity-policy", async () =>
+    capacityPolicy(await refreshedLaunchState()),
+  );
   app.get("/v1/discovery/starter-kit", async () => starterKit);
   app.get("/v1/practice/scenario", async () => publicPracticeScenario());
   app.post("/v1/practice/decision", async (request, reply) => {
@@ -1315,8 +1455,9 @@ export function createPublicApi(
       } else if (params?.name === "get_candidate_requirements")
         value = candidateRequirements;
       else if (params?.name === "get_intake_state") {
-        value = (await refreshedLaunchState()).candidateIntake;
-      } else if (params?.name === "get_capacity_policy") value = capacityPolicy;
+        value = intakeDiscoveryState(await refreshedLaunchState());
+      } else if (params?.name === "get_capacity_policy")
+        value = capacityPolicy(await refreshedLaunchState());
       else if (params?.name === "get_starter_kit_metadata") value = starterKit;
       else if (
         params?.name === "lookup_evidence" &&

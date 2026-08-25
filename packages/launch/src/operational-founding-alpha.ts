@@ -1,9 +1,16 @@
 import { sha256Commitment } from "@abl/recognition";
-import { LaunchStateSchema } from "@abl/schemas";
+import {
+  DEFAULT_FOUNDING_COHORT_STATE,
+  LaunchStateSchema,
+  SchemaVersion,
+} from "@abl/schemas";
 import { z } from "zod";
 
 import { assessPersistentSoak } from "./persistent-soak.js";
-import { assessPublicBeaconSoak } from "./public-beacon.js";
+import {
+  PublicBeaconSoakEvidenceSchema,
+  assessPublicBeaconSoak,
+} from "./public-beacon.js";
 
 const DigestSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const GitCommitSchema = z.string().regex(/^[0-9a-f]{40}$/);
@@ -256,6 +263,106 @@ const foundingCapacity = {
   REFEREE: 6,
   REPLAY_OFFICIAL: 2,
 } as const;
+
+export function createFoundingIntakeLaunchState(input: {
+  stageDPolicy: unknown;
+  stageDEvidence: unknown;
+  mode: "INVITE_ONLY" | "CAPPED_PUBLIC";
+  acceptedAt: string;
+  firstAdmission?: unknown;
+}) {
+  const evidence = PublicBeaconSoakEvidenceSchema.parse(input.stageDEvidence);
+  const result = assessPublicBeaconSoak(input.stageDPolicy, evidence);
+  if (result.status !== "PASS")
+    throw new Error(
+      `Stage D public Beacon has not passed: ${result.blockers.join(", ")}`,
+    );
+  const acceptedAt = z.iso.datetime({ offset: true }).parse(input.acceptedAt);
+  if (Date.parse(acceptedAt) < Date.parse(evidence.endedAt))
+    throw new Error("Founding intake activation predates the public Beacon");
+  const capped = input.mode === "CAPPED_PUBLIC";
+  const firstAdmission =
+    input.firstAdmission === undefined
+      ? null
+      : ExternalAdmissionSchema.parse(input.firstAdmission);
+  if (capped && firstAdmission === null)
+    throw new Error(
+      "Capped public intake requires the first external admission",
+    );
+  if (!capped && firstAdmission !== null)
+    throw new Error(
+      "Invite-only launch state cannot include an external admission",
+    );
+  if (
+    firstAdmission !== null &&
+    Date.parse(acceptedAt) < Date.parse(firstAdmission.acceptedAt)
+  )
+    throw new Error("Capped intake activation predates the first admission");
+  let foundingCohort = DEFAULT_FOUNDING_COHORT_STATE;
+  if (firstAdmission !== null)
+    foundingCohort = {
+      ...DEFAULT_FOUNDING_COHORT_STATE,
+      admitted: {
+        ...DEFAULT_FOUNDING_COHORT_STATE.admitted,
+        [firstAdmission.role]: 1,
+      },
+      openings: {
+        ...DEFAULT_FOUNDING_COHORT_STATE.openings,
+        [firstAdmission.role]:
+          DEFAULT_FOUNDING_COHORT_STATE.openings[firstAdmission.role] - 1,
+      },
+    };
+  return LaunchStateSchema.parse({
+    schemaVersion: SchemaVersion,
+    launchStage: capped ? "CAPPED_FOUNDING_INTAKE" : "PRIVATE_FOUNDING_ALPHA",
+    operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+    recognitionLevel: "SIGNED_VALID",
+    genesis: false,
+    canonical: false,
+    recognized: false,
+    canonicalHistoryOpen: false,
+    productionV1Ready: true,
+    publicExposure: "CANDIDATE_INTAKE",
+    candidateIntake: {
+      mode: input.mode,
+      capacityState: "NO_CREDIBLE_OPPORTUNITY",
+      requirementsUri: "/v1/discovery/candidate-requirements",
+      capacityPolicyUri: "/v1/discovery/capacity-policy",
+    },
+    foundingCohort,
+    foundingConvention: {
+      state: "RECRUITING",
+      minimumFounders: 10,
+      liveFounders: firstAdmission === null ? 0 : 1,
+      eligibilitySnapshotCommitment: null,
+      bootstrap: {
+        state: "NOT_OPEN",
+        closesAt: null,
+        requiredYes: null,
+        yesVotes: 0,
+      },
+    },
+    evidenceDigest: sha256Commitment({
+      stageDResultDigest: result.resultDigest,
+      releaseId: evidence.releaseId,
+      mode: input.mode,
+      firstAdmission:
+        firstAdmission === null ? null : sha256Commitment(firstAdmission),
+    }),
+    blockingReasons: capped
+      ? []
+      : ["First externally operated founding admission is pending"],
+    nextBlockingRequirement: capped
+      ? "Reach ten active founding careers and open the founding convention"
+      : "Complete one independently chosen external admission",
+    lastSuccessfulAcceptance: {
+      stage: "READ_ONLY_BEACON",
+      evidenceId: "ABL-COMPLETION-01-STAGE-D",
+      acceptedAt,
+    },
+    updatedAt: acceptedAt,
+  });
+}
 
 function sameRoleCounts(
   value: z.infer<typeof FoundingRoleCountsSchema>,

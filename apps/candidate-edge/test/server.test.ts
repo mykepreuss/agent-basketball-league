@@ -78,9 +78,16 @@ describe("candidate edge", () => {
     expect(state.statusCode).toBe(200);
     expect(state.headers["x-abl-canonical-authority"]).toBe("none");
     expect(state.json()).toMatchObject({
+      schemaVersion: "1.0.0",
       mode: "CLOSED",
+      capacityState: "CLOSED",
+      capacityByRole: { PLAYER: 0, COACH: 0 },
+      occupiedByRole: { PLAYER: 0, COACH: 0 },
+      openingsByRole: { PLAYER: 0, COACH: 0 },
+      queuedByRole: { PLAYER: 0, COACH: 0 },
       canonicalAuthority: false,
       genesis: false,
+      updatedAt: "2026-08-19T12:00:00.000Z",
     });
     expect(
       (await server.inject({ method: "POST", url: "/v1/core/command" }))

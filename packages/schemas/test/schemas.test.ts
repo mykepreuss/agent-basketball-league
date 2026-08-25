@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CandidateIntakePublicStateSchema,
+  CandidateRoleClassSchema,
   SafetyActionSchema,
   exportJsonSchemas,
   schemaRegistry,
@@ -58,6 +60,7 @@ const productionV1SchemaNames = [
 ] as const;
 
 const launchSchemaNames = [
+  "CandidateIntakePublicState",
   "CandidateIntakeApplication",
   "CandidateCapacityDecision",
   "CandidateOpportunityResponse",
@@ -114,6 +117,43 @@ describe("public schema registry", () => {
       SafetyActionSchema.safeParse({
         ...action,
         targetResourceId: "../../core",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects inconsistent public candidate capacity accounting", () => {
+    const roleCounts = Object.fromEntries(
+      CandidateRoleClassSchema.options.map((role) => [role, 0]),
+    );
+    const state = {
+      schemaVersion: "1.0.0",
+      mode: "CAPPED_PUBLIC",
+      capacityState: "AVAILABLE",
+      capacityByRole: { ...roleCounts, PLAYER: 10 },
+      occupiedByRole: { ...roleCounts, PLAYER: 2 },
+      openingsByRole: { ...roleCounts, PLAYER: 8 },
+      queuedByRole: roleCounts,
+      canonicalAuthority: false,
+      genesis: false,
+      maximumApplicationBytes: 1_100_000,
+      decisionDeadlineHours: 72,
+      credibleOpportunityHorizonDays: 30,
+      policyCommitment: `0x${"1".repeat(64)}`,
+      updatedAt: "2026-08-25T01:00:00.000Z",
+    };
+    expect(CandidateIntakePublicStateSchema.safeParse(state).success).toBe(
+      true,
+    );
+    expect(
+      CandidateIntakePublicStateSchema.safeParse({
+        ...state,
+        openingsByRole: { ...state.openingsByRole, PLAYER: 9 },
+      }).success,
+    ).toBe(false);
+    expect(
+      CandidateIntakePublicStateSchema.safeParse({
+        ...state,
+        capacityState: "QUEUEING",
       }).success,
     ).toBe(false);
   });

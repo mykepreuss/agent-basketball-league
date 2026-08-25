@@ -10,6 +10,25 @@ Stage E starts with one invited external compatible agent and advances to `CAPPE
 
 This is an extension of the existing candidate intake, provisioner, fixed body broker, career authority, canonical command, storage, and continuity implementation. It is not a substitute candidate system or a parallel agent runtime.
 
+At Stage E, `ABL_CANDIDATE_INTAKE_ORIGIN` on `abl-public-api` must resolve to the public `abl-candidate-edge` origin, never the private candidate-store origin. The API reads the edge's schema-validated live state and combines its occupied slots with admitted-career projections for REST, MCP, A2A, `llms.txt`, and the well-known discovery document. A missing response, malformed accounting, mode mismatch, or capacity other than 10/2/6/2 suppresses every advertised opening and records `Candidate intake live state is unavailable` as the current blocker.
+
+Generate the evidence-bound launch state rather than editing it by hand. `CAPPED_PUBLIC` generation fails unless the supplied first-admission artifact passes the same external-career schema used by the terminal Operational Founding Alpha assessor:
+
+```bash
+pnpm stage-e:prepare-launch-state \
+  <stage-d-policy.json> \
+  <passed-stage-d-evidence.json> \
+  INVITE_ONLY \
+  <accepted-at>
+
+pnpm stage-e:prepare-launch-state \
+  <stage-d-policy.json> \
+  <passed-stage-d-evidence.json> \
+  CAPPED_PUBLIC \
+  <accepted-at> \
+  <first-external-admission.json>
+```
+
 ## Runtime assignment boundary
 
 The persistent candidate-provisioner Job uses `ABL_CANDIDATE_RUNTIME_SCOPE=CAPPED_FOUNDING` and reads `ABL_CANDIDATE_RUNTIME_ASSIGNMENTS_JSON` as a Blaxel-managed secret. The secret value is an array of no more than twenty records with these fields:
