@@ -82,6 +82,44 @@ describe("derived launch ledger", () => {
     );
   });
 
+  it("accepts ratified signed-witness finality without a Base broadcast approval", () => {
+    const ready = deriveLaunchLedger({
+      ...input(),
+      launchStage: "PRODUCTION_GENESIS",
+      operatingProfile: "PRODUCTION_GENESIS",
+      recognitionLevel: "INDEPENDENTLY_WITNESSED",
+      genesisRecognition: {
+        mechanism: "SIGNED_WITNESSES",
+        ratified: true,
+        foundingDecisionEventId: "0199d000-0000-7000-8000-000000000001",
+      },
+      approvals: [
+        "MATERIAL_SPEND",
+        "RESOURCE_CREATION",
+        "PUBLIC_EXPOSURE",
+        "GENESIS_ACTIVATION",
+      ].map((action) => ({
+        action,
+        state: "GRANTED" as const,
+        approvalId: `approval-${action.toLowerCase()}`,
+      })),
+    });
+
+    expect(ready.gateStatus).toBe("READY");
+    expect(ready.launchState).toMatchObject({
+      genesis: true,
+      canonical: true,
+      recognitionLevel: "INDEPENDENTLY_WITNESSED",
+      genesisRecognition: {
+        mechanism: "SIGNED_WITNESSES",
+        ratified: true,
+      },
+    });
+    expect(ready.launchState.blockingReasons).not.toContain(
+      "RECOGNITION_BROADCAST: approval not granted",
+    );
+  });
+
   it("blocks required signatures and binds verified signatures to passed evidence", () => {
     const required = deriveLaunchLedger({
       ...input(),

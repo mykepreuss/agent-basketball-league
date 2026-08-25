@@ -64,6 +64,7 @@ const ADMITTED_AGGREGATE_TYPES = [
   "governance-proposal",
   "institutional-election",
   "founding-convention-bootstrap",
+  "founding-convention-decision",
   "due-process-case",
   "resource-schedule",
   "software-release",

@@ -1,8 +1,8 @@
 import { assessCanonicalDatabaseProfile } from "@abl/database";
 import {
   CanonicalDatabaseProfileSchema,
+  GenesisRecognitionProfileSchema,
   RecognitionCheckpointSchema,
-  RecognitionNetworkProfileSchema,
   ReleaseManifestSchema,
 } from "@abl/schemas";
 import { sha256Commitment } from "@abl/recognition";
@@ -14,6 +14,77 @@ const PassedProofSchema = z.strictObject({
   passed: z.literal(true),
   verifiedAt: z.iso.datetime({ offset: true }),
 });
+
+const RecognitionCommitmentsSchema = z.strictObject({
+  constitutionDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  verifierDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  recognitionRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  institutionalKeyRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  schemaDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  migrationDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  releaseDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  networkProfileDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+});
+
+const GenesisRecognitionProofSchema = z.discriminatedUnion("mechanism", [
+  z.strictObject({
+    mechanism: z.literal("SIGNED_WITNESSES"),
+    recognitionLevel: z.literal("INDEPENDENTLY_WITNESSED"),
+    manifestDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    root: z.string().regex(/^0x[0-9a-f]{64}$/),
+    witnessRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    verifiedWitnessIds: z.array(z.string().min(1).max(120)).min(2).max(20),
+    verifierResultDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    finalizedAt: z.iso.datetime({ offset: true }),
+  }),
+  z.strictObject({
+    mechanism: z.literal("BASE_FINALIZED"),
+    recognitionLevel: z.literal("ONCHAIN_FINALIZED"),
+    checkpoint: RecognitionCheckpointSchema,
+    verifierResultDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    finalizedAt: z.iso.datetime({ offset: true }),
+  }),
+  z.strictObject({
+    mechanism: z.literal("COMPATIBLE_REPLACEMENT"),
+    recognitionLevel: z.enum(["INDEPENDENTLY_WITNESSED", "ONCHAIN_FINALIZED"]),
+    manifestDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    root: z.string().regex(/^0x[0-9a-f]{64}$/),
+    profileDocumentDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    implementationVerifierDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    verifierResultDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    finalizedAt: z.iso.datetime({ offset: true }),
+  }),
+]);
+
+const GenesisReleaseAuthorizationSchema = z
+  .strictObject({
+    releaseManifestDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    foundingDecisionEventId: z.string().uuid(),
+    decisionCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    eligible: z.number().int().min(10).max(20),
+    requiredYes: z.number().int().min(7).max(20),
+    authorizedAt: z.iso.datetime({ offset: true }),
+    authorizationSignatures: z
+      .array(z.string().regex(/^0x[0-9a-f]{130}$/))
+      .min(7)
+      .max(20),
+    authorizationCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+  })
+  .superRefine((authorization, context) => {
+    const threshold = Math.max(7, Math.ceil((authorization.eligible * 2) / 3));
+    if (
+      authorization.requiredYes !== threshold ||
+      authorization.authorizationSignatures.length < threshold ||
+      new Set(authorization.authorizationSignatures).size !==
+        authorization.authorizationSignatures.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Genesis release authorization does not satisfy founder quorum",
+      });
+    }
+  });
 
 export const GenesisStartupEvidenceSchema = z.strictObject({
   databaseProfile: CanonicalDatabaseProfileSchema,
@@ -31,32 +102,18 @@ export const GenesisStartupEvidenceSchema = z.strictObject({
     publicBoundary: PassedProofSchema,
     capacity: PassedProofSchema,
   }),
-  recognitionProfile: RecognitionNetworkProfileSchema,
+  recognitionProfile: GenesisRecognitionProfileSchema,
   ratifiedAnchor: z.strictObject({
     foundingDecisionEventId: z.string().uuid(),
-    constitutionDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    verifierDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    recognitionRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    institutionalKeyRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    schemaDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    migrationDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    releaseDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    networkProfileDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+    decisionCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+    ...RecognitionCommitmentsSchema.shape,
     ratificationSignatures: z
       .array(z.string().regex(/^0x[0-9a-f]{130}$/))
       .min(4),
   }),
-  genesisCheckpoint: z.strictObject({
-    checkpoint: RecognitionCheckpointSchema,
-    recognitionLevel: z.literal("ONCHAIN_FINALIZED"),
-    constitutionDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    verifierDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    recognitionRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    institutionalKeyRegistryDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    schemaDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    migrationDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    releaseDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
-    networkProfileDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  genesisReleaseAuthorization: GenesisReleaseAuthorizationSchema,
+  genesisCheckpoint: RecognitionCommitmentsSchema.extend({
+    proof: GenesisRecognitionProofSchema,
   }),
 });
 
@@ -67,6 +124,16 @@ export type GenesisStartupEvidence = z.infer<
 export interface GenesisStartupAssessment {
   operatingProfile: "PRODUCTION_V1_PRE_GENESIS" | "PRODUCTION_GENESIS";
   ready: boolean;
+  recognitionLevel: "NONE" | "INDEPENDENTLY_WITNESSED" | "ONCHAIN_FINALIZED";
+  genesisRecognition: {
+    mechanism:
+      | "UNSELECTED"
+      | "SIGNED_WITNESSES"
+      | "BASE_FINALIZED"
+      | "COMPATIBLE_REPLACEMENT";
+    ratified: boolean;
+    foundingDecisionEventId: string | null;
+  };
   blockers: readonly string[];
   evidenceDigest: `0x${string}` | null;
 }
@@ -79,6 +146,12 @@ export function assessGenesisStartupEvidence(
     return {
       operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
       ready: false,
+      recognitionLevel: "NONE",
+      genesisRecognition: {
+        mechanism: "UNSELECTED",
+        ratified: false,
+        foundingDecisionEventId: null,
+      },
       blockers: ["Genesis startup evidence is incomplete or invalid"],
       evidenceDigest: null,
     };
@@ -92,7 +165,7 @@ export function assessGenesisStartupEvidence(
   blockers.push(...database.missing.map((missing) => `Database: ${missing}`));
 
   const releaseDigest = sha256Commitment(evidence.releaseManifest);
-  const networkDigest = sha256Commitment(evidence.recognitionProfile);
+  const profileDigest = sha256Commitment(evidence.recognitionProfile);
   if (
     evidence.deployedArtifacts.sourceDigest !==
       evidence.releaseManifest.sourceDigest ||
@@ -107,9 +180,8 @@ export function assessGenesisStartupEvidence(
     blockers.push("Deployed artifacts do not match the effective release");
 
   const profile = evidence.recognitionProfile;
+  const { profileCommitment, ...profileBody } = profile;
   if (
-    profile.decisionSource !== "FOUNDING_AGENT_DECISION" ||
-    profile.foundingDecisionEventId === null ||
     profile.foundingDecisionEventId !==
       evidence.ratifiedAnchor.foundingDecisionEventId ||
     !profile.ratified ||
@@ -118,18 +190,32 @@ export function assessGenesisStartupEvidence(
     blockers.push(
       "Recognition profile lacks a ratified founding-agent decision",
     );
-  if (
-    profile.network.classification !== "PRODUCTION" ||
-    profile.network.chainId === 84532
-  )
-    blockers.push("Recognition network is not an approved production network");
-  if (profile.recognitionContractAddress === null)
-    blockers.push("Recognition contract is not selected");
+  if (sha256Commitment(profileBody) !== profileCommitment)
+    blockers.push("Recognition profile commitment is invalid");
   if (profile.sourceReleaseDigest !== evidence.releaseManifest.sourceDigest)
     blockers.push("Recognition profile is not bound to the source release");
+  if (profile.releaseManifestDigest !== releaseDigest)
+    blockers.push("Recognition profile is not bound to the release manifest");
 
   const anchor = evidence.ratifiedAnchor;
+  const releaseAuthorization = evidence.genesisReleaseAuthorization;
   const checkpoint = evidence.genesisCheckpoint;
+  const { authorizationCommitment, ...releaseAuthorizationBody } =
+    releaseAuthorization;
+  if (
+    anchor.decisionCommitment !== profile.decisionCommitment ||
+    releaseAuthorization.releaseManifestDigest !== releaseDigest ||
+    !evidence.releaseManifest.ratificationEventIds.includes(
+      releaseAuthorization.foundingDecisionEventId,
+    ) ||
+    sha256Commitment(releaseAuthorization.authorizationSignatures) !==
+      sha256Commitment(evidence.releaseManifest.authorizationSignatures) ||
+    sha256Commitment(releaseAuthorizationBody) !== authorizationCommitment
+  ) {
+    blockers.push(
+      "Founding decisions do not authorize the recognition profile and Genesis release",
+    );
+  }
   const commitmentPairs = [
     [anchor.constitutionDigest, checkpoint.constitutionDigest, "constitution"],
     [anchor.verifierDigest, checkpoint.verifierDigest, "verifier"],
@@ -155,22 +241,56 @@ export function assessGenesisStartupEvidence(
     anchor.schemaDigest !== evidence.releaseManifest.schemaDigest ||
     anchor.migrationDigest !== evidence.releaseManifest.migrationDigest ||
     anchor.releaseDigest !== releaseDigest ||
-    anchor.networkProfileDigest !== networkDigest
+    anchor.networkProfileDigest !== profileDigest
   )
     blockers.push(
       "Ratified anchor does not match release and network evidence",
     );
+  const proof = checkpoint.proof;
   if (
-    checkpoint.checkpoint.checkpointType !== "CONSTITUTION" ||
-    checkpoint.checkpoint.chainId !== profile.network.chainId ||
-    checkpoint.checkpoint.contractAddress.toLowerCase() !==
-      profile.recognitionContractAddress?.toLowerCase() ||
-    checkpoint.checkpoint.transactionHash === null ||
-    checkpoint.checkpoint.blockNumber === null
+    proof.verifierResultDigest !==
+    evidence.releaseManifest.publicVerifierResultDigest
   )
+    blockers.push("Genesis proof does not match the public verifier result");
+  if (proof.mechanism !== profile.mechanism)
     blockers.push(
-      "Finalized Genesis checkpoint does not match recognition profile",
+      "Genesis proof does not match the ratified recognition profile",
     );
+  if (profile.mechanism === "SIGNED_WITNESSES") {
+    if (
+      proof.mechanism !== "SIGNED_WITNESSES" ||
+      proof.witnessRegistryDigest !== profile.witnessRegistryDigest ||
+      new Set(proof.verifiedWitnessIds).size < profile.minimumWitnesses ||
+      anchor.recognitionRegistryDigest !== profile.witnessRegistryDigest
+    ) {
+      blockers.push(
+        "Signed-witness Genesis proof does not satisfy the ratified profile",
+      );
+    }
+  } else if (profile.mechanism === "BASE_FINALIZED") {
+    if (
+      profile.network.chainId === 84532 ||
+      proof.mechanism !== "BASE_FINALIZED" ||
+      proof.checkpoint.checkpointType !== "CONSTITUTION" ||
+      proof.checkpoint.chainId !== profile.network.chainId ||
+      proof.checkpoint.contractAddress.toLowerCase() !==
+        profile.recognitionContractAddress.toLowerCase() ||
+      proof.checkpoint.transactionHash === null ||
+      proof.checkpoint.blockNumber === null
+    ) {
+      blockers.push(
+        "Finalized Base Genesis checkpoint does not match the ratified profile",
+      );
+    }
+  } else if (
+    proof.mechanism !== "COMPATIBLE_REPLACEMENT" ||
+    proof.profileDocumentDigest !== profile.profileDocumentDigest ||
+    proof.implementationVerifierDigest !== profile.implementationVerifierDigest
+  ) {
+    blockers.push(
+      "Replacement Genesis proof does not match the ratified profile",
+    );
+  }
 
   const ready = blockers.length === 0;
   return {
@@ -178,6 +298,18 @@ export function assessGenesisStartupEvidence(
       ? "PRODUCTION_GENESIS"
       : "PRODUCTION_V1_PRE_GENESIS",
     ready,
+    recognitionLevel: ready ? proof.recognitionLevel : "NONE",
+    genesisRecognition: ready
+      ? {
+          mechanism: profile.mechanism,
+          ratified: true,
+          foundingDecisionEventId: profile.foundingDecisionEventId,
+        }
+      : {
+          mechanism: "UNSELECTED",
+          ratified: false,
+          foundingDecisionEventId: null,
+        },
     blockers,
     evidenceDigest: sha256Commitment(evidence),
   };

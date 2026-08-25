@@ -6,4 +6,5 @@ export * from "./events.js";
 export * from "./identity.js";
 export * from "./merkle.js";
 export * from "./registry.js";
+export * from "./recognition-profiles.js";
 export * from "./verifier.js";

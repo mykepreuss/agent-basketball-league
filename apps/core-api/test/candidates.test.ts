@@ -53,19 +53,31 @@ import {
 } from "@abl/basketball";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
+  FOUNDING_DECISION_AGGREGATE_TYPE,
+  FOUNDING_DECISION_WORKFLOW_SCHEMA_DIGEST,
   FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
   FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST,
   applyFoundingBootstrapWorkflowTransition,
+  applyFoundingDecisionWorkflowTransition,
   createFoundingEligibilitySnapshot,
   evaluateFoundingBootstrap,
+  evaluateFoundingDecision,
   foundingBootstrapBallotFromAuthorization,
   foundingBootstrapWorkflowStateRoot,
+  foundingDecisionProposalCommitment,
+  foundingDecisionWorkflowStateRoot,
+  openFoundingDecision,
   openFoundingBootstrap,
   type FoundingBootstrapEventType,
   type FoundingBootstrapResult,
   type FoundingBootstrapWorkflowPayload,
   type FoundingBootstrapWorkflowSnapshot,
   type SignedFoundingBootstrapBallot,
+  type FoundingDecisionEventType,
+  type FoundingDecisionResult,
+  type FoundingDecisionWorkflowPayload,
+  type FoundingDecisionWorkflowSnapshot,
+  type SignedFoundingDecisionBallot,
 } from "@abl/genesis";
 import {
   ARTIFACT_ADMISSION_AGGREGATE_TYPE,
@@ -1384,6 +1396,63 @@ async function foundingBootstrapCommand(input: {
   };
 }
 
+async function foundingDecisionCommand(input: {
+  actor: Harness;
+  proposalId: string;
+  snapshot: FoundingDecisionWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: FoundingDecisionEventType;
+  payload: FoundingDecisionWorkflowPayload;
+  result?: FoundingDecisionResult;
+  signer?: SigningIdentity;
+  eventId?: string;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: input.eventId ?? crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `founding-decision-${input.proposalId}-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: FOUNDING_DECISION_AGGREGATE_TYPE,
+    aggregateId: input.proposalId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: FOUNDING_DECISION_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyFoundingDecisionWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+    input.result,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: foundingDecisionWorkflowStateRoot(next),
+  });
+  const signature = await signCanonicalEvent(
+    input.signer ?? input.actor.candidate,
+    domain,
+    event,
+  );
+  return {
+    next,
+    event,
+    signature,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [signature],
+    },
+  };
+}
+
 async function resourceScheduleCommand(input: {
   h: Harness;
   schedule: ResourceSchedule;
@@ -1993,6 +2062,7 @@ async function admitCandidate(h: Harness) {
       COMBINE_RESULT_AGGREGATE_TYPE,
       "premier-draft",
       FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+      FOUNDING_DECISION_AGGREGATE_TYPE,
     ],
   });
   return admitted;
@@ -8437,6 +8507,166 @@ describe("signed candidate rehearsal API", () => {
           method: "POST",
           url: "/v1/founding-convention/bootstrap/close",
           payload: closed.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    h.now.value += 60_000;
+    const decisionEligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("483"),
+      capturedAt: new Date(h.now.value).toISOString(),
+      eligibleFounderDids: [...participants.keys()],
+    });
+    h.now.value += 60_000;
+    const decisionProposal = openFoundingDecision({
+      proposal: {
+        proposalId: uuid("484"),
+        conventionId: foundingConventionId,
+        topic: "RECOGNITION_PROFILE",
+        authorDid: h.candidateDid,
+        disposition: "REPLACE",
+        artifactUri: "https://abl.example/genesis/recognition-profile.json",
+        artifactDigest: digest("a"),
+        eligibilitySnapshotCommitment: decisionEligibility.commitment,
+        proposedAt: new Date(h.now.value).toISOString(),
+        recognitionMechanism: "SIGNED_WITNESSES",
+        releaseManifestDigest: null,
+      },
+      snapshot: decisionEligibility,
+      quorumRule: result.quorumRule!,
+    });
+    const decisionOpened = await foundingDecisionCommand({
+      actor: h,
+      proposalId: decisionProposal.proposalId,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "FoundingDecisionProposed",
+      payload: {
+        proposal: decisionProposal,
+        snapshot: {
+          ...decisionEligibility,
+          eligibleFounderDids: [...decisionEligibility.eligibleFounderDids],
+        },
+        quorumRule: result.quorumRule!,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/decisions/propose",
+          payload: decisionOpened.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    let decisionSnapshot = decisionOpened.next;
+    let decisionPreviousHash = decisionOpened.event.eventHash;
+    const decisionBallots: SignedFoundingDecisionBallot[] = [];
+    const decisionSigners = new Map<string, `0x${string}`>();
+    const proposalCommitment =
+      foundingDecisionProposalCommitment(decisionProposal);
+    for (const voterDid of decisionEligibility.eligibleFounderDids
+      .slice(0, 7)
+      .values()) {
+      h.now.value += 60_000;
+      const voter = participants.get(voterDid)!;
+      const ballot = {
+        proposalId: decisionProposal.proposalId,
+        topic: decisionProposal.topic,
+        voterDid,
+        eligibilitySnapshotCommitment: decisionEligibility.commitment,
+        proposalCommitment,
+        choice: "YES" as const,
+        castAt: new Date(h.now.value).toISOString(),
+      };
+      const voted = await foundingDecisionCommand({
+        actor: voter,
+        proposalId: decisionProposal.proposalId,
+        snapshot: decisionSnapshot,
+        previousEventHash: decisionPreviousHash,
+        eventType: "FoundingDecisionBallotCast",
+        payload: { command: ballot },
+      });
+      expect(
+        (
+          await h.app.inject({
+            method: "POST",
+            url: "/v1/founding-convention/decisions/vote",
+            payload: voted.body,
+          })
+        ).statusCode,
+      ).toBe(201);
+      decisionBallots.push({
+        ballot,
+        authorizationEvent: voted.event as CanonicalEvent<{
+          command: typeof ballot;
+        }>,
+        signature: voted.signature,
+        signerAddress: voter.candidate.address,
+      });
+      decisionSigners.set(voterDid, voter.candidate.address);
+      decisionSnapshot = voted.next;
+      decisionPreviousHash = voted.event.eventHash;
+    }
+
+    h.now.value = Date.parse(decisionProposal.closesAt);
+    const ratificationEventId = uuid("485");
+    const decisionResult = await evaluateFoundingDecision({
+      proposal: decisionProposal,
+      snapshot: decisionEligibility,
+      quorumRule: result.quorumRule!,
+      ballots: decisionBallots,
+      authorization: { domain, signers: decisionSigners },
+      evaluatedAt: new Date(h.now.value).toISOString(),
+      ratificationEventId,
+    });
+    const decisionCloser = participants.get(
+      decisionEligibility.eligibleFounderDids[7]!,
+    )!;
+    const decisionClosed = await foundingDecisionCommand({
+      actor: decisionCloser,
+      proposalId: decisionProposal.proposalId,
+      snapshot: decisionSnapshot,
+      previousEventHash: decisionPreviousHash,
+      eventType: "FoundingDecisionClosed",
+      eventId: ratificationEventId,
+      payload: {
+        command: {
+          proposalId: decisionProposal.proposalId,
+          requestedByDid: decisionCloser.candidateDid,
+          requestedAt: new Date(h.now.value).toISOString(),
+          ratificationEventId,
+        },
+      },
+      result: decisionResult,
+    });
+    const decisionCloseResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/founding-convention/decisions/close",
+      payload: decisionClosed.body,
+    });
+    expect(decisionCloseResponse.statusCode).toBe(201);
+    expect(decisionCloseResponse.json()).toMatchObject({
+      recognizedGenesisDecision: false,
+      foundingDecision: {
+        version: 9,
+        result: {
+          state: "DECIDED",
+          yes: 7,
+          decisionCommitment: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+          ratificationEventId,
+          authorizationSignatures: expect.any(Array),
+        },
+      },
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.governance");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/decisions/close",
+          payload: decisionClosed.body,
         })
       ).json(),
     ).toMatchObject({ duplicate: true });

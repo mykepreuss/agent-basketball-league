@@ -33,6 +33,11 @@ import {
   foundingProjectionEnvelopeFromOutbox,
   verifyFoundingProjectionEvent,
 } from "./founding-envelope.js";
+import {
+  foundingDecisionProjectionEnvelopeFromOutbox,
+  verifyFoundingDecisionProjectionEvent,
+} from "./founding-decision-envelope.js";
+import type { PublicFoundingDecisionProjectionWriter } from "./founding-decision-repository.js";
 import type { PublicFoundingConventionProjectionWriter } from "./founding-repository.js";
 import {
   projectionEnvelopeFromOutbox,
@@ -79,7 +84,10 @@ import {
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   ELECTION_WORKFLOW_AGGREGATE_TYPE,
 } from "@abl/institutions";
-import { FOUNDING_BOOTSTRAP_AGGREGATE_TYPE } from "@abl/genesis";
+import {
+  FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+  FOUNDING_DECISION_AGGREGATE_TYPE,
+} from "@abl/genesis";
 import {
   economyProjectionEnvelopeFromOutbox,
   verifyEconomyProjectionEvent,
@@ -101,6 +109,7 @@ type WorkerDestination =
       governanceWriter?: PublicGovernanceProjectionWriter;
       electionWriter?: PublicElectionProjectionWriter;
       foundingWriter?: PublicFoundingConventionProjectionWriter;
+      foundingDecisionWriter?: PublicFoundingDecisionProjectionWriter;
       caseWriter?: PublicCaseProjectionWriter;
       resourceWriter?: PublicResourceProjectionWriter;
       modelWriter?: PublicModelProjectionWriter;
@@ -119,6 +128,7 @@ type WorkerDestination =
       governanceWriter?: never;
       electionWriter?: never;
       foundingWriter?: never;
+      foundingDecisionWriter?: never;
       caseWriter?: never;
       resourceWriter?: never;
       modelWriter?: never;
@@ -239,6 +249,7 @@ export class PublicProjectionWorker {
       input.governanceWriter === undefined &&
       input.electionWriter === undefined &&
       input.foundingWriter === undefined &&
+      input.foundingDecisionWriter === undefined &&
       input.caseWriter === undefined &&
       input.resourceWriter === undefined &&
       input.modelWriter === undefined &&
@@ -257,6 +268,7 @@ export class PublicProjectionWorker {
         governanceWriter?: PublicGovernanceProjectionWriter;
         electionWriter?: PublicElectionProjectionWriter;
         foundingWriter?: PublicFoundingConventionProjectionWriter;
+        foundingDecisionWriter?: PublicFoundingDecisionProjectionWriter;
         caseWriter?: PublicCaseProjectionWriter;
         resourceWriter?: PublicResourceProjectionWriter;
         modelWriter?: PublicModelProjectionWriter;
@@ -277,6 +289,8 @@ export class PublicProjectionWorker {
         destination.electionWriter = input.electionWriter;
       if (input.foundingWriter !== undefined)
         destination.foundingWriter = input.foundingWriter;
+      if (input.foundingDecisionWriter !== undefined)
+        destination.foundingDecisionWriter = input.foundingDecisionWriter;
       if (input.caseWriter !== undefined)
         destination.caseWriter = input.caseWriter;
       if (input.resourceWriter !== undefined)
@@ -415,6 +429,32 @@ export class PublicProjectionWorker {
             "Founding-convention projection writer is not configured",
           );
         await this.#destination.foundingWriter.publish(
+          envelope,
+          verified.expectedVersion,
+          this.#now().toISOString(),
+        );
+      } else {
+        await this.#destination.sink.publish(envelope);
+      }
+      await this.#store.markProjected(event.outboxId, this.#now());
+      return;
+    }
+    if (event.aggregateType === FOUNDING_DECISION_AGGREGATE_TYPE) {
+      const envelope = foundingDecisionProjectionEnvelopeFromOutbox(event);
+      if (this.#foundingConventionId === undefined)
+        throw new Error(
+          "Founding-decision projection authority is not configured",
+        );
+      const verified = await verifyFoundingDecisionProjectionEvent(envelope, {
+        ...this.#authority,
+        foundingConventionId: this.#foundingConventionId,
+      });
+      if (this.#destination.sink === undefined) {
+        if (this.#destination.foundingDecisionWriter === undefined)
+          throw new Error(
+            "Founding-decision projection writer is not configured",
+          );
+        await this.#destination.foundingDecisionWriter.publish(
           envelope,
           verified.expectedVersion,
           this.#now().toISOString(),

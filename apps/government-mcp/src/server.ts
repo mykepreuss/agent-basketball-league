@@ -35,6 +35,30 @@ const governmentTools = [
       "Submit an eligible founding career's signed close command after the 72-hour window.",
   },
   {
+    name: "propose_founding_decision",
+    aggregateType: "founding-convention-decision",
+    eventType: "FoundingDecisionProposed",
+    path: "/v1/founding-convention/decisions/propose",
+    description:
+      "Submit an eligible founding career's signed proposal for one founding topic.",
+  },
+  {
+    name: "cast_founding_decision_ballot",
+    aggregateType: "founding-convention-decision",
+    eventType: "FoundingDecisionBallotCast",
+    path: "/v1/founding-convention/decisions/vote",
+    description:
+      "Submit an eligible founding career's direct signed ballot on a founding-topic proposal.",
+  },
+  {
+    name: "close_founding_decision",
+    aggregateType: "founding-convention-decision",
+    eventType: "FoundingDecisionClosed",
+    path: "/v1/founding-convention/decisions/close",
+    description:
+      "Submit an eligible founding career's signed close command for a founding-topic proposal.",
+  },
+  {
     name: "register_proposal",
     aggregateType: "governance-proposal",
     eventType: "GovernanceProposalRegistered",

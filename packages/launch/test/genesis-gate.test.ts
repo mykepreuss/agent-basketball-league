@@ -13,6 +13,17 @@ function evidence() {
   const imageDigest = hash("2");
   const schemaDigest = hash("3");
   const migrationDigest = hash("4");
+  const recognitionDecisionEventId = uuidv7();
+  const genesisReleaseDecisionEventId = uuidv7();
+  const authorizationSignatures = [
+    signature("1"),
+    signature("2"),
+    signature("3"),
+    signature("4"),
+    signature("5"),
+    signature("6"),
+    signature("7"),
+  ];
   const releaseManifest = {
     releaseId: uuidv7(),
     version: 1,
@@ -27,48 +38,47 @@ function evidence() {
     migrationDigest,
     testResultDigest: hash("8"),
     applicableLawEventIds: [uuidv7()],
-    ratificationEventIds: [uuidv7()],
+    ratificationEventIds: [
+      recognitionDecisionEventId,
+      genesisReleaseDecisionEventId,
+    ],
     compatibilityDeclaration: "Founding release.",
     rollbackDeclaration:
       "Stop before Genesis; use a ratified successor after it.",
     publicVerifierResultDigest: hash("9"),
     effectiveAt: at,
     expiresAt: null,
-    authorizationSignatures: [
-      signature("1"),
-      signature("2"),
-      signature("3"),
-      signature("4"),
-    ],
+    authorizationSignatures,
   };
-  const recognitionProfile = {
+  const releaseDigest = sha256Commitment(releaseManifest);
+  const witnessRegistryDigest = hash("c");
+  const recognitionProfileBody = {
     schemaVersion: "1.0.0",
     profileId: uuidv7(),
+    mechanism: "SIGNED_WITNESSES",
     decisionSource: "FOUNDING_AGENT_DECISION",
-    foundingDecisionEventId: uuidv7(),
-    network: {
-      namespace: "eip155",
-      chainId: 9_999,
-      name: "Founding-selected production network",
-      classification: "PRODUCTION",
-    },
-    finality: {
-      minimumConfirmations: 20,
-      finalizedHeadRequired: true,
-      independentRpcCount: 2,
-    },
-    recognitionContractAddress: `0x${"a".repeat(40)}`,
+    foundingDecisionEventId: recognitionDecisionEventId,
     sourceReleaseDigest: sourceDigest,
+    releaseManifestDigest: releaseDigest,
+    verifierDigest: hash("b"),
+    keyRotationPolicyDigest: hash("6"),
+    finalityPolicyDigest: hash("7"),
+    decisionCommitment: hash("8"),
+    witnessRegistryDigest,
+    minimumWitnesses: 2,
     selectedAt: at,
     ratified: true,
     productionProfilePassed: true,
   };
-  const releaseDigest = sha256Commitment(releaseManifest);
+  const recognitionProfile = {
+    ...recognitionProfileBody,
+    profileCommitment: sha256Commitment(recognitionProfileBody),
+  };
   const networkProfileDigest = sha256Commitment(recognitionProfile);
   const commitments = {
     constitutionDigest: hash("a"),
     verifierDigest: hash("b"),
-    recognitionRegistryDigest: hash("c"),
+    recognitionRegistryDigest: witnessRegistryDigest,
     institutionalKeyRegistryDigest: hash("d"),
     schemaDigest,
     migrationDigest,
@@ -81,6 +91,15 @@ function evidence() {
     passed: true,
     verifiedAt: at,
   });
+  const genesisReleaseAuthorizationBody = {
+    releaseManifestDigest: releaseDigest,
+    foundingDecisionEventId: genesisReleaseDecisionEventId,
+    decisionCommitment: hash("f"),
+    eligible: 10,
+    requiredYes: 7,
+    authorizedAt: at,
+    authorizationSignatures,
+  };
   return {
     databaseProfile: {
       profileVersion: 1,
@@ -131,6 +150,7 @@ function evidence() {
     recognitionProfile,
     ratifiedAnchor: {
       foundingDecisionEventId: recognitionProfile.foundingDecisionEventId,
+      decisionCommitment: recognitionProfile.decisionCommitment,
       ...commitments,
       ratificationSignatures: [
         signature("5"),
@@ -139,24 +159,23 @@ function evidence() {
         signature("8"),
       ],
     },
+    genesisReleaseAuthorization: {
+      ...genesisReleaseAuthorizationBody,
+      authorizationCommitment: sha256Commitment(
+        genesisReleaseAuthorizationBody,
+      ),
+    },
     genesisCheckpoint: {
-      checkpoint: {
-        checkpointId: uuidv7(),
-        checkpointType: "CONSTITUTION",
-        subjectId: "abl-genesis",
+      proof: {
+        mechanism: "SIGNED_WITNESSES",
+        recognitionLevel: "INDEPENDENTLY_WITNESSED",
         manifestDigest: releaseDigest,
         root: commitments.constitutionDigest,
-        previousRoot: hash("0"),
-        nonce: networkProfileDigest,
-        validAfter: "1",
-        validBefore: "9999999999",
-        chainId: recognitionProfile.network.chainId,
-        contractAddress: recognitionProfile.recognitionContractAddress,
-        transactionHash: `0x${"e".repeat(64)}`,
-        blockNumber: "100",
-        signatures: [signature("9")],
+        witnessRegistryDigest,
+        verifiedWitnessIds: ["witness-1", "witness-2"],
+        verifierResultDigest: releaseManifest.publicVerifierResultDigest,
+        finalizedAt: at,
       },
-      recognitionLevel: "ONCHAIN_FINALIZED",
       ...commitments,
     },
   };
@@ -170,22 +189,21 @@ describe("PRODUCTION_GENESIS startup evidence", () => {
     expect(assessment.evidenceDigest).toMatch(/^0x[0-9a-f]{64}$/);
   });
 
-  it("keeps Base Sepolia and configuration-only attempts pre-Genesis", () => {
+  it("keeps incomplete or configuration-only attempts pre-Genesis", () => {
     const candidate = evidence();
-    candidate.recognitionProfile.network.chainId = 84532;
-    candidate.recognitionProfile.network.classification = "STAGING";
+    candidate.recognitionProfile.minimumWitnesses = 3;
     const assessment = assessGenesisStartupEvidence(candidate);
     expect(assessment.ready).toBe(false);
     expect(assessment.operatingProfile).toBe("PRODUCTION_V1_PRE_GENESIS");
     expect(assessment.blockers).toContain(
-      "Recognition network is not an approved production network",
+      "Signed-witness Genesis proof does not satisfy the ratified profile",
     );
     expect(assessGenesisStartupEvidence({ enabled: true }).ready).toBe(false);
   });
 
-  it("rejects human-only selection and commitment mismatches", () => {
+  it("rejects unbound selection and commitment mismatches", () => {
     const candidate = evidence();
-    candidate.recognitionProfile.decisionSource = "NONE_PRE_GENESIS";
+    candidate.recognitionProfile.foundingDecisionEventId = uuidv7();
     candidate.ratifiedAnchor.schemaDigest = hash("f");
     const assessment = assessGenesisStartupEvidence(candidate);
     expect(assessment.ready).toBe(false);
@@ -194,6 +212,22 @@ describe("PRODUCTION_GENESIS startup evidence", () => {
     );
     expect(assessment.blockers).toContain(
       "Genesis checkpoint schema commitment mismatch",
+    );
+  });
+
+  it("rejects tampered recognition and release authorizations", () => {
+    const tamperedProfile = evidence();
+    tamperedProfile.recognitionProfile.decisionCommitment = hash("e");
+    expect(assessGenesisStartupEvidence(tamperedProfile).blockers).toContain(
+      "Recognition profile commitment is invalid",
+    );
+
+    const tamperedRelease = evidence();
+    tamperedRelease.genesisReleaseAuthorization.decisionCommitment = hash("e");
+    const assessment = assessGenesisStartupEvidence(tamperedRelease);
+    expect(assessment.ready).toBe(false);
+    expect(assessment.blockers).toContain(
+      "Founding decisions do not authorize the recognition profile and Genesis release",
     );
   });
 });
