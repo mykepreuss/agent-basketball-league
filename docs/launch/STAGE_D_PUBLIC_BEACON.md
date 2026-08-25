@@ -30,6 +30,8 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 Any failed precondition stops before public-preview creation. It does not invalidate Stage A, B, or C evidence.
 
+After Stage C acceptance, derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
+
 ## One approval
 
 Request one decision containing the exact release commit and image revisions, the two public Sandbox names, the current monthly projection, the USD 25 ceiling, the USD 5 balance floor, automatic top-up off, the 24-hour public-soak requirement, and the rollback below. The approval authorizes first read-only public exposure only. It does not authorize public candidate mutation, model calls, founding-agent decisions, recognition broadcast, canonical history, or Genesis.
