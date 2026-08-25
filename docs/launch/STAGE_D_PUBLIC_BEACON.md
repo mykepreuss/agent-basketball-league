@@ -31,7 +31,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 Any failed precondition stops before public-preview creation. It does not invalidate Stage A, B, or C evidence.
 
-After Stage C acceptance, merge the reviewed release stack, build and push only changed images, update the existing private workloads to the returned immutable revisions, and complete the release-delta verification above. Then derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
+After Stage C acceptance, merge the reviewed release stack, build and push only changed images, update the existing private workloads to the returned immutable revisions, and complete the release-delta verification above. Record the secret-free observations in a mode-`0600` `LIVE_PRIVATE_RELEASE_DELTA` artifact and run `pnpm stage-d:assess-release-delta <monitoring-policy.json> <deployment-map.json> <passed-stage-c-evidence.json> <release-delta-evidence.json>`. The assessor verifies the actual Stage C result, target ancestry, approved workload set, exact release linkage, immutable image references, changed-service restart coverage, required checks, incident counts, private boundary, provider readback, and budget controls. Then derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
 
 ## One approval
 

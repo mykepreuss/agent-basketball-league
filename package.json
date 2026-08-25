@@ -41,6 +41,7 @@
     "stage-d:sample-soak": "tsx scripts/sample-public-beacon.ts",
     "stage-d:finalize-soak": "tsx scripts/finalize-public-beacon-soak.ts",
     "stage-d:assess-soak": "tsx scripts/assess-public-beacon-soak.ts",
+    "stage-d:assess-release-delta": "tsx scripts/assess-private-release-delta.ts",
     "stage-d:verify-beacon": "tsx scripts/verify-public-beacon.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
