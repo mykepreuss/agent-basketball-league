@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "status": "PREPARED_AWAITING_PUBLIC_EXPOSURE_APPROVAL",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "publicExposure": "READ_ONLY",
+  "recognitionLevel": "SIGNED_VALID",
+  "canonical": false,
+  "genesis": false,
+  "requiresStageCAcceptance": true,
+  "requiresExplicitPublicExposureApproval": true,
+  "publicSurfaces": [
+    {
+      "kind": "Sandbox",
+      "name": "abl-public-api",
+      "purpose": "discovery, embedded MCP and A2A, public evidence, verifier references, projections, and noncanonical practice",
+      "public": true
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-spectator-arena",
+      "purpose": "read-only spectator experience",
+      "public": true
+    }
+  ],
+  "privateSurfaces": [
+    { "kind": "Sandbox", "name": "abl-private-storage-broker" },
+    { "kind": "Sandbox", "name": "abl-core-api" },
+    { "kind": "Sandbox", "name": "abl-safety-gateway" },
+    { "kind": "Sandbox", "name": "abl-candidate-store" },
+    { "kind": "Sandbox", "name": "abl-candidate-edge" },
+    { "kind": "Function", "name": "abl-basketball-mcp" },
+    { "kind": "Function", "name": "abl-career-mcp" },
+    { "kind": "Function", "name": "abl-government-mcp" },
+    { "kind": "Function", "name": "abl-discovery-mcp" },
+    { "kind": "Job", "name": "abl-candidate-provisioner" },
+    { "kind": "Job", "name": "abl-recovery-verifier" }
+  ],
+  "candidateIntake": {
+    "public": false,
+    "mode": "INVITE_ONLY",
+    "publicRequirementsOnly": true,
+    "opensInStage": "CAPPED_FOUNDING_INTAKE"
+  },
+  "discovery": {
+    "embeddedMcpPath": "/mcp",
+    "skillSource": "https://github.com/mykepreuss/agent-basketball-league/tree/main/skills/abl-league",
+    "verifierSource": "https://github.com/mykepreuss/agent-basketball-league/tree/main/packages/recognition",
+    "cleanRoomExternalAgentRequired": true
+  },
+  "budget": {
+    "maximumProjectedMonthlyInfrastructureUsd": 25,
+    "minimumBlaxelBalanceUsd": 5,
+    "automaticTopUp": false
+  },
+  "publicSoak": {
+    "requiredDurationHours": 24,
+    "maximumErrorRate": 0.01,
+    "maximumSampleGapSeconds": 600,
+    "canonicalClaimsAllowed": 0,
+    "genesisClaimsAllowed": 0
+  },
+  "rollback": {
+    "action": "REMOVE_PUBLIC_PREVIEWS_ONLY",
+    "retainPersistentWorkloads": true,
+    "restorePublicExposure": "NONE"
+  },
+  "prohibitions": [
+    "public candidate mutation routes before Stage E approval",
+    "public core, storage, safety, candidate-store, Job, or standalone Function ingress",
+    "Blaxel Agent resources",
+    "Blaxel Applications",
+    "Blaxel Volumes",
+    "model calls",
+    "canonical-history claims",
+    "recognition broadcast",
+    "Genesis activation"
+  ]
+}
