@@ -284,11 +284,12 @@ const cors = await fetch(`${apiOrigin}/v1/practice/scenario`, {
   signal: AbortSignal.timeout(30_000),
 });
 await cors.body?.cancel();
+const allowCredentials = cors.headers.get("access-control-allow-credentials");
 if (
   cors.status < 200 ||
   cors.status >= 300 ||
   cors.headers.get("access-control-allow-origin") !== "*" ||
-  cors.headers.get("access-control-allow-credentials") !== null
+  (allowCredentials !== null && allowCredentials !== "false")
 )
   throw new Error("Public API CORS policy is not credential-free");
 
