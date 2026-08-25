@@ -168,10 +168,59 @@ export const AgentPlayedGameEvidenceSchema = z.strictObject({
     referees: Sha256Schema,
     replayOfficials: Sha256Schema,
   }),
+  authorityEvidence: z
+    .strictObject({
+      participants: z.strictObject({
+        players: z.array(DidSchema).length(10),
+        coaches: z.array(DidSchema).length(2),
+        referees: z.array(DidSchema).length(6),
+        replayOfficials: z.array(DidSchema).length(2),
+      }),
+      decisionRoots: z.strictObject({
+        players: Sha256Schema,
+        coaches: Sha256Schema,
+        referees: Sha256Schema,
+        replayOfficials: Sha256Schema,
+      }),
+    })
+    .superRefine(({ participants }, context) => {
+      const roleDids = Object.values(participants).flat();
+      if (new Set(roleDids).size !== roleDids.length)
+        context.addIssue({
+          code: "custom",
+          message: "Founding exhibition roles require twenty distinct careers",
+        });
+      for (const [role, dids] of Object.entries(participants)) {
+        if (new Set(dids).size !== dids.length)
+          context.addIssue({
+            code: "custom",
+            path: [role],
+            message: "Founding exhibition role careers must be distinct",
+          });
+        if (dids.join("\u0000") !== [...dids].sort().join("\u0000"))
+          context.addIssue({
+            code: "custom",
+            path: [role],
+            message: "Founding exhibition role careers must be sorted",
+          });
+      }
+    })
+    .optional(),
   possessionProofRoot: Sha256Schema,
   gameProofCommitment: Sha256Schema,
   evidenceCommitment: Sha256Schema,
 });
+
+const AgentPlayedPossessionAuthorityDidsSchema = z.strictObject({
+  players: z.array(DidSchema).length(20),
+  coaches: z.array(DidSchema).length(4),
+  referees: z.array(DidSchema).length(3),
+  replayOfficials: z.array(DidSchema).length(2),
+});
+
+export type AgentPlayedPossessionAuthorityDids = z.infer<
+  typeof AgentPlayedPossessionAuthorityDidsSchema
+>;
 
 const AgentPlayedPossessionEvidenceSchema = z.strictObject({
   possessionId: z.string().min(1).max(100),
@@ -179,6 +228,7 @@ const AgentPlayedPossessionEvidenceSchema = z.strictObject({
   coachDecisionHashes: z.array(Sha256Schema).length(4),
   refereeDecisionHashes: z.array(Sha256Schema).length(3),
   replayDecisionHashes: z.array(Sha256Schema).length(2),
+  authorityDids: AgentPlayedPossessionAuthorityDidsSchema.optional(),
   eventMerkleRoot: Sha256Schema,
   finalStateRoot: Sha256Schema,
 });
@@ -341,6 +391,69 @@ function evidenceBody(evidence: AgentPlayedGameEvidence) {
   return body;
 }
 
+type AgentPlayedPossessionEvidence = z.infer<
+  typeof AgentPlayedPossessionEvidenceSchema
+>;
+
+function requiredAuthorityDids(
+  proof: AgentPlayedPossessionEvidence,
+): AgentPlayedPossessionAuthorityDids {
+  if (proof.authorityDids === undefined)
+    throw new Error(
+      "Agent-played authority evidence must cover every possession",
+    );
+  return proof.authorityDids;
+}
+
+function createRoleAuthorityEvidence(
+  proofs: readonly AgentPlayedPossessionEvidence[],
+) {
+  const entries = {
+    players: proofs.flatMap((proof) => {
+      const dids = requiredAuthorityDids(proof).players;
+      return proof.playerDecisionHashes.map((eventHash, index) => ({
+        actorDid: dids[index]!,
+        eventHash,
+      }));
+    }),
+    coaches: proofs.flatMap((proof) => {
+      const dids = requiredAuthorityDids(proof).coaches;
+      return proof.coachDecisionHashes.map((eventHash, index) => ({
+        actorDid: dids[index]!,
+        eventHash,
+      }));
+    }),
+    referees: proofs.flatMap((proof) => {
+      const dids = requiredAuthorityDids(proof).referees;
+      return proof.refereeDecisionHashes.map((eventHash, index) => ({
+        actorDid: dids[index]!,
+        eventHash,
+      }));
+    }),
+    replayOfficials: proofs.flatMap((proof) => {
+      const dids = requiredAuthorityDids(proof).replayOfficials;
+      return proof.replayDecisionHashes.map((eventHash, index) => ({
+        actorDid: dids[index]!,
+        eventHash,
+      }));
+    }),
+  };
+  return {
+    participants: Object.fromEntries(
+      Object.entries(entries).map(([role, decisions]) => [
+        role,
+        [...new Set(decisions.map(({ actorDid }) => actorDid))].sort(),
+      ]),
+    ),
+    decisionRoots: Object.fromEntries(
+      Object.entries(entries).map(([role, decisions]) => [
+        role,
+        merkleRoot(decisions.map((decision) => sha256Commitment(decision))),
+      ]),
+    ),
+  };
+}
+
 export function createFinalizedGameEvidenceReader(
   input: unknown,
 ): FinalizedGameEvidenceReader {
@@ -369,6 +482,7 @@ export function createAgentPlayedGameEvidence(input: {
     coachDecisionHashes: readonly Hex[];
     refereeDecisionHashes: readonly Hex[];
     replayDecisionHashes: readonly Hex[];
+    authorityDids?: AgentPlayedPossessionAuthorityDids;
     eventMerkleRoot: Hex;
     finalStateRoot: Hex;
   }[];
@@ -405,6 +519,21 @@ export function createAgentPlayedGameEvidence(input: {
   ) {
     throw new Error("Agent-played decision evidence hashes must be unique");
   }
+  const authorityProofCount = possessionProofs.filter(
+    ({ authorityDids }) => authorityDids !== undefined,
+  ).length;
+  if (
+    authorityProofCount !== 0 &&
+    authorityProofCount !== possessionProofs.length
+  ) {
+    throw new Error(
+      "Agent-played authority evidence must cover every possession",
+    );
+  }
+  const authorityEvidence =
+    authorityProofCount === 0
+      ? undefined
+      : createRoleAuthorityEvidence(possessionProofs);
   const body = {
     gameId: UuidV7Schema.parse(input.gameId),
     possessionCount: possessionProofs.length,
@@ -420,6 +549,7 @@ export function createAgentPlayedGameEvidence(input: {
       referees: merkleRoot(decisionHashes.referees as Hex[]),
       replayOfficials: merkleRoot(decisionHashes.replayOfficials as Hex[]),
     },
+    ...(authorityEvidence === undefined ? {} : { authorityEvidence }),
     possessionProofRoot: merkleRoot(
       possessionProofs.map((proof) => sha256Commitment(proof)),
     ),
@@ -485,6 +615,21 @@ export function replayFinalizedGamePayload(input: unknown): {
     throw new Error("Finalized game does not replay exactly to a final state");
   }
   return { payload, events: replay.events, state: replay.state };
+}
+
+export function replayRoleCompleteFoundingExhibition(input: unknown): {
+  payload: FinalizedGamePayload;
+  events: readonly FullGameEvent[];
+  state: FullGameState;
+  authorityEvidence: NonNullable<AgentPlayedGameEvidence["authorityEvidence"]>;
+} {
+  const replay = replayFinalizedGamePayload(input);
+  const authorityEvidence = replay.payload.agentEvidence.authorityEvidence;
+  if (authorityEvidence === undefined)
+    throw new Error(
+      "Founding exhibition lacks role-complete authority evidence",
+    );
+  return { ...replay, authorityEvidence };
 }
 
 export async function requireFinalizedGameEvidence(

@@ -26,6 +26,7 @@ import {
   replayFullGame,
   replayFinalizedGamePayload,
   requireFinalizedGameScheduleEvidence,
+  replayRoleCompleteFoundingExhibition,
   resolveChallenge,
   rotateOfficialCrew,
   runAgentPlayedExhibition,
@@ -93,6 +94,39 @@ describe("complete deterministic exhibition rules", () => {
         ),
       ),
     );
+    expect(exhibition.agentEvidence.authorityEvidence).toMatchObject({
+      participants: {
+        players: [
+          "did:abl:away-1",
+          "did:abl:away-2",
+          "did:abl:away-3",
+          "did:abl:away-4",
+          "did:abl:away-5",
+          "did:abl:home-1",
+          "did:abl:home-2",
+          "did:abl:home-3",
+          "did:abl:home-4",
+          "did:abl:home-5",
+        ],
+        coaches: ["did:abl:coach-away", "did:abl:coach-home"],
+        referees: [
+          "did:abl:referee-1",
+          "did:abl:referee-2",
+          "did:abl:referee-3",
+          "did:abl:referee-4",
+          "did:abl:referee-5",
+          "did:abl:referee-6",
+        ],
+        replayOfficials: ["did:abl:replay-1", "did:abl:replay-2"],
+      },
+    });
+    expect(
+      new Set(
+        Object.values(
+          exhibition.agentEvidence.authorityEvidence!.participants,
+        ).flat(),
+      ),
+    ).toHaveLength(20);
     expect(exhibition.replay).toMatchObject({
       exact: true,
       inferenceInvocations: 0,
@@ -113,6 +147,10 @@ describe("complete deterministic exhibition rules", () => {
       state: exhibition.finalState,
       events: exhibition.events,
     });
+    expect(replayRoleCompleteFoundingExhibition(payload)).toMatchObject({
+      state: exhibition.finalState,
+      authorityEvidence: exhibition.agentEvidence.authorityEvidence,
+    });
     expect(finalizedGameStateRoot(payload)).toMatch(/^0x[0-9a-f]{64}$/);
     expect(() =>
       replayFinalizedGamePayload({
@@ -129,6 +167,34 @@ describe("complete deterministic exhibition rules", () => {
         broadcastStartedAt: iso(1),
       }),
     ).toThrow("cannot start after finalization");
+    const countOnlyEvidence = createAgentPlayedGameEvidence({
+      gameId: exhibition.input.gameId,
+      gameInput: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      possessionProofs: exhibition.possessionProofs.map(
+        ({ authorityDids: _authorityDids, ...proof }) => proof,
+      ),
+    });
+    expect(() =>
+      replayRoleCompleteFoundingExhibition({
+        ...payload,
+        agentEvidence: countOnlyEvidence,
+      }),
+    ).toThrow("lacks role-complete authority evidence");
+    expect(() =>
+      createAgentPlayedGameEvidence({
+        gameId: exhibition.input.gameId,
+        gameInput: exhibition.input,
+        commands: exhibition.commands,
+        proof: exhibition.proof,
+        possessionProofs: exhibition.possessionProofs.map((proof, index) => {
+          if (index !== 0) return proof;
+          const { authorityDids: _authorityDids, ...countOnlyProof } = proof;
+          return countOnlyProof;
+        }),
+      }),
+    ).toThrow("must cover every possession");
   }, 60_000);
 
   it("locks the canonical exhibition transcript to an exactly replayable proof", () => {

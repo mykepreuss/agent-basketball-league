@@ -381,7 +381,7 @@ describe("core dynamic candidate authority", () => {
         signatures: [await signCanonicalEvent(candidate, domain, event)],
       },
     });
-    expect(response.statusCode).toBe(201);
+    expect(response.statusCode, response.body).toBe(201);
     expect(response.json()).toMatchObject({
       accepted: true,
       canonical: true,

@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x477d0957a805b90e1c5d1d38b32995b3d63d19f0513a917442f0571b8b72d136",
+    "evidenceDigest": "0x11182685e4fb30ab732dcc325f51239c759adb0d28efc17a4f9a04bf5c96944a",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -177,12 +177,12 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0xc3cf02cd424ca8b55611a811c8ae955d69f4fa475f8b14ad15c1b0c1e812ac45",
+      "digest": "0xcb758a30e0bffbfe6cc7f65ecd9abb6a989683565e34cfffab988072308b9c20",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x437615ed67e5cc3381738eece20623ca57d61eb45629c62ba8023f3e23835ee2",
+      "digest": "0x8030295b83231d0d8b64fa3464608f82cdfc81a319c40062cb60e1faac213797",
       "verification": "PASSED"
     },
     {
@@ -202,7 +202,7 @@
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0xc8ddd106ef380e317d4c4be862a0791a3063855aac4445c8502241e69da8cfcc",
+      "digest": "0x7f7d249f126b91142c98410998ac1d787176368ced58acf50164ded3b810b63a",
       "verification": "PASSED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x8731dedeaa2343fa80569304f84f0443d9c198418e87c253cfdcb83854a2d32e"
+  "ledgerDigest": "0xb1c660c32983d7a47f3dc717f50bd64f7f011946ba2c7fd37d3e462a7d222699"
 }
