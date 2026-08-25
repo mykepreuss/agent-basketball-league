@@ -16,6 +16,7 @@ const PublicResponseHeadersSchema = z.strictObject({
   "Access-Control-Allow-Origin": z.literal("*"),
   "Access-Control-Allow-Methods": z.literal("GET, HEAD, OPTIONS, POST"),
   "Access-Control-Allow-Headers": z.literal("Content-Type"),
+  "Access-Control-Allow-Credentials": z.literal("false"),
   "Access-Control-Expose-Headers": z.literal(
     "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-ABL-Genesis-State, X-ABL-Operating-Profile",
   ),

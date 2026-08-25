@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x91080295840129f08c94f85fd3dd0bc0b688a92140b04b5ebcb123716a1792f0",
+    "evidenceDigest": "0x41f3b56946a6e4f25fdfe8bcaba6d4500e81559cc49a1de1746c5a61ad8e6f2b",
     "blockingReasons": [],
     "nextBlockingRequirement": null,
     "lastSuccessfulAcceptance": {
@@ -191,7 +191,7 @@
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xc7c583c77cf4fda23cc3ab7e3abeb49e892713a0bb8291799a0bac84c5bab0de",
+      "digest": "0xb5a123aaa446defc45665f3b2e194c462caae2acb7dffea73dba150d964e3c37",
       "verification": "PASSED"
     },
     {
@@ -504,5 +504,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x11bdd9d36fecdf39565fb317b7a5798198188486c26c3232e8078b3ff381ed8e"
+  "ledgerDigest": "0x34b409163c027283ff2df2eb4724615d7cb1e0f93c68953c41298809472d2892"
 }
