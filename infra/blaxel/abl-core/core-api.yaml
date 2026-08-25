@@ -62,6 +62,9 @@ spec:
       - name: ABL_PUBLIC_PROJECTION_URL
         value: ${ABL_PUBLIC_PROJECTION_URL}
         secret: false
+      - name: ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN
+        value: ${ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN}
+        secret: true
       - name: ABL_PROJECTION_SERVICE_ID
         value: core-projection-publisher
         secret: false
@@ -116,6 +119,9 @@ spec:
       - name: ABL_PRIVATE_STORAGE_URL
         value: ${ABL_PRIVATE_STORAGE_URL}
         secret: false
+      - name: ABL_PRIVATE_STORAGE_PREVIEW_TOKEN
+        value: ${ABL_PRIVATE_STORAGE_PREVIEW_TOKEN}
+        secret: true
       - name: ABL_PRIVATE_STORAGE_SERVICE_ID
         value: core-memory-verifier
         secret: false

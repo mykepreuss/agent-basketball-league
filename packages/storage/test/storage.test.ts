@@ -198,6 +198,27 @@ describe("ciphertext-only Agent Drive layout", () => {
     }
   });
 
+  it("keeps Agent Drive writes exclusive without POSIX hard-link persistence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-agent-drive-direct-"));
+    const repository = createCiphertextRepository({
+      backend: "AGENT_DRIVE",
+      root,
+      brokerOnly: true,
+      region: "us-was-1",
+      permissionsConfigured: true,
+      liveProof: "LIVE_PROOF_REQUIRED",
+    });
+    await repository.initialize();
+    const domainPolicy = policy();
+    await repository.putPolicy(domainPolicy);
+    await expect(repository.putPolicy(domainPolicy)).rejects.toMatchObject({
+      code: "EEXIST",
+    });
+    await expect(repository.loadState()).resolves.toMatchObject({
+      policies: [domainPolicy],
+    });
+  });
+
   it("rejects Agent Drive without broker-only us-was-1 permissions", () => {
     const base = {
       backend: "AGENT_DRIVE" as const,

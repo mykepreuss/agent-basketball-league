@@ -26,6 +26,9 @@ spec:
       - name: ABL_PUBLIC_API_URL
         value: ${ABL_PUBLIC_API_URL}
         secret: false
+      - name: ABL_PUBLIC_API_PREVIEW_TOKEN
+        value: ${ABL_PUBLIC_API_PREVIEW_TOKEN}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false

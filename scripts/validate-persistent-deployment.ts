@@ -75,6 +75,8 @@ const ManifestSchema = z
           .object({
             image: z.string(),
             memory: z.number().int().positive(),
+            minScale: z.number().int().nonnegative().optional(),
+            maxScale: z.number().int().positive().optional(),
             envs: z
               .array(
                 z
@@ -196,6 +198,14 @@ export async function validatePersistentDeployment(
     if (workload.kind === "Function" && manifest.spec.public !== false)
       throw new Error(
         `Stage C Function lacks explicit private mode: ${workload.name}`,
+      );
+    if (
+      workload.kind === "Function" &&
+      (manifest.spec.runtime.minScale !== 0 ||
+        manifest.spec.runtime.maxScale !== 1)
+    )
+      throw new Error(
+        `Stage C Function exceeds its scale-to-zero quota: ${workload.name}`,
       );
     if (manifest.spec.runtime.memory !== workload.memoryMiB)
       throw new Error(`Manifest memory differs for ${workload.name}`);

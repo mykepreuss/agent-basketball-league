@@ -131,6 +131,32 @@ describe("single-workspace topology", () => {
     });
   });
 
+  it("supplies private-preview transport credentials to every upstream caller", async () => {
+    const coreResources = await readYamlDirectory("abl-core");
+    const publicResources = await readYamlDirectory("abl-public");
+    const coreApi = coreResources.find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-core-api",
+    );
+    const arena = publicResources.find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "abl-spectator-arena",
+    );
+    expect(coreApi).toBeDefined();
+    expect(arena).toBeDefined();
+    expect(envMap(coreApi!).get("ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN")).toBe(
+      "${ABL_PUBLIC_PROJECTION_PREVIEW_TOKEN}",
+    );
+    expect(envMap(coreApi!).get("ABL_PRIVATE_STORAGE_PREVIEW_TOKEN")).toBe(
+      "${ABL_PRIVATE_STORAGE_PREVIEW_TOKEN}",
+    );
+    expect(envMap(arena!).get("ABL_PUBLIC_API_PREVIEW_TOKEN")).toBe(
+      "${ABL_PUBLIC_API_PREVIEW_TOKEN}",
+    );
+  });
+
   it("contains one physical workspace with four isolated trust domains", async () => {
     const topology = validateTopology(
       await readJson(new URL("topology.json", infraRoot)),
@@ -752,6 +778,8 @@ describe("single-workspace topology", () => {
     expect(driveApplicator).toContain(
       "isDeepStrictEqual(drive.permissions, drivePolicy.permissions)",
     );
+    expect(driveApplicator).toContain("$schema: z.string().url().optional()");
+    expect(driveApplicator).toContain("reason: z.string().min(1).optional()");
     expect(driveApplicator).not.toMatch(/\.delete\s*\(/);
   });
 });

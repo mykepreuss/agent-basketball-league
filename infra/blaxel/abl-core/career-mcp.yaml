@@ -14,7 +14,7 @@ spec:
     image: ${ABL_CAREER_MCP_IMAGE_DIGEST}
     memory: 2048
     minScale: 0
-    maxScale: 10
+    maxScale: 1
     transport: http-stream
     ports:
       - name: http

@@ -23,6 +23,10 @@ export class BlaxelVolumeCiphertextRepository extends FilesystemCiphertextReposi
 
 export class AgentDriveCiphertextRepository extends FilesystemCiphertextRepository {
   readonly backend = "AGENT_DRIVE" as const;
+
+  public constructor(root: string) {
+    super(root, "AGENT_DRIVE_DIRECT");
+  }
 }
 
 export function createCiphertextRepository(
