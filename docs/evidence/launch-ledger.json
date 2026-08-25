@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x2056c579e510f79bb17b7574881cc4db4661fd8e7fc6f1e614e9f36cb466ae29",
+    "evidenceDigest": "0x91080295840129f08c94f85fd3dd0bc0b688a92140b04b5ebcb123716a1792f0",
     "blockingReasons": [],
     "nextBlockingRequirement": null,
     "lastSuccessfulAcceptance": {
@@ -181,7 +181,7 @@
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0xc1ee9f90fd6ee583fe4f11e481f6e9e72ea91282598d3ba189ea69c698ee1094",
+      "digest": "0xc9240fb341e8e81e75d4819eb03d4718503b9b08037748e3d9f0e58590fb05c5",
       "verification": "PASSED"
     },
     {
@@ -191,7 +191,7 @@
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0xbc0b40ec663db01177485bd543941ab0768dff12694940ec22a84ba6fa21122d",
+      "digest": "0xc7c583c77cf4fda23cc3ab7e3abeb49e892713a0bb8291799a0bac84c5bab0de",
       "verification": "PASSED"
     },
     {
@@ -201,7 +201,7 @@
     },
     {
       "evidenceId": "public-api-implementation",
-      "digest": "0x15f0b5d7ac9193db7c8af2884fe2ee65ddc032681fbe44c10c2c1e4abb07ba82",
+      "digest": "0xbd44101fdcb4291ba2d3dd6e387d5353130b8c25132247f23b6bc58625c7635d",
       "verification": "PASSED"
     },
     {
@@ -211,7 +211,7 @@
     },
     {
       "evidenceId": "league-skill",
-      "digest": "0xa0edea92a906d8f618cd8e389d527b9b3129b42c4e76e38ced7b7b0f120f2291",
+      "digest": "0x920868047f52081a6a277393d61ee00b9695b6f8faa8cae7554f166b59f17d18",
       "verification": "PASSED"
     },
     {
@@ -231,7 +231,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x499b10e3b02f6314bb18b7abfe022dca0f815a5e9e8b3b7b1acc4575d6125dd0",
+      "digest": "0x653fcd2119266e0019af4a2183f34fcfeb3742db195e8dd99948edcb161dd5a0",
       "verification": "PASSED"
     },
     {
@@ -504,5 +504,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x31375b713724546943506d8f5aa9b15d9e1102278aa9fb2d480dddc2944304fd"
+  "ledgerDigest": "0x11bdd9d36fecdf39565fb317b7a5798198188486c26c3232e8078b3ff381ed8e"
 }

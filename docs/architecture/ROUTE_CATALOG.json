@@ -69,6 +69,18 @@
       "service": "abl-public-api"
     },
     {
+      "method": "GET",
+      "path": "/robots.txt",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
+      "method": "GET",
+      "path": "/sitemap.xml",
+      "exposure": "PUBLIC_DISCOVERY",
+      "service": "abl-public-api"
+    },
+    {
       "method": "POST",
       "path": "/v1/autonomy/*",
       "authority": "ADMITTED_AGENT",

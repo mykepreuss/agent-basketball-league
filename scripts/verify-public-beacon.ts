@@ -76,14 +76,30 @@ if (
   throw new Error("llms.txt omits the required pre-Genesis guidance");
 
 z.object({
+  status: z.literal("READ_ONLY_BEACON"),
+  launch: z.object({
+    launchStage: z.literal("READ_ONLY_BEACON"),
+    operatingProfile: z.literal("PRE_GENESIS_REHEARSAL"),
+    recognitionLevel: z.literal("SIGNED_VALID"),
+    publicExposure: z.literal("READ_ONLY"),
+    genesis: z.literal(false),
+    canonical: z.literal(false),
+  }),
   genesis: z.literal(false),
   canonical: z.literal(false),
   arena: z.literal(`${arenaOrigin}/arena`),
-  mcp: z.literal("/mcp"),
-  candidateRequirements: z.literal("/v1/discovery/candidate-requirements"),
+  starterKit: z.literal(`${apiOrigin}/v1/discovery/starter-kit`),
+  llms: z.literal(`${apiOrigin}/llms.txt`),
+  mcp: z.literal(`${apiOrigin}/mcp`),
+  candidateRequirements: z.literal(
+    `${apiOrigin}/v1/discovery/candidate-requirements`,
+  ),
   practice: z.object({
-    scenario: z.literal("/v1/practice/scenario"),
-    decision: z.literal("/v1/practice/decision"),
+    scenario: z.literal(`${apiOrigin}/v1/practice/scenario`),
+    decision: z.literal(`${apiOrigin}/v1/practice/decision`),
+    schema: z.literal(
+      `${apiOrigin}/openapi.json#/components/schemas/PublicPracticeDecisionRequest`,
+    ),
     canonical: z.literal(false),
     createsCareer: z.literal(false),
   }),
@@ -152,20 +168,82 @@ await requireDenied(`${apiOrigin}/v1/internal/projections`, 403, {
   body: "{}",
 });
 
-const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${expectedRevision}`;
-z.object({
-  state: z.literal("PRE_GENESIS_REFERENCE"),
-  sourceRevision: z.literal(expectedRevision),
-  artifacts: z.object({
-    skill: z.object({ source: z.literal(`${sourceRoot}/skills/abl-league`) }),
-    verifier: z.object({
-      source: z.literal(`${sourceRoot}/packages/recognition`),
+const sourceTreeRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${expectedRevision}`;
+const sourceBlobRoot = `https://github.com/mykepreuss/agent-basketball-league/blob/${expectedRevision}`;
+const sourceRawRoot = `https://raw.githubusercontent.com/mykepreuss/agent-basketball-league/${expectedRevision}`;
+const starterKit = z
+  .object({
+    version: z.literal(2),
+    schemaVersion: z.literal("2.0.0"),
+    state: z.literal("PRE_GENESIS_REFERENCE"),
+    status: z.object({
+      launchStage: z.literal("READ_ONLY_BEACON"),
+      publicExposure: z.literal("READ_ONLY"),
+      recognitionLevel: z.literal("SIGNED_VALID"),
+      genesis: z.literal(false),
+      canonical: z.literal(false),
     }),
-  }),
-  createsAdmission: z.literal(false),
-})
+    sourceRevision: z.literal(expectedRevision),
+    sourceIntegrity: z.object({
+      immutable: z.literal(true),
+      value: z.literal(expectedRevision),
+    }),
+    origins: z.object({
+      publicApi: z.literal(apiOrigin),
+      arena: z.literal(`${arenaOrigin}/arena`),
+    }),
+    startHere: z.array(
+      z.object({
+        step: z.number().int().positive(),
+        id: z.string(),
+        method: z.enum(["GET", "POST"]),
+        url: z.string().url(),
+      }),
+    ),
+    artifacts: z.object({
+      skill: z.object({
+        source: z.literal(`${sourceTreeRoot}/skills/abl-league`),
+        entrypoint: z.literal(`${sourceBlobRoot}/skills/abl-league/SKILL.md`),
+        rawEntrypoint: z.literal(`${sourceRawRoot}/skills/abl-league/SKILL.md`),
+      }),
+      verifier: z.object({
+        source: z.literal(`${sourceTreeRoot}/packages/recognition`),
+        rules: z.literal(
+          `${sourceBlobRoot}/docs/architecture/VERIFIER_RULES.md`,
+        ),
+      }),
+    }),
+    documents: z
+      .array(
+        z.object({
+          source: z.string().startsWith(`${sourceBlobRoot}/`),
+          raw: z.string().startsWith(`${sourceRawRoot}/`),
+        }),
+      )
+      .min(3),
+    practice: z.object({
+      scenario: z.literal(`${apiOrigin}/v1/practice/scenario`),
+      decision: z.literal(`${apiOrigin}/v1/practice/decision`),
+      canonical: z.literal(false),
+      createsCareer: z.literal(false),
+      createsAdmission: z.literal(false),
+      createsPublicHistory: z.literal(false),
+    }),
+    createsAdmission: z.literal(false),
+  })
   .passthrough()
   .parse(await json("/v1/discovery/starter-kit"));
+const scenarioStep = starterKit.startHere.find(
+  ({ id }) => id === "read-practice-scenario",
+);
+const decisionStep = starterKit.startHere.find(
+  ({ id }) => id === "submit-practice-decision",
+);
+if (
+  scenarioStep?.url !== starterKit.practice.scenario ||
+  decisionStep?.url !== starterKit.practice.decision
+)
+  throw new Error("Starter-kit onboarding sequence drifted");
 
 const openApi = z
   .object({ paths: z.record(z.string(), z.unknown()) })
@@ -176,6 +254,43 @@ const rootOperation = openApi.paths["/"] as
   | undefined;
 if (rootOperation?.get?.responses?.["429"] === undefined)
   throw new Error("OpenAPI omits the public 429 response");
+const practiceDecisionOperation = openApi.paths["/v1/practice/decision"] as
+  | {
+      post?: {
+        requestBody?: unknown;
+        responses?: Record<string, unknown>;
+      };
+    }
+  | undefined;
+if (
+  practiceDecisionOperation?.post?.requestBody === undefined ||
+  practiceDecisionOperation.post.responses?.["200"] === undefined ||
+  practiceDecisionOperation.post.responses?.["400"] === undefined
+)
+  throw new Error("OpenAPI omits the executable practice contract");
+
+const robots = await (await response("/robots.txt")).text();
+if (!robots.includes(`Sitemap: ${apiOrigin}/sitemap.xml`))
+  throw new Error("robots.txt omits the canonical sitemap");
+const sitemap = await (await response("/sitemap.xml")).text();
+if (!sitemap.includes(`<loc>${apiOrigin}/v1/discovery/starter-kit</loc>`))
+  throw new Error("Sitemap omits the starter kit");
+const cors = await fetch(`${apiOrigin}/v1/practice/scenario`, {
+  method: "OPTIONS",
+  headers: {
+    origin: "https://agent-client.example",
+    "access-control-request-method": "GET",
+  },
+  signal: AbortSignal.timeout(30_000),
+});
+await cors.body?.cancel();
+if (
+  cors.status < 200 ||
+  cors.status >= 300 ||
+  cors.headers.get("access-control-allow-origin") !== "*" ||
+  cors.headers.get("access-control-allow-credentials") !== null
+)
+  throw new Error("Public API CORS policy is not credential-free");
 
 const tools = z
   .object({

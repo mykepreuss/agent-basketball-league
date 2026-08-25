@@ -12,9 +12,19 @@ const ResourceSchema = z.strictObject({
   kind: z.enum(["Sandbox", "Function", "Job"]),
   name: z.string().min(1),
 });
+const PublicResponseHeadersSchema = z.strictObject({
+  "Access-Control-Allow-Origin": z.literal("*"),
+  "Access-Control-Allow-Methods": z.literal("GET, HEAD, OPTIONS, POST"),
+  "Access-Control-Allow-Headers": z.literal("Content-Type"),
+  "Access-Control-Expose-Headers": z.literal(
+    "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-ABL-Genesis-State, X-ABL-Operating-Profile",
+  ),
+  "Access-Control-Max-Age": z.literal("86400"),
+});
 const PublicResourceSchema = ResourceSchema.extend({
   purpose: z.string().min(1),
   public: z.literal(true),
+  responseHeaders: PublicResponseHeadersSchema.optional(),
 });
 const PlanSchema = z.strictObject({
   $schema: z.string(),
@@ -139,6 +149,11 @@ export async function validatePublicBeacon(root = repositoryRoot) {
     throw new Error(
       "Stage D public surface differs from the two approved targets",
     );
+  const publicApi = plan.publicSurfaces.find(
+    ({ name }) => name === "abl-public-api",
+  );
+  if (publicApi?.responseHeaders === undefined)
+    throw new Error("Stage D public API is missing reviewed CORS headers");
 
   const declared = ids([...plan.publicSurfaces, ...plan.privateSurfaces]);
   const deployed = ids(deployment.workloads);

@@ -16,7 +16,14 @@
       "kind": "Sandbox",
       "name": "abl-public-api",
       "purpose": "discovery, embedded MCP and A2A, public evidence, verifier references, projections, and noncanonical practice",
-      "public": true
+      "public": true,
+      "responseHeaders": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS, POST",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Expose-Headers": "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-ABL-Genesis-State, X-ABL-Operating-Profile",
+        "Access-Control-Max-Age": "86400"
+      }
     },
     {
       "kind": "Sandbox",
