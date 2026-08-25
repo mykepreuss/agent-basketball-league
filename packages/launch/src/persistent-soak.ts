@@ -200,8 +200,13 @@ export function composePersistentSoakEvidence(input: {
     (total, service) => total + service.failures,
     0,
   );
-  if (samples.failedRuns !== serviceFailures)
-    throw new Error("Stage C aggregate and per-service failures do not match");
+  if (
+    serviceFailures < samples.failedRuns ||
+    serviceFailures > samples.failedRuns * Object.keys(samples.services).length
+  )
+    throw new Error(
+      "Stage C aggregate and per-service failures are inconsistent",
+    );
 
   return PersistentSoakEvidenceSchema.parse({
     version: 1,
