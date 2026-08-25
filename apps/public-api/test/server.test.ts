@@ -96,6 +96,7 @@ describe("public API", () => {
     const sourceRevision = "a".repeat(40);
     const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${sourceRevision}`;
     const app = createPublicApi({
+      arenaOrigin: "https://arena.example",
       candidateIntakeOrigin: "https://candidate.example",
       sourceRevision,
     });
@@ -129,6 +130,7 @@ describe("public API", () => {
       candidateIntake: {
         respond: "https://candidate.example/v1/candidate-intake/respond",
       },
+      arena: "https://arena.example/arena",
     });
     expect(
       (

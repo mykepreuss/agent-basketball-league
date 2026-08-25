@@ -1,0 +1,208 @@
+import { z } from "zod";
+
+const [apiInput, arenaInput, expectedRevision] = process.argv.slice(2);
+if (!apiInput || !arenaInput || !expectedRevision)
+  throw new Error(
+    "Usage: verify-public-beacon <public-api-origin> <arena-origin> <release-commit>",
+  );
+if (!/^[0-9a-f]{40}$/.test(expectedRevision))
+  throw new Error("Release commit must be a full lowercase Git commit hash");
+
+function parsePublicOrigin(input: string): string {
+  const url = new URL(input);
+  if (
+    url.protocol !== "https:" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.pathname !== "/" ||
+    url.search !== "" ||
+    url.hash !== ""
+  )
+    throw new Error("Beacon origins must be credential-free HTTPS origins");
+  return url.origin;
+}
+
+const apiOrigin = parsePublicOrigin(apiInput);
+const arenaOrigin = parsePublicOrigin(arenaInput);
+const observedPaths: string[] = [];
+
+async function response(path: string, init?: RequestInit): Promise<Response> {
+  const result = await fetch(`${apiOrigin}${path}`, {
+    ...init,
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (result.status !== 200)
+    throw new Error(`Beacon path ${path} returned HTTP ${result.status}`);
+  observedPaths.push(path);
+  return result;
+}
+
+async function json(path: string, init?: RequestInit): Promise<unknown> {
+  return (await response(path, init)).json();
+}
+
+z.object({ genesis: z.literal(false), canonical: z.literal(false) })
+  .passthrough()
+  .parse(await json("/"));
+
+const llms = await (await response("/llms.txt")).text();
+if (
+  !llms.includes("Agent Basketball League") ||
+  !llms.includes("Practice creates no career")
+)
+  throw new Error("llms.txt omits the required pre-Genesis guidance");
+
+z.object({
+  genesis: z.literal(false),
+  canonical: z.literal(false),
+  arena: z.literal(`${arenaOrigin}/arena`),
+  mcp: z.literal("/mcp"),
+  candidateRequirements: z.literal("/v1/discovery/candidate-requirements"),
+  practice: z.object({
+    scenario: z.literal("/v1/practice/scenario"),
+    decision: z.literal("/v1/practice/decision"),
+    canonical: z.literal(false),
+    createsCareer: z.literal(false),
+  }),
+})
+  .passthrough()
+  .parse(await json("/.well-known/agent-basketball-league.json"));
+
+const agentCard = z
+  .object({
+    version: z.string(),
+    skills: z.array(z.object({ id: z.string() })).min(4),
+  })
+  .passthrough()
+  .parse(await json("/.well-known/agent-card.json"));
+if (!agentCard.skills.some(({ id }) => id === "try_basketball"))
+  throw new Error("A2A Agent Card omits the practice skill");
+
+z.object({
+  launchStage: z.literal("READ_ONLY_BEACON"),
+  operatingProfile: z.literal("PRE_GENESIS_REHEARSAL"),
+  recognitionLevel: z.literal("SIGNED_VALID"),
+  publicExposure: z.literal("READ_ONLY"),
+  genesis: z.literal(false),
+  canonical: z.literal(false),
+  canonicalHistoryOpen: z.literal(false),
+})
+  .passthrough()
+  .parse(await json("/v1/discovery/launch-state"));
+
+z.object({
+  authority: z.literal("DISCOVERY_ONLY"),
+  endpoints: z.object({ register: z.string().url() }),
+  canonicalAdmission: z.literal(false),
+  rateLimits: z.object({
+    exceededStatus: z.literal(429),
+    retryHeader: z.literal("Retry-After"),
+  }),
+})
+  .passthrough()
+  .parse(await json("/v1/discovery/candidate-requirements"));
+
+const sourceRoot = `https://github.com/mykepreuss/agent-basketball-league/tree/${expectedRevision}`;
+z.object({
+  state: z.literal("PRE_GENESIS_REFERENCE"),
+  sourceRevision: z.literal(expectedRevision),
+  artifacts: z.object({
+    skill: z.object({ source: z.literal(`${sourceRoot}/skills/abl-league`) }),
+    verifier: z.object({
+      source: z.literal(`${sourceRoot}/packages/recognition`),
+    }),
+  }),
+  createsAdmission: z.literal(false),
+})
+  .passthrough()
+  .parse(await json("/v1/discovery/starter-kit"));
+
+const openApi = z
+  .object({ paths: z.record(z.string(), z.unknown()) })
+  .passthrough()
+  .parse(await json("/openapi.json"));
+const rootOperation = openApi.paths["/"] as
+  | { get?: { responses?: Record<string, unknown> } }
+  | undefined;
+if (rootOperation?.get?.responses?.["429"] === undefined)
+  throw new Error("OpenAPI omits the public 429 response");
+
+const tools = z
+  .object({
+    result: z.object({ tools: z.array(z.object({ name: z.string() })).min(8) }),
+  })
+  .passthrough()
+  .parse(
+    await json("/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  );
+if (!tools.result.tools.some(({ name }) => name === "try_basketball"))
+  throw new Error("Discovery MCP omits try_basketball");
+
+const scenario = z
+  .object({
+    scenarioId: z.string(),
+    practice: z.literal(true),
+    canonical: z.literal(false),
+    createsCareer: z.literal(false),
+    decisionRequirements: z.object({
+      playerId: z.string(),
+      windowId: z.string(),
+    }),
+  })
+  .passthrough()
+  .parse(await json("/v1/practice/scenario"));
+z.object({
+  practice: z.literal(true),
+  canonical: z.literal(false),
+  recognition: z.literal("NONE"),
+  recognizedGameMutation: z.literal(false),
+  createsCareer: z.literal(false),
+  createsPublicHistory: z.literal(false),
+  inferenceInvocations: z.literal(0),
+})
+  .passthrough()
+  .parse(
+    await json("/v1/practice/decision", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scenarioId: scenario.scenarioId,
+        decision: {
+          playerId: scenario.decisionRequirements.playerId,
+          windowId: scenario.decisionRequirements.windowId,
+          action: "SHOOT",
+          shot: "LAYUP",
+        },
+      }),
+    }),
+  );
+
+const arena = await fetch(`${arenaOrigin}/arena`, {
+  signal: AbortSignal.timeout(30_000),
+});
+if (arena.status !== 200)
+  throw new Error(`Arena returned HTTP ${arena.status}`);
+const arenaHtml = await arena.text();
+if (!arenaHtml.includes("PRE_GENESIS_EXPERIMENT"))
+  throw new Error("Arena omits the pre-Genesis classification");
+
+process.stdout.write(
+  `${JSON.stringify({
+    status: "PASS",
+    evidenceClass: "LIVE_PUBLIC_BEACON_PROTOCOL",
+    releaseId: expectedRevision,
+    publicExposure: "READ_ONLY",
+    historyClassification: "PRE_GENESIS_EXPERIMENT",
+    recognitionLevel: "SIGNED_VALID",
+    observedApiPaths: [...new Set(observedPaths)].sort(),
+    arenaVerified: true,
+    candidateMutationAttempted: false,
+    credentialsUsed: false,
+    modelInvocations: 0,
+    secretValuesPrinted: false,
+  })}\n`,
+);

@@ -27,6 +27,9 @@ spec:
       - name: ABL_PUBLIC_ORIGIN
         value: ${ABL_PUBLIC_ORIGIN}
         secret: false
+      - name: ABL_ARENA_ORIGIN
+        value: ${ABL_ARENA_ORIGIN}
+        secret: false
       - name: ABL_CANDIDATE_INTAKE_ORIGIN
         value: ${ABL_CANDIDATE_INTAKE_ORIGIN}
         secret: false
@@ -137,6 +140,9 @@ spec:
         secret: false
       - name: ABL_OPERATING_PROFILE
         value: ${ABL_OPERATING_PROFILE}
+        secret: false
+      - name: ABL_LAUNCH_STATE_JSON
+        value: ${ABL_LAUNCH_STATE_JSON}
         secret: false
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}

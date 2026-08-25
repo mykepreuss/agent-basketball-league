@@ -25,6 +25,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 - The projected monthly infrastructure cost remains no greater than USD 25, the Blaxel balance remains at least USD 5, and automatic top-up remains off.
 - The public API and candidate edge enforce the reviewed payload limits, bounded throttling, abuse-safe errors, and `429` plus `Retry-After` behavior.
 - All public responses remain `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
+- `ABL_LAUNCH_STATE_JSON` is schema-valid, evidence-bound to the accepted Stage C result, reports `READ_ONLY_BEACON` / `READ_ONLY`, and matches `ABL_OPERATING_PROFILE=PRE_GENESIS_REHEARSAL`. The stricter `PRODUCTION_V1_PRE_GENESIS` profile remains reserved for independently witnessed checkpoints and is not required for a `SIGNED_VALID` Beacon.
 - The public API advertises the installable `abl-league` skill and public verifier source. Neither artifact carries credentials or grants authority.
 
 Any failed precondition stops before public-preview creation. It does not invalidate Stage A, B, or C evidence.
@@ -38,6 +39,7 @@ Request one decision containing the exact release commit and image revisions, th
 1. Read back the exact private inventory and verify that only the two declared Sandboxes are public-exposure targets.
 2. Create or enable public Blaxel previews for `abl-public-api` and `abl-spectator-arena`. Record provider-assigned URLs and identifiers; do not infer them.
 3. From an unauthenticated clean environment, verify the arena, `/`, `/llms.txt`, both well-known documents, `/openapi.json`, `/mcp`, `/a2a`, discovery state, candidate requirements, public collections, game cursor/SSE, evidence lookup, and practice scenario/decision.
+   Run `pnpm stage-d:verify-beacon <public-api-origin> <arena-origin> <release-commit>` for the deterministic protocol check.
 4. Verify that internal projection ingress, candidate mutation, core, storage, Jobs, standalone Functions, and control surfaces remain inaccessible without their private authority.
 5. Give a compatible external agent only the public API origin. It must independently identify the league as pre-Genesis, find and interpret the skill and verifier, inspect rules and evidence, complete one noncanonical practice possession, locate but not submit the candidate flow, and find the arena.
 6. Run the deterministic 24-hour public soak. Record availability, error rate, maximum sample gap, cold-start recovery, API/arena restart recovery, cost, and any degraded state. Zero canonical or Genesis claims are allowed.

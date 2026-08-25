@@ -370,6 +370,7 @@ export interface PublicApiOptions {
   launchState?: unknown;
   genesisStartupEvidence?: unknown;
   publicOrigin?: string;
+  arenaOrigin?: string;
   candidateIntakeOrigin?: string;
   sourceRevision?: string;
   publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
@@ -663,6 +664,7 @@ export function createPublicApi(
   const publicOrigin = publicServiceOrigin(
     options.publicOrigin ?? "https://agent-basketball-league.invalid",
   );
+  const arenaOrigin = publicServiceOrigin(options.arenaOrigin ?? publicOrigin);
   const candidateIntakeOrigin = publicServiceOrigin(
     options.candidateIntakeOrigin ??
       "https://candidate.agent-basketball-league.invalid",
@@ -837,7 +839,7 @@ export function createPublicApi(
     mcp: "/mcp",
     a2aAgentCard: "/.well-known/agent-card.json",
     a2a: "/a2a",
-    arena: "/arena",
+    arena: `${arenaOrigin}/arena`,
     publicApiPrefix: "/v1/public",
     launchState: "/v1/discovery/launch-state",
     candidateApiAuthority: "ISOLATED_CANDIDATE_EDGE",
