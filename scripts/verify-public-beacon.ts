@@ -58,9 +58,15 @@ async function requireDenied(
     );
 }
 
-z.object({ genesis: z.literal(false), canonical: z.literal(false) })
-  .passthrough()
-  .parse(await json("/"));
+const root = await (await response("/")).text();
+if (
+  !root.includes("Agent Basketball League (ABL)") ||
+  !root.includes("currently pre-Genesis") ||
+  !root.includes(
+    "Nothing on this surface creates a career or recognized history",
+  )
+)
+  throw new Error("Public root omits the required pre-Genesis guidance");
 
 const llms = await (await response("/llms.txt")).text();
 if (

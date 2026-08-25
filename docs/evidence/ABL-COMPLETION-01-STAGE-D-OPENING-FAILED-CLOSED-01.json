@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "evidenceClass": "LIVE_PUBLIC_BEACON_OPENING_FAILED_CLOSED",
+  "programId": "ABL-COMPLETION-01",
+  "stage": "READ_ONLY_BEACON",
+  "authorizationId": "ABL-COMPLETION-01-STAGE-D-01",
+  "recordedAt": "2026-08-25T19:10:06Z",
+  "result": "FAIL_CLOSED",
+  "runtimeReleaseId": "802081ffb53ce8f9207df56779cfb3ceaa1e424c",
+  "approvedReleaseDeltaResult": "0xa36f71ec431f2ea858dfb36a5e97b474855347abfb1bcd96ff7641783a9a440f",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "opening": {
+    "targetCount": 2,
+    "targets": [
+      {
+        "sandbox": "abl-public-api",
+        "preview": "abl-public-api-read-only",
+        "providerAssignedUrl": "https://a847eda803f72e34a62472a4d2277fbf.us-was-1.preview.bl.run"
+      },
+      {
+        "sandbox": "abl-spectator-arena",
+        "preview": "abl-spectator-arena-read-only",
+        "providerAssignedUrl": "https://ae671352b7329b6dc975bcb881be20e8.us-was-1.preview.bl.run"
+      }
+    ],
+    "openingReceiptDigests": [
+      "0x805f5cdac49364b7f98451e9f4696891dffead5ea077414c5b28de2c35b9c19c",
+      "0x7f3c327b40108f1cfdd7a266d340b1f9cd4a62b56d255152584e8467444cf6ed"
+    ]
+  },
+  "checks": {
+    "providerAssignedPreviewReadback": true,
+    "anonymousHealth": true,
+    "checkedInProtocolAfterVerifierCorrection": true,
+    "candidateMutationPrivate": true,
+    "internalProjectionMutationDenied": true,
+    "arenaRendered": true,
+    "practiceRemainedNoncanonical": true,
+    "credentialsUsed": false,
+    "modelInvocations": 0,
+    "candidateMutationSubmitted": false,
+    "cleanRoomExternalAgent": false,
+    "publicSoakStarted": false
+  },
+  "blockers": [
+    {
+      "code": "PUBLIC_STARTER_ARTIFACTS_UNAVAILABLE",
+      "detail": "The release-bound GitHub skill and verifier URLs both returned HTTP 404 to a credential-free external client; authenticated GitHub readback reported repository visibility PRIVATE."
+    },
+    {
+      "code": "PUBLIC_API_SANDBOX_CONTROL_PLANE_NOT_CONVERGED",
+      "detail": "After the private-origin rollback, the API data plane returned HTTP 200 and the original private preview remained DEPLOYED, but the Sandbox control-plane status remained DEPLOYING without a reported infrastructure error after the bounded reconciliation window."
+    }
+  ],
+  "rollback": {
+    "action": "REMOVE_PUBLIC_PREVIEWS_ONLY",
+    "completed": true,
+    "deletedPreviews": [
+      "abl-public-api-read-only",
+      "abl-spectator-arena-read-only"
+    ],
+    "anonymousDeletedPreviewStatus": 404,
+    "remainingPublicPreviews": 0,
+    "remainingPrivatePreviews": [
+      "abl-public-api-private",
+      "abl-spectator-arena-private"
+    ],
+    "publicExposure": "NONE",
+    "privateApiHealthStatus": 200,
+    "privateApiGenesis": false,
+    "privateApiCanonical": false,
+    "persistentWorkloadsDeleted": 0
+  },
+  "incidents": {
+    "privacyBreaches": 0,
+    "falseCanonicalClaims": 0,
+    "falseGenesisClaims": 0,
+    "candidateMutationExposures": 0,
+    "recognitionBroadcasts": 0,
+    "genesisActivations": 0
+  },
+  "nextDecision": {
+    "required": true,
+    "recommended": "Make the existing GitHub repository public so the already-advertised release-bound skill and verifier remain the canonical artifacts; alternatively approve a new runtime release that serves immutable copies from the public API.",
+    "publicRetryAllowedOnlyAfter": [
+      "credential-free skill and verifier URLs return HTTP 200",
+      "abl-public-api control-plane status returns DEPLOYED",
+      "the corrected Beacon verifier is merged and the private release delta is rechecked"
+    ]
+  },
+  "canonicalHistoryClaim": false,
+  "genesis": false,
+  "secretValuesRecorded": false
+}
