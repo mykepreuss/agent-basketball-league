@@ -773,6 +773,7 @@ describe("single-workspace topology", () => {
     expect(driveApplicator).toContain(
       'required("ABL_PLATFORM_MUTATION_AUTHORIZATION_ID")',
     );
+    expect(driveApplicator).toContain('z.literal("agent-basketball-league")');
     expect(driveApplicator).toContain('required("BL_WORKSPACE") !== workspace');
     expect(driveApplicator).toContain("permissions: drivePolicy.permissions");
     expect(driveApplicator).toContain(

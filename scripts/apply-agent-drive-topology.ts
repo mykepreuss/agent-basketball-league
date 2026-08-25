@@ -5,12 +5,7 @@ import { isDeepStrictEqual } from "node:util";
 import { DriveInstance, SandboxInstance } from "@blaxel/core";
 import { z } from "zod";
 
-const WorkspaceSchema = z.enum([
-  "abl-core",
-  "abl-private",
-  "abl-public",
-  "agent-basketball-league",
-]);
+const WorkspaceSchema = z.literal("agent-basketball-league");
 const DrivePermissionSchema = z.strictObject({
   labels: z
     .record(z.string(), z.string())

@@ -82,6 +82,8 @@ const RouteCatalogSchema = z.object({
     z
       .object({
         service: z.string(),
+        method: z.string(),
+        path: z.string(),
         exposure: z.enum(["PUBLIC_DISCOVERY", "PUBLIC_READ_ONLY"]).optional(),
       })
       .passthrough(),
@@ -90,6 +92,14 @@ const RouteCatalogSchema = z.object({
 
 function ids(resources: readonly z.infer<typeof ResourceSchema>[]): string[] {
   return resources.map(({ kind, name }) => `${kind}/${name}`).sort();
+}
+
+function routeId(route: {
+  service: string;
+  method: string;
+  path: string;
+}): string {
+  return `${route.service}:${route.method}:${route.path}`;
 }
 
 export async function validatePublicBeacon(root = repositoryRoot) {
@@ -143,6 +153,33 @@ export async function validatePublicBeacon(root = repositoryRoot) {
   if (invalidPublicRoute)
     throw new Error(
       `Unexpected public route service: ${invalidPublicRoute.service}`,
+    );
+  const publicPostRoutes = routeCatalog.routes
+    .filter((route) => route.exposure !== undefined && route.method === "POST")
+    .map(routeId)
+    .sort();
+  const expectedPublicPostRoutes = [
+    "abl-public-api:POST:/a2a",
+    "abl-public-api:POST:/mcp",
+    "abl-public-api:POST:/v1/practice/decision",
+  ];
+  if (
+    JSON.stringify(publicPostRoutes) !==
+    JSON.stringify(expectedPublicPostRoutes)
+  )
+    throw new Error(
+      "Stage D public POST routes differ from the safe allowlist",
+    );
+  const exposedPrivatePath = routeCatalog.routes.find(
+    (route) =>
+      route.exposure !== undefined &&
+      (route.path.startsWith("/v1/internal/") ||
+        route.path.startsWith("/v1/candidate-intake") ||
+        route.path.startsWith("/v1/candidates/")),
+  );
+  if (exposedPrivatePath)
+    throw new Error(
+      `Stage D exposes a private mutation path: ${routeId(exposedPrivatePath)}`,
     );
 
   if (
