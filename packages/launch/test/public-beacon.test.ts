@@ -34,6 +34,7 @@ const policy = {
     maximumErrorRate: 0.01,
     maximumSampleGapSeconds: 600,
     maximumProjectedMonthlyCostUsd: 25,
+    projectedMonthlyCostEnforcement: "ADVISORY",
     minimumBlaxelBalanceUsd: 5,
   },
 } as const;
@@ -219,8 +220,56 @@ describe("public Beacon soak", () => {
         "public soak is shorter than 24 hours",
         "required public check did not pass: cleanRoomExternalAgent",
         "public soak recorded falseCanonicalClaims: 1",
-        "projected monthly cost exceeded threshold",
       ]),
+    );
+  });
+
+  it("reports cost without blocking an advisory-cost public soak", () => {
+    const observed = evidence();
+    const result = assessPublicBeaconSoak(
+      {
+        ...policy,
+        thresholds: {
+          ...policy.thresholds,
+          projectedMonthlyCostEnforcement: "ADVISORY",
+        },
+      },
+      {
+        ...observed,
+        metrics: {
+          ...observed.metrics,
+          projectedMonthlyCostUsd: 250,
+          observedCostUsd: 250,
+        },
+      },
+    );
+    expect(result).toMatchObject({ status: "PASS", blockers: [] });
+  });
+
+  it("can enforce an explicit hard public-soak cost ceiling", () => {
+    const observed = evidence();
+    const result = assessPublicBeaconSoak(
+      {
+        ...policy,
+        thresholds: {
+          ...policy.thresholds,
+          projectedMonthlyCostEnforcement: "HARD_CEILING",
+        },
+      },
+      {
+        ...observed,
+        policyDigest: sha256Commitment({
+          ...policy,
+          thresholds: {
+            ...policy.thresholds,
+            projectedMonthlyCostEnforcement: "HARD_CEILING",
+          },
+        }),
+        metrics: { ...observed.metrics, projectedMonthlyCostUsd: 25.01 },
+      },
+    );
+    expect(result.blockers).toContain(
+      "projected monthly cost exceeded threshold",
     );
   });
 

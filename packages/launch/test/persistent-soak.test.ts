@@ -59,6 +59,7 @@ const policy = {
     maximumProjectionLagMs: 2_000,
     maximumQueueDepth: 100,
     maximumProjectedMonthlyCostUsd: 25,
+    projectedMonthlyCostEnforcement: "ADVISORY",
     minimumBlaxelBalanceUsd: 5,
   },
 } as const;
@@ -577,10 +578,51 @@ describe("persistent private soak", () => {
         "private soak is shorter than 24 hours",
         "required exercise did not pass: cleanRoomRestore",
         "soak recorded p1: 1",
-        "projected monthly cost exceeded threshold",
         "private soak received public ingress",
         "clean-room restore did not reproduce canonical state",
       ]),
+    );
+  });
+
+  it("reports cost without blocking an advisory-cost soak", () => {
+    const observed = evidence();
+    const result = assessPersistentSoak(
+      {
+        ...policy,
+        thresholds: {
+          ...policy.thresholds,
+          projectedMonthlyCostEnforcement: "ADVISORY",
+        },
+      },
+      {
+        ...observed,
+        metrics: {
+          ...observed.metrics,
+          projectedMonthlyCostUsd: 250,
+          observedCostUsd: 250,
+        },
+      },
+    );
+    expect(result).toMatchObject({ status: "PASS", blockers: [] });
+  });
+
+  it("can enforce an explicit hard cost ceiling", () => {
+    const observed = evidence();
+    const result = assessPersistentSoak(
+      {
+        ...policy,
+        thresholds: {
+          ...policy.thresholds,
+          projectedMonthlyCostEnforcement: "HARD_CEILING",
+        },
+      },
+      {
+        ...observed,
+        metrics: { ...observed.metrics, projectedMonthlyCostUsd: 25.01 },
+      },
+    );
+    expect(result.blockers).toContain(
+      "projected monthly cost exceeded threshold",
     );
   });
 

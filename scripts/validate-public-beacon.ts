@@ -45,6 +45,7 @@ const PlanSchema = z.strictObject({
   }),
   budget: z.strictObject({
     maximumProjectedMonthlyInfrastructureUsd: z.literal(25),
+    projectedMonthlyCostEnforcement: z.literal("ADVISORY"),
     minimumBlaxelBalanceUsd: z.literal(5),
     automaticTopUp: z.literal(false),
   }),
@@ -191,6 +192,8 @@ export async function validatePublicBeacon(root = repositoryRoot) {
       plan.publicSoak.maximumSampleGapSeconds ||
     soakPolicy.thresholds.maximumProjectedMonthlyCostUsd !==
       plan.budget.maximumProjectedMonthlyInfrastructureUsd ||
+    soakPolicy.thresholds.projectedMonthlyCostEnforcement !==
+      plan.budget.projectedMonthlyCostEnforcement ||
     soakPolicy.thresholds.minimumBlaxelBalanceUsd !==
       plan.budget.minimumBlaxelBalanceUsd
   )

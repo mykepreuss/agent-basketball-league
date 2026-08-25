@@ -80,6 +80,12 @@
       ]
     },
     {
+      "requirementId": "FOUNDING_ALPHA_MERGED_PRIVATE_RELEASE_DELTA",
+      "requiredForStage": "READ_ONLY_BEACON",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["merged-private-release-delta"]
+    },
+    {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
       "requiredForStage": "PRIVATE_FOUNDING_ALPHA",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
@@ -213,6 +219,14 @@
       "source": {
         "type": "FILE_SHA256",
         "path": "docs/evidence/ABL-COMPLETION-01-STAGE-C-OWNER-ACCEPTANCE-01.json"
+      },
+      "verification": "PASSED"
+    },
+    {
+      "evidenceId": "merged-private-release-delta",
+      "source": {
+        "type": "FILE_SHA256",
+        "path": "docs/evidence/ABL-COMPLETION-01-STAGE-D-PRIVATE-RELEASE-DELTA.json"
       },
       "verification": "PASSED"
     },

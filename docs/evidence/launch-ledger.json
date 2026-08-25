@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0xb09b838421dbf657cf2b038b778c005870c6a0e3016968afd8557c309971849e",
+    "evidenceDigest": "0x2056c579e510f79bb17b7574881cc4db4661fd8e7fc6f1e614e9f36cb466ae29",
     "blockingReasons": [],
     "nextBlockingRequirement": null,
     "lastSuccessfulAcceptance": {
@@ -155,6 +155,12 @@
       ]
     },
     {
+      "requirementId": "FOUNDING_ALPHA_MERGED_PRIVATE_RELEASE_DELTA",
+      "requiredForStage": "READ_ONLY_BEACON",
+      "status": "VERIFIED_COMPLETE",
+      "evidenceIds": ["merged-private-release-delta"]
+    },
+    {
       "requirementId": "FOUNDING_ALPHA_FIRST_SOL_INVITATION",
       "requiredForStage": "PRIVATE_FOUNDING_ALPHA",
       "status": "BLOCKED_EXTERNAL_INPUT_REQUIRED",
@@ -170,22 +176,22 @@
   "evidence": [
     {
       "evidenceId": "canonical-launch-plan",
-      "digest": "0xca545da2cb4ae529378bffc55167e13ded4dac40760f7bd14b599393163987ce",
+      "digest": "0x053b0c44b1ade6cad3f8e944b1d1e93eed8551536e9cf04756236c00ac5585ce",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-applications",
-      "digest": "0x8cf2b7898ea19c9f3294d1f9677557b3c88117863d36350124aadb810ad79068",
+      "digest": "0xc1ee9f90fd6ee583fe4f11e481f6e9e72ea91282598d3ba189ea69c698ee1094",
       "verification": "PASSED"
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x2bf21751f26517a9a1fedc6b0e80bbc778e09997a4af8c85ad1ccb7b7f51c420",
+      "digest": "0xf2241046573fc8b4716b4ecc5a9ddce130c73a3f4c883405b375f5c20cd28768",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0x50c3b93b4cf78f08165fbf9b13a0775d18062b52d34115c94beeaceffcbc3344",
+      "digest": "0xbc0b40ec663db01177485bd543941ab0768dff12694940ec22a84ba6fa21122d",
       "verification": "PASSED"
     },
     {
@@ -200,7 +206,7 @@
     },
     {
       "evidenceId": "arena-implementation",
-      "digest": "0xbdb2790a1916431adf799f4d95aad0ddc8de155aa1e1a1a41291f30ee7e24bcf",
+      "digest": "0x7e76f1473ed963b0b6f7af7cbb199ebe357632eec6cae4c62086c72c21d1310b",
       "verification": "PASSED"
     },
     {
@@ -210,7 +216,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0x90bee91ef2f78dad6484920dc5faf2b53d1de206bc7fea652ed873eb3f4548ae",
+      "digest": "0x972eabb3e3527214f0d2830c6493ae5c65ab7e1d94dff57094251adbfe7a239c",
       "verification": "PASSED"
     },
     {
@@ -259,8 +265,13 @@
       "verification": "PASSED"
     },
     {
+      "evidenceId": "merged-private-release-delta",
+      "digest": "0x4c7bcab668be349f8efe350a6dd553c35176467652917c0af8a24db1b1cf36f0",
+      "verification": "PASSED"
+    },
+    {
       "evidenceId": "first-sol-invitation-evidence",
-      "digest": "0xca545da2cb4ae529378bffc55167e13ded4dac40760f7bd14b599393163987ce",
+      "digest": "0x053b0c44b1ade6cad3f8e944b1d1e93eed8551536e9cf04756236c00ac5585ce",
       "verification": "LIVE_PROOF_REQUIRED"
     },
     {
@@ -493,5 +504,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xa3d816dd17f862ccabb89eb765865e0283d9832b283cb8105b7cebfd3750fcbb"
+  "ledgerDigest": "0x31375b713724546943506d8f5aa9b15d9e1102278aa9fb2d480dddc2944304fd"
 }

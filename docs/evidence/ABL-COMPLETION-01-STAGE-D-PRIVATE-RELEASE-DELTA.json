@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "evidenceClass": "LIVE_PRIVATE_RELEASE_DELTA",
+  "stage": "READ_ONLY_BEACON_RELEASE_DELTA",
+  "workspace": "agent-basketball-league",
+  "stageCReleaseId": "ad73a9ff151ac5599ad90e581114ebf179d9e848",
+  "targetReleaseId": "802081ffb53ce8f9207df56779cfb3ceaa1e424c",
+  "startedAt": "2026-08-25T16:25:51.000Z",
+  "endedAt": "2026-08-25T17:59:42.000Z",
+  "publicExposure": "NONE",
+  "changedWorkloads": [
+    {
+      "kind": "Sandbox",
+      "name": "abl-private-storage-broker",
+      "imageName": "abl-stage-c-storage-broker-image",
+      "trustDomain": "abl-private",
+      "providerTrustDomainLabel": "abl-private",
+      "immutableImageReference": "sandbox/abl-stage-c-storage-broker-image:y8uu9cg7mxwp"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-core-api",
+      "imageName": "abl-stage-c-core-api-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "sandbox/abl-stage-c-core-api-image:nshi23g50a0g"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-safety-gateway",
+      "imageName": "abl-stage-c-safety-gateway-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "sandbox/abl-stage-c-safety-gateway-image:i0j5g9gan5ox"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-public-api",
+      "imageName": "abl-stage-c-public-api-image",
+      "trustDomain": "abl-public",
+      "providerTrustDomainLabel": "abl-public",
+      "immutableImageReference": "sandbox/abl-stage-c-public-api-image:pg8vfoba28bo"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-spectator-arena",
+      "imageName": "abl-stage-c-arena-image",
+      "trustDomain": "abl-public",
+      "providerTrustDomainLabel": "abl-public",
+      "immutableImageReference": "sandbox/abl-stage-c-arena-image:ilce04j7h3xj"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-candidate-store",
+      "imageName": "abl-stage-c-candidate-store-image",
+      "trustDomain": "abl-public",
+      "providerTrustDomainLabel": "abl-public",
+      "immutableImageReference": "sandbox/abl-stage-c-candidate-store-image:awxs3pfy1nix"
+    },
+    {
+      "kind": "Sandbox",
+      "name": "abl-candidate-edge",
+      "imageName": "abl-stage-c-candidate-edge-image",
+      "trustDomain": "abl-public",
+      "providerTrustDomainLabel": "abl-public",
+      "immutableImageReference": "sandbox/abl-stage-c-candidate-edge-image:eam1sgm9bpqh"
+    },
+    {
+      "kind": "Function",
+      "name": "abl-basketball-mcp",
+      "imageName": "abl-stage-c-basketball-mcp-image",
+      "trustDomain": "abl-competition",
+      "providerTrustDomainLabel": "abl-competition",
+      "immutableImageReference": "function/abl-stage-c-basketball-mcp-image:n1vj39plbrr4"
+    },
+    {
+      "kind": "Function",
+      "name": "abl-career-mcp",
+      "imageName": "abl-stage-c-career-mcp-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "function/abl-stage-c-career-mcp-image:exo56nidrzuh"
+    },
+    {
+      "kind": "Function",
+      "name": "abl-government-mcp",
+      "imageName": "abl-stage-c-government-mcp-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "function/abl-stage-c-government-mcp-image:om851eel2lkk"
+    },
+    {
+      "kind": "Function",
+      "name": "abl-discovery-mcp",
+      "imageName": "abl-stage-c-discovery-mcp-image",
+      "trustDomain": "abl-public",
+      "providerTrustDomainLabel": "abl-public",
+      "immutableImageReference": "function/abl-stage-c-discovery-mcp-image:uh8ao3jdv3r8"
+    },
+    {
+      "kind": "Job",
+      "name": "abl-candidate-provisioner",
+      "imageName": "abl-stage-c-candidate-provisioner-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "job/abl-stage-c-candidate-provisioner-image:y7ucz1536954"
+    },
+    {
+      "kind": "Job",
+      "name": "abl-recovery-verifier",
+      "imageName": "abl-stage-c-recovery-job-image",
+      "trustDomain": "abl-core",
+      "providerTrustDomainLabel": "abl-core",
+      "immutableImageReference": "job/abl-stage-c-recovery-job-image:zgziywuks3w8"
+    }
+  ],
+  "changedServiceRestarts": [
+    { "kind": "Sandbox", "name": "abl-private-storage-broker", "passed": true },
+    { "kind": "Sandbox", "name": "abl-core-api", "passed": true },
+    { "kind": "Sandbox", "name": "abl-safety-gateway", "passed": true },
+    { "kind": "Sandbox", "name": "abl-public-api", "passed": true },
+    { "kind": "Sandbox", "name": "abl-spectator-arena", "passed": true },
+    { "kind": "Sandbox", "name": "abl-candidate-store", "passed": true },
+    { "kind": "Sandbox", "name": "abl-candidate-edge", "passed": true },
+    { "kind": "Function", "name": "abl-basketball-mcp", "passed": true },
+    { "kind": "Function", "name": "abl-career-mcp", "passed": true },
+    { "kind": "Function", "name": "abl-government-mcp", "passed": true },
+    { "kind": "Function", "name": "abl-discovery-mcp", "passed": true }
+  ],
+  "checks": {
+    "targetDescendsFromStageC": true,
+    "exactReleaseIdentity": true,
+    "exactImageIdentity": true,
+    "healthReadiness": true,
+    "coreToPublicDelivery": true,
+    "replayRootEquality": true,
+    "affectedRejections": true,
+    "privateBoundary": true
+  },
+  "incidents": {
+    "p0": 0,
+    "p1": 0,
+    "privacyBreaches": 0,
+    "replayRootDivergences": 0,
+    "unrecoverableRestarts": 0
+  },
+  "metrics": {
+    "measuredAt": "2026-08-25T17:59:42.000Z",
+    "projectedMonthlyCostUsd": 21.9084,
+    "observedDeltaCostUsd": 0.79,
+    "blaxelBalanceUsd": 1005.97,
+    "automaticTopUp": false,
+    "publicIngressRequests": 0,
+    "canonicalClaims": 0,
+    "genesisClaims": 0,
+    "finalProviderReadback": true
+  },
+  "secretValuesRecorded": false
+}
