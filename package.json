@@ -44,6 +44,7 @@
     "stage-d:assess-soak": "tsx scripts/assess-public-beacon-soak.ts",
     "stage-d:assess-release-delta": "tsx scripts/assess-private-release-delta.ts",
     "stage-d:verify-beacon": "tsx scripts/verify-public-beacon.ts",
+    "stage-i:assess-completion": "tsx scripts/assess-genesis-completion.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
     "test": "turbo run test",

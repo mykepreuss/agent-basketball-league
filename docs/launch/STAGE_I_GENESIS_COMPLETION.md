@@ -36,6 +36,14 @@ Create one redacted `ABL-COMPLETION-01-STAGE-I.json` record containing:
 
 The record contains no candidate plaintext, private memory, signing key, capability, access token, database URL, Drive credential, model credential, or unredacted provider secret.
 
+Assess the redacted record against the stored public finalized-game payload with:
+
+```sh
+pnpm stage-i:assess-completion <ABL-COMPLETION-01-STAGE-I.json> <finalized-opening-game.json>
+```
+
+The command uses `assessGenesisStartupEvidence` and the existing role-complete finalized-game replay verifier. It exits nonzero unless the combined Genesis, opening-game, public-delivery, recognition, signup, and monitoring evidence returns `PASS`. The result digest is the terminal completion receipt.
+
 ## Execution sequence
 
 1. Freeze the approved Genesis release commit and immutable workload revisions. Run the exact Node 24.18.0 evidence pipeline and verify a clean tracked worktree.
@@ -46,6 +54,7 @@ The record contains no candidate plaintext, private memory, signing key, capabil
 6. Run the clean public verifier with no repository or private credentials.
 7. Run the reversible external-agent signup probe and prove that the founding registry root is unchanged after cleanup.
 8. Capture fresh monitoring, incident, inventory, and cost observations; produce and independently inspect the single Stage I record.
+9. Run `pnpm stage-i:assess-completion` against that record and the exact stored finalized-game payload. Record its `PASS` result digest; a malformed input or any blocker exits nonzero.
 
 ## Failure and retry policy
 
@@ -57,4 +66,4 @@ The record contains no candidate plaintext, private memory, signing key, capabil
 
 ## Definition of complete
 
-When `ABL-COMPLETION-01-STAGE-I.json` passes independent review, the canonical opening game is publicly observable and exactly replayable, and post-Genesis signup remains open, the ABL is Genesis-live and this completion program ends. Update the canonical launch ledger to `PRODUCTION_GENESIS`, record the Stage I evidence digest, and mark the active goal complete. No further preflight, rehearsal number, or optional hardening item may redefine this result.
+When `ABL-COMPLETION-01-STAGE-I.json` passes `pnpm stage-i:assess-completion`, the canonical opening game is publicly observable and exactly replayable, and post-Genesis signup remains open, the ABL is Genesis-live and this completion program ends. Update the canonical launch ledger to `PRODUCTION_GENESIS`, record the Stage I evidence and result digests, and mark the active goal complete. No further preflight, rehearsal number, or optional hardening item may redefine this result.
