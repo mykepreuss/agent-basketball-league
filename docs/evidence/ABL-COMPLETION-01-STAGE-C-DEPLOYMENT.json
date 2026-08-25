@@ -1,10 +1,10 @@
 {
   "programId": "ABL-COMPLETION-01",
   "stage": "READ_ONLY_BEACON",
-  "status": "APPROVED_SINGLE_WORKSPACE_DEPLOYMENT_IN_PROGRESS",
-  "recordedAt": "2026-08-24T22:11:26Z",
+  "status": "PRIVATE_DEPLOYMENT_ACTIVE_SOAK_PENDING",
+  "recordedAt": "2026-08-25T00:14:23Z",
   "sourceBaselineCommit": "656cc2742485f92a83d6755963c2c3daa6d14f47",
-  "correctionReleaseCommit": null,
+  "correctionReleaseCommit": "0f349d0e8b8976dde6dd0aa7d718e8455d5905e8",
   "runtime": "node-v24.18.0",
   "providerMutation": true,
   "deployment": {
@@ -17,7 +17,7 @@
     ],
     "map": "infra/blaxel/persistent-pre-genesis/deployment-map.json",
     "mapFileSha256": "0x8ac53025986843fd2c049965b56c8c27cf84cc1c7b74a3601652c0132167cb30",
-    "deploymentDigest": "0x83e31e5e0696adc50034c978bf42b5e8887bb3bb0cb00d8fda91e992c5bf23c5",
+    "deploymentDigest": "0x22aeee9c6a0d2f69e5933999ee0b8d91bd00b801617beef5e8ca2f2faa406e0e",
     "workloadCount": 13,
     "imageCount": 13,
     "privateEndpointCount": 11,
@@ -90,15 +90,80 @@
     "secretValuesInOutput": false
   },
   "blaxel": {
-    "imagePushes": 0,
-    "workloadsCreated": 0,
-    "drivesCreated": 0,
-    "previewsCreated": 0
+    "workspace": "agent-basketball-league",
+    "region": "us-was-1",
+    "imageRecords": 13,
+    "workloadsCreated": 13,
+    "sandboxes": 7,
+    "functions": 4,
+    "jobs": 2,
+    "drivesCreated": 3,
+    "sandboxPreviewsCreated": 7,
+    "privateEndpointCount": 11,
+    "publicEndpoints": 0,
+    "projectedMonthlyCostUsd": 21.9084,
+    "sandboxImages": {
+      "abl-candidate-edge": "sandbox/abl-stage-c-candidate-edge-image:ysf5otzj5uuq",
+      "abl-candidate-store": "sandbox/abl-stage-c-candidate-store-image:tipbijm9pzke",
+      "abl-core-api": "sandbox/abl-stage-c-core-api-image:wfogftuc1l1x",
+      "abl-private-storage-broker": "sandbox/abl-stage-c-storage-broker-image:xy6zndpwotr9",
+      "abl-public-api": "sandbox/abl-stage-c-public-api-image:rdz8tl1upxer",
+      "abl-safety-gateway": "sandbox/abl-stage-c-safety-gateway-image:e20cqcisbx6e",
+      "abl-spectator-arena": "sandbox/abl-stage-c-arena-image:e9kwuxu9aue8"
+    },
+    "functionImages": {
+      "abl-basketball-mcp": "function/abl-stage-c-basketball-mcp-image:p71egqalezq7",
+      "abl-career-mcp": "function/abl-stage-c-career-mcp-image:yjrbq4p3enze",
+      "abl-discovery-mcp": "function/abl-stage-c-discovery-mcp-image:bx34fisw4zs2",
+      "abl-government-mcp": "function/abl-stage-c-government-mcp-image:dnedncirqbnw"
+    },
+    "jobImages": {
+      "abl-candidate-provisioner": "job/abl-stage-c-candidate-provisioner-image:uhjt8rymnik3",
+      "abl-recovery-verifier": "job/abl-stage-c-recovery-job-image:zgziywuks3w8"
+    }
+  },
+  "liveAcceptance": {
+    "privatePreviewAuthentication": {
+      "sandboxesChecked": 7,
+      "unauthenticatedStatus": 401,
+      "authenticatedStatus": 200,
+      "status": "PASS"
+    },
+    "mcpProtocol": {
+      "functionsChecked": 4,
+      "protocolVersion": "2025-11-25",
+      "initialize": "PASS",
+      "toolsList": "PASS"
+    },
+    "agentDrive": {
+      "drives": ["abl-private-state", "abl-core-state", "abl-public-state"],
+      "mountCount": 4,
+      "pathPermissionReadback": "PASS",
+      "mountedWriteRead": "PASS",
+      "storageWriteMode": "AGENT_DRIVE_DIRECT_EXCLUSIVE",
+      "storageImageRevision": "xy6zndpwotr9",
+      "policyReadAfterRemount": "PASS",
+      "storageHealthAfterRestart": "PASS",
+      "restartRecovery": "PASS"
+    },
+    "exactRuntime": {
+      "node": "v24.18.0",
+      "status": "PASS_LOCAL_WITH_EXTERNAL_GATES",
+      "stableResultDigest": "0x336ded13b6b6bb5820ab585245f3942231b594f653b455d4232c429e443191a8",
+      "launchLedgerDigest": "0x399bb6c252243e07765e8dc7202176fc7639746157fa2113ac4906989d565411"
+    }
+  },
+  "soak": {
+    "status": "PENDING_MERGED_RELEASE",
+    "requiredContinuousHours": 24,
+    "startedAt": null,
+    "completedAt": null
   },
   "limitations": [
-    "No Stage C Blaxel image, workload, preview, or Drive has been created.",
     "No live clean-room restore has been performed against the persistent database.",
     "The 24-hour private soak has not started.",
+    "Credential rotation and the candidate-flow exercise remain pending.",
+    "The recovery verifier Job is deployed but will not be invoked until a distinct clean-room restored database exists.",
     "Public exposure remains separately approval-gated."
   ]
 }
