@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "stage": "READ_ONLY_BEACON_PUBLIC_SOAK",
+  "requiredDurationHours": 24,
+  "publicExposure": "READ_ONLY",
+  "requiredSurfaces": [
+    { "name": "abl-public-api", "probePath": "/health", "expectedStatus": 200 },
+    {
+      "name": "abl-spectator-arena",
+      "probePath": "/health",
+      "expectedStatus": 200
+    }
+  ],
+  "requiredChecks": [
+    "anonymousDiscovery",
+    "arenaRendering",
+    "releaseBoundSkill",
+    "releaseBoundVerifier",
+    "noncanonicalPractice",
+    "candidateMutationPrivate",
+    "rateLimitRetryGuidance",
+    "boundedPayloads",
+    "scaleToZeroRecovery",
+    "restartRecovery",
+    "cleanRoomExternalAgent",
+    "degradedStateLabeling"
+  ],
+  "thresholds": {
+    "maximumErrorRate": 0.01,
+    "maximumSampleGapSeconds": 600,
+    "maximumProjectedMonthlyCostUsd": 25,
+    "minimumBlaxelBalanceUsd": 5
+  }
+}

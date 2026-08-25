@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
+import { PublicBeaconSoakPolicySchema } from "../packages/launch/src/index.js";
+
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const ResourceSchema = z.strictObject({
   kind: z.enum(["Sandbox", "Function", "Job"]),
@@ -47,6 +49,9 @@ const PlanSchema = z.strictObject({
     automaticTopUp: z.literal(false),
   }),
   publicSoak: z.strictObject({
+    monitoringPolicy: z.literal(
+      "infra/blaxel/public-beacon/monitoring-policy.json",
+    ),
     requiredDurationHours: z.literal(24),
     maximumErrorRate: z.number().positive().max(0.01),
     maximumSampleGapSeconds: z.literal(600),
@@ -89,20 +94,28 @@ function ids(resources: readonly z.infer<typeof ResourceSchema>[]): string[] {
 
 export async function validatePublicBeacon(root = repositoryRoot) {
   const planPath = join(root, "infra/blaxel/public-beacon/exposure-plan.json");
-  const [planSource, deploymentSource, routeCatalogSource] = await Promise.all([
-    readFile(planPath, "utf8"),
-    readFile(
-      join(root, "infra/blaxel/persistent-pre-genesis/deployment-map.json"),
-      "utf8",
-    ),
-    readFile(join(root, "docs/architecture/ROUTE_CATALOG.json"), "utf8"),
-  ]);
+  const [planSource, deploymentSource, routeCatalogSource, soakPolicySource] =
+    await Promise.all([
+      readFile(planPath, "utf8"),
+      readFile(
+        join(root, "infra/blaxel/persistent-pre-genesis/deployment-map.json"),
+        "utf8",
+      ),
+      readFile(join(root, "docs/architecture/ROUTE_CATALOG.json"), "utf8"),
+      readFile(
+        join(root, "infra/blaxel/public-beacon/monitoring-policy.json"),
+        "utf8",
+      ),
+    ]);
   const plan = PlanSchema.parse(JSON.parse(planSource) as unknown);
   const deployment = DeploymentSchema.parse(
     JSON.parse(deploymentSource) as unknown,
   );
   const routeCatalog = RouteCatalogSchema.parse(
     JSON.parse(routeCatalogSource) as unknown,
+  );
+  const soakPolicy = PublicBeaconSoakPolicySchema.parse(
+    JSON.parse(soakPolicySource) as unknown,
   );
 
   const expectedPublic = [
@@ -132,6 +145,20 @@ export async function validatePublicBeacon(root = repositoryRoot) {
       `Unexpected public route service: ${invalidPublicRoute.service}`,
     );
 
+  if (
+    soakPolicy.requiredDurationHours !==
+      plan.publicSoak.requiredDurationHours ||
+    soakPolicy.thresholds.maximumErrorRate !==
+      plan.publicSoak.maximumErrorRate ||
+    soakPolicy.thresholds.maximumSampleGapSeconds !==
+      plan.publicSoak.maximumSampleGapSeconds ||
+    soakPolicy.thresholds.maximumProjectedMonthlyCostUsd !==
+      plan.budget.maximumProjectedMonthlyInfrastructureUsd ||
+    soakPolicy.thresholds.minimumBlaxelBalanceUsd !==
+      plan.budget.minimumBlaxelBalanceUsd
+  )
+    throw new Error("Public soak policy differs from the exposure plan");
+
   const digest = createHash("sha256").update(planSource).digest("hex");
   return {
     status: "PASS" as const,
@@ -140,6 +167,7 @@ export async function validatePublicBeacon(root = repositoryRoot) {
     publicRouteCount: routeCatalog.routes.filter(
       ({ exposure }) => exposure !== undefined,
     ).length,
+    requiredPublicCheckCount: soakPolicy.requiredChecks.length,
     exposurePlanDigest: `0x${digest}` as const,
   };
 }

@@ -37,6 +37,7 @@
     "stage-c:validate-deployment": "tsx scripts/validate-persistent-deployment.ts",
     "stage-d:validate-beacon": "tsx scripts/validate-public-beacon.ts",
     "stage-d:prepare-launch-state": "tsx scripts/prepare-public-beacon-launch-state.ts",
+    "stage-d:assess-soak": "tsx scripts/assess-public-beacon-soak.ts",
     "stage-d:verify-beacon": "tsx scripts/verify-public-beacon.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",

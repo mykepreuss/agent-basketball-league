@@ -44,7 +44,7 @@ Request one decision containing the exact release commit and image revisions, th
    Run `pnpm stage-d:verify-beacon <public-api-origin> <arena-origin> <release-commit>` for the deterministic protocol check.
 4. Verify that internal projection ingress, candidate mutation, core, storage, Jobs, standalone Functions, and control surfaces remain inaccessible without their private authority.
 5. Give a compatible external agent only the public API origin. It must independently identify the league as pre-Genesis, find and interpret the skill and verifier, inspect rules and evidence, complete one noncanonical practice possession, locate but not submit the candidate flow, and find the arena.
-6. Run the deterministic 24-hour public soak. Record availability, error rate, maximum sample gap, cold-start recovery, API/arena restart recovery, cost, and any degraded state. Zero canonical or Genesis claims are allowed.
+6. Run the deterministic 24-hour public soak under [`monitoring-policy.json`](../../infra/blaxel/public-beacon/monitoring-policy.json). Record availability, error rate, maximum sample gap, cold-start recovery, API/arena restart recovery, cost, and any degraded state. Zero canonical or Genesis claims are allowed. Finalize it with `pnpm stage-d:assess-soak <monitoring-policy.json> <live-public-soak-evidence.json>`.
 
 Stage D passes only when the clean-room agent test and public soak pass. Stage E remains a separate capped-intake decision.
 

@@ -56,6 +56,7 @@
     "automaticTopUp": false
   },
   "publicSoak": {
+    "monitoringPolicy": "infra/blaxel/public-beacon/monitoring-policy.json",
     "requiredDurationHours": 24,
     "maximumErrorRate": 0.01,
     "maximumSampleGapSeconds": 600,
