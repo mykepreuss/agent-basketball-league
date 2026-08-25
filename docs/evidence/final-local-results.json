@@ -28,18 +28,18 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 43,
-      "totalTasks": 43
+      "successfulTasks": 44,
+      "totalTasks": 44
     },
     {
       "name": "unit-integration-property-contract-migration-api",
       "command": "pnpm turbo run test --force --concurrency=1",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 357,
-      "testFiles": 74,
-      "successfulTasks": 43,
-      "totalTasks": 43
+      "assertions": 375,
+      "testFiles": 78,
+      "successfulTasks": 44,
+      "totalTasks": 44
     },
     {
       "name": "acceptance-replay-load-recovery",
@@ -92,7 +92,7 @@
       "totalTasks": 30
     }
   ],
-  "recordedAt": "2026-08-25T00:11:16.090Z",
+  "recordedAt": "2026-08-25T03:42:48.452Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -100,8 +100,8 @@
     "pnpm": "11.21.0"
   },
   "overall": "PASS_LOCAL_WITH_EXTERNAL_GATES",
-  "stableResultDigest": "0x336ded13b6b6bb5820ab585245f3942231b594f653b455d4232c429e443191a8",
-  "routeCount": 70,
+  "stableResultDigest": "0x7041f24a859343a5b286a39120af6f53f6a9d397a8764126eaecb3568ff48cf6",
+  "routeCount": 71,
   "rawResults": [
     {
       "name": "format",
@@ -138,30 +138,30 @@
       "exitCode": 0,
       "assertions": 0,
       "testFiles": 0,
-      "successfulTasks": 43,
-      "totalTasks": 43,
-      "outputSha256": "3a58a9e306845aac470a97ae965abab8a9206257187760d120948d3ad587228a",
+      "successfulTasks": 44,
+      "totalTasks": 44,
+      "outputSha256": "55c03e703e4fcfc4552b8b8189d4fdcadcb1093f67b7bb2ea1adf6dfe15e835e",
       "outputTail": [
-        "@abl/discovery-mcp:check: cache bypass, force executing 3b38f3c99b213564",
-        "@abl/discovery-mcp:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/basketball-mcp:check: cache bypass, force executing 8c9c683ee9bd6ce9",
-        "@abl/basketball-mcp:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/rehearsal:check: cache bypass, force executing ae0ec83eb744e269",
         "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/projections:check: cache bypass, force executing bb09cfd12e9660d3",
+        "@abl/projections:check: cache bypass, force executing 4c4732dc7103f115",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/assurance:check: cache bypass, force executing cef952c9c577cf80",
         "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/public-api:check: cache bypass, force executing de12c29a568f9839",
-        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/arena:check: cache bypass, force executing 6645cfe0a6be2f25",
-        "@abl/arena:check: $ tsc --noEmit",
-        "@abl/core-api:check: cache bypass, force executing 89a35d0d87c9dafd",
+        "@abl/candidate-provisioner:check: cache bypass, force executing 233e40e578fa2df6",
+        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/candidate-edge:check: cache bypass, force executing 7e3f83f09c4199d8",
+        "@abl/candidate-edge:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/core-api:check: cache bypass, force executing b51ee89faad4a8da",
         "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/public-api:check: cache bypass, force executing a1ad633b4ac9b1f8",
+        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/arena:check: cache bypass, force executing 26df9b7874346182",
+        "@abl/arena:check: $ tsc --noEmit",
         "",
-        " Tasks:    43 successful, 43 total",
-        "Cached:    0 cached, 43 total",
-        "  Time:    1m19.549s"
+        " Tasks:    44 successful, 44 total",
+        "Cached:    0 cached, 44 total",
+        "  Time:    1m1.835s"
       ]
     },
     {
@@ -169,11 +169,11 @@
       "command": "pnpm turbo run test --force --concurrency=1",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 357,
-      "testFiles": 74,
-      "successfulTasks": 43,
-      "totalTasks": 43,
-      "outputSha256": "f9570effafd34228196c6e58d14d8813d5b562e91073f606b30b6c16c7287cd4",
+      "assertions": 375,
+      "testFiles": 78,
+      "successfulTasks": 44,
+      "totalTasks": 44,
+      "outputSha256": "7c02782fe1271ed24b90aec3c74c0860b0b6986503013c2442e8edc287860367",
       "outputTail": [
         " WARNING  no output files found for task @abl/database#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/discovery-mcp#test. Please check your `outputs` key in `turbo.json`",
@@ -206,17 +206,17 @@
       "testFiles": 4,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "17a6c358c35833e347075c6e1f036ef08a30f1f5e869e331961edec9adfab71c",
+      "outputSha256": "2c14b9fb48564587086bea9149b4ba1de9519dbfceed08fd8d7a43996dca9f1f",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
-        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league",
+        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-stage-d",
         "",
         "",
         " Test Files  4 passed (4)",
         "      Tests  18 passed (18)",
-        "   Start at  17:10:17",
-        "   Duration  11.57s (transform 1.85s, setup 0ms, import 4.72s, tests 10.66s, environment 0ms)"
+        "   Start at  20:41:57",
+        "   Duration  10.54s (transform 1.47s, setup 0ms, import 4.09s, tests 9.72s, environment 0ms)"
       ]
     },
     {
@@ -228,17 +228,17 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "b9f0d5e5ab957565d0911359890b2c43571d4d67077e28ee99a77fa985beb27a",
+      "outputSha256": "3aeb2758ef3881e75a25db828b6fd03c22a63948f8433450a76e8e8bad9fad57",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
-        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league",
+        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-stage-d",
         "",
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  17:10:29",
-        "   Duration  1.54s (transform 597ms, setup 0ms, import 1.30s, tests 163ms, environment 0ms)"
+        "   Start at  20:42:08",
+        "   Duration  1.27s (transform 469ms, setup 0ms, import 1.08s, tests 126ms, environment 0ms)"
       ]
     },
     {
@@ -250,10 +250,10 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "fc823958deb643132f6c61a069f85f81f397ee549d1acc2f81147458dee6b698",
+      "outputSha256": "0545d97126f3ac937aee0408d88cd4aa6290161a25d10e134b951ea42df6ce09",
       "outputTail": [
         "$ tsx scripts/run-network-load.ts",
-        "loopback HTTP requests: 22000; failures: 0; p95: 24.25ms",
+        "loopback HTTP requests: 22000; failures: 0; p95: 20.00ms",
         "ABL Assertions 2 passed",
         "ABL Test Files 1 passed"
       ]
@@ -267,28 +267,28 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "8c1a36df9aa016ff662fd53f9ae0e855fdca88919a44f391d12a119f20ae6e00",
+      "outputSha256": "d1cef1bea0daae9ec007311e884abfc66bda53714772a59e395a115f7e488c9b",
       "outputTail": [
-        "[arena] (node:98805) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:36518) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
-        "[arena] (node:98806) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:36519) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "Running 2 tests using 1 worker",
         "",
-        "(node:98807) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:36520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[1/2] [desktop-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "(node:98813) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:36525) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[2/2] [mobile-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "  2 passed (9.9s)"
+        "  2 passed (8.7s)"
       ]
     },
     {
@@ -300,12 +300,8 @@
       "testFiles": 0,
       "successfulTasks": 30,
       "totalTasks": 30,
-      "outputSha256": "2ffe4e8c66646bdca8614e81852106154bce4acd553101b28539b62074828094",
+      "outputSha256": "cfae51d1f8e02ac6eb676432286e3687e9da9f288bf205f16a8d2461a27b9fa6",
       "outputTail": [
-        "@abl/arena:build:   Finished TypeScript in 1046ms ...",
-        "@abl/arena:build:   Collecting page data using 6 workers ...",
-        "@abl/arena:build:   Generating static pages using 6 workers (0/3) ...",
-        "@abl/arena:build: ✓ Generating static pages using 6 workers (3/3) in 248ms",
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
         "@abl/arena:build: Route (app)",
@@ -318,10 +314,14 @@
         "@abl/arena:build: ○  (Static)   prerendered as static content",
         "@abl/arena:build: ƒ  (Dynamic)  server-rendered on demand",
         "@abl/arena:build: ",
+        "@abl/core-api:build: cache bypass, force executing 3cfc3db1b5e0ac21",
+        "@abl/core-api:build: $ tsc -p tsconfig.json",
+        "@abl/public-api:build: cache bypass, force executing b67c3f71ba7d5520",
+        "@abl/public-api:build: $ tsc -p tsconfig.json",
         "",
         " Tasks:    30 successful, 30 total",
         "Cached:    0 cached, 30 total",
-        "  Time:    27.818s"
+        "  Time:    24.124s"
       ]
     }
   ],
@@ -330,10 +330,10 @@
     "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
     "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
     "The existing agent-basketball-league workspace is the selected physical topology; its three persistent Agent Drives and thirteen workloads are privately deployed, while the continuous 24-hour soak remains outstanding.",
-    "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality remain live Stage C exercises.",
+    "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality passed during Stage C, while the uninterrupted 24-hour soak remains in progress.",
     "Base finality lacks a ratified deployment and credentials.",
-    "Stage C recurring capacity is approved within the USD 25 monthly ceiling; immutable workloads and private endpoints are established, while continuous monitoring and measured 24-hour provider cost remain outstanding.",
-    "Founding-agent decisions and signatures do not exist.",
+    "Stage C recurring capacity is approved within the USD 25 monthly ceiling; immutable workloads and private endpoints are established and continuous monitoring is active, while the completed 24-hour observation and measured provider cost remain outstanding.",
+    "Live founding-agent decisions and signatures do not exist.",
     "Hardware-backed non-exportable signing is not supported by the local fixture."
   ]
 }

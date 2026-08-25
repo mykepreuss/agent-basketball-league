@@ -63,6 +63,7 @@ const ADMITTED_AGGREGATE_TYPES = [
   "career-contracts",
   "governance-proposal",
   "institutional-election",
+  "founding-convention-bootstrap",
   "due-process-case",
   "resource-schedule",
   "software-release",
@@ -337,6 +338,10 @@ const app =
         const candidateAdmission = {
           challengeSecret: secret("ABL_CANDIDATE_CHALLENGE_HMAC_BASE64"),
         };
+        const foundingConventionId =
+          process.env.ABL_FOUNDING_CONVENTION_ID === undefined
+            ? undefined
+            : z.uuid().parse(process.env.ABL_FOUNDING_CONVENTION_ID);
         const competitionId = required("ABL_COMPETITION_ID");
         const seasonId = required("ABL_SEASON_ID");
         const economyId = `${competitionId}:${seasonId}`;
@@ -373,6 +378,9 @@ const app =
           governanceEligibilitySnapshotDigest: sha256Commitment(
             governanceEligibilitySnapshot,
           ),
+          ...(foundingConventionId === undefined
+            ? {}
+            : { foundingConventionId }),
           caseTribunalDids,
           caseAppellateDids,
           resourceScheduleRatification,
@@ -485,6 +493,13 @@ const app =
           governance: {
             eligibilitySnapshot: governanceEligibilitySnapshot,
           },
+          ...(foundingConventionId === undefined
+            ? {}
+            : {
+                foundingConvention: {
+                  conventionId: foundingConventionId,
+                },
+              }),
           artifacts: {
             governance: {
               eligibilitySnapshot: governanceEligibilitySnapshot,

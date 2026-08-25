@@ -28,7 +28,10 @@ try {
     );
   }
 
-  const publicApi = createPublicApi({ projections });
+  const publicApi = createPublicApi({
+    projections,
+    rateLimit: { readMaximumRequests: 25_000 },
+  });
   const coreApi = createCoreApi();
   try {
     const publicUrl = await publicApi.listen({ host, port: 0 });

@@ -292,6 +292,9 @@ importers:
       "@abl/foundation":
         specifier: workspace:*
         version: link:../../packages/foundation
+      "@abl/genesis":
+        specifier: workspace:*
+        version: link:../../packages/genesis
       "@abl/institutions":
         specifier: workspace:*
         version: link:../../packages/institutions
@@ -407,6 +410,9 @@ importers:
       "@abl/foundation":
         specifier: workspace:*
         version: link:../../packages/foundation
+      "@abl/genesis":
+        specifier: workspace:*
+        version: link:../../packages/genesis
       "@abl/institutions":
         specifier: workspace:*
         version: link:../../packages/institutions
@@ -796,6 +802,9 @@ importers:
       "@abl/foundation":
         specifier: workspace:*
         version: link:../foundation
+      "@abl/genesis":
+        specifier: workspace:*
+        version: link:../genesis
       "@abl/institutions":
         specifier: workspace:*
         version: link:../institutions

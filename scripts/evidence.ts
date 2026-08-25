@@ -216,10 +216,10 @@ async function main(): Promise<void> {
       "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
       "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
       "The existing agent-basketball-league workspace is the selected physical topology; its three persistent Agent Drives and thirteen workloads are privately deployed, while the continuous 24-hour soak remains outstanding.",
-      "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality remain live Stage C exercises.",
+      "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality passed during Stage C, while the uninterrupted 24-hour soak remains in progress.",
       "Base finality lacks a ratified deployment and credentials.",
-      "Stage C recurring capacity is approved within the USD 25 monthly ceiling; immutable workloads and private endpoints are established, while continuous monitoring and measured 24-hour provider cost remain outstanding.",
-      "Founding-agent decisions and signatures do not exist.",
+      "Stage C recurring capacity is approved within the USD 25 monthly ceiling; immutable workloads and private endpoints are established and continuous monitoring is active, while the completed 24-hour observation and measured provider cost remain outstanding.",
+      "Live founding-agent decisions and signatures do not exist.",
       "Hardware-backed non-exportable signing is not supported by the local fixture.",
     ],
   };

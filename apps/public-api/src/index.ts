@@ -29,6 +29,7 @@ import {
   FilePublicEconomyProjectionRepository,
   FilePublicElectionProjectionRepository,
   FilePublicFinalGameProjectionRepository,
+  FilePublicFoundingConventionProjectionRepository,
   FilePublicCaseProjectionRepository,
   FilePublicGovernanceProjectionRepository,
   FilePublicModelProjectionRepository,
@@ -44,6 +45,7 @@ import {
   verifyEconomyProjectionEvent,
   verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
+  verifyFoundingProjectionEvent,
   verifyCaseProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
@@ -97,6 +99,7 @@ const PUBLIC_AGGREGATE_TYPES = [
   "career-contracts",
   "governance-proposal",
   "institutional-election",
+  "founding-convention-bootstrap",
   "due-process-case",
   "resource-schedule",
   "software-release",
@@ -238,6 +241,7 @@ function projectionAuthority(): {
   finalizedGameScheduleEvidence: FinalizedGameScheduleEvidenceReader;
   developmentConferenceId: string;
   developmentCharterAuthorityDid: string;
+  foundingConventionId: string | undefined;
 } {
   const registry = AgentRegistrySchema.parse(
     JSON.parse(required("ABL_PROJECTION_VERIFY_KEY_REGISTRY")),
@@ -249,6 +253,10 @@ function projectionAuthority(): {
     .string()
     .regex(/^0x[0-9a-f]{64}$/)
     .parse(required("ABL_GOVERNANCE_ELIGIBILITY_SNAPSHOT_DIGEST"));
+  const foundingConventionId =
+    process.env.ABL_FOUNDING_CONVENTION_ID === undefined
+      ? undefined
+      : z.uuid().parse(process.env.ABL_FOUNDING_CONVENTION_ID);
   const draftAuthorityDid = z
     .string()
     .startsWith("did:")
@@ -386,6 +394,7 @@ function projectionAuthority(): {
     finalizedGameScheduleEvidence,
     developmentConferenceId,
     developmentCharterAuthorityDid,
+    foundingConventionId,
   };
 }
 
@@ -417,6 +426,9 @@ let draftProjections: FilePublicDraftProjectionRepository | undefined;
 let economyProjections: FilePublicEconomyProjectionRepository | undefined;
 let governanceProjections: FilePublicGovernanceProjectionRepository | undefined;
 let electionProjections: FilePublicElectionProjectionRepository | undefined;
+let foundingConventionProjections:
+  | FilePublicFoundingConventionProjectionRepository
+  | undefined;
 let caseProjections: FilePublicCaseProjectionRepository | undefined;
 let resourceProjections: FilePublicResourceProjectionRepository | undefined;
 let modelProjections: FilePublicModelProjectionRepository | undefined;
@@ -470,6 +482,18 @@ if (projectionRoot !== undefined) {
         verifyElectionProjectionEvent(authorization, runtimeAuthority),
     },
   );
+  if (runtimeAuthority.foundingConventionId !== undefined) {
+    const conventionId = runtimeAuthority.foundingConventionId;
+    foundingConventionProjections =
+      new FilePublicFoundingConventionProjectionRepository(projectionRoot, {
+        domain: runtimeAuthority.domain,
+        verifyAuthorization: async (authorization) =>
+          verifyFoundingProjectionEvent(authorization, {
+            ...runtimeAuthority,
+            foundingConventionId: conventionId,
+          }),
+      });
+  }
   developmentProjections = new FilePublicDevelopmentProjectionRepository(
     projectionRoot,
     {
@@ -555,6 +579,7 @@ await Promise.all([
   draftProjections?.initialize(),
   governanceProjections?.initialize(),
   electionProjections?.initialize(),
+  foundingConventionProjections?.initialize(),
   caseProjections?.initialize(),
   modelProjections?.initialize(),
   socialProjections?.initialize(),
@@ -708,6 +733,13 @@ if (
     economyWriter: economyProjections,
     governanceWriter: governanceProjections,
     electionWriter: electionProjections,
+    ...(foundingConventionProjections === undefined ||
+    authority.foundingConventionId === undefined
+      ? {}
+      : {
+          foundingWriter: foundingConventionProjections,
+          foundingConventionId: authority.foundingConventionId,
+        }),
     caseWriter: caseProjections,
     resourceWriter: resourceProjections,
     modelWriter: modelProjections,
@@ -768,6 +800,8 @@ if (governanceProjections !== undefined)
   apiOptions.governanceProjections = governanceProjections;
 if (electionProjections !== undefined)
   apiOptions.electionProjections = electionProjections;
+if (foundingConventionProjections !== undefined)
+  apiOptions.foundingConventionProjections = foundingConventionProjections;
 if (caseProjections !== undefined) apiOptions.caseProjections = caseProjections;
 if (resourceProjections !== undefined)
   apiOptions.resourceProjections = resourceProjections;

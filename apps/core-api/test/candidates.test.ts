@@ -53,6 +53,21 @@ import {
 } from "@abl/basketball";
 import { InMemoryCanonicalStore } from "@abl/database";
 import {
+  FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+  FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST,
+  applyFoundingBootstrapWorkflowTransition,
+  createFoundingEligibilitySnapshot,
+  evaluateFoundingBootstrap,
+  foundingBootstrapBallotFromAuthorization,
+  foundingBootstrapWorkflowStateRoot,
+  openFoundingBootstrap,
+  type FoundingBootstrapEventType,
+  type FoundingBootstrapResult,
+  type FoundingBootstrapWorkflowPayload,
+  type FoundingBootstrapWorkflowSnapshot,
+  type SignedFoundingBootstrapBallot,
+} from "@abl/genesis";
+import {
   ARTIFACT_ADMISSION_AGGREGATE_TYPE,
   ARTIFACT_ADMISSION_SCHEMA_DIGEST,
   ARTIFACT_ADMITTED_EVENT_TYPE,
@@ -208,6 +223,8 @@ const uuid = (suffix: string) =>
   `018f0000-0000-7000-8000-${suffix.padStart(12, "0")}`;
 const recognizedBodyImageDigest = digest("9");
 const governanceSnapshotCapturedAt = iso(day + 4 * 60_000);
+const foundingConventionId = uuid("469");
+const foundingBootstrapProposalId = uuid("470");
 const rehearsalClubId = "club-new-york";
 const governorDid = "did:abl:governor-http-1";
 const tribunalDids = Array.from(
@@ -750,6 +767,7 @@ async function harness(
         configuredGovernanceSnapshot ??
         governanceEligibilitySnapshot(candidateDid),
     },
+    foundingConvention: { conventionId: foundingConventionId },
     artifacts: {
       governance: {
         eligibilitySnapshot: governanceEligibilitySnapshot(candidateDid),
@@ -1307,6 +1325,61 @@ async function electionCommand(input: {
           event,
         ),
       ],
+    },
+  };
+}
+
+async function foundingBootstrapCommand(input: {
+  actor: Harness;
+  snapshot: FoundingBootstrapWorkflowSnapshot | null;
+  previousEventHash: Hex | null;
+  eventType: FoundingBootstrapEventType;
+  payload: FoundingBootstrapWorkflowPayload;
+  result?: FoundingBootstrapResult;
+  signer?: SigningIdentity;
+}) {
+  const aggregateVersion = BigInt((input.snapshot?.version ?? 0) + 1);
+  const timestamp = new Date(input.actor.now.value).toISOString();
+  const eventInput = {
+    eventId: crypto.randomUUID(),
+    actorDid: input.actor.candidateDid,
+    nonce: `founding-bootstrap-${aggregateVersion}`,
+    idempotencyKey: crypto.randomUUID(),
+    aggregateType: FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
+    aggregateId: foundingConventionId,
+    aggregateVersion,
+    eventType: input.eventType,
+    previousEventHash: input.previousEventHash,
+    payload: input.payload,
+    schemaDigest: FOUNDING_BOOTSTRAP_WORKFLOW_SCHEMA_DIGEST,
+    timestamp,
+  } as const;
+  const provisional = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: digest("0"),
+  });
+  const next = applyFoundingBootstrapWorkflowTransition(
+    input.snapshot,
+    provisional,
+    input.payload,
+    input.result,
+  );
+  const event = createCanonicalEvent({
+    ...eventInput,
+    stateRoot: foundingBootstrapWorkflowStateRoot(next),
+  });
+  const signature = await signCanonicalEvent(
+    input.signer ?? input.actor.candidate,
+    domain,
+    event,
+  );
+  return {
+    next,
+    event,
+    signature,
+    body: {
+      event: { ...event, aggregateVersion: aggregateVersion.toString() },
+      signatures: [signature],
     },
   };
 }
@@ -1919,6 +1992,7 @@ async function admitCandidate(h: Harness) {
       PRIVATE_PRACTICE_AGGREGATE_TYPE,
       COMBINE_RESULT_AGGREGATE_TYPE,
       "premier-draft",
+      FOUNDING_BOOTSTRAP_AGGREGATE_TYPE,
     ],
   });
   return admitted;
@@ -8159,6 +8233,454 @@ describe("signed candidate rehearsal API", () => {
         })
       ).json(),
     ).toMatchObject({ state: "REVOKED" });
+    await h.app.close();
+  });
+
+  it("persists and independently tallies the agent-only founding bootstrap", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    const participants = new Map<string, Harness>([[h.candidateDid, h]]);
+    const additionalDids = Array.from(
+      { length: 9 },
+      (_, index) => `did:abl:founding-career-${index + 2}`,
+    );
+    const keys = ["3", "4", "5", "6", "7", "8", "9", "a", "b"];
+    for (const [index, did] of additionalDids.entries()) {
+      const participant = await additionalCareer(h, did, keys[index]!);
+      await admitCandidate(participant);
+      participants.set(did, participant);
+    }
+
+    h.now.value += 60_000;
+    const capturedAt = new Date(h.now.value).toISOString();
+    const eligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("471"),
+      capturedAt,
+      eligibleFounderDids: [...participants.keys()],
+    });
+    h.now.value += 60_000;
+    const proposal = openFoundingBootstrap({
+      proposalId: foundingBootstrapProposalId,
+      snapshot: eligibility,
+      openedAt: new Date(h.now.value).toISOString(),
+    });
+    const openPayload: FoundingBootstrapWorkflowPayload = {
+      snapshot: {
+        ...eligibility,
+        eligibleFounderDids: [...eligibility.eligibleFounderDids],
+      },
+      proposal,
+    };
+    const operatorOpening = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "FoundingBootstrapOpened",
+      payload: openPayload,
+      signer: h.formerOperator,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/open",
+          payload: operatorOpening.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const opened = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "FoundingBootstrapOpened",
+      payload: openPayload,
+    });
+    const openResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/founding-convention/bootstrap/open",
+      payload: opened.body,
+    });
+    expect(openResponse.statusCode).toBe(201);
+    expect(openResponse.json()).toMatchObject({
+      accepted: true,
+      state: "PRE_GENESIS_EXPERIMENT",
+      canonical: false,
+      recognitionLevel: "SIGNED_VALID",
+      recognizedGenesisConvention: false,
+      directBallotsOnly: true,
+      humanVotingAllowed: false,
+      foundingBootstrap: {
+        proposalId: foundingBootstrapProposalId,
+        version: 1,
+        result: null,
+      },
+    });
+    expect(h.store.events.at(-1)?.outboxTopic).toBe("public.governance");
+
+    let snapshot = opened.next;
+    let previousEventHash = opened.event.eventHash;
+    const ballots: SignedFoundingBootstrapBallot[] = [];
+    const ballotSigners = new Map<string, `0x${string}`>();
+    for (const [index, voterDid] of eligibility.eligibleFounderDids
+      .slice(0, 7)
+      .entries()) {
+      h.now.value += 60_000;
+      const voter = participants.get(voterDid)!;
+      const ballot = {
+        proposalId: foundingBootstrapProposalId,
+        voterDid,
+        snapshotCommitment: eligibility.commitment,
+        choice: "YES" as const,
+        castAt: new Date(h.now.value).toISOString(),
+      };
+      if (index === 0) {
+        const operatorBallot = await foundingBootstrapCommand({
+          actor: voter,
+          snapshot,
+          previousEventHash,
+          eventType: "FoundingBootstrapBallotCast",
+          payload: { command: ballot },
+          signer: h.formerOperator,
+        });
+        expect(
+          (
+            await h.app.inject({
+              method: "POST",
+              url: "/v1/founding-convention/bootstrap/vote",
+              payload: operatorBallot.body,
+            })
+          ).statusCode,
+        ).toBe(403);
+      }
+      const voted = await foundingBootstrapCommand({
+        actor: voter,
+        snapshot,
+        previousEventHash,
+        eventType: "FoundingBootstrapBallotCast",
+        payload: { command: ballot },
+      });
+      expect(
+        (
+          await h.app.inject({
+            method: "POST",
+            url: "/v1/founding-convention/bootstrap/vote",
+            payload: voted.body,
+          })
+        ).statusCode,
+      ).toBe(201);
+      ballots.push(
+        foundingBootstrapBallotFromAuthorization(
+          ballot,
+          voted.event,
+          voted.signature,
+          voter.candidate.address,
+        ),
+      );
+      ballotSigners.set(voterDid, voter.candidate.address);
+      snapshot = voted.next;
+      previousEventHash = voted.event.eventHash;
+    }
+
+    h.now.value = Date.parse(proposal.closesAt);
+    const result = await evaluateFoundingBootstrap({
+      snapshot: eligibility,
+      proposal,
+      ballots,
+      authorization: {
+        domain,
+        aggregateId: foundingConventionId,
+        signers: ballotSigners,
+      },
+      evaluatedAt: new Date(h.now.value).toISOString(),
+    });
+    const closer = participants.get(eligibility.eligibleFounderDids[7]!)!;
+    const closePayload = {
+      command: {
+        proposalId: foundingBootstrapProposalId,
+        requestedByDid: closer.candidateDid,
+        requestedAt: new Date(h.now.value).toISOString(),
+      },
+    };
+    const closed = await foundingBootstrapCommand({
+      actor: closer,
+      snapshot,
+      previousEventHash,
+      eventType: "FoundingBootstrapClosed",
+      payload: closePayload,
+      result,
+    });
+    const closeResponse = await h.app.inject({
+      method: "POST",
+      url: "/v1/founding-convention/bootstrap/close",
+      payload: closed.body,
+    });
+    expect(closeResponse.statusCode).toBe(201);
+    expect(closeResponse.json()).toMatchObject({
+      foundingBootstrap: {
+        version: 9,
+        result: {
+          state: "ADOPTED",
+          eligible: 10,
+          requiredYes: 7,
+          yes: 7,
+          quorumRule: {
+            minimumActiveFounders: 10,
+            humanVotingAllowed: false,
+          },
+        },
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/close",
+          payload: closed.body,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    const ballotRecord = h.store.events.find(
+      (event) => event.eventType === "FoundingBootstrapBallotCast",
+    )!;
+    ballotRecord.stateRoot = digest("f");
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/close",
+          payload: closed.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    await h.app.close();
+  });
+
+  it("retains an expired bootstrap and admits a policy-eligible replacement", async () => {
+    const h = await harness();
+    await admitCandidate(h);
+    const participants = new Map<string, Harness>([[h.candidateDid, h]]);
+    const initialDids = Array.from(
+      { length: 9 },
+      (_, index) => `did:abl:replacement-career-${index + 2}`,
+    );
+    for (const [index, did] of initialDids.entries()) {
+      const participant = await additionalCareer(
+        h,
+        did,
+        (index + 3).toString(16),
+      );
+      await admitCandidate(participant);
+      participants.set(did, participant);
+    }
+
+    h.now.value += 60_000;
+    const initialEligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("472"),
+      capturedAt: new Date(h.now.value).toISOString(),
+      eligibleFounderDids: [...participants.keys()],
+    });
+    const initialProposal = openFoundingBootstrap({
+      proposalId: uuid("473"),
+      snapshot: initialEligibility,
+      openedAt: initialEligibility.capturedAt,
+    });
+    const opened = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: null,
+      previousEventHash: null,
+      eventType: "FoundingBootstrapOpened",
+      payload: {
+        snapshot: {
+          ...initialEligibility,
+          eligibleFounderDids: [...initialEligibility.eligibleFounderDids],
+        },
+        proposal: initialProposal,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/open",
+          payload: opened.body,
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    h.now.value = Date.parse(initialProposal.closesAt);
+    const expiredResult = await evaluateFoundingBootstrap({
+      snapshot: initialEligibility,
+      proposal: initialProposal,
+      ballots: [],
+      authorization: {
+        domain,
+        aggregateId: foundingConventionId,
+        signers: new Map(),
+      },
+      evaluatedAt: initialProposal.closesAt,
+    });
+    const closed = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: opened.next,
+      previousEventHash: opened.event.eventHash,
+      eventType: "FoundingBootstrapClosed",
+      payload: {
+        command: {
+          proposalId: initialProposal.proposalId,
+          requestedByDid: h.candidateDid,
+          requestedAt: initialProposal.closesAt,
+        },
+      },
+      result: expiredResult,
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/close",
+          payload: closed.body,
+        })
+      ).json(),
+    ).toMatchObject({
+      foundingBootstrap: { result: { state: "EXPIRED" } },
+    });
+
+    for (const [did, key] of [
+      ["did:abl:replacement-career-11", "c"],
+      ["did:abl:replacement-career-12", "d"],
+    ] as const) {
+      h.now.value += 60_000;
+      const participant = await additionalCareer(h, did, key);
+      await admitCandidate(participant);
+      participants.set(did, participant);
+    }
+    h.now.value =
+      Date.parse(initialProposal.closesAt) + 7 * 24 * 60 * 60 * 1_000;
+
+    const corruptedDid = "did:abl:replacement-career-11";
+    const corruptedAdmission = h.store.events.find(
+      (event) =>
+        event.aggregateType === "candidate-admission" &&
+        event.aggregateId === corruptedDid &&
+        event.eventType === "CandidateAdmitted",
+    )!;
+    const validAdmissionRoot = corruptedAdmission.stateRoot;
+    corruptedAdmission.stateRoot = digest("f");
+    const corruptEligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("478"),
+      capturedAt: new Date(h.now.value).toISOString(),
+      eligibleFounderDids: [...participants.keys()].filter(
+        (did) => did !== corruptedDid,
+      ),
+    });
+    const corruptProposal = openFoundingBootstrap({
+      proposalId: uuid("479"),
+      snapshot: corruptEligibility,
+      openedAt: corruptEligibility.capturedAt,
+    });
+    const corruptOpening = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: closed.next,
+      previousEventHash: closed.event.eventHash,
+      eventType: "FoundingBootstrapOpened",
+      payload: {
+        snapshot: {
+          ...corruptEligibility,
+          eligibleFounderDids: [...corruptEligibility.eligibleFounderDids],
+        },
+        proposal: corruptProposal,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/open",
+          payload: corruptOpening.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    corruptedAdmission.stateRoot = validAdmissionRoot;
+
+    const incompleteEligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("474"),
+      capturedAt: new Date(h.now.value).toISOString(),
+      eligibleFounderDids: initialEligibility.eligibleFounderDids,
+    });
+    const incompleteProposal = openFoundingBootstrap({
+      proposalId: uuid("475"),
+      snapshot: incompleteEligibility,
+      openedAt: incompleteEligibility.capturedAt,
+    });
+    const incomplete = await foundingBootstrapCommand({
+      actor: h,
+      snapshot: closed.next,
+      previousEventHash: closed.event.eventHash,
+      eventType: "FoundingBootstrapOpened",
+      payload: {
+        snapshot: {
+          ...incompleteEligibility,
+          eligibleFounderDids: [...incompleteEligibility.eligibleFounderDids],
+        },
+        proposal: incompleteProposal,
+      },
+    });
+    expect(
+      (
+        await h.app.inject({
+          method: "POST",
+          url: "/v1/founding-convention/bootstrap/open",
+          payload: incomplete.body,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const replacementEligibility = createFoundingEligibilitySnapshot({
+      snapshotId: uuid("476"),
+      capturedAt: new Date(h.now.value).toISOString(),
+      eligibleFounderDids: [...participants.keys()],
+    });
+    const replacementProposal = openFoundingBootstrap({
+      proposalId: uuid("477"),
+      snapshot: replacementEligibility,
+      openedAt: replacementEligibility.capturedAt,
+    });
+    const replacement = await foundingBootstrapCommand({
+      actor: participants.get("did:abl:replacement-career-11")!,
+      snapshot: closed.next,
+      previousEventHash: closed.event.eventHash,
+      eventType: "FoundingBootstrapOpened",
+      payload: {
+        snapshot: {
+          ...replacementEligibility,
+          eligibleFounderDids: [...replacementEligibility.eligibleFounderDids],
+        },
+        proposal: replacementProposal,
+      },
+    });
+    const response = await h.app.inject({
+      method: "POST",
+      url: "/v1/founding-convention/bootstrap/open",
+      payload: replacement.body,
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      foundingBootstrap: {
+        conventionId: foundingConventionId,
+        proposalId: replacementProposal.proposalId,
+        version: 3,
+        ballots: [],
+        result: null,
+        previousAttempts: [
+          {
+            proposal: { proposalId: initialProposal.proposalId },
+            result: { state: "EXPIRED" },
+          },
+        ],
+      },
+    });
     await h.app.close();
   });
 

@@ -15,6 +15,8 @@ export * from "./election-repository.js";
 export * from "./envelope.js";
 export * from "./final-game-envelope.js";
 export * from "./final-game-repository.js";
+export * from "./founding-envelope.js";
+export * from "./founding-repository.js";
 export * from "./governance-envelope.js";
 export * from "./governance-repository.js";
 export * from "./model-envelope.js";

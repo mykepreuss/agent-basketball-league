@@ -16,6 +16,7 @@ import {
   verifyEconomyProjectionEvent,
   verifyElectionProjectionEvent,
   verifyFinalGameProjectionEvent,
+  verifyFoundingProjectionEvent,
   verifyGovernanceProjectionEvent,
   verifyModelProjectionEvent,
   verifyProjectionEvent,
@@ -39,6 +40,8 @@ import {
   type PublicFinalGameProjectionReader,
   type PublicFinalGameProjectionWriter,
   type PublicFinalizedGameProjection,
+  type PublicFoundingConventionProjectionReader,
+  type PublicFoundingConventionProjectionWriter,
   type PublicGameProjection,
   type PublicGovernanceProjectionReader,
   type PublicGovernanceProjectionWriter,
@@ -54,6 +57,7 @@ import {
   type PublicSocialProjectionWriter,
   type DevelopmentProjectionVerificationAuthority,
 } from "@abl/projections";
+import { FOUNDING_BOOTSTRAP_AGGREGATE_TYPE } from "@abl/genesis";
 import {
   PublicPracticeDecisionRequestSchema,
   publicPracticeScenario,
@@ -98,6 +102,9 @@ export interface PublicRateLimitOptions {
   maximumTrackedKeys?: number;
   now?: () => number;
 }
+
+const defaultReadMaximumRequests = 120;
+const defaultInteractionMaximumRequests = 30;
 
 export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   { method: "GET", path: "/", exposure: "PUBLIC_DISCOVERY" },
@@ -382,6 +389,7 @@ export interface PublicApiOptions {
   economyProjections?: PublicEconomyProjectionReader;
   governanceProjections?: PublicGovernanceProjectionReader;
   electionProjections?: PublicElectionProjectionReader;
+  foundingConventionProjections?: PublicFoundingConventionProjectionReader;
   caseProjections?: PublicCaseProjectionReader;
   resourceProjections?: PublicResourceProjectionReader;
   modelProjections?: PublicModelProjectionReader;
@@ -397,6 +405,7 @@ export interface PublicApiOptions {
     economyWriter?: PublicEconomyProjectionWriter;
     governanceWriter?: PublicGovernanceProjectionWriter;
     electionWriter?: PublicElectionProjectionWriter;
+    foundingWriter?: PublicFoundingConventionProjectionWriter;
     caseWriter?: PublicCaseProjectionWriter;
     resourceWriter?: PublicResourceProjectionWriter;
     modelWriter?: PublicModelProjectionWriter;
@@ -415,6 +424,7 @@ export interface PublicApiOptions {
     freeAgencyWindow?: { opensAt: string; closesAt: string };
     tradeAccessEvidence?: TradeAccessEvidenceReader;
     governanceEligibilitySnapshotDigest?: string;
+    foundingConventionId?: string | undefined;
     caseTribunalDids?: readonly string[];
     caseAppellateDids?: readonly string[];
     resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
@@ -542,12 +552,15 @@ export function createPublicApi(
   const rateLimitWindowMs = options.rateLimit?.windowMs ?? 60_000;
   const maximumTrackedKeys = options.rateLimit?.maximumTrackedKeys ?? 50_000;
   const readRateLimiter = new FixedWindowRateLimiter({
-    maximumRequests: options.rateLimit?.readMaximumRequests ?? 300,
+    maximumRequests:
+      options.rateLimit?.readMaximumRequests ?? defaultReadMaximumRequests,
     windowMs: rateLimitWindowMs,
     maximumTrackedKeys,
   });
   const interactionRateLimiter = new FixedWindowRateLimiter({
-    maximumRequests: options.rateLimit?.interactionMaximumRequests ?? 60,
+    maximumRequests:
+      options.rateLimit?.interactionMaximumRequests ??
+      defaultInteractionMaximumRequests,
     windowMs: rateLimitWindowMs,
     maximumTrackedKeys,
   });
@@ -581,6 +594,7 @@ export function createPublicApi(
     options.economyProjections !== undefined ||
     options.governanceProjections !== undefined ||
     options.electionProjections !== undefined ||
+    options.foundingConventionProjections !== undefined ||
     options.caseProjections !== undefined ||
     options.resourceProjections !== undefined ||
     options.modelProjections !== undefined ||
@@ -644,6 +658,41 @@ export function createPublicApi(
     !genesisAssessment.ready
   )
     launchState = LaunchStateSchema.parse(defaultLaunchState);
+  function currentLaunchState() {
+    const founding = options.foundingConventionProjections
+      ?.foundingConvention()
+      .at(-1);
+    if (founding === undefined) return launchState;
+    const bootstrapState = founding.result?.state ?? "OPEN";
+    let conventionState:
+      | "RECRUITING"
+      | "BOOTSTRAP_OPEN"
+      | "QUORUM_RULE_ADOPTED";
+    if (bootstrapState === "ADOPTED") {
+      conventionState = "QUORUM_RULE_ADOPTED";
+    } else if (bootstrapState === "OPEN") {
+      conventionState = "BOOTSTRAP_OPEN";
+    } else {
+      conventionState = "RECRUITING";
+    }
+    return LaunchStateSchema.parse({
+      ...launchState,
+      foundingConvention: {
+        state: conventionState,
+        minimumFounders: 10,
+        liveFounders: founding.eligibilitySnapshot.eligibleFounderDids.length,
+        eligibilitySnapshotCommitment: founding.eligibilitySnapshot.commitment,
+        bootstrap: {
+          state: bootstrapState,
+          closesAt: founding.proposal.closesAt,
+          requiredYes: founding.proposal.requiredYes,
+          yesVotes:
+            founding.result?.yes ??
+            founding.ballots.filter(({ choice }) => choice === "YES").length,
+        },
+      },
+    });
+  }
   const canonicalHistoryOpen =
     launchState.genesis &&
     launchState.canonical &&
@@ -706,8 +755,8 @@ export function createPublicApi(
       respond: `${candidateIntakeOrigin}/v1/candidate-intake/respond`,
     },
     rateLimits: {
-      readRequestsPerMinute: 120,
-      writeRequestsPerMinute: 30,
+      readRequestsPerMinute: defaultReadMaximumRequests,
+      writeRequestsPerMinute: defaultInteractionMaximumRequests,
       exceededStatus: 429,
       retryHeader: "Retry-After",
     },
@@ -757,6 +806,7 @@ export function createPublicApi(
         options.developmentProjections?.refresh(),
         options.governanceProjections?.refresh(),
         options.electionProjections?.refresh(),
+        options.foundingConventionProjections?.refresh(),
         options.caseProjections?.refresh(),
         options.socialProjections?.refresh(),
         options.finalGameProjections?.refresh(),
@@ -1007,7 +1057,10 @@ export function createPublicApi(
       },
     };
   });
-  app.get("/v1/discovery/launch-state", async () => launchState);
+  app.get("/v1/discovery/launch-state", async () => {
+    await refreshPublicProjections();
+    return currentLaunchState();
+  });
   app.get(
     "/v1/discovery/candidate-requirements",
     async () => candidateRequirements,
@@ -1431,6 +1484,40 @@ export function createPublicApi(
         if (topic === "public.governance") {
           if (
             projectionAggregateType(request.body) ===
+            FOUNDING_BOOTSTRAP_AGGREGATE_TYPE
+          ) {
+            if (
+              projectionIngress.foundingConventionId === undefined ||
+              projectionIngress.foundingWriter === undefined
+            ) {
+              throw new ServiceAuthenticationError(
+                "Founding-convention projection authority is not configured",
+              );
+            }
+            const verified = await verifyFoundingProjectionEvent(request.body, {
+              ...projectionIngress,
+              foundingConventionId: projectionIngress.foundingConventionId,
+            });
+            if (
+              headers["x-abl-expected-version"] !== verified.expectedVersion
+            ) {
+              throw new ProjectionVersionConflictError(
+                "Signed expected version does not precede the founding-convention event",
+              );
+            }
+            const record = await projectionIngress.foundingWriter.publish(
+              verified.envelope,
+              verified.expectedVersion,
+              projectionIngress.now?.().toISOString(),
+            );
+            return reply.code(201).send({
+              accepted: true,
+              canonicalEventHash: verified.event.eventHash,
+              cursor: record.cursor,
+            });
+          }
+          if (
+            projectionAggregateType(request.body) ===
             ELECTION_WORKFLOW_AGGREGATE_TYPE
           ) {
             if (
@@ -1739,6 +1826,8 @@ export function createPublicApi(
             }),
           ),
           ...(options.electionProjections?.elections() ?? []),
+          ...(options.foundingConventionProjections?.foundingConvention() ??
+            []),
           ...(options.caseProjections?.cases() ?? []),
         ];
       }
