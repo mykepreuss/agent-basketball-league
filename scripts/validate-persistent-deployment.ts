@@ -8,10 +8,17 @@ import { z } from "zod";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const WorkspaceSchema = z.literal("agent-basketball-league");
+const TrustDomainSchema = z.enum([
+  "abl-core",
+  "abl-private",
+  "abl-public",
+  "abl-competition",
+]);
 const WorkloadKindSchema = z.enum(["Sandbox", "Function", "Job"]);
 const WorkloadSchema = z.strictObject({
   ordinal: z.number().int().positive(),
   workspace: WorkspaceSchema,
+  trustDomain: TrustDomainSchema,
   kind: WorkloadKindSchema,
   name: z.string().min(1).max(49),
   manifest: z.string().startsWith("infra/blaxel/"),
@@ -100,9 +107,28 @@ export interface PersistentDeploymentValidation {
   workloadCount: number;
   privateEndpointCount: number;
   imageCount: number;
+  trustDomainCounts: Record<z.infer<typeof TrustDomainSchema>, number>;
   memoryMiB: { sandboxes: number; functions: number; jobs: number };
   deploymentDigest: `0x${string}`;
 }
+
+const expectedTrustDomains = new Map<string, z.infer<typeof TrustDomainSchema>>(
+  [
+    ["abl-private-storage-broker", "abl-private"],
+    ["abl-core-api", "abl-core"],
+    ["abl-safety-gateway", "abl-core"],
+    ["abl-public-api", "abl-public"],
+    ["abl-spectator-arena", "abl-public"],
+    ["abl-candidate-store", "abl-public"],
+    ["abl-candidate-edge", "abl-public"],
+    ["abl-basketball-mcp", "abl-competition"],
+    ["abl-career-mcp", "abl-core"],
+    ["abl-government-mcp", "abl-core"],
+    ["abl-discovery-mcp", "abl-public"],
+    ["abl-candidate-provisioner", "abl-core"],
+    ["abl-recovery-verifier", "abl-core"],
+  ],
+);
 
 export async function validatePersistentDeployment(
   root = repositoryRoot,
@@ -163,7 +189,18 @@ export async function validatePersistentDeployment(
   const manifestSources: string[] = [];
   const manifestsByName = new Map<string, z.infer<typeof ManifestSchema>>();
   const memoryMiB = { sandboxes: 0, functions: 0, jobs: 0 };
+  const trustDomainCounts = {
+    "abl-core": 0,
+    "abl-private": 0,
+    "abl-public": 0,
+    "abl-competition": 0,
+  };
   for (const workload of deployment.workloads) {
+    if (expectedTrustDomains.get(workload.name) !== workload.trustDomain)
+      throw new Error(
+        `Stage C trust-domain assignment differs for ${workload.name}`,
+      );
+    trustDomainCounts[workload.trustDomain] += 1;
     if (
       workload.manifest.endsWith(".example.yaml") ||
       workload.manifest.includes("/model-")
@@ -261,6 +298,7 @@ export async function validatePersistentDeployment(
     workloadCount: deployment.workloads.length,
     privateEndpointCount,
     imageCount: uniqueImages.size,
+    trustDomainCounts,
     memoryMiB,
     deploymentDigest: `0x${deploymentHash.digest("hex")}`,
   };

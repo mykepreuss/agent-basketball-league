@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0xd61f207996a9791f6b2183537971ff3056b94cd77afbb871ac1f1d145334d3e6",
+    "evidenceDigest": "0x280746f680bbbc08d4d217917af1d42a3e2c06ea2a7baaffe2039c2cd209251b",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -182,12 +182,12 @@
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x8160fc670cd76ad8d1db63018f5fb01e05bda09a1e9021aaf94bb9ddcb424178",
+      "digest": "0x5426d809a6e8368349fd6de33d691b675cef2ac7f6329746140fee9306123c69",
       "verification": "PASSED"
     },
     {
       "evidenceId": "active-blaxel-topology",
-      "digest": "0x48759796400e2703f608fa53963b859ac88d4f3c3e112e5863bd0172686f9a41",
+      "digest": "0x7414077e3fa5fdedcea4118162c0e0de2ce6e1a26a7addfd79408d08beb13772",
       "verification": "PASSED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0x2b5856eef201d63a4cafe2063c29a8c34f7b6b357a6ffc847f671e221379952c"
+  "ledgerDigest": "0x402e1bfee8f54e9df1c6ce312f16918b42f1ed515b3860957325e816574ff4db"
 }

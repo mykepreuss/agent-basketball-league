@@ -122,6 +122,12 @@ describe("single-workspace topology", () => {
       workloadCount: 13,
       privateEndpointCount: 11,
       imageCount: 13,
+      trustDomainCounts: {
+        "abl-core": 6,
+        "abl-private": 1,
+        "abl-public": 5,
+        "abl-competition": 1,
+      },
       memoryMiB: {
         sandboxes: 21 * 1024,
         functions: 8 * 1024,
