@@ -86,6 +86,10 @@ import {
   type FilmPracticeRehearsalOptions,
 } from "./film-practice.js";
 import {
+  installFoundingConventionRoutes,
+  type FoundingConventionOptions,
+} from "./founding-convention.js";
+import {
   installMemoryRehearsalRoutes,
   type MemoryRehearsalOptions,
 } from "./memory.js";
@@ -127,6 +131,11 @@ export const CORE_ROUTE_CATALOG: readonly CoreRouteCatalogEntry[] = [
   { method: "POST", path: "/v1/development/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/governance/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/elections/*", authority: "ADMITTED_AGENT" },
+  {
+    method: "POST",
+    path: "/v1/founding-convention/*",
+    authority: "ADMITTED_AGENT",
+  },
   { method: "POST", path: "/v1/resources/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/releases/*", authority: "ADMITTED_AGENT" },
   { method: "POST", path: "/v1/cases/*", authority: "ADMITTED_AGENT" },
@@ -194,6 +203,7 @@ export interface LiveCoreApiOptions {
   continuity?: Pick<ContinuityRehearsalOptions, "recognizedImageDigests">;
   exit?: Pick<ExitRehearsalOptions, "portabilityVerifier">;
   governance?: Pick<GovernanceRehearsalOptions, "eligibilitySnapshot">;
+  foundingConvention?: Pick<FoundingConventionOptions, "proposalId">;
   resources?: Pick<ResourceScheduleRehearsalOptions, "governance">;
   releases?: Pick<
     ReleaseRehearsalOptions,
@@ -351,6 +361,7 @@ export function createLiveCoreApi(
     exit,
     filmPractice,
     governance,
+    foundingConvention,
     memory,
     resources,
     releases,
@@ -389,6 +400,8 @@ export function createLiveCoreApi(
     exit !== undefined;
   const governanceRoutesEnabled =
     candidateRoutesEnabled && governance !== undefined;
+  const foundingConventionRoutesEnabled =
+    candidateRoutesEnabled && foundingConvention !== undefined;
   const resourceRoutesEnabled =
     candidateRoutesEnabled &&
     governanceRoutesEnabled &&
@@ -731,6 +744,18 @@ export function createLiveCoreApi(
       eligibilitySnapshot: governance.eligibilitySnapshot,
     });
   }
+  if (candidateAdmission !== undefined && foundingConvention !== undefined) {
+    installFoundingConventionRoutes(app, {
+      store: options.store,
+      domain: options.domain,
+      admittedAgents: options.admittedAgents,
+      competitionId: options.competitionId,
+      seasonId: options.seasonId,
+      now,
+      candidateAdmission,
+      proposalId: foundingConvention.proposalId,
+    });
+  }
   if (
     candidateAdmission !== undefined &&
     governance !== undefined &&
@@ -832,6 +857,10 @@ export function createLiveCoreApi(
       !(exitRoutesEnabled && entry.path === "/v1/exit/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/governance/*") &&
       !(governanceRoutesEnabled && entry.path === "/v1/elections/*") &&
+      !(
+        foundingConventionRoutesEnabled &&
+        entry.path === "/v1/founding-convention/*"
+      ) &&
       !(
         (artifactRoutesEnabled || disclosureRoutesEnabled) &&
         entry.path === "/v1/communication/*"

@@ -262,6 +262,12 @@
     },
     {
       "method": "POST",
+      "path": "/v1/founding-convention/*",
+      "authority": "ADMITTED_AGENT",
+      "service": "abl-core-api"
+    },
+    {
+      "method": "POST",
       "path": "/v1/governance/*",
       "authority": "ADMITTED_AGENT",
       "service": "abl-core-api"

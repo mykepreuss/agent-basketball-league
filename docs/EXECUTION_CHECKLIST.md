@@ -12,7 +12,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] `PRIVATE_STAGING` passed through the existing candidate, career Sandbox, signed command, PostgreSQL/outbox, projection, SSE, arena, encrypted Agent Drive storage, restart, exact replay, and `SIGNED_VALID` verifier path.
 - [x] Export redacted [Stage B evidence](./evidence/ABL-COMPLETION-01-STAGE-B.md), tear down only the temporary proof resources, and verify the final Blaxel and Neon inventories.
 - [x] Merge the reviewed Stage B corrections and evidence after exact-runtime and code-simplifier verification through PR 28.
-- [!] Stage C persistent capacity is approved and deployment is in progress in `agent-basketball-league`. First public read-only exposure remains a distinct approval boundary after the 24-hour private soak passes.
+- [~] Stage C persistent capacity is approved and live in `agent-basketball-league`; the deterministic 24-hour private soak is in progress. First public read-only exposure remains a distinct approval boundary after the soak passes.
 
 ### Stage C local readiness — 2026-08-24
 
@@ -23,7 +23,7 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Refresh the read-only Blaxel and Neon provider state and freeze a measurable USD 21.9084/month cost envelope with USD 3.0916 contingency.
 - [x] Replace recursive manifest application with an exact thirteen-workload deployment map; keep all eleven endpoints private and exclude candidate-specific examples and model resources.
 - [x] Package the previously missing safety-gateway and PostgreSQL clean-room recovery-verifier images; make the Job compare every public table and database catalog without logging credentials or row content.
-- [!] Obtain recurring-capacity approval before creating the three production workspaces, persistent Neon project, or any declared workload.
+- [x] Apply the recurring-capacity approval by reusing the existing workspace, creating the persistent Neon project, and deploying only the declared private workloads beneath the USD 25/month ceiling.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 
@@ -118,7 +118,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Threat-model administrator, provider, sponsor, model, key, storage, telemetry, context, network, and recovery compromise.
 - [x] Pass schema strictness, classification coverage, and constitutional invariant tests; record evidence.
 
-## 2. Four-workspace Blaxel foundation [!]
+## 2. Single-workspace Blaxel foundation [~]
 
 - [x] Define `agent-basketball-league` as the physical workspace and private, core, public, and integration roles as logical trust domains with explicit responsibilities and prohibited access.
 - [x] Define least-privilege cross-service identities, signed requests, nonces, expected versions, and allowlists.
@@ -133,7 +133,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Build and push the six staging images under the consumed Gate 2 authorization; record immutable tags and sizes; remove every tag during teardown.
 - [x] Correct the body initialization path locally so protected-stage failures remain externally readable without exposing the process, filesystem, terminal, or upload APIs.
 - [x] Re-review and exact-runtime verify the corrected immutable body inputs; preserve the live image/build/runtime proof as a separate authorization gate.
-- [!] Obtain the four production Blaxel workspaces. The temporary `agent-basketball-league` workspace and active Drive entitlement do not replace the production topology or a live Drive proof.
+- [x] Adopt the existing `agent-basketball-league` workspace as the production topology and enforce private, core, competition, and public-surface boundaries with scoped workload identities, credentials, previews, PostgreSQL roles, and Agent Drive ACLs.
 - [x] Prepare and locally validate a bounded, private single-workspace staging manifest set without applying it.
 - [x] Apply the exact six-Sandbox manifest set under `ABL-GATE2-2026-08-21-02`; preserve the failed-closed body result and complete teardown.
 - [x] Apply the diagnostic-corrected six-Sandbox set under `ABL-GATE2-2026-08-21-03`; prove diagnostics and API handoff, stop on workload-token exposure and fixed-broker `401`, preserve redacted evidence, and complete teardown.
@@ -235,7 +235,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Give development players/council the specified government representation and rights.
 - [x] Pass development charter, schedule, labor, mobility, and governance tests; record evidence.
 - [x] Carry development formation, schedule, labor, mobility, and premier-eligibility decisions through exact ordered multi-career commands, canonical persistence, authenticated projection delivery, independent public verification, and restart replay.
-- [!] Instantiate the conference with live admitted bodies and verified Blaxel funding, quota, officiating, replay, and rehearsal evidence after the target workspaces and agent approvals exist.
+- [!] Instantiate the conference with live admitted bodies and verified Blaxel funding, quota, officiating, replay, and rehearsal evidence after the founding careers exist.
 
 ## 9. Private rehearsal [ ]
 
@@ -252,13 +252,13 @@ The numbered R01 records below are historical evidence. They are not active prer
 - [x] Statically verify the fixed-broker source controls for direct sockets, alternate DNS, custom TLS, subprocesses, local/private routes, metadata routes, workload-token access, mounted-environment reads, secret rehydration, and preview-token absence.
 - [!] Execute those seven escape attempts inside the built image after a target Blaxel sandbox is available.
 - [x] Prove local cross-domain ciphertext isolation, ciphertext-only broker behavior, public/core private-content denial, trade revocation ordering, and telemetry exclusion.
-- [!] Repeat the isolation and telemetry exercises against Agent Drive and the four live Blaxel workspaces after access is supplied.
+- [x] Repeat the in-scope isolation, restart, credential-rotation, and recovery exercises against the three Agent Drives and live single-workspace services during Stage C.
 - [x] Prove from topology, capability-scoped manifests, independent agent-signature verification, and restart-time durable-record verification that a public compromise has no path to commands, competition credentials, the canonical database, private content, or persistent recognized-history forgery.
-- [!] Run a live public-workspace penetration exercise after that workspace exists.
+- [ ] Run ordinary public abuse, authorization, and isolation checks after first public exposure; an enterprise penetration exercise is outside the V1 completion requirement.
 - [x] Execute a local in-process synthetic proof at 2x the targets: 20,000 spectator cursor polls, 2,000 candidate registrations, 20 games, and 400 active body objects.
-- [!] Reserve and exercise 10,000 spectators, 1,000 candidate registrations/day, ten simultaneous games, and 200 active bodies with 2x remote headroom where reservable; material spend and missing workspaces gate this step.
+- [x] Retire remote 2x enterprise-capacity reservation from the V1 completion path; retain the completed local synthetic regression and use bounded public-soak measurements for the experiment.
 - [x] Keep local synthetic public errors under 1%, cursor/segment P95 under 750ms, broadcast lag under 2s, and event loss/duplication at zero.
-- [!] Validate the same SLOs with live networked Blaxel applications, sandboxes, and spectator traffic.
+- [!] Validate the experiment-scale SLOs with live Blaxel Functions, Sandboxes, and spectator traffic during the approved public soak.
 - [x] Prove overload priority: games, rights, government, due process, exit, continuity, and minimum autonomy before admissions/spectators.
 - [x] Perform local encrypted-storage/guardian recovery, clean-room exit restore, event/outbox rebuild, checkpoint verification, signing-key recovery, and a 30-day wind-down exercise.
 - [x] Define and enforce a provider-neutral PostgreSQL capability profile for production V1 and the stronger genesis recovery gate.

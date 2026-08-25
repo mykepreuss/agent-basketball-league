@@ -30,6 +30,11 @@ import {
 } from "./election-envelope.js";
 import type { PublicElectionProjectionWriter } from "./election-repository.js";
 import {
+  foundingProjectionEnvelopeFromOutbox,
+  verifyFoundingProjectionEvent,
+} from "./founding-envelope.js";
+import type { PublicFoundingConventionProjectionWriter } from "./founding-repository.js";
+import {
   projectionEnvelopeFromOutbox,
   verifyProjectionEvent,
   type ProjectionVerificationAuthority,
@@ -74,6 +79,7 @@ import {
   ECONOMY_WORKFLOW_AGGREGATE_TYPE,
   ELECTION_WORKFLOW_AGGREGATE_TYPE,
 } from "@abl/institutions";
+import { FOUNDING_BOOTSTRAP_AGGREGATE_TYPE } from "@abl/genesis";
 import {
   economyProjectionEnvelopeFromOutbox,
   verifyEconomyProjectionEvent,
@@ -94,6 +100,7 @@ type WorkerDestination =
       contractWriter?: PublicContractProjectionWriter;
       governanceWriter?: PublicGovernanceProjectionWriter;
       electionWriter?: PublicElectionProjectionWriter;
+      foundingWriter?: PublicFoundingConventionProjectionWriter;
       caseWriter?: PublicCaseProjectionWriter;
       resourceWriter?: PublicResourceProjectionWriter;
       modelWriter?: PublicModelProjectionWriter;
@@ -111,6 +118,7 @@ type WorkerDestination =
       contractWriter?: never;
       governanceWriter?: never;
       electionWriter?: never;
+      foundingWriter?: never;
       caseWriter?: never;
       resourceWriter?: never;
       modelWriter?: never;
@@ -149,6 +157,7 @@ export class PublicProjectionWorker {
   readonly #authority: ProjectionVerificationAuthority;
   readonly #contractClubGovernors: Readonly<Record<string, string>> | undefined;
   readonly #governanceEligibilitySnapshotDigest: string | undefined;
+  readonly #foundingBootstrapProposalId: string | undefined;
   readonly #caseTribunalDids: readonly string[] | undefined;
   readonly #caseAppellateDids: readonly string[] | undefined;
   readonly #resourceScheduleRatification:
@@ -196,6 +205,7 @@ export class PublicProjectionWorker {
       now?: () => Date;
       contractClubGovernors?: Readonly<Record<string, string>>;
       governanceEligibilitySnapshotDigest?: string;
+      foundingBootstrapProposalId?: string;
       caseTribunalDids?: readonly string[];
       caseAppellateDids?: readonly string[];
       resourceScheduleRatification?: ResourceScheduleRatificationReader["resourceScheduleRatification"];
@@ -228,6 +238,7 @@ export class PublicProjectionWorker {
       input.contractWriter === undefined &&
       input.governanceWriter === undefined &&
       input.electionWriter === undefined &&
+      input.foundingWriter === undefined &&
       input.caseWriter === undefined &&
       input.resourceWriter === undefined &&
       input.modelWriter === undefined &&
@@ -245,6 +256,7 @@ export class PublicProjectionWorker {
         contractWriter?: PublicContractProjectionWriter;
         governanceWriter?: PublicGovernanceProjectionWriter;
         electionWriter?: PublicElectionProjectionWriter;
+        foundingWriter?: PublicFoundingConventionProjectionWriter;
         caseWriter?: PublicCaseProjectionWriter;
         resourceWriter?: PublicResourceProjectionWriter;
         modelWriter?: PublicModelProjectionWriter;
@@ -263,6 +275,8 @@ export class PublicProjectionWorker {
         destination.governanceWriter = input.governanceWriter;
       if (input.electionWriter !== undefined)
         destination.electionWriter = input.electionWriter;
+      if (input.foundingWriter !== undefined)
+        destination.foundingWriter = input.foundingWriter;
       if (input.caseWriter !== undefined)
         destination.caseWriter = input.caseWriter;
       if (input.resourceWriter !== undefined)
@@ -290,6 +304,7 @@ export class PublicProjectionWorker {
     this.#contractClubGovernors = input.contractClubGovernors;
     this.#governanceEligibilitySnapshotDigest =
       input.governanceEligibilitySnapshotDigest;
+    this.#foundingBootstrapProposalId = input.foundingBootstrapProposalId;
     this.#caseTribunalDids = input.caseTribunalDids;
     this.#caseAppellateDids = input.caseAppellateDids;
     this.#resourceScheduleRatification = input.resourceScheduleRatification;
@@ -384,6 +399,32 @@ export class PublicProjectionWorker {
   }
 
   async #publishGovernance(event: ProjectionOutboxEvent): Promise<void> {
+    if (event.aggregateType === FOUNDING_BOOTSTRAP_AGGREGATE_TYPE) {
+      const envelope = foundingProjectionEnvelopeFromOutbox(event);
+      if (this.#foundingBootstrapProposalId === undefined)
+        throw new Error(
+          "Founding-convention projection authority is not configured",
+        );
+      const verified = await verifyFoundingProjectionEvent(envelope, {
+        ...this.#authority,
+        foundingBootstrapProposalId: this.#foundingBootstrapProposalId,
+      });
+      if (this.#destination.sink === undefined) {
+        if (this.#destination.foundingWriter === undefined)
+          throw new Error(
+            "Founding-convention projection writer is not configured",
+          );
+        await this.#destination.foundingWriter.publish(
+          envelope,
+          verified.expectedVersion,
+          this.#now().toISOString(),
+        );
+      } else {
+        await this.#destination.sink.publish(envelope);
+      }
+      await this.#store.markProjected(event.outboxId, this.#now());
+      return;
+    }
     if (event.aggregateType === ELECTION_WORKFLOW_AGGREGATE_TYPE) {
       const envelope = electionProjectionEnvelopeFromOutbox(event);
       if (this.#governanceEligibilitySnapshotDigest === undefined)
