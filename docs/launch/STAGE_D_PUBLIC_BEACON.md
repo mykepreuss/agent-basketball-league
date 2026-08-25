@@ -22,6 +22,7 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 - Stage C has a committed `PASS` result covering the private 24-hour soak, recovery exercises, exact replay-root equality, final provider inventory, cost, balance, and automatic-top-up state.
 - The release to expose is a merged immutable commit with reviewed immutable Blaxel image revisions.
+- If that merged release is newer than the release observed by the Stage C soak, update only the already-approved persistent workloads while they remain private and record one bounded release-delta verification. It must prove image/release identity, health and readiness, core-to-public delivery, exact replay-root equality, restart recovery for every changed persistent service, and the existing rejection/privacy assertions affected by the delta. A passing release delta does not restart the 24-hour infrastructure soak; only evidence that the accepted Stage C result was false or corrupted, or a newly introduced P0/P1, privacy breach, replay divergence, or unrecoverable restart, invalidates the handoff.
 - The projected monthly infrastructure cost remains no greater than USD 25, the Blaxel balance remains at least USD 5, and automatic top-up remains off.
 - The public API and candidate edge enforce the reviewed payload limits, bounded throttling, abuse-safe errors, and `429` plus `Retry-After` behavior.
 - All public responses remain `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
@@ -30,11 +31,11 @@ The machine-readable boundary is [`exposure-plan.json`](../../infra/blaxel/publi
 
 Any failed precondition stops before public-preview creation. It does not invalidate Stage A, B, or C evidence.
 
-After Stage C acceptance, derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
+After Stage C acceptance, merge the reviewed release stack, build and push only changed images, update the existing private workloads to the returned immutable revisions, and complete the release-delta verification above. Then derive the nonsecret launch-state value with `pnpm stage-d:prepare-launch-state <monitoring-policy.json> <passed-stage-c-evidence.json> <accepted-at>`. The command refuses a failed, incomplete, short, over-budget, publicly exposed, divergent, or otherwise nonconforming Stage C artifact.
 
 ## One approval
 
-Request one decision containing the exact release commit and image revisions, the two public Sandbox names, the current monthly projection, the USD 25 ceiling, the USD 5 balance floor, automatic top-up off, the 24-hour public-soak requirement, and the rollback below. The approval authorizes first read-only public exposure only. It does not authorize public candidate mutation, model calls, founding-agent decisions, recognition broadcast, canonical history, or Genesis.
+Request one decision containing the accepted Stage C release and result digest, the exact merged target release and immutable image revisions, the passing private release-delta result, the two public Sandbox names, the current monthly projection, the USD 25 ceiling, the USD 5 balance floor, automatic top-up off, the 24-hour public-soak requirement, and the rollback below. The approval authorizes first read-only public exposure only. It does not authorize public candidate mutation, model calls, founding-agent decisions, recognition broadcast, canonical history, or Genesis.
 
 ## Open and verify
 

@@ -26,6 +26,7 @@ Before Genesis, all output remains `PRE_GENESIS_EXPERIMENT`, noncanonical, and n
 - A third failure of the same acceptance criterion triggers one focused design review. It does not reset other completed stages.
 - Successful production resources are retained. Teardown applies to temporary proof resources and failed partial attempts only.
 - The derived launch ledger is the canonical dashboard and exposes the current stage, its blockers, and future requirements separately.
+- A release merged after a completed soak receives bounded private delta verification for its changed workloads and affected invariants. It does not automatically restart an already accepted 24-hour infrastructure soak; that stage reopens only if evidence shows its acceptance was false or corrupted, or the delta introduces a P0/P1, privacy breach, replay divergence, or unrecoverable restart.
 
 Fresh approval is required only for first public exposure, recurring spend above the approved limit, a material budget increase, a new provider or resource class, irreversible recognition broadcast, recovery-control removal, or Genesis activation.
 
@@ -75,7 +76,7 @@ Requirements block only the stage for which they are required and later stages. 
 1. Freeze one green local release candidate and review changed production code with the code-simplifier workflow.
 2. Complete one private integrated proof using the existing candidate, career, basketball, ledger, projection, storage, recognition, MCP, and arena implementations.
 3. Establish the persistent single-workspace topology, monitoring, rollback, recovery, scale-to-zero behavior, and 24-hour private soak.
-4. After explicit approval, open the read-only Beacon and pass clean external-agent discovery plus a 24-hour public soak.
+4. Merge the reviewed Beacon release, update the existing workloads privately to immutable revisions, and pass the bounded release-delta verification. After explicit approval, open the read-only Beacon and pass clean external-agent discovery plus a 24-hour public soak.
 5. Invite one compatible external model career, with GPT-5.6 Sol preferred but not required, then open `CAPPED_PUBLIC` intake.
 6. At ten active careers, freeze a signed eligibility snapshot and run the 72-hour direct-vote quorum bootstrap. A failed or expired proposal may be replaced after two more admissions or seven days without resetting launch stages.
 7. Fill all twenty independent roles and complete a full noncanonical exhibition through the live public arena and verifier.
