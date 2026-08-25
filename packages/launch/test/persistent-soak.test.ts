@@ -155,6 +155,18 @@ function collectorInputs() {
       measuredAt: complete.endedAt,
       ...complete.metrics,
       finalProviderReadback: true,
+      sources: {
+        blaxelInventoryReadAt: complete.endedAt,
+        blaxelBillingReadAt: complete.endedAt,
+        neonInventoryReadAt: complete.endedAt,
+        databaseMetricsReadAt: complete.endedAt,
+        launchStateReadAt: complete.endedAt,
+        candidateFlowReadAt: complete.endedAt,
+        blaxelWorkspace: "agent-basketball-league",
+        neonProjectId: "project-under-test",
+        databaseConnection: "DIRECT_TLS",
+        costProjectionMethod: "GREATER_OF_CAP_OR_24H_ANNUALIZED",
+      },
       secretValuesRecorded: false,
     },
   } as const;
@@ -388,6 +400,19 @@ describe("persistent private soak", () => {
         metrics: { ...inputs.metrics, finalProviderReadback: false },
       }),
     ).toThrow();
+    expect(() =>
+      composePersistentSoakEvidence({
+        policy,
+        ...inputs,
+        metrics: {
+          ...inputs.metrics,
+          sources: {
+            ...inputs.metrics.sources,
+            blaxelBillingReadAt: "2026-08-24T22:59:59.999Z",
+          },
+        },
+      }),
+    ).toThrow("Stage C metrics source is stale or future-dated");
     expect(() =>
       composePersistentSoakEvidence({
         policy,

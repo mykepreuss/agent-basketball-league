@@ -160,6 +160,15 @@ const PersistentSoakRecoveryInputSchema = z.object(
   PersistentSoakEvidenceSchema.shape.recovery.shape,
 );
 
+const metricsReadbackTimestampNames = [
+  "blaxelInventoryReadAt",
+  "blaxelBillingReadAt",
+  "neonInventoryReadAt",
+  "databaseMetricsReadAt",
+  "launchStateReadAt",
+  "candidateFlowReadAt",
+] as const;
+
 const PersistentSoakExercisesSchema = z.object({
   stage: z.literal("READ_ONLY_BEACON_PRIVATE_SOAK"),
   releaseId: z.string().min(1).max(200),
@@ -176,6 +185,18 @@ const PersistentSoakMetricsSchema =
     releaseId: z.string().min(1).max(200),
     measuredAt: z.iso.datetime({ offset: true }),
     finalProviderReadback: z.literal(true),
+    sources: z.strictObject({
+      blaxelInventoryReadAt: z.iso.datetime({ offset: true }),
+      blaxelBillingReadAt: z.iso.datetime({ offset: true }),
+      neonInventoryReadAt: z.iso.datetime({ offset: true }),
+      databaseMetricsReadAt: z.iso.datetime({ offset: true }),
+      launchStateReadAt: z.iso.datetime({ offset: true }),
+      candidateFlowReadAt: z.iso.datetime({ offset: true }),
+      blaxelWorkspace: PersistentWorkspaceSchema,
+      neonProjectId: z.string().min(1).max(100),
+      databaseConnection: z.literal("DIRECT_TLS"),
+      costProjectionMethod: z.literal("GREATER_OF_CAP_OR_24H_ANNUALIZED"),
+    }),
     secretValuesRecorded: z.literal(false),
   });
 
@@ -212,6 +233,17 @@ export function composePersistentSoakEvidence(input: {
     throw new Error(
       "Stage C aggregate and per-service failures are inconsistent",
     );
+  const measuredAt = Date.parse(metrics.measuredAt);
+  const latestSampleAt = Date.parse(samples.updatedAt);
+  if (measuredAt < latestSampleAt)
+    throw new Error("Stage C metrics precede the final service sample");
+  for (const name of metricsReadbackTimestampNames) {
+    const readAt = Date.parse(metrics.sources[name]);
+    if (readAt > measuredAt || measuredAt - readAt > 3_600_000)
+      throw new Error(
+        `Stage C metrics source is stale or future-dated: ${name}`,
+      );
+  }
 
   return PersistentSoakEvidenceSchema.parse({
     version: 1,

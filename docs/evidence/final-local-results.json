@@ -92,7 +92,7 @@
       "totalTasks": 30
     }
   ],
-  "recordedAt": "2026-08-25T07:32:17.473Z",
+  "recordedAt": "2026-08-25T07:44:06.226Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -140,28 +140,28 @@
       "testFiles": 0,
       "successfulTasks": 44,
       "totalTasks": 44,
-      "outputSha256": "5726cafe619b2d04e79b437ac0d137d3fa1e03d8866f7688424133816477f515",
+      "outputSha256": "e58b6b8a5ee661087c0b5f8100c8e517574762cb9c0460aeb497d1a179225282",
       "outputTail": [
-        "@abl/candidate-provisioner:check: cache bypass, force executing ace3fac4ad223a68",
-        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/safety-gateway:check: cache bypass, force executing a8a1b7dd1bf73494",
-        "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/assurance:check: cache bypass, force executing c8e7648f84dec8c2",
         "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/safety-gateway:check: cache bypass, force executing a8a1b7dd1bf73494",
+        "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/projections:check: cache bypass, force executing bee73ec942cd0005",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/rehearsal:check: cache bypass, force executing 27e66ad68a9d77dd",
-        "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/public-api:check: cache bypass, force executing 0473efc95347e4fe",
-        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/core-api:check: cache bypass, force executing 92c59f311176e65f",
-        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/candidate-edge:check: cache bypass, force executing 970911435d68e279",
+        "@abl/candidate-edge:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/candidate-provisioner:check: cache bypass, force executing ebfd53950bcd3a33",
+        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/arena:check: cache bypass, force executing 5af84d8de094dcdd",
         "@abl/arena:check: $ tsc --noEmit",
+        "@abl/public-api:check: cache bypass, force executing 415434d2dc8f061c",
+        "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/core-api:check: cache bypass, force executing 5104362ced561bb0",
+        "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
         " Tasks:    44 successful, 44 total",
         "Cached:    0 cached, 44 total",
-        "  Time:    1m1.637s"
+        "  Time:    1m2.066s"
       ]
     },
     {
@@ -173,7 +173,7 @@
       "testFiles": 84,
       "successfulTasks": 44,
       "totalTasks": 44,
-      "outputSha256": "41cd7ced08f1180a8707e4f98e4bd44cfe0fc405b79621005981cc7fc6b29fc7",
+      "outputSha256": "e1defc31857132d1f0c64be129e0d6d3f010b2bb37efdd828fd728e640d04cb5",
       "outputTail": [
         " WARNING  no output files found for task @abl/database#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/discovery-mcp#test. Please check your `outputs` key in `turbo.json`",
@@ -206,7 +206,7 @@
       "testFiles": 4,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "812f38536a2675ea0d329f905a63f9e03bd282a90cdb602336de1f5f421f6030",
+      "outputSha256": "31b6d470b5c796b846a37cd1c47e9ed3dd5555f08c13501c3dafaa5b5ef81d03",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
@@ -215,8 +215,8 @@
         "",
         " Test Files  4 passed (4)",
         "      Tests  18 passed (18)",
-        "   Start at  00:31:26",
-        "   Duration  10.57s (transform 1.52s, setup 0ms, import 4.15s, tests 9.75s, environment 0ms)"
+        "   Start at  00:43:15",
+        "   Duration  10.57s (transform 1.47s, setup 0ms, import 4.14s, tests 9.74s, environment 0ms)"
       ]
     },
     {
@@ -228,7 +228,7 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "f7dc2aeb3f32d9855e97b8247d134cfa9c3bc4562622d05181083504f31c49b4",
+      "outputSha256": "7cf0cb939775451078acd5408a5de35ca1ea3d3c2f313eb3600ea0cd3e1fc85f",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
@@ -237,8 +237,8 @@
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  00:31:37",
-        "   Duration  1.30s (transform 492ms, setup 0ms, import 1.11s, tests 127ms, environment 0ms)"
+        "   Start at  00:43:26",
+        "   Duration  1.30s (transform 499ms, setup 0ms, import 1.11s, tests 127ms, environment 0ms)"
       ]
     },
     {
@@ -250,10 +250,10 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "558c5e9c45f2ff9b816bc4710a61e6aead3f4840b350c7c5f516e28d65fc41b8",
+      "outputSha256": "7f5d97e8bb4a168f0dd9505b41734ffd2d7f09b08450c8e54a703b201b6ee88f",
       "outputTail": [
         "$ tsx scripts/run-network-load.ts",
-        "loopback HTTP requests: 22000; failures: 0; p95: 21.08ms",
+        "loopback HTTP requests: 22000; failures: 0; p95: 21.45ms",
         "ABL Assertions 2 passed",
         "ABL Test Files 1 passed"
       ]
@@ -267,23 +267,23 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "c60ffc7c526e761899bb5aa15e9bdc4b8398ba19c0a7938e13cb3b02808b698c",
+      "outputSha256": "4ee60852f01a98b78d8cc29bde884eaa7b2dc46db900f4d09368e3f4366f26d0",
       "outputTail": [
-        "[arena] (node:5370) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:9175) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
-        "[arena] (node:5371) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:9176) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "Running 2 tests using 1 worker",
         "",
-        "(node:5372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:9177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[1/2] [desktop-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "(node:5377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:9182) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
@@ -300,10 +300,12 @@
       "testFiles": 0,
       "successfulTasks": 30,
       "totalTasks": 30,
-      "outputSha256": "d4996ea8063c9da5d4dfb8e2195fedab7be139826cf86f03c9767a5073296450",
+      "outputSha256": "ad179e33e3bacc5006b5442b698ae5226474775e1a12f5d9adc2d878d1cef470",
       "outputTail": [
+        "@abl/arena:build:   Finished TypeScript in 899ms ...",
+        "@abl/arena:build:   Collecting page data using 6 workers ...",
         "@abl/arena:build:   Generating static pages using 6 workers (0/3) ...",
-        "@abl/arena:build: ✓ Generating static pages using 6 workers (3/3) in 213ms",
+        "@abl/arena:build: ✓ Generating static pages using 6 workers (3/3) in 209ms",
         "@abl/arena:build:   Finalizing page optimization ...",
         "@abl/arena:build: ",
         "@abl/arena:build: Route (app)",
@@ -316,12 +318,10 @@
         "@abl/arena:build: ○  (Static)   prerendered as static content",
         "@abl/arena:build: ƒ  (Dynamic)  server-rendered on demand",
         "@abl/arena:build: ",
-        "@abl/core-api:build: cache bypass, force executing a88a286a99ad7bf1",
-        "@abl/core-api:build: $ tsc -p tsconfig.json",
         "",
         " Tasks:    30 successful, 30 total",
         "Cached:    0 cached, 30 total",
-        "  Time:    24.036s"
+        "  Time:    23.809s"
       ]
     }
   ],
