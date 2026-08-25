@@ -332,6 +332,21 @@ describe("persistent private soak", () => {
     expect(assessPersistentSoak(policy, composed).status).toBe("PASS");
   });
 
+  it("accepts several service failures from the same failed sample run", () => {
+    const inputs = collectorInputs();
+    const services = structuredClone(inputs.samples.services);
+    services["abl-core-api"]!.failures = 1;
+    services["abl-public-api"]!.failures = 1;
+    const composed = composePersistentSoakEvidence({
+      policy,
+      ...inputs,
+      samples: { ...inputs.samples, failedRuns: 1, services },
+    });
+    expect(
+      composed.services.reduce((total, service) => total + service.failures, 0),
+    ).toBe(2);
+  });
+
   it("rejects mismatched releases, unverified metrics, and failure drift", () => {
     const inputs = collectorInputs();
     expect(() =>
@@ -354,7 +369,7 @@ describe("persistent private soak", () => {
         ...inputs,
         samples: { ...inputs.samples, failedRuns: 1 },
       }),
-    ).toThrow("Stage C aggregate and per-service failures do not match");
+    ).toThrow("Stage C aggregate and per-service failures are inconsistent");
   });
 
   it("fails only the observed Stage C criteria without reopening earlier stages", () => {
