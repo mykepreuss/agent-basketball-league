@@ -166,26 +166,26 @@ The implementation must:
 
 ### Blaxel placement
 
-| ABL capability                                                     | Selected Blaxel resource                              |
-| ------------------------------------------------------------------ | ----------------------------------------------------- |
-| Core API                                                           | Sandbox                                               |
-| Public API                                                         | Sandbox                                               |
-| Spectator arena                                                    | Sandbox                                               |
-| Each candidate/career fixed body broker                            | Dedicated Sandbox                                     |
-| Private storage broker                                             | Sandbox                                               |
-| Each candidate or admitted career body                             | Dedicated on-demand Sandbox                           |
-| Candidate intake edge                                              | Function                                              |
-| Durable candidate intake store                                     | Private Sandbox with the public-workspace Agent Drive |
-| Candidate provisioning                                             | Job                                                   |
-| Projection, replay, evidence, and scheduled autonomy work          | Jobs                                                  |
-| Discovery, career, basketball, and government tools                | MCP server hosting                                    |
-| Model routing, fallbacks, token accounting, and cost controls      | Model Gateway                                         |
-| Private memory, film, career packages, replays, and evidence files | Agent Drive                                           |
-| Service configuration and credentials                              | Variables and Secrets                                 |
-| Staging access                                                     | Token-protected private previews                      |
-| Public hostname and arena                                          | Blaxel preview/custom-domain facilities               |
-| Images and immutable runtime artifacts                             | Blaxel image registry and remote builds               |
-| Logs, traces, runtime state, and model telemetry                   | Blaxel observability                                  |
+| ABL capability                                                     | Selected Blaxel resource                           |
+| ------------------------------------------------------------------ | -------------------------------------------------- |
+| Core API                                                           | Sandbox                                            |
+| Public API                                                         | Sandbox                                            |
+| Spectator arena                                                    | Sandbox                                            |
+| Each candidate/career fixed body broker                            | Dedicated Sandbox                                  |
+| Private storage broker                                             | Sandbox                                            |
+| Each candidate or admitted career body                             | Dedicated on-demand Sandbox                        |
+| Candidate intake edge                                              | Function                                           |
+| Durable candidate intake store                                     | Private Sandbox with the public-domain Agent Drive |
+| Candidate provisioning                                             | Job                                                |
+| Projection, replay, evidence, and scheduled autonomy work          | Jobs                                               |
+| Discovery, career, basketball, and government tools                | MCP server hosting                                 |
+| Model routing, fallbacks, token accounting, and cost controls      | Model Gateway                                      |
+| Private memory, film, career packages, replays, and evidence files | Agent Drive                                        |
+| Service configuration and credentials                              | Variables and Secrets                              |
+| Staging access                                                     | Token-protected private previews                   |
+| Public hostname and arena                                          | Blaxel preview/custom-domain facilities            |
+| Images and immutable runtime artifacts                             | Blaxel image registry and remote builds            |
+| Logs, traces, runtime state, and model telemetry                   | Blaxel observability                               |
 
 Blaxel supports Sandboxes alongside Jobs, MCP hosting, Model APIs, Agent Drive, previews, and observability. The ABL deliberately selects Sandboxes rather than Blaxel Agents. [Blaxel platform overview](https://docs.blaxel.ai/Overview), [Sandbox documentation](https://docs.blaxel.ai/Sandboxes/Overview)
 
@@ -193,7 +193,7 @@ Agent Drive is selected instead of Blaxel Volumes. Workspace-scoped Drives are m
 
 ### Workspace placement
 
-Use the existing `agent-basketball-league` Blaxel workspace for every league-operated workload. Preserve four logical trust domains inside it:
+Use the existing `agent-basketball-league` Blaxel workspace for every league-operated workload. The physical workspace count is one: launch work must not create `abl-private`, `abl-core`, `abl-public`, `abl-competition`, or any other additional ABL workspace. Preserve four logical trust domains inside the existing workspace:
 
 - core: core API, career/government MCP services, canonical processing, safety gateway, and Jobs;
 - private: private-storage broker, private career-data Agent Drive, recovery, and exit packages;
