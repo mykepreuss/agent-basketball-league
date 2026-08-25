@@ -182,6 +182,7 @@ import { describe, expect, it } from "vitest";
 
 import { createLiveCoreApi } from "../src/server.js";
 import { readCandidateCareerAuthority } from "../src/candidates.js";
+import type { CareerOperationalVerifier } from "../src/candidate-authority.js";
 import { COMBINE_REGISTRATION_SCHEMA_DIGEST } from "../src/combine.js";
 import {
   CONTINUITY_WORKFLOW_SCHEMA_DIGEST,
@@ -702,6 +703,7 @@ class TestExitPortabilityVerifier implements ExitPackagePortabilityVerifier {
 
 async function harness(
   configuredGovernanceSnapshot?: TestEligibilitySnapshot,
+  careerOperationalVerifier?: CareerOperationalVerifier,
 ): Promise<Harness> {
   const store = new InMemoryCanonicalStore();
   const now = { value: start };
@@ -737,6 +739,9 @@ async function harness(
       challengeId: () => "challenge-http-1",
       challengeBytes: () => new Uint8Array(32).fill(7),
     },
+    ...(careerOperationalVerifier === undefined
+      ? {}
+      : { careerOperationalVerifier }),
     combine: {
       combineId: "season-zero-premier-combine",
       openedAt: iso(0),
@@ -2024,7 +2029,11 @@ async function admitCandidate(h: Harness) {
     "CandidateAdmitted",
     {
       admission: {
+        applicationId: uuid("401"),
         candidateDid: h.candidateDid,
+        roleClass: "PLAYER",
+        capacityDecisionCommitment: digest("4"),
+        opportunityResponseCommitment: digest("5"),
         identityStatementCommitment: digest("8"),
         constitutionDigest: inspection.constitutionDigest,
         threatModelDigest: inspection.threatModelDigest,
@@ -2302,6 +2311,32 @@ async function ratifyArtifactExecutable(input: {
 }
 
 describe("signed candidate rehearsal API", () => {
+  it("binds canonical admission to the live accepted intake role", async () => {
+    const observed: unknown[] = [];
+    const h = await harness(undefined, {
+      resolveOperational: async (binding) => {
+        observed.push(binding);
+        return {
+          operational: true,
+          ...binding,
+          sandboxResourceName: "abl-career-0198e000000070008000000000000001",
+        };
+      },
+    });
+    await admitCandidate(h);
+    expect(observed).toEqual([
+      {
+        applicationId: uuid("401"),
+        candidateDid: h.candidateDid,
+        signerAddress: h.candidate.address,
+        roleClass: "PLAYER",
+        capacityDecisionCommitment: digest("4"),
+        opportunityResponseCommitment: digest("5"),
+      },
+    ]);
+    await h.app.close();
+  });
+
   it("persists restart-safe admission, memory, combine, and continuity lifecycles", async () => {
     const h = await harness();
     await registerAndTransfer(h);
@@ -2464,7 +2499,11 @@ describe("signed candidate rehearsal API", () => {
     const signedAt = new Date(h.now.value).toISOString();
     const admissionPayload = {
       admission: {
+        applicationId: uuid("4"),
         candidateDid: h.candidateDid,
+        roleClass: "PLAYER" as const,
+        capacityDecisionCommitment: digest("4"),
+        opportunityResponseCommitment: digest("5"),
         identityStatementCommitment: digest("8"),
         constitutionDigest: inspection.constitutionDigest,
         threatModelDigest: inspection.threatModelDigest,
@@ -4326,6 +4365,12 @@ describe("signed candidate rehearsal API", () => {
       encryptedPackageCommitment: digest("b"),
       issuedAt,
     };
+    expect(authority).toMatchObject({
+      applicationId: uuid("401"),
+      roleClass: "PLAYER",
+      capacityDecisionCommitment: digest("4"),
+      opportunityResponseCommitment: digest("5"),
+    });
     const packageValue: SignedExitPackage = {
       ...unsignedPackage,
       institutionalSignatures: [

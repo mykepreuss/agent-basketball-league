@@ -183,8 +183,12 @@ describe("candidate edge", () => {
     const server = await app({ authorityToken });
     const path = "/internal/v1/candidate-intake/authority";
     const body = {
+      applicationId: "0198e000-0000-7000-8000-000000000001",
       candidateDid: "did:abl:unprovisioned",
       signerAddress: `0x${"1".repeat(40)}`,
+      roleClass: "PLAYER",
+      capacityDecisionCommitment: `0x${"2".repeat(64)}`,
+      opportunityResponseCommitment: `0x${"3".repeat(64)}`,
     };
     expect(
       (await server.inject({ method: "POST", url: path, payload: body }))
@@ -197,6 +201,79 @@ describe("candidate edge", () => {
           url: path,
           headers: { authorization: `Bearer ${authorityToken}` },
           payload: body,
+        })
+      ).statusCode,
+    ).toBe(403);
+    await server.close();
+  });
+
+  it("binds operational authority to the accepted role and isolated career signer", async () => {
+    const authorityToken = "candidate-authority-token-with-32-bytes";
+    const applicationId = "0198e000-0000-7000-8000-000000000001";
+    const candidateDid = "did:abl:accepted-player";
+    const capacityDecisionCommitment = `0x${"2".repeat(64)}`;
+    const accepted = {
+      schemaVersion: "1.0.0",
+      applicationId,
+      candidateDid,
+      decisionCommitment: capacityDecisionCommitment,
+      action: "ACCEPT_OFFER",
+      respondedAt: "2026-08-19T12:00:00.000Z",
+      nonce: "accepted-response-nonce-001",
+      signature: `0x${"a".repeat(130)}`,
+    };
+    const binding = {
+      applicationId,
+      candidateDid,
+      signerAddress: `0x${"4".repeat(40)}`,
+      roleClass: "PLAYER",
+      capacityDecisionCommitment,
+      opportunityResponseCommitment: sha256Commitment(accepted),
+    };
+    const record = {
+      application: {
+        applicationId,
+        candidateDid,
+        formerOperatorSigningAddress: `0x${"5".repeat(40)}`,
+      },
+      decision: {
+        roleClass: "PLAYER",
+        decisionCommitment: capacityDecisionCommitment,
+      },
+      opportunityResponses: [accepted],
+      status: { state: "PROVISIONED" },
+      provisioningReceipt: {
+        state: "PROVISIONED_AWAITING_TRANSFER",
+        sandboxResourceName: "abl-career-0198e000000070008000000000000001",
+      },
+    };
+    const server = createCandidateEdge({
+      intake: {
+        provisioningSnapshot: async () => [record],
+      } as unknown as CandidateIntakeService,
+      authorityToken,
+    });
+    const request = (payload: Record<string, unknown>) =>
+      server.inject({
+        method: "POST",
+        url: "/internal/v1/candidate-intake/authority",
+        headers: { authorization: `Bearer ${authorityToken}` },
+        payload,
+      });
+    const acceptedResponse = await request(binding);
+    expect(acceptedResponse.statusCode).toBe(200);
+    expect(acceptedResponse.json()).toMatchObject({
+      operational: true,
+      ...binding,
+    });
+    expect((await request({ ...binding, roleClass: "COACH" })).statusCode).toBe(
+      403,
+    );
+    expect(
+      (
+        await request({
+          ...binding,
+          opportunityResponseCommitment: `0x${"6".repeat(64)}`,
         })
       ).statusCode,
     ).toBe(403);

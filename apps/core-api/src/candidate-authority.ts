@@ -1,24 +1,12 @@
+import {
+  CandidateCareerBindingSchema,
+  type CandidateCareerBinding,
+} from "@abl/schemas";
 import { z } from "zod";
 
-const OperationalAuthoritySchema = z.strictObject({
+const OperationalAuthoritySchema = CandidateCareerBindingSchema.extend({
   operational: z.literal(true),
-  applicationId: z.uuid(),
-  candidateDid: z.string().startsWith("did:"),
-  signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  roleClass: z.enum([
-    "PLAYER",
-    "COACH",
-    "REFEREE",
-    "REPLAY_OFFICIAL",
-    "GOVERNOR",
-    "COMMISSIONER",
-    "TRIBUNAL",
-    "INTEGRITY",
-    "ADVOCATE",
-    "BROADCASTER",
-    "MEDIA",
-  ]),
-  sandboxResourceName: z.string().min(1).max(128),
+  sandboxResourceName: z.string().min(1).max(160),
 });
 
 export type CareerOperationalAuthority = z.infer<
@@ -27,8 +15,7 @@ export type CareerOperationalAuthority = z.infer<
 
 export interface CareerOperationalVerifier {
   resolveOperational(
-    candidateDid: string,
-    signerAddress: string,
+    binding: CandidateCareerBinding,
   ): Promise<CareerOperationalAuthority>;
 }
 
@@ -65,9 +52,9 @@ export class HttpCandidateOperationalVerifier
   }
 
   public async resolveOperational(
-    candidateDid: string,
-    signerAddress: string,
+    candidate: CandidateCareerBinding,
   ): Promise<CareerOperationalAuthority> {
+    const binding = CandidateCareerBindingSchema.parse(candidate);
     const response = await this.#fetch(
       `${this.#origin}/internal/v1/candidate-intake/authority`,
       {
@@ -79,7 +66,7 @@ export class HttpCandidateOperationalVerifier
             ? {}
             : { "x-blaxel-preview-token": this.#previewToken }),
         },
-        body: JSON.stringify({ candidateDid, signerAddress }),
+        body: JSON.stringify(binding),
         redirect: "error",
         signal: AbortSignal.timeout(5_000),
       },
@@ -91,8 +78,15 @@ export class HttpCandidateOperationalVerifier
       throw new Error(`Candidate is not operational: ${response.status}`);
     const authority = OperationalAuthoritySchema.parse(JSON.parse(body));
     if (
-      authority.candidateDid !== candidateDid ||
-      authority.signerAddress.toLowerCase() !== signerAddress.toLowerCase()
+      authority.applicationId !== binding.applicationId ||
+      authority.candidateDid !== binding.candidateDid ||
+      authority.signerAddress.toLowerCase() !==
+        binding.signerAddress.toLowerCase() ||
+      authority.roleClass !== binding.roleClass ||
+      authority.capacityDecisionCommitment !==
+        binding.capacityDecisionCommitment ||
+      authority.opportunityResponseCommitment !==
+        binding.opportunityResponseCommitment
     )
       throw new Error("Candidate-authority response does not match command");
     return authority;

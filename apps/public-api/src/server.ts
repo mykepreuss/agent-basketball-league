@@ -313,6 +313,12 @@ const stagesBeforeFoundingConvention: ReadonlySet<string> = new Set([
   "PRIVATE_FOUNDING_ALPHA",
   "CAPPED_FOUNDING_INTAKE",
 ]);
+const foundingRoles = [
+  "PLAYER",
+  "COACH",
+  "REFEREE",
+  "REPLAY_OFFICIAL",
+] as const;
 
 function suppressCanonicalClaims(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(suppressCanonicalClaims);
@@ -675,11 +681,50 @@ export function createPublicApi(
     !genesisAssessment.ready
   )
     launchState = LaunchStateSchema.parse(defaultLaunchState);
+
+  function currentFoundingCohort() {
+    const modelState = options.modelProjections?.models().at(-1);
+    if (modelState === undefined)
+      return {
+        cohort: launchState.foundingCohort,
+        hasLiveProjection: false,
+      };
+    const admitted = Object.fromEntries(
+      foundingRoles.map((role) => [role, modelState.admittedByRole[role]]),
+    ) as Record<(typeof foundingRoles)[number], number>;
+    const openings = Object.fromEntries(
+      foundingRoles.map((role) => [
+        role,
+        launchState.foundingCohort.capacity[role] -
+          launchState.foundingCohort.offers[role] -
+          admitted[role],
+      ]),
+    ) as Record<(typeof foundingRoles)[number], number>;
+    return {
+      cohort: { ...launchState.foundingCohort, admitted, openings },
+      hasLiveProjection: true,
+    };
+  }
+
   function currentLaunchState() {
+    const { cohort: foundingCohort, hasLiveProjection } =
+      currentFoundingCohort();
+    const liveFounders = foundingRoles.reduce(
+      (total, role) => total + foundingCohort.admitted[role],
+      0,
+    );
     const founding = options.foundingConventionProjections
       ?.foundingConvention()
       .at(-1);
-    if (founding === undefined) return launchState;
+    if (founding === undefined)
+      return LaunchStateSchema.parse({
+        ...launchState,
+        foundingCohort,
+        foundingConvention: {
+          ...launchState.foundingConvention,
+          liveFounders,
+        },
+      });
     const decisions =
       options.foundingDecisionProjections?.foundingDecisions() ?? [];
     const adoptedDecisions = new Map<string, (typeof decisions)[number]>();
@@ -735,10 +780,13 @@ export function createPublicApi(
         ? "FOUNDING_CONVENTION"
         : launchState.launchStage,
       genesisRecognition,
+      foundingCohort,
       foundingConvention: {
         state: conventionState,
         minimumFounders: 10,
-        liveFounders: founding.eligibilitySnapshot.eligibleFounderDids.length,
+        liveFounders: hasLiveProjection
+          ? liveFounders
+          : founding.eligibilitySnapshot.eligibleFounderDids.length,
         eligibilitySnapshotCommitment: founding.eligibilitySnapshot.commitment,
         bootstrap: {
           state: bootstrapState,

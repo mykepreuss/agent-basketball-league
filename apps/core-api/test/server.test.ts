@@ -23,6 +23,7 @@ import {
   createCoreApi,
   createLiveCoreApi,
 } from "../src/server.js";
+import { CandidateNotAdmittedError } from "../src/candidates.js";
 
 const domain: TypedDataDomain = {
   name: "ABL Recognition",
@@ -355,6 +356,24 @@ describe("core dynamic candidate authority", () => {
     const candidateDid = "did:abl:dynamic-founding-player";
     const candidate = createSigningIdentity(`0x${"c".repeat(64)}`);
     const event = await possessionEvent(candidateDid);
+    const careerAuthority = {
+      applicationId: "0198e000-0000-7000-8000-000000000021",
+      candidateDid,
+      roleClass: "PLAYER" as const,
+      capacityDecisionCommitment: `0x${"1".repeat(64)}` as const,
+      opportunityResponseCommitment: `0x${"2".repeat(64)}` as const,
+      signingAddress: candidate.address,
+      signingPublicKey: candidate.publicKey,
+      runtimeDigest: `0x${"3".repeat(64)}`,
+      toolDigests: [],
+      guardianDids: [],
+      admissionEventHash: `0x${"4".repeat(64)}` as const,
+      admittedAt: finalizedAt,
+      careerRecordCommitment: `0x${"5".repeat(64)}` as const,
+      keyLineageCommitment: `0x${"6".repeat(64)}` as const,
+      consentHistoryCommitment: `0x${"7".repeat(64)}` as const,
+      state: "ADMITTED" as const,
+    };
     const app = createLiveCoreApi({
       store: new InMemoryCanonicalStore(),
       domain,
@@ -362,13 +381,11 @@ describe("core dynamic candidate authority", () => {
       competitionId: "season-zero",
       seasonId: "pre-genesis",
       now: () => Date.parse(finalizedAt),
+      candidateCareerAuthorityReader: async () => careerAuthority,
       careerOperationalVerifier: {
-        resolveOperational: async (did, signerAddress) => ({
+        resolveOperational: async (binding) => ({
           operational: true,
-          applicationId: "0198e000-0000-7000-8000-000000000021",
-          candidateDid: did,
-          signerAddress,
-          roleClass: "PLAYER",
+          ...binding,
           sandboxResourceName: "abl-career-0198e000000070008000000000000021",
         }),
       },
@@ -396,13 +413,14 @@ describe("core dynamic candidate authority", () => {
       competitionId: "season-zero",
       seasonId: "pre-genesis",
       now: () => Date.parse(finalizedAt),
+      candidateCareerAuthorityReader: async () => ({
+        ...careerAuthority,
+        roleClass: "MEDIA" as const,
+      }),
       careerOperationalVerifier: {
-        resolveOperational: async (did, signerAddress) => ({
+        resolveOperational: async (binding) => ({
           operational: true,
-          applicationId: "0198e000-0000-7000-8000-000000000021",
-          candidateDid: did,
-          signerAddress,
-          roleClass: "MEDIA",
+          ...binding,
           sandboxResourceName: "abl-career-0198e000000070008000000000000021",
         }),
       },
@@ -420,5 +438,38 @@ describe("core dynamic candidate authority", () => {
       ).statusCode,
     ).toBe(403);
     await denied.close();
+
+    const revoked = createLiveCoreApi({
+      store: new InMemoryCanonicalStore(),
+      domain,
+      admittedAgents: new Map([
+        [
+          candidateDid,
+          {
+            signerAddress: candidate.address,
+            allowedAggregateTypes: ["game-possession"],
+          },
+        ],
+      ]),
+      competitionId: "season-zero",
+      seasonId: "pre-genesis",
+      now: () => Date.parse(finalizedAt),
+      candidateCareerAuthorityReader: async () => {
+        throw new CandidateNotAdmittedError("Candidate career is revoked");
+      },
+    });
+    expect(
+      (
+        await revoked.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            event: { ...event, aggregateVersion: "1" },
+            signatures: [await signCanonicalEvent(candidate, domain, event)],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    await revoked.close();
   });
 });

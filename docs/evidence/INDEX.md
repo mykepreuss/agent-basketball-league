@@ -65,7 +65,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Clean-room exit/recovery                    | Local behavior pass; live gate                                                     | `PHASE-05.md`, continuity/exit tests                                                   |
 | Founding convention                         | Signed bootstrap and replacement path passes locally; live-agent gate              | `PHASE-11.md`, genesis/core/projection/public/MCP suites                               |
 | Genesis readiness                           | Local bundle ready; gated                                                          | `PHASE-11.md`, release/deployment/cost/risk bundle                                     |
-| Final local acceptance                      | 448 assertions across 93 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
+| Final local acceptance                      | 450 assertions across 93 files; 118 uncached tasks pass                            | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                  |
 
 ## Known limitations and external dependencies
 

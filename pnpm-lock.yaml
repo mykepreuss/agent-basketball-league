@@ -202,6 +202,9 @@ importers:
       "@abl/launch":
         specifier: workspace:*
         version: link:../../packages/launch
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
       "@abl/schemas":
         specifier: workspace:*
         version: link:../../packages/schemas
@@ -215,9 +218,6 @@ importers:
         specifier: "catalog:"
         version: 4.4.3
     devDependencies:
-      "@abl/recognition":
-        specifier: workspace:*
-        version: link:../../packages/recognition
       "@types/node":
         specifier: "catalog:"
         version: 26.2.0

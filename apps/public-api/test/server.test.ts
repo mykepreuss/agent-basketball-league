@@ -735,6 +735,19 @@ describe("public API", () => {
             canonical: true,
             verification: "CANONICAL_LOCAL_REHEARSAL",
             recognizedGenesisConcentration: false,
+            admittedByRole: {
+              PLAYER: 1,
+              COACH: 0,
+              REFEREE: 0,
+              REPLAY_OFFICIAL: 0,
+              GOVERNOR: 0,
+              COMMISSIONER: 0,
+              TRIBUNAL: 0,
+              INTEGRITY: 0,
+              ADVOCATE: 0,
+              BROADCASTER: 0,
+              MEDIA: 0,
+            },
             totalAgents: 1,
             exactModel: [{ value: "model-a-r1", count: 1, bps: 10_000 }],
             family: [{ value: "family-a", count: 1, bps: 10_000 }],
@@ -777,7 +790,21 @@ describe("public API", () => {
         },
       ],
     });
-    expect(refreshes).toBe(1);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/v1/discovery/launch-state",
+        })
+      ).json(),
+    ).toMatchObject({
+      foundingCohort: {
+        admitted: { PLAYER: 1 },
+        openings: { PLAYER: 9 },
+      },
+      foundingConvention: { liveFounders: 1 },
+    });
+    expect(refreshes).toBe(2);
     await app.close();
   });
 

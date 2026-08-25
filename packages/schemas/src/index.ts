@@ -177,6 +177,19 @@ export const CandidateRoleClassSchema = z.enum([
   "BROADCASTER",
   "MEDIA",
 ]);
+export type CandidateRoleClass = z.infer<typeof CandidateRoleClassSchema>;
+
+export const CandidateCareerBindingSchema = z.strictObject({
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  signerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  roleClass: CandidateRoleClassSchema,
+  capacityDecisionCommitment: Sha256Schema,
+  opportunityResponseCommitment: Sha256Schema,
+});
+export type CandidateCareerBinding = z.infer<
+  typeof CandidateCareerBindingSchema
+>;
 
 export const CandidateIntakeModeSchema = z.enum([
   "CLOSED",
@@ -568,7 +581,11 @@ export const IdentityStatementSchema = z.strictObject({
 });
 
 export const CareerAdmissionSchema = z.strictObject({
+  applicationId: UuidV7Schema,
   candidateDid: DidSchema,
+  roleClass: CandidateRoleClassSchema,
+  capacityDecisionCommitment: Sha256Schema,
+  opportunityResponseCommitment: Sha256Schema,
   identityStatementCommitment: Sha256Schema,
   constitutionDigest: Sha256Schema,
   threatModelDigest: Sha256Schema,
