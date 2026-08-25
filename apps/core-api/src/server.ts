@@ -327,6 +327,18 @@ function commandValidationError(message: string): Error {
   return error;
 }
 
+function roleCommandAggregateTypes(roleClass: string): readonly string[] {
+  switch (roleClass) {
+    case "PLAYER":
+    case "COACH":
+    case "REFEREE":
+    case "REPLAY_OFFICIAL":
+      return ["game-possession"];
+    default:
+      return [];
+  }
+}
+
 export function createLiveCoreApi(
   options: LiveCoreApiOptions,
 ): FastifyInstance {
@@ -428,11 +440,8 @@ export function createLiveCoreApi(
     try {
       const parsed = SignedCanonicalCommandSchema.parse(request.body);
       const event = materializeCanonicalEvent(parsed.event);
-      const authority = options.admittedAgents.get(event.actorDid);
       const occurredAt = Date.parse(event.timestamp);
       if (
-        authority === undefined ||
-        !authority.allowedAggregateTypes.includes(event.aggregateType) ||
         !Number.isFinite(occurredAt) ||
         event.timestamp !== new Date(occurredAt).toISOString() ||
         occurredAt > now() + 60_000
@@ -449,18 +458,41 @@ export function createLiveCoreApi(
       } catch {
         throw authorizationError("Canonical event signature is invalid");
       }
-      if (signer.toLowerCase() !== authority.signerAddress.toLowerCase())
-        throw authorizationError("Signature is not registered to actor");
+      let operationalAuthority;
       if (options.careerOperationalVerifier !== undefined) {
         try {
-          await options.careerOperationalVerifier.assertOperational(
-            event.actorDid,
-            signer,
-          );
+          operationalAuthority =
+            await options.careerOperationalVerifier.resolveOperational(
+              event.actorDid,
+              signer,
+            );
         } catch {
           throw authorizationError("Career is not operational");
         }
-      } else if (candidateAdmission !== undefined && exitRoutesEnabled) {
+      }
+      const configuredAuthority = options.admittedAgents.get(event.actorDid);
+      if (configuredAuthority !== undefined) {
+        if (
+          signer.toLowerCase() !==
+            configuredAuthority.signerAddress.toLowerCase() ||
+          !configuredAuthority.allowedAggregateTypes.includes(
+            event.aggregateType,
+          )
+        )
+          throw authorizationError("Signature is not registered to actor");
+      } else if (
+        operationalAuthority === undefined ||
+        !roleCommandAggregateTypes(operationalAuthority.roleClass).includes(
+          event.aggregateType,
+        )
+      ) {
+        throw authorizationError("Actor is not admitted for this command");
+      }
+      if (
+        options.careerOperationalVerifier === undefined &&
+        candidateAdmission !== undefined &&
+        exitRoutesEnabled
+      ) {
         try {
           await requireCareerOperational(
             {

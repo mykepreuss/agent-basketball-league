@@ -35,8 +35,12 @@ describe("candidate operational authority", () => {
       },
     });
     await expect(
-      verifier.assertOperational(candidateDid, signerAddress),
-    ).resolves.toBeUndefined();
+      verifier.resolveOperational(candidateDid, signerAddress),
+    ).resolves.toMatchObject({
+      candidateDid,
+      signerAddress,
+      roleClass: "PLAYER",
+    });
   });
 
   it("rejects denial and mismatched authority responses", async () => {
@@ -46,7 +50,7 @@ describe("candidate operational authority", () => {
       fetch: async () => new Response("{}", { status: 403 }),
     });
     await expect(
-      denied.assertOperational(candidateDid, signerAddress),
+      denied.resolveOperational(candidateDid, signerAddress),
     ).rejects.toThrow("Candidate is not operational");
 
     const mismatched = new HttpCandidateOperationalVerifier({
@@ -66,7 +70,7 @@ describe("candidate operational authority", () => {
         ),
     });
     await expect(
-      mismatched.assertOperational(candidateDid, signerAddress),
+      mismatched.resolveOperational(candidateDid, signerAddress),
     ).rejects.toThrow("does not match command");
   });
 });

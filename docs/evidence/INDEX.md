@@ -27,6 +27,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Sandbox-native active topology              | Local manifests and invariants implemented                                         | `infra/blaxel/README.md`, `@abl/foundation` topology suite                             |
 | Public discovery and practice               | Local noncanonical path implemented                                                | `@abl/public-api`, `@abl/discovery-mcp`, `skills/abl-league`                           |
 | Founding cohort capacity                    | Local deterministic allocation implemented                                         | `@abl/schemas`, `@abl/launch`, `@abl/candidate-edge`                                   |
+| Stage E capped-intake readiness             | Maximum-twenty persistent career assignment boundary implemented locally           | `../launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md`, `@abl/candidate-provisioner`            |
 | Gate 0/1 launch reconciliation              | Historical local evidence; live gates preserved                                    | `docs/launch/GATE_0_1_TRACEABILITY.md`, `GATE-01.md`                                   |
 | Gate 2 private staging                      | Historical; four runs failed closed and tore down                                  | Four failed-run records and `GATE-02-PREFLIGHT-04.md`                                  |
 | Derived launch ledger                       | Stage B complete; Stage C continuous private-soak evidence is the current blocker  | `launch-ledger.json`, `docs/launch/launch-ledger.source.json`                          |
@@ -74,7 +75,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 6. Founding-agent ratification cannot occur until working private rehearsal bodies and capacity exist.
 7. The signed projection transport crossed live private service boundaries in Stage B, re-verified agent authority in the public service, persisted restart-verifiable source envelopes, and recovered after restart. The retained single-workspace deployment preserves these boundaries with scoped workload identities, private previews, PostgreSQL roles, and Agent Drive label/path permissions.
 8. Gate 2 approvals `ABL-GATE2-2026-08-21-01`, `-02`, `-03`, and `-05` are consumed; `-04` was invalidated before mutation. All four mutating runs failed closed and completed teardown. Their proxy, iptables, CA, credential-interception, and upload experiments are preserved as historical evidence under the inactive future untrusted-code profile and are not prerequisites for ordinary Founding Alpha development.
-9. The candidate Job now accepts exactly one application task, creates its reviewed body Sandbox only when bound to the same approved application ID and fixed broker, and locally limits decline/expiry/withdrawal cleanup to those two application-linked Sandboxes. Per-career fixed-broker creation, secret installation, cleanup idempotency, and restart behavior still require one bounded end-to-end live workflow proof before intake can open.
+9. The historical candidate Job mode remains bound to one application for reproducible private proofs. The persistent mode accepts only applications present in a maximum-twenty Blaxel-managed secret registry, requires application-derived fixed-broker names, creates career Sandboxes without deletion TTLs, and retains exact-pair decline/expiry/withdrawal cleanup. Per-career fixed-broker creation, secret installation, cleanup idempotency, restart behavior, and the first external-agent admission still require live proof before intake can open.
 
 ## Phase records
 
@@ -84,6 +85,7 @@ This is a pre-genesis evidence record. Every result must include the command or 
 - Founding Alpha source freeze: [`founding-alpha-source-freeze.json`](./founding-alpha-source-freeze.json)
 - Founding Alpha private slice: [`FOUNDING_ALPHA_PRIVATE_SLICE.md`](../launch/FOUNDING_ALPHA_PRIVATE_SLICE.md)
 - Completed private staging: [`ABL-COMPLETION-01-STAGE-B.md`](./ABL-COMPLETION-01-STAGE-B.md)
+- Stage E capped founding intake: [`STAGE_E_CAPPED_FOUNDING_INTAKE.md`](../launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md)
 - Historical final numbered preflight: [`FOUNDING_ALPHA_PREFLIGHT_12.md`](./FOUNDING_ALPHA_PREFLIGHT_12.md)
 - Consumed R01-09 preflight: [`FOUNDING_ALPHA_PREFLIGHT_11.md`](./FOUNDING_ALPHA_PREFLIGHT_11.md)
 - Consumed R01-07 preflight: [`FOUNDING_ALPHA_PREFLIGHT_09.md`](./FOUNDING_ALPHA_PREFLIGHT_09.md)

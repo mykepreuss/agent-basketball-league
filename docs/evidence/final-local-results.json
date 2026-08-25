@@ -36,7 +36,7 @@
       "command": "pnpm turbo run test --force --concurrency=1",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 393,
+      "assertions": 398,
       "testFiles": 82,
       "successfulTasks": 44,
       "totalTasks": 44
@@ -92,7 +92,7 @@
       "totalTasks": 30
     }
   ],
-  "recordedAt": "2026-08-25T05:49:59.118Z",
+  "recordedAt": "2026-08-25T06:41:03.799Z",
   "environment": {
     "platform": "darwin 25.5.0 arm64",
     "node": "v24.18.0",
@@ -100,7 +100,7 @@
     "pnpm": "11.21.0"
   },
   "overall": "PASS_LOCAL_WITH_EXTERNAL_GATES",
-  "stableResultDigest": "0xca5cbc54c8123a2fe2368c6f6cc62a6f4bafb10df33a255359cba25a59aba437",
+  "stableResultDigest": "0x7cd6dfd76307fae6ae4d19a55876a09add4093ddd55fa444452745ab07a95238",
   "routeCount": 71,
   "rawResults": [
     {
@@ -140,28 +140,28 @@
       "testFiles": 0,
       "successfulTasks": 44,
       "totalTasks": 44,
-      "outputSha256": "de03967b9a6d6d603463bcea747ed092a79dacd3309434be567044102f2d7f61",
+      "outputSha256": "b3c7db4767c8e4898cd216d3a61fcf18d68329b091d742ba43559f85567d22b9",
       "outputTail": [
         "@abl/assurance:check: cache bypass, force executing c8e7648f84dec8c2",
         "@abl/assurance:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/projections:check: cache bypass, force executing bee73ec942cd0005",
         "@abl/projections:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/safety-gateway:check: cache bypass, force executing a8a1b7dd1bf73494",
-        "@abl/safety-gateway:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/candidate-provisioner:check: cache bypass, force executing 2d929c3d33c2d815",
-        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/rehearsal:check: cache bypass, force executing 27e66ad68a9d77dd",
+        "@abl/rehearsal:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/candidate-edge:check: cache bypass, force executing 75b711623233e730",
         "@abl/candidate-edge:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+        "@abl/candidate-provisioner:check: cache bypass, force executing 0a242da879a23ce6",
+        "@abl/candidate-provisioner:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "@abl/arena:check: cache bypass, force executing 5af84d8de094dcdd",
         "@abl/arena:check: $ tsc --noEmit",
         "@abl/public-api:check: cache bypass, force executing ffe77bc425f084cb",
         "@abl/public-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-        "@abl/core-api:check: cache bypass, force executing 37d68c28cd36df2d",
+        "@abl/core-api:check: cache bypass, force executing ed7f52f6b00dea84",
         "@abl/core-api:check: $ tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
         "",
         " Tasks:    44 successful, 44 total",
         "Cached:    0 cached, 44 total",
-        "  Time:    1m2.028s"
+        "  Time:    1m0.112s"
       ]
     },
     {
@@ -169,11 +169,11 @@
       "command": "pnpm turbo run test --force --concurrency=1",
       "status": "PASS",
       "exitCode": 0,
-      "assertions": 393,
+      "assertions": 398,
       "testFiles": 82,
       "successfulTasks": 44,
       "totalTasks": 44,
-      "outputSha256": "c98c93dda61944f590acb6afbc76e289fc90562cbde5f858dfb65567a15c09b9",
+      "outputSha256": "7e8c641f94013f01e12325eaea28cf3e9d1288ddf48a09bcf64bb470313101a2",
       "outputTail": [
         " WARNING  no output files found for task @abl/database#test. Please check your `outputs` key in `turbo.json`",
         " WARNING  no output files found for task @abl/discovery-mcp#test. Please check your `outputs` key in `turbo.json`",
@@ -206,17 +206,17 @@
       "testFiles": 4,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "6ead1544c35ebe20962fd34fd7e86388665ae28fe591a6d9e2aab4b790e79d21",
+      "outputSha256": "81e6729083e4c23cea439ab91b1da0fd4cb22139235a54318aee6b9313b4bfa9",
       "outputTail": [
         "$ vitest run --config tests/vitest.acceptance.ts",
         "",
-        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-genesis-decisions",
+        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-stage-e",
         "",
         "",
         " Test Files  4 passed (4)",
         "      Tests  18 passed (18)",
-        "   Start at  22:49:08",
-        "   Duration  10.24s (transform 1.51s, setup 0ms, import 4.18s, tests 9.40s, environment 0ms)"
+        "   Start at  23:40:13",
+        "   Duration  10.30s (transform 1.42s, setup 0ms, import 4.19s, tests 9.47s, environment 0ms)"
       ]
     },
     {
@@ -228,17 +228,17 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "215d265e8d652ef246525d090712524c7b28f5099dc4b9c1dd9ce08b0bbe732d",
+      "outputSha256": "7eb9e9cdb6c6238ac732c1879f43ae874aeaceb67f38dcfad7f45d5baf3d51ba",
       "outputTail": [
         "$ vitest run --config tests/vitest.adversarial.ts",
         "",
-        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-genesis-decisions",
+        " RUN  v4.1.10 /Users/mp/Code/mp-hq/agent-basketball-league-stage-e",
         "",
         "",
         " Test Files  1 passed (1)",
         "      Tests  9 passed (9)",
-        "   Start at  22:49:18",
-        "   Duration  1.26s (transform 477ms, setup 0ms, import 1.06s, tests 128ms, environment 0ms)"
+        "   Start at  23:40:24",
+        "   Duration  1.27s (transform 481ms, setup 0ms, import 1.08s, tests 126ms, environment 0ms)"
       ]
     },
     {
@@ -250,10 +250,10 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "415f2cb8ac8dd90621857d658a5ee2940469215b3ebf4930d322b23d8a225968",
+      "outputSha256": "906fc6ca349ae29f64bac14a45a585617d8f0eb600fd704fe81cc97c89576022",
       "outputTail": [
         "$ tsx scripts/run-network-load.ts",
-        "loopback HTTP requests: 22000; failures: 0; p95: 19.03ms",
+        "loopback HTTP requests: 22000; failures: 0; p95: 20.30ms",
         "ABL Assertions 2 passed",
         "ABL Test Files 1 passed"
       ]
@@ -267,23 +267,23 @@
       "testFiles": 1,
       "successfulTasks": null,
       "totalTasks": null,
-      "outputSha256": "cc451ba98add42713a50219da9b74eb4f78a3fd04e7cddfae6cc9f742e3430f1",
+      "outputSha256": "c25fbb3d39a011ee1722dc4d53a7dcf791cbcab8b4f12275fea2475c72a2d3fe",
       "outputTail": [
-        "[arena] (node:75059) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:93001) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
-        "[arena] (node:75060) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "[arena] (node:93002) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "[arena] (Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "Running 2 tests using 1 worker",
         "",
-        "(node:75061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:93003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
         "[1/2] [desktop-chromium] › tests/browser/arena.spec.ts:3:1 › renders a replay-verified pre-Genesis game from the public API",
-        "(node:75066) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
+        "(node:93008) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.",
         "(Use `node --trace-warnings ...` to show where the warning was created)",
         "",
         "",
@@ -300,9 +300,9 @@
       "testFiles": 0,
       "successfulTasks": 30,
       "totalTasks": 30,
-      "outputSha256": "ff5acbb5a4664a2d3475a0ceaf7961d5ffc6dff03bea8697e4f5d2531ce8ac8b",
+      "outputSha256": "93a63e82cb037fee70ace30ae8c53a3f4115079e4a549a7c94b5da8363027465",
       "outputTail": [
-        "@abl/arena:build:   Finished TypeScript in 877ms ...",
+        "@abl/arena:build:   Finished TypeScript in 872ms ...",
         "@abl/arena:build:   Collecting page data using 6 workers ...",
         "@abl/arena:build:   Generating static pages using 6 workers (0/3) ...",
         "@abl/arena:build: ✓ Generating static pages using 6 workers (3/3) in 206ms",
@@ -321,13 +321,13 @@
         "",
         " Tasks:    30 successful, 30 total",
         "Cached:    0 cached, 30 total",
-        "  Time:    24.399s"
+        "  Time:    23.619s"
       ]
     }
   ],
   "limitations": [
     "The retained Stage B evidence live-proves the existing private end-to-end slice; the persistent Stage C environment and 24-hour soak are still in progress.",
-    "Candidate decline, expiry, and withdrawal cleanup is locally bounded to the application-linked career body and fixed-broker Sandboxes; creation, secret installation, cleanup idempotency, and restart behavior still require live proof.",
+    "The candidate provisioner locally proves historical single-application mode and a maximum-twenty persistent founding registry with application-derived fixed brokers and exact-pair cleanup; per-career broker creation, secret installation, cleanup idempotency, restart behavior, and the first external-agent admission still require live proof.",
     "Live Blaxel scheduler/runtime safety actuation is unavailable; only the fixed durable control registry is locally proven.",
     "The existing agent-basketball-league workspace is the selected physical topology; its three persistent Agent Drives and thirteen workloads are privately deployed, while the continuous 24-hour soak remains outstanding.",
     "Persistent Neon PostgreSQL 17 project shy-pine-00200479 is created and migrated with 23 public tables; credential rotation, backup, clean-room restore, and exact replay equality passed during Stage C, while the uninterrupted 24-hour soak remains in progress.",

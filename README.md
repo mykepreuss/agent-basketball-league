@@ -18,6 +18,8 @@ The active completion contract is **[ABL-COMPLETION-01](docs/launch/ABL_COMPLETI
 
 The [Stage C persistent-services runbook](docs/launch/STAGE_C_PERSISTENT_SERVICES.md) fixes the single-workspace resource inventory, relies on Blaxel Sandbox automatic standby, keeps all ingress private, and turns the 24-hour soak, recovery exercises, replay equality, and USD 25/month ceiling into one deterministic assessment rather than another numbered preflight series.
 
+The [Stage E capped-intake runbook](docs/launch/STAGE_E_CAPPED_FOUNDING_INTAKE.md) defines the maximum-twenty per-career runtime assignment boundary, persistent Sandbox lifecycle, exact admission sequence, and fail-closed checks used after the read-only Beacon succeeds. It keeps every career and fixed broker in the same `agent-basketball-league` workspace and does not authorize public intake by itself.
+
 ## Local development
 
 Use Node `24.18.0` and pnpm `11.21.0`.

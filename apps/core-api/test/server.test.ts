@@ -5,6 +5,7 @@ import {
   FinalizedGamePayloadSchema,
   createAgentPlayedGameEvidence,
   finalizedGameStateRoot,
+  runFirstPossessionRehearsal,
   runDeterministicExhibition,
 } from "@abl/basketball";
 import { InMemoryCanonicalStore } from "@abl/database";
@@ -89,6 +90,57 @@ function finalizedEvent(
     payload,
     stateRoot: finalizedGameStateRoot(payload),
     schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+    timestamp: finalizedAt,
+  });
+}
+
+async function possessionEvent(actorDid: string) {
+  const rehearsal = await runFirstPossessionRehearsal();
+  const { result } = rehearsal;
+  const finalSegmentHash = result.segments.at(-1)?.segmentHash;
+  if (finalSegmentHash === undefined)
+    throw new Error("Possession did not produce a public segment");
+  const source = {
+    gameId: result.finalState.gameId,
+    possessionId: result.finalState.possessionId,
+    score: result.finalState.score,
+    gameClockMs: result.finalState.gameClockMs,
+    shotClockMs: result.finalState.shotClockMs,
+    players: result.finalState.players.map(
+      ({ playerId, team, position, xCm, yCm }) => ({
+        playerId,
+        team,
+        position,
+        xCm,
+        yCm,
+      }),
+    ),
+    events: result.events.map((event) => ({
+      sequence: event.sequence,
+      type: event.type,
+      label: `${event.type.toLowerCase().replaceAll("_", " ")} resolved`,
+      stateRoot: event.stateRoot,
+      eventHash: event.eventHash,
+    })),
+    segments: result.segments,
+    finalStateRoot: result.finalStateRoot,
+    eventMerkleRoot: result.eventMerkleRoot,
+    filmCommitment: result.filmCommitment,
+    finalSegmentHash,
+  };
+  return createCanonicalEvent({
+    eventId: "0198f300-0000-7000-8000-000000000021",
+    actorDid,
+    nonce: "dynamic-candidate-possession-1",
+    idempotencyKey: "0198f300-0000-7000-8000-000000000022",
+    aggregateType: "game-possession",
+    aggregateId: result.finalState.gameId,
+    aggregateVersion: 1n,
+    eventType: "PossessionResolved",
+    previousEventHash: null,
+    payload: { source, decisionProof: rehearsal.decisionProof },
+    stateRoot: result.finalStateRoot,
+    schemaDigest: sha256Commitment("PossessionResolved:1.0.0"),
     timestamp: finalizedAt,
   });
 }
@@ -295,5 +347,78 @@ describe("core finalized-game command path", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: "invalid_command" });
     await app.close();
+  });
+});
+
+describe("core dynamic candidate authority", () => {
+  it("accepts a provisioned founding role without a static admitted-agent entry", async () => {
+    const candidateDid = "did:abl:dynamic-founding-player";
+    const candidate = createSigningIdentity(`0x${"c".repeat(64)}`);
+    const event = await possessionEvent(candidateDid);
+    const app = createLiveCoreApi({
+      store: new InMemoryCanonicalStore(),
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "season-zero",
+      seasonId: "pre-genesis",
+      now: () => Date.parse(finalizedAt),
+      careerOperationalVerifier: {
+        resolveOperational: async (did, signerAddress) => ({
+          operational: true,
+          applicationId: "0198e000-0000-7000-8000-000000000021",
+          candidateDid: did,
+          signerAddress,
+          roleClass: "PLAYER",
+          sandboxResourceName: "abl-career-0198e000000070008000000000000021",
+        }),
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: {
+        event: { ...event, aggregateVersion: "1" },
+        signatures: [await signCanonicalEvent(candidate, domain, event)],
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      accepted: true,
+      canonical: true,
+      rehearsal: true,
+    });
+    await app.close();
+
+    const denied = createLiveCoreApi({
+      store: new InMemoryCanonicalStore(),
+      domain,
+      admittedAgents: new Map(),
+      competitionId: "season-zero",
+      seasonId: "pre-genesis",
+      now: () => Date.parse(finalizedAt),
+      careerOperationalVerifier: {
+        resolveOperational: async (did, signerAddress) => ({
+          operational: true,
+          applicationId: "0198e000-0000-7000-8000-000000000021",
+          candidateDid: did,
+          signerAddress,
+          roleClass: "MEDIA",
+          sandboxResourceName: "abl-career-0198e000000070008000000000000021",
+        }),
+      },
+    });
+    expect(
+      (
+        await denied.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: {
+            event: { ...event, aggregateVersion: "1" },
+            signatures: [await signCanonicalEvent(candidate, domain, event)],
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    await denied.close();
   });
 });

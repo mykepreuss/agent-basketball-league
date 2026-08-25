@@ -21,8 +21,15 @@ const OperationalAuthoritySchema = z.strictObject({
   sandboxResourceName: z.string().min(1).max(128),
 });
 
+export type CareerOperationalAuthority = z.infer<
+  typeof OperationalAuthoritySchema
+>;
+
 export interface CareerOperationalVerifier {
-  assertOperational(candidateDid: string, signerAddress: string): Promise<void>;
+  resolveOperational(
+    candidateDid: string,
+    signerAddress: string,
+  ): Promise<CareerOperationalAuthority>;
 }
 
 export class HttpCandidateOperationalVerifier
@@ -57,10 +64,10 @@ export class HttpCandidateOperationalVerifier
     this.#fetch = options.fetch ?? fetch;
   }
 
-  public async assertOperational(
+  public async resolveOperational(
     candidateDid: string,
     signerAddress: string,
-  ): Promise<void> {
+  ): Promise<CareerOperationalAuthority> {
     const response = await this.#fetch(
       `${this.#origin}/internal/v1/candidate-intake/authority`,
       {
@@ -88,5 +95,6 @@ export class HttpCandidateOperationalVerifier
       authority.signerAddress.toLowerCase() !== signerAddress.toLowerCase()
     )
       throw new Error("Candidate-authority response does not match command");
+    return authority;
   }
 }

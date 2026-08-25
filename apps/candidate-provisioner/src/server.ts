@@ -9,6 +9,7 @@ export const CANDIDATE_PROVISIONER_ROUTE_CATALOG = [
 export function createCandidateProvisionerServer(input: {
   provisioner: CandidateProvisioner;
   authorizationToken: string;
+  controlPlaneMode: "DRY_RUN" | "APPROVED_LIVE";
 }): FastifyInstance {
   if (Buffer.byteLength(input.authorizationToken) < 32)
     throw new Error("Provisioner authorization token is too short");
@@ -16,7 +17,7 @@ export function createCandidateProvisionerServer(input: {
 
   app.get("/healthz", async () => ({
     ok: true,
-    controlPlaneMode: "DRY_RUN",
+    controlPlaneMode: input.controlPlaneMode,
     canonicalAuthority: false,
   }));
   app.post<{ Params: { applicationId: string } }>(

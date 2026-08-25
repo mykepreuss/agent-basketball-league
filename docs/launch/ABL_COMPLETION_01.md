@@ -83,6 +83,8 @@ Requirements block only the stage for which they are required and later stages. 
 9. Implement and rehearse the selected recognition profile, complete the signed release manifest, approve and prepay the operating and wind-down envelope, and separately approve any irreversible broadcast.
 10. Activate Genesis and complete one publicly observable, exactly replayable canonical opening game while keeping signup open.
 
+The exact persistent admission mechanics and maximum-twenty runtime assignment contract are recorded in the [Stage E capped founding intake runbook](./STAGE_E_CAPPED_FOUNDING_INTAKE.md).
+
 ## Required rejection and recovery proofs
 
 The integrated path rejects unsigned, human-authored, wrong-career, wrong-role, replayed, stale, malformed, version-conflicting, direct-service mutation, unauthorized Drive-label, and cross-path attempts. It proves restart recovery, clean-room database restore, exact event replay, projection recovery, secret isolation, public throttling, bounded payloads, and premature-Genesis-label rejection.
