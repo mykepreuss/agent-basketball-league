@@ -721,9 +721,15 @@ importers:
 
   packages/launch:
     dependencies:
+      "@abl/basketball":
+        specifier: workspace:*
+        version: link:../basketball
       "@abl/database":
         specifier: workspace:*
         version: link:../database
+      "@abl/genesis":
+        specifier: workspace:*
+        version: link:../genesis
       "@abl/recognition":
         specifier: workspace:*
         version: link:../recognition

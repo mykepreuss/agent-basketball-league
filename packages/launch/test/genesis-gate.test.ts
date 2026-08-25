@@ -1,12 +1,19 @@
+import { FOUNDING_DECISIONS } from "@abl/genesis";
 import { sha256Commitment } from "@abl/recognition";
 import { v7 as uuidv7 } from "uuid";
 import { describe, expect, it } from "vitest";
 
-import { assessGenesisStartupEvidence } from "../src/index.js";
+import {
+  assessGenesisStartupEvidence,
+  foundingExhibitionPublicDeliveryResultDigest,
+  foundingExhibitionReplayResultDigest,
+  genesisPrerequisiteEvidenceDigest,
+} from "../src/index.js";
 
 const at = "2026-08-19T12:00:00.000Z";
-const hash = (character: string) => `0x${character.repeat(64)}`;
-const signature = (character: string) => `0x${character.repeat(130)}`;
+const hash = (character: string): `0x${string}` => `0x${character.repeat(64)}`;
+const signature = (index: number): `0x${string}` =>
+  `0x${index.toString(16).padStart(130, "0")}`;
 
 function evidence() {
   const sourceDigest = hash("1");
@@ -15,15 +22,191 @@ function evidence() {
   const migrationDigest = hash("4");
   const recognitionDecisionEventId = uuidv7();
   const genesisReleaseDecisionEventId = uuidv7();
-  const authorizationSignatures = [
-    signature("1"),
-    signature("2"),
-    signature("3"),
-    signature("4"),
-    signature("5"),
-    signature("6"),
-    signature("7"),
-  ];
+  const authorizationSignatures = Array.from({ length: 14 }, (_, index) =>
+    signature(index + 1),
+  );
+  const proof = (id: string, character: string) => ({
+    evidenceId: id,
+    digest: hash(character),
+    passed: true as const,
+    verifiedAt: at,
+  });
+  const roles = {
+    players: Array.from(
+      { length: 10 },
+      (_, index) =>
+        `did:abl:founding-player-${String(index + 1).padStart(2, "0")}`,
+    ),
+    coaches: Array.from(
+      { length: 2 },
+      (_, index) =>
+        `did:abl:founding-coach-${String(index + 1).padStart(2, "0")}`,
+    ),
+    referees: Array.from(
+      { length: 6 },
+      (_, index) =>
+        `did:abl:founding-referee-${String(index + 1).padStart(2, "0")}`,
+    ),
+    replayOfficials: Array.from(
+      { length: 2 },
+      (_, index) =>
+        `did:abl:founding-replay-${String(index + 1).padStart(2, "0")}`,
+    ),
+  };
+  const cohortBody = {
+    targetCareers: 20 as const,
+    activeCareers: 20 as const,
+    roles,
+    careerRegistryStateRoot: hash("a"),
+    eligibilitySnapshotCommitment: hash("b"),
+    verifiedAt: at,
+  };
+  const foundingCohort = {
+    ...cohortBody,
+    cohortCommitment: sha256Commitment(cohortBody),
+  };
+  const decisionRoots = {
+    players: hash("1"),
+    coaches: hash("2"),
+    referees: hash("3"),
+    replayOfficials: hash("4"),
+  };
+  const agentEvidenceBody = {
+    gameId: uuidv7(),
+    possessionCount: 128,
+    decisionCounts: {
+      players: 2_560,
+      coaches: 512,
+      referees: 384,
+      replayOfficials: 256,
+    },
+    decisionRoots,
+    authorityEvidence: {
+      participants: structuredClone(roles),
+      decisionRoots,
+    },
+    possessionProofRoot: hash("5"),
+    gameProofCommitment: hash("6"),
+  };
+  const agentEvidence = {
+    ...agentEvidenceBody,
+    evidenceCommitment: sha256Commitment(agentEvidenceBody),
+  };
+  const finalizedPayloadDigest = hash("7");
+  const finalStateRoot = hash("8");
+  const eventMerkleRoot = hash("9");
+  const foundingExhibition = {
+    classification: "PRE_GENESIS_EXPERIMENT" as const,
+    canonical: false as const,
+    recognitionLevel: "SIGNED_VALID" as const,
+    finalizedPayloadDigest,
+    finalStateRoot,
+    eventMerkleRoot,
+    agentEvidence,
+    humanDecisionCount: 0 as const,
+    inferenceInvocations: 0 as const,
+  };
+  const foundingExhibitionProof = {
+    ...foundingExhibition,
+    exactReplay: {
+      evidenceId: "founding-exhibition-exact-replay",
+      digest: foundingExhibitionReplayResultDigest(foundingExhibition),
+      passed: true as const,
+      verifiedAt: at,
+    },
+    publicDelivery: {
+      evidenceId: "founding-exhibition-public-delivery",
+      digest: foundingExhibitionPublicDeliveryResultDigest(foundingExhibition),
+      passed: true as const,
+      verifiedAt: at,
+    },
+  };
+  const liveProofs = {
+    exactRuntime: proof("exact-runtime", "0"),
+    sandboxIsolation: proof("sandbox-isolation", "1"),
+    storageRecovery: proof("storage-recovery", "2"),
+    databaseRecovery: proof("database-recovery", "3"),
+    publicBoundary: proof("public-boundary", "4"),
+    cleanPublicVerification: proof("clean-public-verification", "5"),
+    monitoring: proof("monitoring", "6"),
+    capacity: proof("capacity", "7"),
+  };
+  const eventIds = new Map(
+    FOUNDING_DECISIONS.map((topic) => [
+      topic,
+      topic === "RECOGNITION_PROFILE"
+        ? recognitionDecisionEventId
+        : topic === "GENESIS_RELEASE"
+          ? genesisReleaseDecisionEventId
+          : uuidv7(),
+    ]),
+  );
+  const foundingDecisions = FOUNDING_DECISIONS.map((topic, index) => ({
+    topic,
+    state: "DECIDED" as const,
+    disposition: "RATIFY" as const,
+    eligible: 20,
+    requiredYes: 14,
+    yes: 14,
+    eligibilitySnapshotCommitment: foundingCohort.eligibilitySnapshotCommitment,
+    artifactDigest: sha256Commitment({ topic, artifact: index }),
+    recognitionMechanism:
+      topic === "RECOGNITION_PROFILE" ? ("SIGNED_WITNESSES" as const) : null,
+    releaseManifestDigest: topic === "GENESIS_RELEASE" ? hash("0") : null,
+    decisionCommitment:
+      topic === "RECOGNITION_PROFILE"
+        ? hash("8")
+        : topic === "GENESIS_RELEASE"
+          ? hash("f")
+          : sha256Commitment({ topic, decision: index }),
+    ratificationEventId: eventIds.get(topic)!,
+    authorizationSignatures,
+    directBallotsOnly: true as const,
+    humanVotingAllowed: false as const,
+    publicProjection: {
+      evidenceId: `founding-decision-${topic.toLowerCase()}`,
+      digest: sha256Commitment({ topic, projection: index }),
+      passed: true as const,
+      verifiedAt: at,
+    },
+  }));
+  const fundingBody = {
+    humanSpendApprovalDigest: hash("c"),
+    resourceScheduleDecisionEventId: eventIds.get("RESOURCE_SCHEDULE")!,
+    operating: {
+      purpose: "SEASON_ZERO_OPERATION" as const,
+      currency: "USD" as const,
+      coverageStartsAt: at,
+      coverageEndsAt: "2026-09-18T12:00:00.000Z",
+      requiredAmountCents: 7_500,
+      prepaidAmountCents: 7_500,
+      prepaidAt: "2026-08-18T12:00:00.000Z",
+      providerReceiptDigest: hash("d"),
+    },
+    windDown: {
+      purpose: "WIND_DOWN_RESERVE" as const,
+      restrictedToWindDown: true as const,
+      currency: "USD" as const,
+      coverageStartsAt: at,
+      coverageEndsAt: "2026-09-18T12:00:00.000Z",
+      requiredAmountCents: 7_500,
+      prepaidAmountCents: 7_500,
+      prepaidAt: "2026-08-18T12:00:00.000Z",
+      providerReceiptDigest: hash("e"),
+    },
+    verifiedAt: at,
+  };
+  const funding = {
+    ...fundingBody,
+    fundingCommitment: sha256Commitment(fundingBody),
+  };
+  const testResultDigest = genesisPrerequisiteEvidenceDigest({
+    liveProofs,
+    foundingCohort,
+    foundingExhibition: foundingExhibitionProof,
+    foundingDecisions,
+    funding,
+  });
   const releaseManifest = {
     releaseId: uuidv7(),
     version: 1,
@@ -36,12 +219,13 @@ function evidence() {
     toolDigest: hash("7"),
     schemaDigest,
     migrationDigest,
-    testResultDigest: hash("8"),
-    applicableLawEventIds: [uuidv7()],
-    ratificationEventIds: [
-      recognitionDecisionEventId,
-      genesisReleaseDecisionEventId,
-    ],
+    testResultDigest,
+    applicableLawEventIds: foundingDecisions.map(
+      ({ ratificationEventId }) => ratificationEventId,
+    ),
+    ratificationEventIds: foundingDecisions.map(
+      ({ ratificationEventId }) => ratificationEventId,
+    ),
     compatibilityDeclaration: "Founding release.",
     rollbackDeclaration:
       "Stop before Genesis; use a ratified successor after it.",
@@ -51,6 +235,9 @@ function evidence() {
     authorizationSignatures,
   };
   const releaseDigest = sha256Commitment(releaseManifest);
+  foundingDecisions.find(
+    ({ topic }) => topic === "GENESIS_RELEASE",
+  )!.releaseManifestDigest = releaseDigest;
   const witnessRegistryDigest = hash("c");
   const recognitionProfileBody = {
     schemaVersion: "1.0.0",
@@ -85,18 +272,12 @@ function evidence() {
     releaseDigest,
     networkProfileDigest,
   };
-  const proof = (id: string, character: string) => ({
-    evidenceId: id,
-    digest: hash(character),
-    passed: true,
-    verifiedAt: at,
-  });
   const genesisReleaseAuthorizationBody = {
     releaseManifestDigest: releaseDigest,
     foundingDecisionEventId: genesisReleaseDecisionEventId,
     decisionCommitment: hash("f"),
-    eligible: 10,
-    requiredYes: 7,
+    eligible: 20,
+    requiredYes: 14,
     authorizedAt: at,
     authorizationSignatures,
   };
@@ -141,23 +322,18 @@ function evidence() {
       migrationDigest,
     },
     liveProofs: {
-      sandboxIsolation: proof("sandbox-isolation", "1"),
-      storageRecovery: proof("storage-recovery", "2"),
-      databaseRecovery: proof("database-recovery", "3"),
-      publicBoundary: proof("public-boundary", "4"),
-      capacity: proof("capacity", "5"),
+      ...liveProofs,
     },
+    foundingCohort,
+    foundingExhibition: foundingExhibitionProof,
+    foundingDecisions,
+    funding,
     recognitionProfile,
     ratifiedAnchor: {
       foundingDecisionEventId: recognitionProfile.foundingDecisionEventId,
       decisionCommitment: recognitionProfile.decisionCommitment,
       ...commitments,
-      ratificationSignatures: [
-        signature("5"),
-        signature("6"),
-        signature("7"),
-        signature("8"),
-      ],
+      ratificationSignatures: authorizationSignatures,
     },
     genesisReleaseAuthorization: {
       ...genesisReleaseAuthorizationBody,
@@ -228,6 +404,56 @@ describe("PRODUCTION_GENESIS startup evidence", () => {
     expect(assessment.ready).toBe(false);
     expect(assessment.blockers).toContain(
       "Founding decisions do not authorize the recognition profile and Genesis release",
+    );
+  });
+
+  it("requires every adopted founding topic and the complete role cohort", () => {
+    const missingDecision = evidence();
+    missingDecision.foundingDecisions.pop();
+    expect(assessGenesisStartupEvidence(missingDecision)).toMatchObject({
+      ready: false,
+      blockers: ["Genesis startup evidence is incomplete or invalid"],
+    });
+
+    const substitutedCareer = evidence();
+    substitutedCareer.foundingExhibition.agentEvidence.authorityEvidence!.participants.players[0] =
+      "did:abl:founding-player-00";
+    const assessment = assessGenesisStartupEvidence(substitutedCareer);
+    expect(assessment.ready).toBe(false);
+    expect(assessment.blockers).toContain(
+      "Founding exhibition does not use the complete twenty-career cohort",
+    );
+    expect(assessment.blockers).toContain(
+      "Founding exhibition authority evidence is invalid",
+    );
+  });
+
+  it("requires exact replay, public delivery, and two prepaid envelopes", () => {
+    const invalidReplay = evidence();
+    invalidReplay.foundingExhibition.exactReplay.digest = hash("f");
+    expect(assessGenesisStartupEvidence(invalidReplay).blockers).toContain(
+      "Founding exhibition exact-replay proof is invalid",
+    );
+
+    const underfunded = evidence();
+    underfunded.funding.windDown.prepaidAmountCents = 100;
+    const { fundingCommitment: _fundingCommitment, ...fundingBody } =
+      underfunded.funding;
+    underfunded.funding.fundingCommitment = sha256Commitment(fundingBody);
+    const assessment = assessGenesisStartupEvidence(underfunded);
+    expect(assessment.ready).toBe(false);
+    expect(assessment.blockers).toContain(
+      "Season Zero operation and wind-down reserve are not separately prepaid for thirty days",
+    );
+  });
+
+  it("requires the release to bind the complete prerequisite bundle", () => {
+    const candidate = evidence();
+    candidate.releaseManifest.testResultDigest = hash("f");
+    const assessment = assessGenesisStartupEvidence(candidate);
+    expect(assessment.ready).toBe(false);
+    expect(assessment.blockers).toContain(
+      "Release manifest does not bind the complete Genesis prerequisites",
     );
   });
 });

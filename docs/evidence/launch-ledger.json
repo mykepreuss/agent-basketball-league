@@ -67,7 +67,7 @@
       "ratified": false,
       "foundingDecisionEventId": null
     },
-    "evidenceDigest": "0x11182685e4fb30ab732dcc325f51239c759adb0d28efc17a4f9a04bf5c96944a",
+    "evidenceDigest": "0x0c18a4b5f4d5c3f4b42fbcdac5f644f8420507f172badaf91212b17f64355f7d",
     "blockingReasons": [
       "FOUNDING_ALPHA_PERSISTENT_BEACON: IMPLEMENTED_LIVE_PROOF_REQUIRED",
       "FOUNDING_ALPHA_PERSISTENT_BEACON: evidence persistent-beacon-live-proof not passed"
@@ -182,7 +182,7 @@
     },
     {
       "evidenceId": "existing-domain-packages",
-      "digest": "0x8030295b83231d0d8b64fa3464608f82cdfc81a319c40062cb60e1faac213797",
+      "digest": "0xbedec75c169acd4743897f5265c16f5c1a65a5eda99cfc46edf9e4a6ae5e6420",
       "verification": "PASSED"
     },
     {
@@ -212,7 +212,7 @@
     },
     {
       "evidenceId": "launch-domain-implementation",
-      "digest": "0xb183c3c7293a75afee16a7a25720af2db9dfa97f6db0d9ae2741960aa4aff904",
+      "digest": "0x29606e1f1ef2884420292c5c92079e4c1b7258ea024491e008f6b12e67c9ce6c",
       "verification": "PASSED"
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "evidenceId": "exact-runtime-final-result",
-      "digest": "0x457145328097ebf35b2c05f94bb11a0ae2eb7f4c7f5a7a3b0237d8e9ae6d0f85",
+      "digest": "0xb60c577428e7d7a9fb0826f2bde292029ddb0358e685c9503bb2d52b02c042c8",
       "verification": "PASSED"
     },
     {
@@ -490,5 +490,5 @@
       "rollbackState": "EXECUTED"
     }
   ],
-  "ledgerDigest": "0xb1c660c32983d7a47f3dc717f50bd64f7f011946ba2c7fd37d3e462a7d222699"
+  "ledgerDigest": "0xdb8fb739413738a854a79889e9f3fed9a0004e9cea82033978fee143c477973d"
 }
