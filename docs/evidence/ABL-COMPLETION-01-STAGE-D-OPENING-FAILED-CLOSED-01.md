@@ -1,8 +1,8 @@
 # ABL-COMPLETION-01 Stage D opening — failed closed 01
 
-> Result: `FAIL_CLOSED`  
-> Recorded: `2026-08-25T19:10:06Z`  
-> Runtime release: `802081ffb53ce8f9207df56779cfb3ceaa1e424c`  
+> Result: `FAIL_CLOSED`
+> Recorded: `2026-08-25T19:10:06Z`
+> Runtime release: `802081ffb53ce8f9207df56779cfb3ceaa1e424c`
 > Approved private release-delta result: `0xa36f71ec431f2ea858dfb36a5e97b474855347abfb1bcd96ff7641783a9a440f`
 
 The first Stage D opening created exactly the two approved read-only public previews. Provider readback, anonymous health, the arena, noncanonical practice, candidate-mutation denial, and internal-projection denial passed. The live check also exposed and corrected a tooling mismatch: `/` intentionally returns agent-readable plain text, while the Beacon verifier had attempted to parse it as JSON.
