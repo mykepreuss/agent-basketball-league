@@ -63,6 +63,10 @@ export type CandidateRuntimeScope =
       assignment: CandidateRuntimeAssignment;
     }
   | {
+      mode: "POST_GENESIS_SINGLE";
+      assignment: CandidateRuntimeAssignment;
+    }
+  | {
       mode: "CAPPED_FOUNDING";
       assignments: readonly CandidateRuntimeAssignment[];
     };
@@ -70,11 +74,21 @@ export type CandidateRuntimeScope =
 function parseRuntimeScope(
   scope: CandidateRuntimeScope,
 ): CandidateRuntimeScope {
-  if (scope.mode === "BOUNDED_SINGLE")
+  if (scope.mode !== "CAPPED_FOUNDING") {
+    const assignment = CandidateRuntimeAssignmentSchema.parse(scope.assignment);
+    if (
+      scope.mode === "POST_GENESIS_SINGLE" &&
+      assignment.fixedBrokerResourceName !==
+        candidateFixedBrokerName(assignment.applicationId)
+    )
+      throw new Error(
+        "Post-Genesis fixed-broker name is not application-derived",
+      );
     return {
       mode: scope.mode,
-      assignment: CandidateRuntimeAssignmentSchema.parse(scope.assignment),
+      assignment,
     };
+  }
   const assignments = parseCandidateRuntimeAssignments(scope.assignments);
   for (const value of [
     assignments.map(({ applicationId }) => applicationId),
@@ -121,6 +135,7 @@ export interface BlaxelCandidateControlPlaneOptions {
   imageReference: string;
   runtimeScope: CandidateRuntimeScope;
   authorizationId: string;
+  genesisEvidenceDigest?: string;
   fixedBrokerImageReference: string;
   memory?: number;
   factory?: CandidateSandboxFactory;
@@ -135,6 +150,7 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #imageReference: string;
   readonly #runtimeScope: CandidateRuntimeScope;
   readonly #authorizationId: string;
+  readonly #genesisEvidenceDigest: `0x${string}` | null;
   readonly #fixedBrokerImageReference: string;
   readonly #memory: number;
   readonly #factory: CandidateSandboxFactory;
@@ -152,6 +168,13 @@ export class BlaxelCandidateSandboxControlPlane
       .max(160)
       .regex(/^[A-Za-z0-9._:-]+$/)
       .parse(options.authorizationId);
+    this.#genesisEvidenceDigest =
+      this.#runtimeScope.mode === "POST_GENESIS_SINGLE"
+        ? (z
+            .string()
+            .regex(/^0x[0-9a-f]{64}$/)
+            .parse(options.genesisEvidenceDigest) as `0x${string}`)
+        : null;
     this.#fixedBrokerImageReference =
       ImmutableSandboxImageReferenceSchema.parse(
         options.fixedBrokerImageReference,
@@ -225,6 +248,11 @@ export class BlaxelCandidateSandboxControlPlane
       "abl-role-class": input.roleClass.toLowerCase(),
       "abl-command-commitment": input.commandCommitment.slice(2, 18),
       "abl-authorization": runtimeContractCommitment(this.#authorizationId),
+      ...(this.#genesisEvidenceDigest === null
+        ? {}
+        : {
+            "abl-genesis-evidence": this.#genesisEvidenceDigest.slice(2, 18),
+          }),
       "abl-runtime-contract": runtimeContractCommitment({
         applicationId: input.applicationId,
         authorizationId: this.#authorizationId,
@@ -233,6 +261,7 @@ export class BlaxelCandidateSandboxControlPlane
         memory: this.#memory,
         allowedDomains: [fixedBrokerHost],
         lifecycle: this.#runtimeScope.mode,
+        genesisEvidenceDigest: this.#genesisEvidenceDigest,
         envs,
       }),
     };
@@ -268,7 +297,7 @@ export class BlaxelCandidateSandboxControlPlane
       memory: this.#memory,
       labels,
       envs,
-      persistent: this.#runtimeScope.mode === "CAPPED_FOUNDING",
+      persistent: this.#runtimeScope.mode !== "BOUNDED_SINGLE",
     });
     return {
       state: "PROVISIONED_AWAITING_TRANSFER",
@@ -324,7 +353,7 @@ export class BlaxelCandidateSandboxControlPlane
   #assignment(applicationId: string): CandidateRuntimeAssignment {
     const id = z.uuid().parse(applicationId);
     let assignment: CandidateRuntimeAssignment | undefined;
-    if (this.#runtimeScope.mode === "BOUNDED_SINGLE") {
+    if (this.#runtimeScope.mode !== "CAPPED_FOUNDING") {
       if (this.#runtimeScope.assignment.applicationId === id)
         assignment = this.#runtimeScope.assignment;
     } else {

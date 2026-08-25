@@ -258,6 +258,112 @@ describe("candidate provisioner private boundary", () => {
     }
   });
 
+  it("provisions one persistent post-Genesis career without reopening the founding cap", async () => {
+    const applicationId = "0198e000-0000-7000-8000-000000000021";
+    const runtime = assignment(applicationId, "post-genesis-21");
+    let requested:
+      | Parameters<CandidateSandboxFactory["createIfNotExists"]>[0]
+      | undefined;
+    const factory: CandidateSandboxFactory = {
+      async get() {
+        return {
+          metadata: {
+            name: runtime.fixedBrokerResourceName,
+            externalId: applicationId,
+            workspace: "agent-basketball-league",
+          },
+          spec: {
+            enabled: true,
+            region: "us-was-1",
+            volumes: null,
+            runtime: {
+              image:
+                "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
+              ports: [{ name: "http", protocol: "HTTP", target: 3_000 }],
+            },
+          },
+        } as never;
+      },
+      async createIfNotExists(input) {
+        requested = input;
+        const resource = input as Extract<typeof input, { metadata: unknown }>;
+        return {
+          metadata: {
+            ...resource.metadata,
+            workspace: "agent-basketball-league",
+          },
+          spec: { ...resource.spec, volumes: null },
+        } as never;
+      },
+      async list() {
+        return { data: [] };
+      },
+      async delete() {},
+    };
+    const options = {
+      workspace: "agent-basketball-league",
+      region: "us-was-1",
+      imageReference: "sandbox/abl-alpha-r01-body-image:b05103ad9158991c22153",
+      runtimeScope: { mode: "POST_GENESIS_SINGLE", assignment: runtime },
+      authorizationId: "ABL-COMPLETION-01-POST-GENESIS-ADMISSION",
+      genesisEvidenceDigest: `0x${"a".repeat(64)}`,
+      fixedBrokerImageReference:
+        "sandbox/abl-alpha-r01-fixed-broker-image:11f8e87713b02c9446370",
+    } as const;
+    const controlPlane = new BlaxelCandidateSandboxControlPlane({
+      ...options,
+      factory,
+    });
+
+    await expect(
+      controlPlane.provision({
+        applicationId,
+        candidateDid: "did:abl:post-genesis-media-21",
+        roleClass: "MEDIA",
+        formerOperatorSigningAddress: `0x${"1".repeat(40)}`,
+        commandCommitment: `0x${"2".repeat(64)}`,
+      }),
+    ).resolves.toEqual({
+      state: "PROVISIONED_AWAITING_TRANSFER",
+      sandboxResourceName: candidateSandboxName(applicationId),
+    });
+    expect(requested).toMatchObject({
+      metadata: {
+        name: candidateSandboxName(applicationId),
+        externalId: applicationId,
+        labels: { "abl-runtime-contract": expect.any(String) },
+      },
+      spec: {
+        region: "us-was-1",
+        network: { allowedDomains: ["broker-post-genesis-21.example"] },
+      },
+    });
+    expect(
+      (requested as unknown as { spec: { lifecycle?: unknown } }).spec
+        .lifecycle,
+    ).toBeUndefined();
+
+    expect(
+      () =>
+        new BlaxelCandidateSandboxControlPlane({
+          ...options,
+          runtimeScope: {
+            mode: "POST_GENESIS_SINGLE",
+            assignment: {
+              ...runtime,
+              fixedBrokerResourceName: "operator-selected-broker",
+            },
+          },
+        }),
+    ).toThrow("not application-derived");
+
+    const { genesisEvidenceDigest: _genesisEvidenceDigest, ...withoutGenesis } =
+      options;
+    expect(
+      () => new BlaxelCandidateSandboxControlPlane(withoutGenesis),
+    ).toThrow();
+  });
+
   it("reports the configured live control-plane mode without claiming canonical authority", async () => {
     const app = createCandidateProvisionerServer({
       provisioner: {} as never,

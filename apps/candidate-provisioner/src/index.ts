@@ -2,6 +2,7 @@ import {
   CandidateIntakeRepository,
   CandidateProvisioner,
   DryRunCandidateControlPlane,
+  assessGenesisStartupEvidence,
   decryptCandidateEnvelope,
   parseCandidateIntakePolicy,
   type CandidateProvisioningRepository,
@@ -53,8 +54,12 @@ const controlPlaneMode = z
   .parse(process.env.ABL_CANDIDATE_CONTROL_PLANE_MODE ?? "DRY_RUN");
 const liveRuntimeScope =
   controlPlaneMode === "APPROVED_LIVE" ? candidateRuntimeScope() : null;
+const genesisEvidenceDigest =
+  liveRuntimeScope?.mode === "POST_GENESIS_SINGLE"
+    ? verifiedGenesisEvidenceDigest()
+    : undefined;
 const targetApplicationId =
-  liveRuntimeScope?.mode === "BOUNDED_SINGLE"
+  liveRuntimeScope !== null && liveRuntimeScope.mode !== "CAPPED_FOUNDING"
     ? liveRuntimeScope.assignment.applicationId
     : null;
 const controlPlane =
@@ -68,6 +73,9 @@ const controlPlane =
         authorizationId: required(
           "ABL_CANDIDATE_PROVISIONING_AUTHORIZATION_ID",
         ),
+        ...(genesisEvidenceDigest === undefined
+          ? {}
+          : { genesisEvidenceDigest }),
         fixedBrokerImageReference: required(
           "ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE",
         ),
@@ -103,7 +111,7 @@ const provisioner = new CandidateProvisioner({
 
 function candidateRuntimeScope(): CandidateRuntimeScope {
   const mode = z
-    .enum(["BOUNDED_SINGLE", "CAPPED_FOUNDING"])
+    .enum(["BOUNDED_SINGLE", "CAPPED_FOUNDING", "POST_GENESIS_SINGLE"])
     .parse(process.env.ABL_CANDIDATE_RUNTIME_SCOPE ?? "BOUNDED_SINGLE");
   if (mode === "CAPPED_FOUNDING")
     return {
@@ -128,6 +136,17 @@ function candidateRuntimeScope(): CandidateRuntimeScope {
       previewToken: required("ABL_CANDIDATE_FIXED_BROKER_PREVIEW_TOKEN"),
     },
   };
+}
+
+function verifiedGenesisEvidenceDigest(): `0x${string}` {
+  const assessment = assessGenesisStartupEvidence(
+    JSON.parse(required("ABL_GENESIS_STARTUP_EVIDENCE_JSON")),
+  );
+  if (!assessment.ready || assessment.evidenceDigest === null)
+    throw new Error(
+      `Post-Genesis provisioning evidence rejected: ${assessment.blockers.join("; ")}`,
+    );
+  return assessment.evidenceDigest;
 }
 if (process.env.ABL_CANDIDATE_PROVISIONER_MODE === "JOB") {
   blStartJob(async (candidate: unknown) => {

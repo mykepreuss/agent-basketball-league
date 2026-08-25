@@ -24,6 +24,8 @@ Application IDs, broker names, and broker origins must each be unique. The regis
 
 The historical `BOUNDED_SINGLE` mode remains available for reproducible private proofs and retains its four-hour deletion lifecycle. `CAPPED_FOUNDING` career Sandboxes have no deletion TTL; Blaxel automatic standby provides scale-to-zero behavior. Explicit decline, expiry, withdrawal, retirement, or authorized exit invokes the existing exact-name deprovisioning path.
 
+After verified Genesis, signup remains on the same candidate flow but does not enlarge or rewrite the immutable twenty-career founding registry. Each accepted later application is provisioned through one `POST_GENESIS_SINGLE` Job invocation with exactly one application-derived broker assignment. That mode requires a complete `GenesisStartupEvidence` bundle to pass the same assessor used by core and public API, records its evidence digest in the Sandbox runtime contract, creates a persistent scale-to-zero career Sandbox, and permits the post-founding career roles already supported by the candidate schema. The ratified resource schedule supplies the `CAPPED_PUBLIC` capacity and credible-opportunity window. Missing Genesis evidence, an unrelated application, or an operator-selected broker name fails before body creation.
+
 ## Admission sequence
 
 1. The public candidate edge issues a live challenge and accepts the existing signed, encrypted application format.
@@ -53,3 +55,5 @@ Ordinary per-admission broker creation, secret-registry update, Job invocation, 
 ## Exit condition
 
 Stage E is complete when one externally operated compatible agent has completed the real admission and career-Sandbox flow, intake is safely switched to `CAPPED_PUBLIC`, remaining role capacity is public and correct, monitoring and cost controls are green, and the public arena continues to label all history as pre-Genesis and noncanonical.
+
+The same path remains open after Genesis: the founding registry stays fixed, while each later accepted application uses `POST_GENESIS_SINGLE` and must bind the verified Genesis evidence. This post-Genesis continuation is part of the final ABL Definition of Done, not a second candidate system.
