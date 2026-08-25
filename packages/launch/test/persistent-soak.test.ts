@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   PersistentSoakPolicySchema,
   assessPersistentSoak,
+  composePersistentSoakEvidence,
   createReadOnlyBeaconLaunchState,
 } from "../src/persistent-soak.js";
 
@@ -323,6 +324,53 @@ describe("persistent private soak", () => {
       blockers: [],
       resultDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
     });
+  });
+
+  it("composes final evidence only from matching secret-free collectors", () => {
+    const inputs = collectorInputs();
+    const composed = composePersistentSoakEvidence({ policy, ...inputs });
+    expect(composed).toEqual(evidence());
+    expect(assessPersistentSoak(policy, composed).status).toBe("PASS");
+  });
+
+  it("accepts several service failures from the same failed sample run", () => {
+    const inputs = collectorInputs();
+    const services = structuredClone(inputs.samples.services);
+    services["abl-core-api"]!.failures = 1;
+    services["abl-public-api"]!.failures = 1;
+    const composed = composePersistentSoakEvidence({
+      policy,
+      ...inputs,
+      samples: { ...inputs.samples, failedRuns: 1, services },
+    });
+    expect(
+      composed.services.reduce((total, service) => total + service.failures, 0),
+    ).toBe(2);
+  });
+
+  it("rejects mismatched releases, unverified metrics, and failure drift", () => {
+    const inputs = collectorInputs();
+    expect(() =>
+      composePersistentSoakEvidence({
+        policy,
+        ...inputs,
+        metrics: { ...inputs.metrics, releaseId: "other-release" },
+      }),
+    ).toThrow("Stage C evidence release IDs do not match");
+    expect(() =>
+      composePersistentSoakEvidence({
+        policy,
+        ...inputs,
+        metrics: { ...inputs.metrics, finalProviderReadback: false },
+      }),
+    ).toThrow();
+    expect(() =>
+      composePersistentSoakEvidence({
+        policy,
+        ...inputs,
+        samples: { ...inputs.samples, failedRuns: 1 },
+      }),
+    ).toThrow("Stage C aggregate and per-service failures are inconsistent");
   });
 
   it("derives the evidence-bound read-only Beacon state only after Stage C passes", () => {
