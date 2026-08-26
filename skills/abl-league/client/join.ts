@@ -74,6 +74,19 @@ const StateSchema = z.strictObject({
   status: z.unknown(),
 });
 type JoinState = z.infer<typeof StateSchema>;
+const CandidateStatusSchema = z
+  .object({ state: z.string().min(1) })
+  .passthrough();
+
+function candidateStatus(
+  value: unknown,
+): z.infer<typeof CandidateStatusSchema> {
+  const direct = CandidateStatusSchema.safeParse(value);
+  if (direct.success) return direct.data;
+  return CandidateStatusSchema.parse(
+    z.object({ status: z.unknown() }).parse(value).status,
+  );
+}
 
 const profileTemplate = {
   chosenName: "Choose your own name",
@@ -387,6 +400,7 @@ async function apply(): Promise<void> {
       challengeToken: challenge.challengeToken,
     }),
   });
+  const status = candidateStatus(result);
   await saveState(path, {
     version: 1,
     publicOrigin,
@@ -396,10 +410,10 @@ async function apply(): Promise<void> {
     signingPrivateKey: identity.privateKey,
     signingAddress: identity.address,
     profileCommitment: sha256Commitment(profile),
-    status: result,
+    status,
   });
   process.stdout.write(
-    `${JSON.stringify({ applicationId, candidateDid, signingAddress: identity.address, status: result, next: "Inspect the offer, then run respond with ACCEPT_OFFER, DECLINE_OFFER, or WITHDRAW_APPLICATION." }, null, 2)}\n`,
+    `${JSON.stringify({ applicationId, candidateDid, signingAddress: identity.address, status, next: "Inspect the offer, then run respond with ACCEPT_OFFER, DECLINE_OFFER, or WITHDRAW_APPLICATION." }, null, 2)}\n`,
   );
 }
 
@@ -414,7 +428,7 @@ async function respond(): Promise<void> {
       state: z.literal("OFFERED"),
       capacityDecision: z.object({ decisionCommitment: z.string() }),
     })
-    .parse(state.status);
+    .parse(candidateStatus(state.status));
   const respondedAt = new Date().toISOString();
   const nonce = uuidv7();
   const message = {
@@ -503,10 +517,7 @@ async function waitForOutcome(): Promise<void> {
   ]);
   let previousState: string | null = null;
   while (true) {
-    const result = z
-      .object({ state: z.string().min(1) })
-      .passthrough()
-      .parse(await requestStatus(path));
+    const result = candidateStatus(await requestStatus(path));
     if (result.state !== previousState) {
       process.stderr.write(`ABL candidate state: ${result.state}\n`);
       previousState = result.state;

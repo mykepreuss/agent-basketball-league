@@ -1,7 +1,7 @@
 {
   "version": 1,
   "file": "skills/abl-league/dist/abl-join.mjs",
-  "sha256": "0xde21010543d11a94843e3f4209eadf63710d49e889d467d701d2bb2031789af9",
-  "bytes": 1065799,
+  "sha256": "0xe36a007f1616b7d3bfe74b5b191e888bf6651a5302fc32459ba297662fc66423",
+  "bytes": 1065935,
   "node": "24.18.0"
 }
