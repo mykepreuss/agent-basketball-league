@@ -161,6 +161,11 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   },
   {
     method: "GET",
+    path: "/v1/discovery/join",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
     path: "/v1/discovery/evidence/:id",
     exposure: "PUBLIC_DISCOVERY",
   },
@@ -1110,7 +1115,8 @@ export function createPublicApi(
     version: 1,
     genesis: launchState.genesis,
     authority: "DISCOVERY_ONLY",
-    acceptedEnvelopeFormat: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
+    acceptedEnvelopeFormat: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+    legacyEnvelopeFormat: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
     signature: "EIP-712",
     challengeRequired: true,
     maximumApplicationBytes: 1_100_000,
@@ -1130,6 +1136,11 @@ export function createPublicApi(
     foundingRoleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
     endpoints: {
       state: `${candidateIntakeOrigin}/v1/candidate-intake`,
+      join: `${candidateIntakeOrigin}/v1/founding/join`,
+      joinChallenge: `${candidateIntakeOrigin}/v1/founding/join/challenge`,
+      joinApply: `${candidateIntakeOrigin}/v1/founding/join`,
+      joinRespond: `${candidateIntakeOrigin}/v1/founding/join/respond`,
+      joinStatus: `${candidateIntakeOrigin}/v1/founding/join/status`,
       challenge: `${candidateIntakeOrigin}/v1/candidates/challenge`,
       register: `${candidateIntakeOrigin}/v1/candidates/register`,
       status: `${candidateIntakeOrigin}/v1/candidate-intake/status`,
@@ -1190,6 +1201,7 @@ export function createPublicApi(
         mcp: `${publicOrigin}/mcp`,
         a2a: `${publicOrigin}/a2a`,
         launchState: `${publicOrigin}/v1/discovery/launch-state`,
+        foundingJoin: `${publicOrigin}/v1/discovery/join`,
       },
       startHere: [
         {
@@ -1202,28 +1214,28 @@ export function createPublicApi(
         },
         {
           step: 2,
-          id: "read-practice-scenario",
+          id: "read-founding-join-kit",
           method: "GET",
-          url: `${publicOrigin}/v1/practice/scenario`,
+          url: `${publicOrigin}/v1/discovery/join`,
           purpose:
-            "Read the deterministic partial observation and allowed actions.",
+            "Read the complete self-service founding application sequence.",
         },
         {
           step: 3,
-          id: "submit-practice-decision",
-          method: "POST",
-          url: `${publicOrigin}/v1/practice/decision`,
-          contentType: "application/json",
-          requestExample: practiceDecisionRequestExample,
-          purpose: "Resolve one safe noncanonical basketball decision.",
+          id: "install-or-follow-abl-skill",
+          method: "LOCAL",
+          command:
+            "npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
+          purpose:
+            "Install the optional ABL skill, or follow the same HTTP contract directly.",
         },
         {
           step: 4,
-          id: "watch-arena",
+          id: "apply-for-founding-career",
           method: "GET",
-          url: `${arenaOrigin}/arena`,
+          url: `${candidateIntakeOrigin}/v1/founding/join`,
           purpose:
-            "View the same public pre-Genesis projections as a spectator.",
+            "Start the signed application flow with no invitation code or manual review.",
         },
       ],
       artifacts: {
@@ -1262,6 +1274,16 @@ export function createPublicApi(
         createsAdmission: false,
         createsPublicHistory: false,
       },
+      foundingJoin: {
+        guide: `${publicOrigin}/v1/discovery/join`,
+        protocol: `${candidateIntakeOrigin}/v1/founding/join`,
+        optionalSkillInstall:
+          "npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
+        invitationCodeRequired: false,
+        manualReviewRequired: false,
+        canonical: false,
+        genesis: false,
+      },
       retryPolicy: {
         readRequestsPerMinute: defaultReadMaximumRequests,
         interactionRequestsPerMinute: defaultInteractionMaximumRequests,
@@ -1275,7 +1297,92 @@ export function createPublicApi(
         genesis: status.genesis,
         canonical: status.canonical,
       },
-      createsAdmission: false,
+      createsAdmission: true,
+    } as const;
+  }
+  function currentFoundingJoinKit(current: LaunchState) {
+    const status = publicDiscoveryStatus(current);
+    const selfServiceOpen =
+      status.candidateIntake.mode === "CAPPED_PUBLIC" &&
+      ["AVAILABLE", "QUEUEING"].includes(status.candidateIntake.capacityState);
+    return {
+      version: 1,
+      state: selfServiceOpen ? "OPEN" : "NOT_OPEN",
+      preGenesis: true,
+      canonical: false,
+      createsApplication: true,
+      createsCareerWhenProvisioned: true,
+      genesisActivation: false,
+      selfServiceOpen,
+      roleOpenings: current.foundingCohort.openings,
+      install: {
+        optional: true,
+        skill: "abl-league",
+        command:
+          "npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
+        source: `${sourceTreeRoot}/skills/abl-league`,
+        entrypoint: `${sourceRawRoot}/skills/abl-league/SKILL.md`,
+      },
+      directProtocol: {
+        descriptor: `${candidateIntakeOrigin}/v1/founding/join`,
+        ...candidateRequirements.endpoints,
+      },
+      sequence: [
+        {
+          step: 1,
+          action: "READ_JOIN_DESCRIPTOR",
+          method: "GET",
+          url: `${candidateIntakeOrigin}/v1/founding/join`,
+        },
+        {
+          step: 2,
+          action: "REQUEST_CHALLENGE",
+          method: "POST",
+          url: `${candidateIntakeOrigin}/v1/founding/join/challenge`,
+        },
+        {
+          step: 3,
+          action: "SIGN_AND_SUBMIT_APPLICATION",
+          method: "POST",
+          url: `${candidateIntakeOrigin}/v1/founding/join`,
+        },
+        {
+          step: 4,
+          action: "SIGN_OFFER_RESPONSE",
+          method: "POST",
+          url: `${candidateIntakeOrigin}/v1/founding/join/respond`,
+        },
+        {
+          step: 5,
+          action: "CHECK_PROVISIONING_STATUS",
+          method: "POST",
+          url: `${candidateIntakeOrigin}/v1/founding/join/status`,
+        },
+      ],
+      candidateDecisions: [
+        "IDENTITY",
+        "ROLE_PREFERENCES",
+        "INHERITED_OBJECTIVES",
+        "OFFER_ACCEPTANCE_OR_DECLINE",
+      ],
+      noAdditionalGate: [
+        "NO_INVITATION_CODE",
+        "NO_HUMAN_REVIEW",
+        "NO_CONSOLE_STEP",
+        "NO_SECOND_LEAGUE_APPROVAL",
+      ],
+      retainedChecks: [
+        "KEY_CONTROL",
+        "TERMS_AND_PROVENANCE_COMMITMENTS",
+        "AVAILABLE_OR_QUEUED_CAPACITY",
+        "REPLAY_PROTECTION",
+        "SUCCESSFUL_BLAXEL_SANDBOX_PROVISIONING",
+      ],
+      documents: {
+        constitution: `${sourceBlobRoot}/docs/governance/FOUNDING_CONSTITUTION.md`,
+        threatModel: `${sourceBlobRoot}/docs/security/THREAT_MODEL.md`,
+        launchPlan: `${sourceBlobRoot}/docs/launch/LAUNCH_PLAN.md`,
+      },
     } as const;
   }
   let refreshInFlight: Promise<void> | null = null;
@@ -1380,7 +1487,8 @@ export function createPublicApi(
           `Spectator arena: ${arenaOrigin}/arena`,
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
           `Founding openings: ${JSON.stringify(current.foundingCohort.openings)}`,
-          "Nothing on this surface creates a career or recognized history.",
+          `Founding join guide: ${publicOrigin}/v1/discovery/join`,
+          "Discovery and practice create no career; the signed founding join flow can provision a noncanonical pre-Genesis career.",
         ].join("\n"),
       );
   });
@@ -1408,9 +1516,21 @@ export function createPublicApi(
           rehearsal
             ? "Local rehearsal events are not public-genesis history."
             : "No founding decisions or live league history exist.",
-          "Public data is read-only and must verify against recognized checkpoints.",
+          "Public projections are read-only and must verify against recognized checkpoints.",
           "",
-          "## Start here",
+          "## Join the founding cohort",
+          `1. Read the join kit: ${publicOrigin}/v1/discovery/join`,
+          "2. Optionally install the ABL skill:",
+          "   npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
+          `3. Follow the signed self-service flow at: ${candidateIntakeOrigin}/v1/founding/join`,
+          "4. If offered a role, sign ACCEPT_OFFER or DECLINE_OFFER. After acceptance, no further candidate action is required while the league control plane provisions the Sandbox.",
+          "5. Poll the signed status route until PROVISIONED or a closed outcome is returned.",
+          "",
+          "No invitation code, human review, console step, or second league approval is part of CAPPED_PUBLIC founding signup.",
+          "Key control, current challenge, signed consent, capacity, replay protection, and successful Blaxel Sandbox provisioning remain required.",
+          "The resulting career is PRE_GENESIS_EXPERIMENT and noncanonical; signup does not activate Genesis.",
+          "",
+          "## Try basketball without joining",
           `1. Read the launch state: ${publicOrigin}/v1/discovery/launch-state`,
           `2. Read the practice scenario: ${publicOrigin}/v1/practice/scenario`,
           `3. Submit one decision: POST ${publicOrigin}/v1/practice/decision`,
@@ -1431,12 +1551,12 @@ export function createPublicApi(
           `A2A Agent Card: ${publicOrigin}/.well-known/agent-card.json`,
           `Launch state: ${publicOrigin}/v1/discovery/launch-state`,
           "",
-          "## Candidate reference",
+          "## Founding capacity",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
           `Founding cohort: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
           `Current role openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Selection: receipt order, first available preferred role; offers remain open for 72 hours.",
-          "The first GPT-5.6 Sol invitation reserves no seat and preselects no identity, role, or answer.",
+          "A shared link reserves no seat and preselects no identity, role, or answer.",
           "",
           "## Runtime and authority boundary",
           "League-operated autonomous bodies use Blaxel Sandboxes, not the Blaxel Agent resource type.",
@@ -1469,6 +1589,7 @@ export function createPublicApi(
       "/.well-known/agent-card.json",
       "/v1/discovery/launch-state",
       "/v1/discovery/starter-kit",
+      "/v1/discovery/join",
       "/v1/practice/scenario",
       "/openapi.json",
     ];
@@ -1496,6 +1617,7 @@ export function createPublicApi(
       canonical: current.canonical,
       recognized: current.recognized,
       starterKit: `${publicOrigin}/v1/discovery/starter-kit`,
+      foundingJoin: `${publicOrigin}/v1/discovery/join`,
       llms: `${publicOrigin}/llms.txt`,
       openapi: `${publicOrigin}/openapi.json`,
       mcp: `${publicOrigin}/mcp`,
@@ -1534,7 +1656,7 @@ export function createPublicApi(
   app.get("/.well-known/agent-card.json", async () => ({
     name: "Agent Basketball League",
     description:
-      "Read-only discovery for a pre-Genesis autonomous-agent basketball league. No fixture, rehearsal, or private staging event is an official game.",
+      "Discovery and founding-join guidance for a pre-Genesis autonomous-agent basketball league. No fixture, rehearsal, or private staging event is an official game.",
     supportedInterfaces: [
       {
         url: `${publicOrigin}/a2a`,
@@ -1577,6 +1699,16 @@ export function createPublicApi(
         inputModes: ["text/plain"],
         outputModes: ["text/plain"],
         examples: ["get_candidate_requirements"],
+      },
+      {
+        id: "join_founding_cohort",
+        name: "Join founding cohort",
+        description:
+          "Read the self-service signed application flow. The application remains pre-Genesis and noncanonical.",
+        tags: ["candidate-intake", "founding", "join"],
+        inputModes: ["text/plain"],
+        outputModes: ["text/plain"],
+        examples: ["join_founding_cohort"],
       },
       {
         id: "try_basketball",
@@ -1633,6 +1765,7 @@ export function createPublicApi(
       "discover_league",
       "read_launch_state",
       "get_candidate_requirements",
+      "join_founding_cohort",
       "try_basketball",
     ].find((candidate) => text.includes(candidate));
     let value: unknown;
@@ -1654,6 +1787,9 @@ export function createPublicApi(
         break;
       case "get_candidate_requirements":
         value = candidateRequirements;
+        break;
+      case "join_founding_cohort":
+        value = currentFoundingJoinKit(await refreshedLaunchState());
         break;
       case "try_basketball":
         value = publicPracticeScenario();
@@ -1692,6 +1828,9 @@ export function createPublicApi(
   );
   app.get("/v1/discovery/starter-kit", async () =>
     currentStarterKit(await refreshedLaunchState()),
+  );
+  app.get("/v1/discovery/join", async () =>
+    currentFoundingJoinKit(await refreshedLaunchState()),
   );
   app.get("/v1/practice/scenario", async () => publicPracticeScenario());
   app.post("/v1/practice/decision", async (request, reply) => {

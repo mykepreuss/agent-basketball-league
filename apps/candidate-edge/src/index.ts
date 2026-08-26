@@ -22,6 +22,17 @@ assertCandidateEdgeIsolation(process.env);
 const mode = z
   .enum(["GATEWAY", "STORE"])
   .parse(process.env.ABL_CANDIDATE_EDGE_MODE ?? "STORE");
+const envelopeRecipient =
+  process.env.ABL_CANDIDATE_ENVELOPE_PUBLIC_KEY === undefined &&
+  process.env.ABL_CANDIDATE_ENVELOPE_KEY_ID === undefined
+    ? undefined
+    : {
+        keyId: required("ABL_CANDIDATE_ENVELOPE_KEY_ID"),
+        publicKey: z
+          .string()
+          .regex(/^[A-Za-z0-9_-]{43}$/)
+          .parse(required("ABL_CANDIDATE_ENVELOPE_PUBLIC_KEY")),
+      };
 const app =
   mode === "GATEWAY"
     ? createCandidateGateway({
@@ -43,6 +54,7 @@ const app =
           makeChallengeId: uuidv7,
           makeNonce: () => randomBytes(24).toString("base64url"),
         }),
+        ...(envelopeRecipient === undefined ? {} : { envelopeRecipient }),
         provisioningToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
         authorityToken: required("ABL_CANDIDATE_AUTHORITY_TOKEN"),
       });

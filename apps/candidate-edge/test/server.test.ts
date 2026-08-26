@@ -3,7 +3,7 @@ import { sha256Commitment } from "@abl/recognition";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CANDIDATE_EDGE_ROUTE_CATALOG,
@@ -22,6 +22,7 @@ afterEach(async () => {
 
 async function app(
   input: {
+    envelopeRecipient?: { keyId: string; publicKey: string };
     provisioningToken?: string;
     authorityToken?: string;
     rateLimit?: CandidateRateLimitOptions;
@@ -93,6 +94,123 @@ describe("candidate edge", () => {
       (await server.inject({ method: "POST", url: "/v1/core/command" }))
         .statusCode,
     ).toBe(404);
+    await server.close();
+  });
+
+  it("publishes a one-path founding join contract backed by the existing intake", async () => {
+    const server = await app({
+      envelopeRecipient: {
+        keyId: "abl-founding-intake-v1",
+        publicKey: "A".repeat(43),
+      },
+    });
+    const join = await server.inject({
+      method: "GET",
+      url: "/v1/founding/join",
+    });
+    expect(join.statusCode).toBe(200);
+    expect(join.json()).toMatchObject({
+      preGenesis: true,
+      canonical: false,
+      inviteCodeRequired: false,
+      manualReviewRequired: false,
+      candidateActionRequiredAfterAcceptance: false,
+      provisioningOwner: "LEAGUE_CONTROL_PLANE",
+      state: { mode: "CLOSED", capacityState: "CLOSED" },
+      envelopeRecipient: {
+        format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+        keyId: "abl-founding-intake-v1",
+        publicKey: "A".repeat(43),
+      },
+      endpoints: {
+        challenge: "/v1/founding/join/challenge",
+        apply: "/v1/founding/join",
+        respond: "/v1/founding/join/respond",
+        status: "/v1/founding/join/status",
+      },
+    });
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/v1/founding/join/challenge",
+          payload: { candidateDid: "did:abl:founding-candidate" },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/v1/founding/join",
+          payload: { unsigned: true },
+        })
+      ).json(),
+    ).toEqual({ error: "candidate_intake_request_rejected" });
+    await server.close();
+  });
+
+  it("rejects legacy and mismatched envelopes before they reach public intake", async () => {
+    const register = vi.fn();
+    const intake = {
+      register,
+      intakeState: vi.fn(),
+    } as unknown as CandidateIntakeService;
+    const server = createCandidateEdge({
+      intake,
+      envelopeRecipient: {
+        keyId: "abl-founding-intake-v1",
+        publicKey: "A".repeat(43),
+      },
+    });
+    const base = {
+      schemaVersion: "1.0.0",
+      applicationId: "0198e000-0000-7000-8000-000000000001",
+      candidateDid: "did:abl:founding-candidate",
+      requestedRoleClasses: ["PLAYER"],
+      challengeId: "0198e000-0000-7000-8000-000000000002",
+      challengeCommitment: `0x${"1".repeat(64)}`,
+      challengeExpiresAt: "2026-08-19T12:15:00.000Z",
+      manifestCommitment: `0x${"2".repeat(64)}`,
+      provenanceCommitment: `0x${"3".repeat(64)}`,
+      manifestSchemaDigest: `0x${"4".repeat(64)}`,
+      provenanceSchemaDigest: `0x${"5".repeat(64)}`,
+      formerOperatorSigningAddress: `0x${"6".repeat(40)}`,
+      submittedAt: "2026-08-19T12:00:00.000Z",
+      expiresAt: "2026-08-19T12:10:00.000Z",
+      signature: `0x${"7".repeat(130)}`,
+    };
+    const legacyEnvelope = {
+      format: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1" as const,
+      recipientKeyId: "legacy-key",
+      nonce: "0123456789abcdef01234567",
+      ciphertext: "ciphertext",
+      ciphertextCommitment: `0x${"8".repeat(64)}`,
+    };
+    const mismatchedEnvelope = {
+      format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1" as const,
+      recipientKeyId: "inactive-key",
+      ephemeralPublicKey: "B".repeat(43),
+      nonce: "0123456789abcdef01234567",
+      ciphertext: "ciphertext",
+      ciphertextCommitment: `0x${"8".repeat(64)}`,
+    };
+
+    for (const encryptedEnvelope of [legacyEnvelope, mismatchedEnvelope]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/v1/founding/join",
+        payload: {
+          application: { ...base, encryptedEnvelope },
+          challengeToken: "challenge-token",
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: "candidate_intake_request_rejected",
+      });
+    }
+    expect(register).not.toHaveBeenCalled();
     await server.close();
   });
 

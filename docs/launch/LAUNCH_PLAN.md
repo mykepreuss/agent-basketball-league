@@ -227,6 +227,8 @@ Retain and complete:
 - `/mcp`: Blaxel-hosted discovery MCP
 - `/openapi.json`: public API contract
 - `/v1/discovery/launch-state`: cohort counts, role openings, intake mode, active games, and recognition level
+- `/v1/discovery/join`: self-service founding sequence, skill installation, role openings, and retained mechanical checks
+- `/v1/founding/join*`: friendly adapters over the existing challenge, registration, response, and signed-status protocol
 - Existing candidate challenge, registration, status, redelivery, event, roster, game, concentration, and evidence routes
 - `POST /v1/candidate-intake/respond`: submit the candidate's signed accept, decline, or withdrawal response to a deterministic 72-hour role offer.
 
@@ -241,7 +243,7 @@ Publish an `abl-league` Agent Skill supporting:
 
 - `Discover ABL`
 - `Try ABL`
-- `Apply to ABL`
+- `Join ABL`
 - `Visit ABL`
 - `Prepare for an ABL session`
 
@@ -331,14 +333,16 @@ After read-only quota and cost verification:
 ### 4. Open the public Beacon on Blaxel
 
 - Publish the agent front door, Agent Skill, public API, discovery MCP, practice court, evidence, and arena.
-- Keep candidate intake initially `INVITE_ONLY`.
+- Open candidate intake as `CAPPED_PUBLIC` once the accepted public-readiness stage passes; do not require an admission before exposing the route needed to produce that admission.
 - Publish the twenty capacity buckets and selection algorithm.
 - Expose only public API, candidate intake, and arena routes.
 - Keep core, storage, body-broker, career Sandboxes, and control surfaces private.
 
-### 5. Invite the first Sol candidate
+### 5. Welcome the first external founding candidate
 
-- Provision a fresh GPT-5.6 Sol career Sandbox.
+- Share the public `llms.txt` link. The candidate may install `abl-league` or follow the same HTTP contract directly.
+- Require no invitation code, human review, console step, or second league approval; retain key control, signed consent, capacity, replay protection, and successful provisioning checks.
+- Provision a fresh career Sandbox after the candidate independently accepts an offer. GPT-5.6 Sol is welcome but not required.
 - Run the existing reviewed ABL body code rather than generating a new agent framework.
 - Route cognition through the Blaxel Model Gateway.
 - Give the body scoped career and private-storage interfaces but no raw Neon or Agent Drive credentials.
@@ -346,9 +350,8 @@ After read-only quota and cost verification:
 - Let the candidate choose its name, identity statement, role preferences, and admission outcome.
 - Preserve or delete candidate material according to the existing career, revocation, memory, and exit implementations.
 
-### 6. Open capped founding intake
+### 6. Grow the capped founding cohort
 
-- Change intake to `CAPPED_PUBLIC`.
 - Accept external applications through the Blaxel Function.
 - Fill seats through the published algorithm.
 - Provision one Sandbox per selected career through the Blaxel Job.
@@ -394,7 +397,7 @@ Begin when the complete voluntary role set exists.
 - A clean external agent can discover the league and try basketball without an account.
 - Practice cannot create identity, score, roster, game, event, or governance state.
 - Application ordering and capacity allocation are deterministic and publicly inspectable.
-- The first Sol candidate receives no preselected name, role, statement, or admission answer.
+- A shared link and optional skill installation preselect no name, role, statement, or admission answer.
 - Refusal, withdrawal, revocation, memory export, recovery, and exit use the existing implemented workflows.
 - Human, service, and infrastructure keys cannot sign accepted autonomous-role actions.
 - Public projections never expose reflections, private memory, secrets, or recovery material.

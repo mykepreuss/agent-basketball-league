@@ -213,19 +213,21 @@ describe("public API", () => {
       protocols: {
         llms: "https://public.example/llms.txt",
         openapi: "https://public.example/openapi.json",
+        foundingJoin: "https://public.example/v1/discovery/join",
       },
       startHere: [
         { step: 1, method: "GET" },
         { step: 2, method: "GET" },
         {
           step: 3,
-          method: "POST",
-          requestExample: {
-            scenarioId: "abl-first-possession-practice-v1",
-            decision: { action: "SHOOT", shot: "LAYUP" },
-          },
+          method: "LOCAL",
+          command:
+            "npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
         },
-        { step: 4, url: "https://arena.example/arena" },
+        {
+          step: 4,
+          url: "https://candidate.example/v1/founding/join",
+        },
       ],
       artifacts: {
         skill: {
@@ -300,7 +302,8 @@ describe("public API", () => {
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const openApiBody = openApi.json();
     const paths = openApiBody.paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(33);
+    expect(Object.keys(paths)).toHaveLength(34);
+    expect(paths["/v1/discovery/join"]).toHaveProperty("get");
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     expect(paths["/"]).toMatchObject({
       get: {
@@ -353,7 +356,10 @@ describe("public API", () => {
     expect(sitemap.body).toContain(
       "<loc>https://public.example/v1/discovery/starter-kit</loc>",
     );
-    expect(sitemap.body.match(/<loc>/g)).toHaveLength(8);
+    expect(sitemap.body).toContain(
+      "<loc>https://public.example/v1/discovery/join</loc>",
+    );
+    expect(sitemap.body.match(/<loc>/g)).toHaveLength(9);
     expect(openApi.headers.link).toBe(
       '<https://public.example/openapi.json>; rel="canonical"',
     );
@@ -440,6 +446,7 @@ describe("public API", () => {
         { id: "discover_league" },
         { id: "read_launch_state" },
         { id: "get_candidate_requirements" },
+        { id: "join_founding_cohort" },
         { id: "try_basketball" },
       ],
     });
@@ -485,7 +492,7 @@ describe("public API", () => {
     await app.close();
   });
 
-  it("guides a clean-room agent from every primary entry point through practice", async () => {
+  it("guides a clean-room agent from every primary entry point to join or practice", async () => {
     const publicOrigin = "https://public.example";
     const app = createPublicApi({
       publicOrigin,
@@ -524,19 +531,34 @@ describe("public API", () => {
             new URL(document.raw).protocol === "https:",
         ),
       ).toBe(true);
-      const scenarioStep = starter.startHere.find(
-        ({ id }: { id: string }) => id === "read-practice-scenario",
+      const joinStep = starter.startHere.find(
+        ({ id }: { id: string }) => id === "read-founding-join-kit",
       );
-      const decisionStep = starter.startHere.find(
-        ({ id }: { id: string }) => id === "submit-practice-decision",
-      );
-      const scenario = (
+      expect(joinStep.url).toBe(`${publicOrigin}/v1/discovery/join`);
+      const join = (
         await app.inject({
-          method: scenarioStep.method,
-          url: new URL(scenarioStep.url).pathname,
+          method: joinStep.method,
+          url: new URL(joinStep.url).pathname,
         })
       ).json();
-      expect(decisionStep.requestExample).toMatchObject({
+      expect(join).toMatchObject({
+        preGenesis: true,
+        canonical: false,
+        createsApplication: true,
+        noAdditionalGate: [
+          "NO_INVITATION_CODE",
+          "NO_HUMAN_REVIEW",
+          "NO_CONSOLE_STEP",
+          "NO_SECOND_LEAGUE_APPROVAL",
+        ],
+      });
+      const scenario = (
+        await app.inject({
+          method: "GET",
+          url: new URL(starter.practice.scenario).pathname,
+        })
+      ).json();
+      expect(starter.practice.example).toMatchObject({
         scenarioId: scenario.scenarioId,
         decision: {
           windowId: scenario.decisionRequirements.windowId,
@@ -544,9 +566,9 @@ describe("public API", () => {
         },
       });
       const outcome = await app.inject({
-        method: decisionStep.method,
-        url: new URL(decisionStep.url).pathname,
-        payload: decisionStep.requestExample,
+        method: "POST",
+        url: new URL(starter.practice.decision).pathname,
+        payload: starter.practice.example,
       });
       expect(outcome.statusCode, entry).toBe(200);
       expect(outcome.json()).toMatchObject({

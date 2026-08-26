@@ -135,6 +135,17 @@ export function createDiscoveryMcp(
         }),
     }),
     defineMcpTool({
+      name: "get_founding_join_kit",
+      description:
+        "Read the self-service founding application sequence, optional skill installation, capacity, and pre-Genesis boundary.",
+      inputSchema: EmptyInputSchema,
+      execute: () =>
+        requestPublicApi({
+          method: "GET",
+          path: "/v1/discovery/join",
+        }),
+    }),
+    defineMcpTool({
       name: "lookup_evidence",
       description: "Look up one allowlisted public evidence record by ID.",
       inputSchema: EvidenceInputSchema,

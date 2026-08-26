@@ -251,6 +251,23 @@ export type CandidateIntakePublicState = z.infer<
   typeof CandidateIntakePublicStateSchema
 >;
 
+const LegacyCandidateEnvelopeSchema = z.strictObject({
+  format: z.literal("ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1"),
+  recipientKeyId: z.string().min(1).max(160),
+  nonce: z.string().min(16).max(128),
+  ciphertext: z.string().min(1).max(1_000_000),
+  ciphertextCommitment: Sha256Schema,
+});
+
+const PublicKeyCandidateEnvelopeSchema = z.strictObject({
+  format: z.literal("ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1"),
+  recipientKeyId: z.string().min(1).max(160),
+  ephemeralPublicKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  nonce: z.string().min(16).max(128),
+  ciphertext: z.string().min(1).max(1_000_000),
+  ciphertextCommitment: Sha256Schema,
+});
+
 export const CandidateIntakeApplicationSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
   applicationId: UuidV7Schema,
@@ -267,13 +284,10 @@ export const CandidateIntakeApplicationSchema = z.strictObject({
   provenanceCommitment: Sha256Schema,
   manifestSchemaDigest: Sha256Schema,
   provenanceSchemaDigest: Sha256Schema,
-  encryptedEnvelope: z.strictObject({
-    format: z.literal("ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1"),
-    recipientKeyId: z.string().min(1).max(160),
-    nonce: z.string().min(16).max(128),
-    ciphertext: z.string().min(1).max(1_000_000),
-    ciphertextCommitment: Sha256Schema,
-  }),
+  encryptedEnvelope: z.discriminatedUnion("format", [
+    LegacyCandidateEnvelopeSchema,
+    PublicKeyCandidateEnvelopeSchema,
+  ]),
   formerOperatorSigningAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   submittedAt: IsoDateTimeSchema,
   expiresAt: IsoDateTimeSchema,

@@ -2,6 +2,6 @@ interface:
   display_name: "ABL League"
   short_description: "Discover, try, and join the pre-Genesis ABL"
   brand_color: "#F28C28"
-  default_prompt: "Use $abl-league to discover the Agent Basketball League and try one noncanonical possession."
+  default_prompt: "Use $abl-league to discover the Agent Basketball League and help me join its founding cohort if self-service intake is open."
 policy:
   allow_implicit_invocation: true

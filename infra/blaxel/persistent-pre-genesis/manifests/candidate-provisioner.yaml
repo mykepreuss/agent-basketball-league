@@ -35,6 +35,9 @@ spec:
       - name: ABL_CANDIDATE_ENVELOPE_KEY
         value: ${ABL_CANDIDATE_ENVELOPE_KEY}
         secret: true
+      - name: ABL_CANDIDATE_ENVELOPE_KEY_ID
+        value: ${ABL_CANDIDATE_ENVELOPE_KEY_ID}
+        secret: false
       - name: ABL_CANDIDATE_COMMAND_DOMAIN_JSON
         value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
         secret: false
