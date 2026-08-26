@@ -67,6 +67,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { PUBLIC_ROUTE_CATALOG, createPublicApi } from "../src/server.js";
+import { requiresIndependentlyWitnessedCheckpoints } from "../src/recognition-gate.js";
 
 function candidateRoleCounts(
   values: Partial<Record<CandidateRoleClass, number>> = {},
@@ -173,6 +174,15 @@ function candidateStateFetch(state: unknown): typeof fetch {
 }
 
 describe("public API", () => {
+  it("does not require witnessed checkpoints for Founding Season", () => {
+    expect(requiresIndependentlyWitnessedCheckpoints("FOUNDING_SEASON")).toBe(
+      false,
+    );
+    expect(
+      requiresIndependentlyWitnessedCheckpoints("PRODUCTION_V1_PRE_GENESIS"),
+    ).toBe(true);
+  });
+
   it("reports launch classification through its operational health route", async () => {
     const app = createPublicApi();
     expect(

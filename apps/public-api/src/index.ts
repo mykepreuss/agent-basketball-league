@@ -74,6 +74,7 @@ import {
   ViemBaseCheckpointObservationReader,
   createBaseCheckpointRpc,
 } from "./base-checkpoints.js";
+import { requiresIndependentlyWitnessedCheckpoints } from "./recognition-gate.js";
 import { COMPILED_RECOGNITION_ANCHOR } from "./recognition-anchor.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -715,10 +716,7 @@ if (
   launchState.operatingProfile !== operatingProfile
 )
   throw new Error("Launch state and operating profile do not match");
-if (
-  operatingProfile === "PRODUCTION_V1_PRE_GENESIS" ||
-  operatingProfile === "FOUNDING_SEASON"
-) {
+if (requiresIndependentlyWitnessedCheckpoints(operatingProfile)) {
   const checkpoints = checkpointProjections?.checkpoints() ?? [];
   if (
     checkpoints.length === 0 ||
