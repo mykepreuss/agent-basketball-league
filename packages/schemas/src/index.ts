@@ -369,6 +369,23 @@ export const CandidateProvisioningReceiptSchema = z.strictObject({
   receiptCommitment: Sha256Schema,
 });
 
+export const CandidateRuntimeIdentityReceiptSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  roleClass: CandidateRoleClassSchema,
+  signingPublicKey: Secp256k1PublicKeySchema,
+  signingAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  encryptionPublicKey: X25519PublicKeySchema,
+  signingKeyAttestation: Sha256Schema,
+  encryptionKeyAttestation: Sha256Schema,
+  runtimeAttestationDigest: Sha256Schema,
+  generatedInIsolatedRuntime: z.literal(true),
+  humanInputRoutes: z.tuple([]),
+  createdAt: IsoDateTimeSchema,
+  proofSignature: Eip712SignatureSchema,
+});
+
 export const CandidateIntakeStatusSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
   applicationId: UuidV7Schema,
@@ -1466,6 +1483,7 @@ export const schemaRegistry = {
   CandidateCapacityDecision: CandidateCapacityDecisionSchema,
   CandidateOpportunityResponse: CandidateOpportunityResponseSchema,
   CandidateProvisioningReceipt: CandidateProvisioningReceiptSchema,
+  CandidateRuntimeIdentityReceipt: CandidateRuntimeIdentityReceiptSchema,
   CandidateIntakeStatus: CandidateIntakeStatusSchema,
   LaunchState: LaunchStateSchema,
   RecognitionNetworkProfile: RecognitionNetworkProfileSchema,

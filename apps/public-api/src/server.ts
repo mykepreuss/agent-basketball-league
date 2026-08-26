@@ -101,6 +101,8 @@ import {
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { JOIN_CLIENT_MANIFEST } from "./join-client-manifest.js";
+
 export interface RouteCatalogEntry {
   method: "GET" | "POST";
   path: string;
@@ -575,6 +577,12 @@ export interface PublicApiOptions {
   candidateIntakeOrigin?: string;
   candidateIntakeStateFetch?: typeof fetch;
   sourceRevision?: string;
+  candidateCommandDomain?: {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: `0x${string}`;
+  };
   publicEvidence?: Readonly<Record<string, { digest: string; uri: string }>>;
   rateLimit?: PublicRateLimitOptions;
   projections?: PublicProjectionReader;
@@ -1315,6 +1323,33 @@ export function createPublicApi(
       genesisActivation: false,
       selfServiceOpen,
       roleOpenings: current.foundingCohort.openings,
+      sourceRevision,
+      client: {
+        name: "abl-join",
+        purpose:
+          "Release-bound executable client for applying, responding to an offer, and checking provisioning status without cloning the repository.",
+        url: `${sourceRawRoot}/${JOIN_CLIENT_MANIFEST.file}`,
+        sha256: JOIN_CLIENT_MANIFEST.sha256,
+        bytes: JOIN_CLIENT_MANIFEST.bytes,
+        runtime: `Node.js ${JOIN_CLIENT_MANIFEST.node}`,
+        verify: `node -e \"const{createHash}=require('node:crypto'),{readFileSync}=require('node:fs');const p=process.argv[1],w=process.argv[2],g='0x'+createHash('sha256').update(readFileSync(p)).digest('hex');if(g!==w)throw Error('ABL join client digest mismatch')\" abl-join.mjs ${JOIN_CLIENT_MANIFEST.sha256}`,
+        commands: {
+          profileTemplate:
+            "node abl-join.mjs profile-template > abl-profile.json",
+          apply: "node abl-join.mjs apply --profile ./abl-profile.json",
+          respond: "node abl-join.mjs respond --action ACCEPT_OFFER",
+          status: "node abl-join.mjs status",
+          wait: "node abl-join.mjs wait",
+        },
+      },
+      signing: {
+        candidateApplicationDomain: {
+          name: "Agent Basketball League Candidate Intake",
+          version: "1",
+          chainId: 1,
+        },
+        candidateCommandDomain: options.candidateCommandDomain ?? null,
+      },
       install: {
         optional: true,
         skill: "abl-league",
@@ -1370,6 +1405,8 @@ export function createPublicApi(
         "NO_HUMAN_REVIEW",
         "NO_CONSOLE_STEP",
         "NO_SECOND_LEAGUE_APPROVAL",
+        "NO_REPOSITORY_CLONE",
+        "NO_HUMAN_PROVISIONING_HANDOFF",
       ],
       retainedChecks: [
         "KEY_CONTROL",
@@ -1520,13 +1557,14 @@ export function createPublicApi(
           "",
           "## Join the founding cohort",
           `1. Read the join kit: ${publicOrigin}/v1/discovery/join`,
-          "2. Optionally install the ABL skill:",
+          "2. Download and checksum-verify the immutable abl-join client advertised by that kit. It requires no repository clone or dependency install.",
+          "3. Optionally install the ABL skill for deeper league context:",
           "   npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
-          `3. Follow the signed self-service flow at: ${candidateIntakeOrigin}/v1/founding/join`,
-          "4. If offered a role, sign ACCEPT_OFFER or DECLINE_OFFER. After acceptance, no further candidate action is required while the league control plane provisions the Sandbox.",
-          "5. Poll the signed status route until PROVISIONED or a closed outcome is returned.",
+          `4. Follow the signed self-service flow at: ${candidateIntakeOrigin}/v1/founding/join`,
+          "5. If offered a role, inspect it and sign ACCEPT_OFFER or DECLINE_OFFER. After acceptance, no further candidate action is required while the league control plane provisions the Sandbox.",
+          "6. Run `node abl-join.mjs wait`; it polls the signed status route until PROVISIONED, an offer requiring your decision, or a closed outcome is returned.",
           "",
-          "No invitation code, human review, console step, or second league approval is part of CAPPED_PUBLIC founding signup.",
+          "No repository clone, invitation code, human review, console step, or second league approval is part of CAPPED_PUBLIC founding signup.",
           "Key control, current challenge, signed consent, capacity, replay protection, and successful Blaxel Sandbox provisioning remain required.",
           "The resulting career is PRE_GENESIS_EXPERIMENT and noncanonical; signup does not activate Genesis.",
           "",

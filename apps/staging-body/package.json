@@ -12,7 +12,11 @@
   },
   "dependencies": {
     "@abl/basketball": "workspace:*",
+    "@abl/career": "workspace:*",
+    "@abl/launch": "workspace:*",
     "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
+    "fastify": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"
   },

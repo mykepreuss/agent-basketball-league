@@ -1,11 +1,22 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { SandboxInstance } from "@blaxel/core";
 import {
   ImmutableSandboxImageReferenceSchema,
+  verifyCandidateRuntimeIdentityReceipt,
   type CandidateRoleClass,
   type CandidateSandboxControlPlane,
 } from "@abl/launch";
+import {
+  CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
+  CANDIDATE_WORKFLOW_AGGREGATE_TYPE,
+  applyCandidateTransition,
+  candidateStateRoot,
+} from "@abl/career";
+import { SignedCanonicalCommandSchema } from "@abl/schemas";
+import { createCanonicalEvent, type CanonicalEvent } from "@abl/recognition";
+import { v5 as uuidv5 } from "uuid";
+import type { Hex, TypedDataDomain } from "viem";
 import { z } from "zod";
 
 const WorkspaceNameSchema = z
@@ -69,11 +80,15 @@ export type CandidateRuntimeScope =
   | {
       mode: "CAPPED_FOUNDING";
       assignments: readonly CandidateRuntimeAssignment[];
+    }
+  | {
+      mode: "CAPPED_FOUNDING_AUTO";
     };
 
 function parseRuntimeScope(
   scope: CandidateRuntimeScope,
 ): CandidateRuntimeScope {
+  if (scope.mode === "CAPPED_FOUNDING_AUTO") return scope;
   if (scope.mode !== "CAPPED_FOUNDING") {
     const assignment = CandidateRuntimeAssignmentSchema.parse(scope.assignment);
     if (
@@ -137,6 +152,9 @@ export interface BlaxelCandidateControlPlaneOptions {
   authorizationId: string;
   genesisEvidenceDigest?: string;
   fixedBrokerImageReference: string;
+  coreOrigin?: string;
+  corePreviewToken?: string;
+  candidateCommandDomain?: TypedDataDomain;
   memory?: number;
   factory?: CandidateSandboxFactory;
 }
@@ -152,6 +170,9 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #authorizationId: string;
   readonly #genesisEvidenceDigest: `0x${string}` | null;
   readonly #fixedBrokerImageReference: string;
+  readonly #coreOrigin: string | null;
+  readonly #corePreviewToken: string | null;
+  readonly #candidateCommandDomain: TypedDataDomain | null;
   readonly #memory: number;
   readonly #factory: CandidateSandboxFactory;
 
@@ -179,6 +200,21 @@ export class BlaxelCandidateSandboxControlPlane
       ImmutableSandboxImageReferenceSchema.parse(
         options.fixedBrokerImageReference,
       );
+    this.#coreOrigin =
+      options.coreOrigin === undefined
+        ? null
+        : HttpsOriginSchema.parse(options.coreOrigin);
+    this.#corePreviewToken = options.corePreviewToken ?? null;
+    this.#candidateCommandDomain = options.candidateCommandDomain ?? null;
+    if (
+      this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO" &&
+      (this.#coreOrigin === null ||
+        this.#corePreviewToken === null ||
+        this.#candidateCommandDomain === null)
+    )
+      throw new Error(
+        "Automatic founding provisioning requires core authority",
+      );
     this.#memory = z
       .number()
       .int()
@@ -194,10 +230,14 @@ export class BlaxelCandidateSandboxControlPlane
     roleClass: CandidateRoleClass;
     formerOperatorSigningAddress: string;
     commandCommitment: `0x${string}`;
+    candidateCommand?: unknown;
   }): Promise<{
-    state: "PROVISIONED_AWAITING_TRANSFER";
+    state: "PROVISIONED_AWAITING_TRANSFER" | "ISOLATED_TRANSFER_COMPLETE";
     sandboxResourceName: string;
+    formerOperatorAccessRemovedAt?: string | null;
   }> {
+    if (this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO")
+      return this.#provisionAutomatically(input);
     const assignment = this.#assignment(input.applicationId);
     if (
       this.#runtimeScope.mode === "CAPPED_FOUNDING" &&
@@ -305,6 +345,305 @@ export class BlaxelCandidateSandboxControlPlane
     };
   }
 
+  async #provisionAutomatically(input: {
+    applicationId: string;
+    candidateDid: string;
+    roleClass: CandidateRoleClass;
+    formerOperatorSigningAddress: string;
+    commandCommitment: `0x${string}`;
+    candidateCommand?: unknown;
+  }): Promise<{
+    state: "ISOLATED_TRANSFER_COMPLETE";
+    sandboxResourceName: string;
+    formerOperatorAccessRemovedAt: string;
+  }> {
+    if (!FoundingRoleClass.safeParse(input.roleClass).success)
+      throw new Error("Capped founding runtime rejects a non-founding role");
+    const registeredCommand = SignedCanonicalCommandSchema.parse(
+      input.candidateCommand,
+    );
+    const registrationEvent = materializeEvent(registeredCommand.event);
+    if (
+      registrationEvent.aggregateType !== CANDIDATE_WORKFLOW_AGGREGATE_TYPE ||
+      registrationEvent.eventType !== "CandidateRegistered" ||
+      registrationEvent.actorDid !== input.candidateDid ||
+      registrationEvent.aggregateId !== input.candidateDid ||
+      registrationEvent.aggregateVersion !== 1n
+    )
+      throw new Error("Candidate registration command is not transferable");
+    await this.#submitCoreCommand("/v1/candidates/register", registeredCommand);
+    const registration = applyCandidateTransition(null, {
+      candidateDid: input.candidateDid,
+      eventType: "CandidateRegistered",
+      aggregateVersion: 1n,
+      timestamp: registrationEvent.timestamp,
+      payload: registrationEvent.payload,
+    });
+
+    const capabilityToken = randomBytes(32).toString("base64url");
+    const capabilityExpiresAt = new Date(
+      Date.now() + 4 * 60 * 60 * 1_000,
+    ).toISOString();
+    const brokerName = candidateFixedBrokerName(input.applicationId);
+    const brokerEnvs = [
+      environment("HOST", "0.0.0.0"),
+      environment("PORT", "3000"),
+      environment("ABL_CORE_ROUTE_MODE", "DISABLED"),
+      environment("ABL_PRIVATE_ROUTE_MODE", "DISABLED"),
+      environment("ABL_MODEL_ROUTE_MODE", "DISABLED"),
+      environment("ABL_CANONICAL_SIGNING_MODE", "DISABLED"),
+      environment("ABL_AGENT_DID", input.candidateDid),
+      environment("ABL_SERVICE_ID", `candidate-${input.applicationId}`),
+      environment("ABL_BODY_CAPABILITY_EXPIRES_AT", capabilityExpiresAt),
+      environment(
+        "ABL_BODY_CAPABILITY_TOKEN_B64",
+        Buffer.from(capabilityToken).toString("base64"),
+        true,
+      ),
+      environment(
+        "ABL_SERVICE_CREDENTIAL_B64",
+        randomBytes(32).toString("base64"),
+        true,
+      ),
+      environment("DO_NOT_TRACK", "1"),
+      environment("BL_ENABLE_OPENTELEMETRY", "false"),
+      environment("TELEMETRY_ENABLED", "false"),
+      environment("ABL_LOG_CONTENT", "false"),
+    ];
+    const broker = await this.#factory.createIfNotExists({
+      metadata: {
+        name: brokerName,
+        displayName: `ABL broker ${input.applicationId.slice(0, 8)}`,
+        externalId: input.applicationId,
+        labels: {
+          "abl-workspace-role": "competition-fixed-broker",
+          "abl-runtime-resource": "sandbox",
+          "abl-application": input.applicationId
+            .replaceAll("-", "")
+            .slice(0, 16),
+          "abl-authorization": runtimeContractCommitment(this.#authorizationId),
+        },
+      },
+      spec: {
+        enabled: true,
+        region: this.#region,
+        network: { allowedDomains: [] },
+        runtime: {
+          image: this.#fixedBrokerImageReference,
+          memory: 1_024,
+          ports: [{ name: "http", protocol: "HTTP", target: 3_000 }],
+          envs: brokerEnvs,
+        },
+      },
+    });
+    assertFixedBroker({
+      sandbox: broker,
+      resourceName: brokerName,
+      applicationId: input.applicationId,
+      workspace: this.#workspace,
+      region: this.#region,
+      imageReference: this.#fixedBrokerImageReference,
+    });
+    await broker.process.exec({
+      name: "abl-fixed-broker",
+      command: "node dist/index.js",
+      workingDir: "/opt/abl",
+      waitForCompletion: false,
+      waitForPorts: [3_000],
+      keepAlive: true,
+      timeout: 0,
+      restartOnFailure: true,
+      maxRestarts: -1,
+    });
+    const brokerPreview = await broker.previews.createIfNotExists({
+      metadata: { name: `${brokerName}-private` },
+      spec: { port: 3_000, public: false },
+    });
+    const brokerOrigin = HttpsOriginSchema.parse(brokerPreview.spec.url);
+    const brokerPreviewToken = await brokerPreview.tokens.create(
+      new Date(capabilityExpiresAt),
+    );
+
+    const fixedBrokerHost = new URL(brokerOrigin).hostname;
+    const resourceName = candidateSandboxName(input.applicationId);
+    const envs = [
+      environment("HOST", "0.0.0.0"),
+      environment("PORT", "3000"),
+      environment("ABL_RUNTIME_RESOURCE_TYPE", "SANDBOX"),
+      environment("ABL_BODY_RUNTIME_MODE", "FOUNDING_CAREER"),
+      environment("ABL_APPLICATION_ID", input.applicationId),
+      environment("ABL_AGENT_DID", input.candidateDid),
+      environment("ABL_ROLE_CLASS", input.roleClass),
+      environment("ABL_RUNTIME_IMAGE_REFERENCE", this.#imageReference),
+      environment(
+        "ABL_CANDIDATE_COMMAND_DOMAIN_JSON",
+        JSON.stringify(this.#candidateCommandDomain),
+      ),
+      environment("ABL_FIXED_BROKER_ORIGIN", brokerOrigin),
+      environment(
+        "ABL_FIXED_BROKER_PREVIEW_TOKEN",
+        brokerPreviewToken.value,
+        true,
+      ),
+      environment("ABL_FIXED_BROKER_CAPABILITY_TOKEN", capabilityToken, true),
+      environment("BL_SANDBOX_USER_ENABLED", "true"),
+      environment("DO_NOT_TRACK", "1"),
+      environment("BL_ENABLE_OPENTELEMETRY", "false"),
+      environment("TELEMETRY_ENABLED", "false"),
+      environment("ABL_LOG_CONTENT", "false"),
+    ];
+    const labels = {
+      "abl-workspace-role": "competition-career-body",
+      "abl-runtime-resource": "sandbox",
+      "abl-role-class": input.roleClass.toLowerCase(),
+      "abl-command-commitment": input.commandCommitment.slice(2, 18),
+      "abl-authorization": runtimeContractCommitment(this.#authorizationId),
+      "abl-runtime-contract": runtimeContractCommitment({
+        applicationId: input.applicationId,
+        authorizationId: this.#authorizationId,
+        image: this.#imageReference,
+        region: this.#region,
+        memory: this.#memory,
+        allowedDomains: [fixedBrokerHost],
+        lifecycle: "CAPPED_FOUNDING_AUTO",
+        envs: environmentContract(envs),
+      }),
+    };
+    const sandbox = await this.#factory.createIfNotExists({
+      metadata: {
+        name: resourceName,
+        displayName: `ABL career ${input.applicationId.slice(0, 8)}`,
+        externalId: input.applicationId,
+        labels,
+      },
+      spec: {
+        enabled: true,
+        region: this.#region,
+        network: { allowedDomains: [fixedBrokerHost] },
+        runtime: {
+          image: this.#imageReference,
+          memory: this.#memory,
+          ports: [{ name: "http", protocol: "HTTP", target: 3_000 }],
+          envs,
+        },
+      },
+    });
+    assertReturnedSandbox({
+      sandbox,
+      resourceName,
+      workspace: this.#workspace,
+      region: this.#region,
+      imageReference: this.#imageReference,
+      fixedBrokerHost,
+      applicationId: input.applicationId,
+      memory: this.#memory,
+      labels,
+      envs,
+      persistent: true,
+    });
+    await sandbox.process.exec({
+      name: "abl-career-runtime",
+      command: "node dist/index.js",
+      workingDir: "/opt/abl",
+      waitForCompletion: false,
+      waitForPorts: [3_000],
+      keepAlive: true,
+      timeout: 0,
+      restartOnFailure: true,
+      maxRestarts: -1,
+    });
+    const identityResponse = await sandbox.fetch(3_000, "/v1/career/identity");
+    if (!identityResponse.ok)
+      throw new Error("Candidate career identity readback failed");
+    const identity = await verifyCandidateRuntimeIdentityReceipt({
+      receipt: await identityResponse.json(),
+      applicationId: input.applicationId,
+      candidateDid: input.candidateDid,
+      roleClass: input.roleClass,
+      formerOperatorSigningAddress: input.formerOperatorSigningAddress,
+    });
+    const transferredAt = identity.createdAt;
+    const transferPayload = {
+      signingPublicKey: identity.signingPublicKey,
+      signingAddress: identity.signingAddress,
+      encryptionPublicKey: identity.encryptionPublicKey,
+      signingKeyAttestation: identity.signingKeyAttestation,
+      encryptionKeyAttestation: identity.encryptionKeyAttestation,
+      runtimeAttestationDigest: identity.runtimeAttestationDigest,
+      generatedInIsolatedRuntime: true as const,
+      humanInputRoutes: [] as const,
+      invokedContextHashes:
+        registration.registration.manifest.suppliedContextHashes,
+      transferredAt,
+    };
+    const transferred = applyCandidateTransition(registration, {
+      candidateDid: input.candidateDid,
+      eventType: "CandidateTransferred",
+      aggregateVersion: 2n,
+      timestamp: transferredAt,
+      payload: transferPayload,
+    });
+    const transferEvent = createCanonicalEvent({
+      eventId: transferUuid(input.applicationId, "event"),
+      actorDid: input.candidateDid,
+      nonce: transferUuid(input.applicationId, "nonce"),
+      idempotencyKey: transferUuid(input.applicationId, "idempotency"),
+      aggregateType: CANDIDATE_WORKFLOW_AGGREGATE_TYPE,
+      aggregateId: input.candidateDid,
+      aggregateVersion: 2n,
+      eventType: "CandidateTransferred",
+      previousEventHash: registrationEvent.eventHash,
+      payload: transferPayload,
+      stateRoot: candidateStateRoot(transferred),
+      schemaDigest: CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
+      timestamp: transferredAt,
+    });
+    const signingResponse = await sandbox.fetch(
+      3_000,
+      "/v1/career/sign-transfer",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ event: wireEvent(transferEvent) }),
+      },
+    );
+    if (!signingResponse.ok)
+      throw new Error("Candidate isolated transfer signature failed");
+    const signed = z
+      .strictObject({
+        eventHash: z.literal(transferEvent.eventHash),
+        signerAddress: z.literal(identity.signingAddress),
+        signature: z.string().regex(/^0x[0-9a-f]{130}$/),
+      })
+      .parse(await signingResponse.json());
+    await this.#submitCoreCommand("/v1/candidates/transfer", {
+      event: wireEvent(transferEvent),
+      signatures: [signed.signature],
+    });
+    return {
+      state: "ISOLATED_TRANSFER_COMPLETE",
+      sandboxResourceName: resourceName,
+      formerOperatorAccessRemovedAt: transferredAt,
+    };
+  }
+
+  async #submitCoreCommand(path: string, command: unknown): Promise<void> {
+    if (this.#coreOrigin === null || this.#corePreviewToken === null)
+      throw new Error("Candidate core route is not configured");
+    const response = await fetch(new URL(path, this.#coreOrigin), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-blaxel-preview-token": this.#corePreviewToken,
+      },
+      body: JSON.stringify(command),
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok)
+      throw new Error(`Candidate core transition failed: ${response.status}`);
+  }
+
   async deprovision(input: {
     applicationId: string;
     sandboxResourceName: string;
@@ -312,13 +651,14 @@ export class BlaxelCandidateSandboxControlPlane
     state: "DEPROVISIONED" | "ALREADY_ABSENT";
     removedResourceNames: readonly string[];
   }> {
-    const assignment = this.#assignment(input.applicationId);
     const expectedBodyName = candidateSandboxName(input.applicationId);
     if (input.sandboxResourceName !== expectedBodyName)
       throw new Error("Provisioning receipt names another Sandbox");
     const expectedNames = [
       expectedBodyName,
-      assignment.fixedBrokerResourceName,
+      this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO"
+        ? candidateFixedBrokerName(input.applicationId)
+        : this.#assignment(input.applicationId).fixedBrokerResourceName,
     ];
     const page = await this.#factory.list({
       externalId: input.applicationId,
@@ -352,6 +692,8 @@ export class BlaxelCandidateSandboxControlPlane
 
   #assignment(applicationId: string): CandidateRuntimeAssignment {
     const id = z.uuid().parse(applicationId);
+    if (this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO")
+      throw new Error("Automatic founding provisioning has no assignment");
     let assignment: CandidateRuntimeAssignment | undefined;
     if (this.#runtimeScope.mode !== "CAPPED_FOUNDING") {
       if (this.#runtimeScope.assignment.applicationId === id)
@@ -369,6 +711,41 @@ export class BlaxelCandidateSandboxControlPlane
 
 function environment(name: string, value: string, secret = false) {
   return { name, value, secret };
+}
+
+function environmentContract(
+  envs: Array<{ name: string; value: string; secret: boolean }>,
+) {
+  return envs.map(({ name, value, secret }) => ({
+    name,
+    value: secret ? "SECRET" : value,
+    secret,
+  }));
+}
+
+function materializeEvent(
+  event: z.infer<typeof SignedCanonicalCommandSchema>["event"],
+): CanonicalEvent {
+  return {
+    ...event,
+    aggregateVersion: BigInt(event.aggregateVersion),
+    previousEventHash: event.previousEventHash as Hex | null,
+    payloadCommitment: event.payloadCommitment as Hex,
+    stateRoot: event.stateRoot as Hex,
+    schemaDigest: event.schemaDigest as Hex,
+    eventHash: event.eventHash as Hex,
+  };
+}
+
+function wireEvent(event: CanonicalEvent) {
+  return { ...event, aggregateVersion: event.aggregateVersion.toString() };
+}
+
+function transferUuid(applicationId: string, purpose: string): string {
+  return uuidv5(
+    `abl:candidate-transfer:${applicationId}:${purpose}`,
+    uuidv5.URL,
+  );
 }
 
 function runtimeContractCommitment(value: unknown): string {

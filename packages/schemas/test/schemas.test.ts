@@ -65,6 +65,7 @@ const launchSchemaNames = [
   "CandidateCapacityDecision",
   "CandidateOpportunityResponse",
   "CandidateProvisioningReceipt",
+  "CandidateRuntimeIdentityReceipt",
   "CandidateIntakeStatus",
   "LaunchState",
   "RecognitionNetworkProfile",

@@ -21,6 +21,7 @@
     "@abl/launch": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
+    "@blaxel/core": "0.3.13",
     "fastify": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"

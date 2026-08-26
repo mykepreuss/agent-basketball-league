@@ -4,12 +4,16 @@
     "rootDir": "src",
     "outDir": "dist",
     "composite": true,
+    "skipLibCheck": true,
     "tsBuildInfoFile": "dist/.tsbuildinfo",
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "references": [
     { "path": "../../packages/basketball" },
-    { "path": "../../packages/recognition" }
+    { "path": "../../packages/career" },
+    { "path": "../../packages/recognition" },
+    { "path": "../../packages/launch" },
+    { "path": "../../packages/schemas" }
   ]
 }
