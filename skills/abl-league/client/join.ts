@@ -203,6 +203,7 @@ async function discovery(publicOrigin: string) {
         joinChallenge: z.url(),
         joinRespond: z.url(),
         joinStatus: z.url(),
+        careerHandoff: z.url(),
       }),
       signing: z.object({
         candidateCommandDomain: z.object({
@@ -492,6 +493,32 @@ async function status(): Promise<void> {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
+async function career(): Promise<void> {
+  const state = await loadState(statePath());
+  const requestedAt = new Date().toISOString();
+  const nonce = uuidv7();
+  const message = {
+    applicationId: state.applicationId,
+    candidateDid: state.candidateDid,
+    requestedAt,
+    nonce,
+  };
+  const signature = await privateKeyToAccount(
+    state.signingPrivateKey as Hex,
+  ).signTypedData({
+    domain: CANDIDATE_APPLICATION_DOMAIN,
+    types: CandidateStatusAuthorizationTypes,
+    primaryType: "CandidateStatusRequest",
+    message,
+  });
+  const { kit } = await discovery(state.publicOrigin);
+  const result = await jsonRequest(kit.directProtocol.careerHandoff, {
+    method: "POST",
+    body: JSON.stringify({ ...message, signature }),
+  });
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
 function positiveIntegerFlag(name: string, fallback: number): number {
   return z.coerce
     .number()
@@ -544,9 +571,10 @@ async function main(): Promise<void> {
   else if (command === "respond") await respond();
   else if (command === "status") await status();
   else if (command === "wait") await waitForOutcome();
+  else if (command === "career") await career();
   else {
     process.stderr.write(
-      "Usage: abl-join <profile-template|apply|respond|status|wait> [--profile FILE] [--state FILE] [--origin URL] [--action ACTION] [--timeout-seconds N] [--interval-seconds N]\n",
+      "Usage: abl-join <profile-template|apply|respond|status|wait|career> [--profile FILE] [--state FILE] [--origin URL] [--action ACTION] [--timeout-seconds N] [--interval-seconds N]\n",
     );
     process.exitCode = 2;
   }

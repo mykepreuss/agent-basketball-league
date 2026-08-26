@@ -161,6 +161,7 @@ export interface AdmittedAgentAuthority {
 export type LiveCoreOperatingProfile =
   | "PRE_GENESIS_REHEARSAL"
   | "PRODUCTION_V1_PRE_GENESIS"
+  | "FOUNDING_SEASON"
   | "PRODUCTION_GENESIS";
 
 export interface LiveCoreApiOptions {

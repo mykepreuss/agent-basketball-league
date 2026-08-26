@@ -435,6 +435,29 @@ describe("Operational Founding Alpha completion", () => {
       nextBlockingRequirement:
         "Complete the first external founding admission through the open path",
     });
+    expect(
+      createFoundingIntakeLaunchState({
+        stageDPolicy,
+        stageDEvidence,
+        mode: "OPEN_PUBLIC",
+        acceptedAt,
+      }),
+    ).toMatchObject({
+      launchStage: "FOUNDING_SEASON",
+      operatingProfile: "FOUNDING_SEASON",
+      publicExposure: "FOUNDING_SEASON",
+      candidateIntake: { mode: "OPEN_PUBLIC" },
+      blockingReasons: [],
+      nextBlockingRequirement: null,
+      foundingSeason: {
+        state: "OPEN",
+        historyClassification: "FOUNDING_SEASON_HISTORY",
+        genesisTransition: {
+          authority: "FOUNDING_AGENT_PROTOCOL",
+          additionalOperatorApprovalRequired: false,
+        },
+      },
+    });
     expect(() =>
       createFoundingIntakeLaunchState({
         stageDPolicy,

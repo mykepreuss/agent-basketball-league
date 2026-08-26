@@ -3359,8 +3359,8 @@ describe("complete local acceptance", () => {
     ]);
   });
 
-  it("exports all 43 primary, two V1 operational, and nine launch schemas as fail-closed strict JSON Schema", () => {
-    expect(Object.keys(schemaRegistry)).toHaveLength(54);
+  it("exports all 43 primary, two V1 operational, and ten launch schemas as fail-closed strict JSON Schema", () => {
+    expect(Object.keys(schemaRegistry)).toHaveLength(55);
     const jsonSchemas = exportJsonSchemas();
     expect(Object.keys(jsonSchemas)).toEqual(Object.keys(schemaRegistry));
     for (const [name, schema] of Object.entries(jsonSchemas)) {
@@ -3440,6 +3440,7 @@ describe("complete local acceptance", () => {
       "POST /v1/candidate-intake/respond",
       "POST /v1/founding/join/challenge",
       "POST /v1/founding/join",
+      "POST /v1/founding/join/career",
       "POST /v1/founding/join/status",
       "POST /v1/founding/join/respond",
       "GET /healthz",

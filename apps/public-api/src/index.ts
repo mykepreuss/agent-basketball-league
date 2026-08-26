@@ -700,6 +700,7 @@ const operatingProfile = z
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
     "PRODUCTION_V1_PRE_GENESIS",
+    "FOUNDING_SEASON",
     "PRODUCTION_GENESIS",
   ])
   .parse(process.env.ABL_OPERATING_PROFILE ?? "PRE_GENESIS_CLOSED");
@@ -714,7 +715,10 @@ if (
   launchState.operatingProfile !== operatingProfile
 )
   throw new Error("Launch state and operating profile do not match");
-if (operatingProfile === "PRODUCTION_V1_PRE_GENESIS") {
+if (
+  operatingProfile === "PRODUCTION_V1_PRE_GENESIS" ||
+  operatingProfile === "FOUNDING_SEASON"
+) {
   const checkpoints = checkpointProjections?.checkpoints() ?? [];
   if (
     checkpoints.length === 0 ||

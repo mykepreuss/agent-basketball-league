@@ -169,6 +169,7 @@ const operatingProfile = z
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
     "PRODUCTION_V1_PRE_GENESIS",
+    "FOUNDING_SEASON",
     "PRODUCTION_GENESIS",
   ])
   .parse(
@@ -297,7 +298,8 @@ const app =
           throw new Error("Case merits and appellate rosters must be disjoint");
         const databaseProfile = process.env.ABL_CANONICAL_DATABASE_PROFILE_JSON;
         if (
-          activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS" &&
+          (activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS" ||
+            activeOperatingProfile === "FOUNDING_SEASON") &&
           databaseProfile === undefined
         ) {
           throw new Error(
@@ -306,7 +308,8 @@ const app =
         }
         if (databaseProfile !== undefined) {
           const stage =
-            activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS"
+            activeOperatingProfile === "PRODUCTION_V1_PRE_GENESIS" ||
+            activeOperatingProfile === "FOUNDING_SEASON"
               ? "PRODUCTION_V1"
               : z
                   .enum(["PRODUCTION_V1", "GENESIS"])

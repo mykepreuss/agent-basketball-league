@@ -7,11 +7,13 @@ const [policyPath, evidencePath, mode, acceptedAt, admissionPath] =
 if (
   policyPath === undefined ||
   evidencePath === undefined ||
-  (mode !== "INVITE_ONLY" && mode !== "CAPPED_PUBLIC") ||
+  (mode !== "INVITE_ONLY" &&
+    mode !== "CAPPED_PUBLIC" &&
+    mode !== "OPEN_PUBLIC") ||
   acceptedAt === undefined
 )
   throw new Error(
-    "Usage: prepare-founding-intake-launch-state <stage-d-policy.json> <stage-d-evidence.json> <INVITE_ONLY|CAPPED_PUBLIC> <accepted-at> [first-admission.json]",
+    "Usage: prepare-founding-intake-launch-state <stage-d-policy.json> <stage-d-evidence.json> <INVITE_ONLY|CAPPED_PUBLIC|OPEN_PUBLIC> <accepted-at> [first-admission.json]",
   );
 
 async function json(path: string): Promise<unknown> {

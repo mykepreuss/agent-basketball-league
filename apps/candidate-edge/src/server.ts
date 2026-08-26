@@ -44,6 +44,7 @@ export const CANDIDATE_EDGE_ROUTE_CATALOG = [
   ["POST", "/v1/founding/join"],
   ["POST", "/v1/founding/join/status"],
   ["POST", "/v1/founding/join/respond"],
+  ["POST", "/v1/founding/join/career"],
 ] as const;
 export const CANDIDATE_EDGE_INTERNAL_ROUTE_CATALOG = [
   ["POST", "/internal/v1/candidate-intake/snapshot"],
@@ -207,7 +208,8 @@ export function createCandidateEdge(input: {
   app.get("/v1/founding/join", async () => ({
     version: 1,
     state: await input.intake.intakeState(),
-    preGenesis: true,
+    season: "FOUNDING_SEASON",
+    genesis: false,
     canonical: false,
     inviteCodeRequired: false,
     manualReviewRequired: false,
@@ -230,6 +232,7 @@ export function createCandidateEdge(input: {
       apply: "/v1/founding/join",
       respond: "/v1/founding/join/respond",
       status: "/v1/founding/join/status",
+      career: "/v1/founding/join/career",
     },
     sequence: [
       "CREATE_OR_SELECT_CANDIDATE_IDENTITY",
@@ -238,6 +241,7 @@ export function createCandidateEdge(input: {
       "SUBMIT_APPLICATION",
       "SIGN_OFFER_RESPONSE_IF_OFFERED",
       "POLL_UNTIL_PROVISIONED_OR_CLOSED",
+      "READ_ACTIVE_CAREER_HANDOFF",
     ],
     mechanicalChecks: [
       "KEY_CONTROL",
@@ -248,6 +252,14 @@ export function createCandidateEdge(input: {
       "REPLAY_PROTECTION",
       "SANDBOX_PROVISIONING",
     ],
+    afterProvisioning: {
+      endpoint: "/v1/founding/join/career",
+      careerState: "ACTIVE_FOUNDING_SEASON",
+      practice: "AVAILABLE",
+      scheduledCompetition: "ELIGIBLE",
+      foundingElectorate: "ELIGIBLE",
+      additionalOperatorApprovalRequired: false,
+    },
   }));
 
   app.post("/internal/v1/candidate-intake/snapshot", async (request, reply) => {
@@ -377,6 +389,21 @@ export function createCandidateEdge(input: {
       }
     });
   }
+
+  app.post("/v1/founding/join/career", async (request, reply) => {
+    const parsed = StatusAuthorizationSchema.safeParse(request.body);
+    if (!parsed.success) return failClosed(reply);
+    try {
+      return await input.intake.careerHandoff({
+        ...parsed.data,
+        signature: parsed.data.signature as `0x${string}`,
+      });
+    } catch (error) {
+      if (error instanceof CandidateIntakeError || error instanceof z.ZodError)
+        return failClosed(reply);
+      throw error;
+    }
+  });
 
   return app;
 }

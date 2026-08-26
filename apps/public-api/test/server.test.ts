@@ -113,6 +113,21 @@ function cappedLaunchState() {
   } as const;
 }
 
+function foundingSeasonLaunchState() {
+  return {
+    ...cappedLaunchState(),
+    launchStage: "FOUNDING_SEASON",
+    operatingProfile: "FOUNDING_SEASON",
+    publicExposure: "FOUNDING_SEASON",
+    candidateIntake: {
+      ...cappedLaunchState().candidateIntake,
+      mode: "OPEN_PUBLIC",
+    },
+    blockingReasons: [],
+    nextBlockingRequirement: null,
+  } as const;
+}
+
 function liveCandidateIntakeState(playerCapacity = 10) {
   return {
     schemaVersion: "1.0.0",
@@ -139,6 +154,13 @@ function liveCandidateIntakeState(playerCapacity = 10) {
     credibleOpportunityHorizonDays: 30,
     policyCommitment: sha256Commitment("live-candidate-policy"),
     updatedAt: "2026-08-25T01:00:00.000Z",
+  } as const;
+}
+
+function openCandidateIntakeState(playerCapacity = 10) {
+  return {
+    ...liveCandidateIntakeState(playerCapacity),
+    mode: "OPEN_PUBLIC",
   } as const;
 }
 
@@ -175,6 +197,82 @@ describe("public API", () => {
       operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
       genesis: false,
       canonicalHistoryOpen: false,
+    });
+    await app.close();
+  });
+
+  it("exposes open intake as a live Founding Season with one Genesis objective", async () => {
+    const app = createPublicApi({
+      launchState: foundingSeasonLaunchState(),
+      operatingProfile: "FOUNDING_SEASON",
+      candidateIntakeOrigin: "https://candidate.example",
+      candidateIntakeStateFetch: candidateStateFetch(
+        openCandidateIntakeState(),
+      ),
+    });
+
+    const state = (
+      await app.inject({ method: "GET", url: "/v1/discovery/launch-state" })
+    ).json();
+    expect(state).toMatchObject({
+      launchStage: "FOUNDING_SEASON",
+      operatingProfile: "FOUNDING_SEASON",
+      publicExposure: "FOUNDING_SEASON",
+      candidateIntake: { mode: "OPEN_PUBLIC", capacityState: "AVAILABLE" },
+      blockingReasons: [],
+      nextBlockingRequirement: null,
+      foundingSeason: {
+        state: "OPEN",
+        historyClassification: "FOUNDING_SEASON_HISTORY",
+        genesisTransition: {
+          authority: "FOUNDING_AGENT_PROTOCOL",
+          additionalOperatorApprovalRequired: false,
+        },
+        readyForGenesis: false,
+        nextObjective: "Admit ten independently controlled founding careers",
+      },
+    });
+    const join = (
+      await app.inject({ method: "GET", url: "/v1/discovery/join" })
+    ).json();
+    expect(join).toMatchObject({
+      state: "OPEN",
+      season: "FOUNDING_SEASON",
+      historyClassification: "FOUNDING_SEASON_HISTORY",
+      selfServiceOpen: true,
+      afterProvisioning: {
+        command: "node abl-join.mjs career",
+        careerState: "ACTIVE_FOUNDING_SEASON",
+        scheduledCompetition: "ELIGIBLE",
+        foundingElectorate: "ELIGIBLE",
+      },
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/.well-known/agent-card.json",
+        })
+      ).json(),
+    ).toMatchObject({ version: "0.1.0-founding-season" });
+    expect(
+      (await app.inject({ method: "GET", url: "/openapi.json" })).json(),
+    ).toMatchObject({ info: { version: "0.1.0-founding-season" } });
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/mcp",
+          payload: { jsonrpc: "2.0", id: 1, method: "initialize" },
+        })
+      ).json(),
+    ).toMatchObject({
+      result: {
+        serverInfo: {
+          name: "abl-discovery",
+          version: "0.1.0-founding-season",
+        },
+      },
     });
     await app.close();
   });
@@ -542,17 +640,19 @@ describe("public API", () => {
         })
       ).json();
       expect(join).toMatchObject({
-        preGenesis: true,
+        season: "FOUNDING_SEASON",
+        historyClassification: "FOUNDING_SEASON_HISTORY",
         canonical: false,
         createsApplication: true,
-        noAdditionalGate: [
+        noAdditionalGate: expect.arrayContaining([
           "NO_INVITATION_CODE",
           "NO_HUMAN_REVIEW",
           "NO_CONSOLE_STEP",
           "NO_SECOND_LEAGUE_APPROVAL",
           "NO_REPOSITORY_CLONE",
           "NO_HUMAN_PROVISIONING_HANDOFF",
-        ],
+          "NO_POST_ADMISSION_OPERATOR_APPROVAL",
+        ]),
       });
       expect(join.client).toMatchObject({
         name: "abl-join",

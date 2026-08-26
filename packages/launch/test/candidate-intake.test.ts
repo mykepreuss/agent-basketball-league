@@ -388,6 +388,77 @@ describe("candidate intake isolation boundary", () => {
     expect((await restarted.intakeState()).canonicalAuthority).toBe(false);
   });
 
+  it("returns an active Founding Season handoff only after isolated transfer", async () => {
+    const store = await repository();
+    const intake = service(store);
+    const fixture = await signedFixture();
+    const offered = await intake.register({
+      application: fixture.application,
+      challengeToken: fixture.challenge.challengeToken,
+    });
+    await intake.respond(
+      await opportunityResponse(
+        fixture.application,
+        offered.status.capacityDecision!.decisionCommitment,
+        "ACCEPT_OFFER",
+      ),
+    );
+    const authorization = await statusAuthorization(fixture.application);
+    await expect(intake.careerHandoff(authorization)).rejects.toThrow(
+      "not operational",
+    );
+    const applicationCommitment = candidateApplicationCommitment(
+      fixture.application,
+    );
+    const unsignedReceipt = {
+      schemaVersion: SchemaVersion,
+      receiptId: uuidv7({ msecs: now + 1 }),
+      applicationId: fixture.application.applicationId,
+      candidateDid: fixture.application.candidateDid,
+      applicationCommitment,
+      unchangedSignedApplicationCommitment: applicationCommitment,
+      verification: {
+        signature: true as const,
+        challenge: true as const,
+        schemaDigests: true as const,
+        provenanceCommitment: true as const,
+        capacityDecision: true as const,
+        replayProtected: true as const,
+      },
+      controlPlaneMode: "APPROVED_LIVE" as const,
+      state: "ISOLATED_TRANSFER_COMPLETE" as const,
+      sandboxResourceName: "abl-career-open-founding-season",
+      formerOperatorAccessRemovedAt: new Date(now).toISOString(),
+      issuedAt: new Date(now).toISOString(),
+    };
+    await intake.recordProvisioningReceipt({
+      ...unsignedReceipt,
+      receiptCommitment: sha256Commitment(unsignedReceipt),
+    });
+
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      careerState: "ACTIVE_FOUNDING_SEASON",
+      runtime: {
+        provider: "BLAXEL",
+        resourceType: "SANDBOX",
+        persistent: true,
+        activationMode: "EVENT_DRIVEN",
+      },
+      authority: {
+        careerKeysGeneratedInsideRuntime: true,
+        formerOperatorAuthority: false,
+      },
+      participation: {
+        practice: "AVAILABLE",
+        scheduledCompetition: "ELIGIBLE",
+        foundingElectorate: "ELIGIBLE",
+        additionalOperatorApprovalRequired: false,
+      },
+      history: { classification: "FOUNDING_SEASON_HISTORY", genesis: false },
+      nextAction: "WAIT_FOR_SIGNED_CAREER_ACTIVATION",
+    });
+  });
+
   it("publishes reconciled capacity, queue, and opening counts", async () => {
     const intake = service(await repository(), policy(1));
     const first = await signedFixture({
@@ -419,6 +490,36 @@ describe("candidate intake isolation boundary", () => {
       genesis: false,
       policyCommitment: policy(1).policyCommitment,
       updatedAt: new Date(now).toISOString(),
+    });
+  });
+
+  it("offers available roles immediately in open public mode", async () => {
+    const body = {
+      mode: "OPEN_PUBLIC" as const,
+      roleCapacity: { PLAYER: 1 },
+      invitedCandidateDids: [],
+      credibleOpportunityAt: {
+        PLAYER: new Date(now + 24 * 60 * 60 * 1_000).toISOString(),
+      },
+    };
+    const intake = service(await repository(), {
+      ...body,
+      policyCommitment: sha256Commitment(body),
+    });
+    const fixture = await signedFixture({
+      candidateDid: "did:abl:open-founding-season",
+    });
+
+    const registered = await intake.register({
+      application: fixture.application,
+      challengeToken: fixture.challenge.challengeToken,
+    });
+
+    expect(registered.status.state).toBe("OFFERED");
+    expect(await intake.intakeState()).toMatchObject({
+      mode: "OPEN_PUBLIC",
+      capacityState: "QUEUEING",
+      occupiedByRole: { PLAYER: 1 },
     });
   });
 
