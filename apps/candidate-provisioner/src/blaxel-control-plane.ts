@@ -449,12 +449,14 @@ export class BlaxelCandidateSandboxControlPlane
       command: "node dist/index.js",
       workingDir: "/opt/abl",
       waitForCompletion: false,
-      waitForPorts: [3_000],
       keepAlive: true,
       timeout: 0,
       restartOnFailure: true,
       maxRestarts: -1,
     });
+    const brokerHealth = await waitForSandboxResponse(broker, 3_000, "/health");
+    if (!brokerHealth.ok)
+      throw new Error("Candidate fixed-broker readiness failed");
     const brokerPreview = await broker.previews.createIfNotExists({
       metadata: { name: `${brokerName}-private` },
       spec: { port: 3_000, public: false },
@@ -546,13 +548,16 @@ export class BlaxelCandidateSandboxControlPlane
       command: "node dist/index.js",
       workingDir: "/opt/abl",
       waitForCompletion: false,
-      waitForPorts: [3_000],
       keepAlive: true,
       timeout: 0,
       restartOnFailure: true,
       maxRestarts: -1,
     });
-    const identityResponse = await sandbox.fetch(3_000, "/v1/career/identity");
+    const identityResponse = await waitForSandboxResponse(
+      sandbox,
+      3_000,
+      "/v1/career/identity",
+    );
     if (!identityResponse.ok)
       throw new Error("Candidate career identity readback failed");
     const identity = await verifyCandidateRuntimeIdentityReceipt({
@@ -746,6 +751,29 @@ function isTransientSandboxGatewayError(error: unknown): boolean {
   };
   const status = candidate.response?.status ?? candidate.status;
   return status === 502 || status === 503 || status === 504;
+}
+
+async function waitForSandboxResponse(
+  sandbox: SandboxResult,
+  port: number,
+  path: string,
+): Promise<Response> {
+  const maximumAttempts = 60;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    try {
+      const response = await sandbox.fetch(port, path);
+      if (response.ok || ![502, 503, 504].includes(response.status))
+        return response;
+      lastError = new Error(`Sandbox readiness returned ${response.status}`);
+    } catch (error) {
+      if (!isTransientSandboxGatewayError(error)) throw error;
+      lastError = error;
+    }
+    if (attempt < maximumAttempts)
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw lastError ?? new Error("Sandbox readiness timed out");
 }
 
 function environmentContract(

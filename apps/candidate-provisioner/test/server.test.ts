@@ -431,6 +431,7 @@ describe("candidate provisioner private boundary", () => {
     const createdNames: string[] = [];
     const bodyContractLabels: string[] = [];
     const processes: string[] = [];
+    const processInputs: Array<Record<string, unknown>> = [];
     let processReadbacks = 0;
     let transientBrokerFailure = true;
     const factory: CandidateSandboxFactory = {
@@ -463,8 +464,10 @@ describe("candidate provisioner private boundary", () => {
               processReadbacks += 1;
               return [{ name: "abl-fixed-broker", status: "running" }];
             },
-            exec: async ({ name: processName }: { name: string }) => {
+            exec: async (input: { name: string }) => {
+              const { name: processName } = input;
               processes.push(processName);
+              processInputs.push(input);
               if (
                 processName === "abl-fixed-broker" &&
                 transientBrokerFailure
@@ -485,6 +488,7 @@ describe("candidate provisioner private boundary", () => {
             }),
           },
           fetch: async (_port: number, path: string, init?: RequestInit) => {
+            if (path === "/health") return Response.json({ ok: true });
             if (path === "/v1/career/identity")
               return Response.json(identityReceipt);
             const event = JSON.parse(String(init?.body)).event as {
@@ -549,6 +553,9 @@ describe("candidate provisioner private boundary", () => {
     ]);
     expect(bodyContractLabels[0]).toBe(bodyContractLabels[1]);
     expect(processReadbacks).toBe(1);
+    expect(processInputs.every((input) => !("waitForPorts" in input))).toBe(
+      true,
+    );
     expect(processes).toEqual([
       "abl-fixed-broker",
       "abl-career-runtime",
