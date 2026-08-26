@@ -431,6 +431,7 @@ describe("candidate provisioner private boundary", () => {
     const createdNames: string[] = [];
     const bodyContractLabels: string[] = [];
     const processes: string[] = [];
+    let processReadbacks = 0;
     let transientBrokerFailure = true;
     const factory: CandidateSandboxFactory = {
       async get() {
@@ -458,6 +459,10 @@ describe("candidate provisioner private boundary", () => {
           },
           spec: { ...resource.spec, volumes: null },
           process: {
+            list: async () => {
+              processReadbacks += 1;
+              return [{ name: "abl-fixed-broker", status: "running" }];
+            },
             exec: async ({ name: processName }: { name: string }) => {
               processes.push(processName);
               if (
@@ -543,8 +548,8 @@ describe("candidate provisioner private boundary", () => {
       candidateSandboxName(applicationId),
     ]);
     expect(bodyContractLabels[0]).toBe(bodyContractLabels[1]);
+    expect(processReadbacks).toBe(1);
     expect(processes).toEqual([
-      "abl-fixed-broker",
       "abl-fixed-broker",
       "abl-career-runtime",
       "abl-fixed-broker",

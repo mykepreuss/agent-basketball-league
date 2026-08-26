@@ -444,19 +444,17 @@ export class BlaxelCandidateSandboxControlPlane
       region: this.#region,
       imageReference: this.#fixedBrokerImageReference,
     });
-    await retrySandboxGatewayOperation(() =>
-      broker.process.exec({
-        name: "abl-fixed-broker",
-        command: "node dist/index.js",
-        workingDir: "/opt/abl",
-        waitForCompletion: false,
-        waitForPorts: [3_000],
-        keepAlive: true,
-        timeout: 0,
-        restartOnFailure: true,
-        maxRestarts: -1,
-      }),
-    );
+    await ensureSandboxProcessStarted(broker.process, {
+      name: "abl-fixed-broker",
+      command: "node dist/index.js",
+      workingDir: "/opt/abl",
+      waitForCompletion: false,
+      waitForPorts: [3_000],
+      keepAlive: true,
+      timeout: 0,
+      restartOnFailure: true,
+      maxRestarts: -1,
+    });
     const brokerPreview = await broker.previews.createIfNotExists({
       metadata: { name: `${brokerName}-private` },
       spec: { port: 3_000, public: false },
@@ -543,19 +541,17 @@ export class BlaxelCandidateSandboxControlPlane
       envs,
       persistent: true,
     });
-    await retrySandboxGatewayOperation(() =>
-      sandbox.process.exec({
-        name: "abl-career-runtime",
-        command: "node dist/index.js",
-        workingDir: "/opt/abl",
-        waitForCompletion: false,
-        waitForPorts: [3_000],
-        keepAlive: true,
-        timeout: 0,
-        restartOnFailure: true,
-        maxRestarts: -1,
-      }),
-    );
+    await ensureSandboxProcessStarted(sandbox.process, {
+      name: "abl-career-runtime",
+      command: "node dist/index.js",
+      workingDir: "/opt/abl",
+      waitForCompletion: false,
+      waitForPorts: [3_000],
+      keepAlive: true,
+      timeout: 0,
+      restartOnFailure: true,
+      maxRestarts: -1,
+    });
     const identityResponse = await sandbox.fetch(3_000, "/v1/career/identity");
     if (!identityResponse.ok)
       throw new Error("Candidate career identity readback failed");
@@ -717,16 +713,26 @@ function environment(name: string, value: string, secret = false) {
   return { name, value, secret };
 }
 
-async function retrySandboxGatewayOperation<T>(
-  operation: () => Promise<T>,
-): Promise<T> {
+async function ensureSandboxProcessStarted(
+  process: SandboxResult["process"],
+  input: Parameters<SandboxResult["process"]["exec"]>[0],
+): Promise<void> {
   const maximumAttempts = 3;
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await operation();
+      await process.exec(input);
+      return;
     } catch (error) {
       if (attempt >= maximumAttempts || !isTransientSandboxGatewayError(error))
         throw error;
+      const processes = await process.list();
+      if (
+        processes.some(
+          (candidate) =>
+            candidate.name === input.name && candidate.status === "running",
+        )
+      )
+        return;
       await new Promise((resolve) => setTimeout(resolve, attempt * 250));
     }
   }
