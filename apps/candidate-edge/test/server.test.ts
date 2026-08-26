@@ -408,9 +408,14 @@ describe("candidate edge", () => {
     await server.close();
   });
 
-  it("dispatches provisioning immediately after signed offer acceptance", async () => {
+  it("queues provisioning without delaying signed offer acceptance", async () => {
     const applicationId = "0198e000-0000-7000-8000-000000000001";
-    const dispatch = vi.fn().mockResolvedValue("DISPATCHED");
+    let finishDispatch!: () => void;
+    const dispatch = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishDispatch = resolve;
+      }),
+    );
     const server = createCandidateEdge({
       intake: {
         respond: vi.fn().mockResolvedValue({
@@ -443,9 +448,10 @@ describe("candidate edge", () => {
       },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.headers["x-abl-provisioning-dispatch"]).toBe("dispatched");
+    expect(response.headers["x-abl-provisioning-dispatch"]).toBe("queued");
     expect(dispatch).toHaveBeenCalledOnce();
     expect(dispatch).toHaveBeenCalledWith(applicationId);
+    finishDispatch();
     await server.close();
   });
 
@@ -488,6 +494,27 @@ describe("candidate edge", () => {
       (await server.inject({ method: "POST", url: "/v1/core/command" }))
         .statusCode,
     ).toBe(404);
+    await server.close();
+  });
+
+  it("returns a useful retry response when the private store is unavailable", async () => {
+    const server = createCandidateGateway({
+      storeOrigin: "https://candidate-store.example",
+      previewToken: "private-preview-token-with-32-bytes",
+      fetchImplementation: vi.fn().mockRejectedValue(new Error("offline")),
+    });
+    const response = await server.inject({
+      method: "POST",
+      url: "/v1/founding/join/status",
+      payload: {},
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.headers["retry-after"]).toBe("5");
+    expect(response.json()).toEqual({
+      error: "candidate_intake_temporarily_unavailable",
+      retryable: true,
+      retryAfterSeconds: 5,
+    });
     await server.close();
   });
 });

@@ -66,7 +66,7 @@ export function createCandidateGateway(
             },
             body: method === "POST" ? JSON.stringify(request.body) : null,
             redirect: "error",
-            signal: AbortSignal.timeout(12_000),
+            signal: AbortSignal.timeout(4_000),
           });
           const body = await response.text();
           if (Buffer.byteLength(body) > 1_500_000)
@@ -76,8 +76,10 @@ export function createCandidateGateway(
             .type(response.headers.get("content-type") ?? "application/json")
             .send(body);
         } catch {
-          return reply.code(503).send({
+          return reply.header("retry-after", "5").code(503).send({
             error: "candidate_intake_temporarily_unavailable",
+            retryable: true,
+            retryAfterSeconds: 5,
           });
         }
       },
