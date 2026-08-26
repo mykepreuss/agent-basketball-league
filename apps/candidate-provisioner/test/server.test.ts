@@ -556,6 +556,13 @@ describe("candidate provisioner private boundary", () => {
     expect(processInputs.every((input) => !("waitForPorts" in input))).toBe(
       true,
     );
+    expect(
+      processInputs.every(
+        (input) =>
+          JSON.stringify(input.env) ===
+          JSON.stringify({ HOST: "0.0.0.0", PORT: "3000" }),
+      ),
+    ).toBe(true);
     expect(processes).toEqual([
       "abl-fixed-broker",
       "abl-career-runtime",

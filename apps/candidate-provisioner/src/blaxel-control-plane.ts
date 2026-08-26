@@ -447,6 +447,7 @@ export class BlaxelCandidateSandboxControlPlane
     await ensureSandboxProcessStarted(broker.process, {
       name: "abl-fixed-broker",
       command: "node dist/index.js",
+      env: { HOST: "0.0.0.0", PORT: "3000" },
       workingDir: "/opt/abl",
       waitForCompletion: false,
       keepAlive: true,
@@ -546,6 +547,7 @@ export class BlaxelCandidateSandboxControlPlane
     await ensureSandboxProcessStarted(sandbox.process, {
       name: "abl-career-runtime",
       command: "node dist/index.js",
+      env: { HOST: "0.0.0.0", PORT: "3000" },
       workingDir: "/opt/abl",
       waitForCompletion: false,
       keepAlive: true,
