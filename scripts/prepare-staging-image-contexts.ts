@@ -109,9 +109,13 @@ const privateProofImageServices = [
   },
 ] as const satisfies readonly ImageService[];
 const persistentImageServices = [
-  ...privateProofImageServices.filter(
-    ({ directory }) => directory !== "fixed-broker",
-  ),
+  ...privateProofImageServices,
+  {
+    directory: "career-body",
+    packageName: "@abl/staging-body",
+    memory: 4096,
+    type: "sandbox",
+  },
   {
     directory: "safety-gateway",
     packageName: "@abl/safety-gateway",
