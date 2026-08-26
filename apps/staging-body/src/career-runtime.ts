@@ -23,7 +23,8 @@ import type { Hex, TypedDataDomain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 
-const identityPath = "/workspace/state/career-identity.json";
+export const CAREER_IDENTITY_PATH =
+  "/tmp/abl-career-state/career-identity.json";
 const privateKeySchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const DomainSchema = z
   .strictObject({
@@ -141,7 +142,7 @@ async function loadOrCreateIdentity(input: {
 }) {
   try {
     const stored = PersistentIdentitySchema.parse(
-      JSON.parse(await readFile(identityPath, "utf8")),
+      JSON.parse(await readFile(CAREER_IDENTITY_PATH, "utf8")),
     );
     if (
       stored.receipt.applicationId !== input.applicationId ||
@@ -154,12 +155,15 @@ async function loadOrCreateIdentity(input: {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   const identity = await createIdentity(input);
-  await mkdir(dirname(identityPath), { recursive: true, mode: 0o700 });
-  const temporaryPath = `${identityPath}.${process.pid}.tmp`;
+  await mkdir(dirname(CAREER_IDENTITY_PATH), {
+    recursive: true,
+    mode: 0o700,
+  });
+  const temporaryPath = `${CAREER_IDENTITY_PATH}.${process.pid}.tmp`;
   await writeFile(temporaryPath, `${JSON.stringify(identity)}\n`, {
     mode: 0o600,
   });
-  await rename(temporaryPath, identityPath);
+  await rename(temporaryPath, CAREER_IDENTITY_PATH);
   return identity;
 }
 
