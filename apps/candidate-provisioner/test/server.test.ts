@@ -439,6 +439,13 @@ describe("candidate provisioner private boundary", () => {
         const resource = input as Extract<typeof input, { metadata: unknown }>;
         const name = resource.metadata.name!;
         createdNames.push(name);
+        if (name === candidateFixedBrokerName(applicationId))
+          expect(resource.spec.runtime?.envs).toEqual(
+            expect.arrayContaining([
+              { name: "HOST", value: "0.0.0.0", secret: false },
+              { name: "PORT", value: "3000", secret: false },
+            ]),
+          );
         if (name === candidateSandboxName(applicationId))
           bodyContractLabels.push(
             resource.metadata.labels!["abl-runtime-contract"]!,
