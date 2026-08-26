@@ -459,7 +459,7 @@ export class BlaxelCandidateSandboxControlPlane
     if (!brokerHealth.ok)
       throw new Error("Candidate fixed-broker readiness failed");
     const brokerPreview = await broker.previews.createIfNotExists({
-      metadata: { name: `${brokerName}-private` },
+      metadata: { name: `${brokerName}-p` },
       spec: { port: 3_000, public: false },
     });
     const brokerOrigin = HttpsOriginSchema.parse(brokerPreview.spec.url);

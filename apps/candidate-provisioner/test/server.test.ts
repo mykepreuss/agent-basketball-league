@@ -432,6 +432,7 @@ describe("candidate provisioner private boundary", () => {
     const bodyContractLabels: string[] = [];
     const processes: string[] = [];
     const processInputs: Array<Record<string, unknown>> = [];
+    const previewNames: string[] = [];
     let processReadbacks = 0;
     let transientBrokerFailure = true;
     const factory: CandidateSandboxFactory = {
@@ -480,12 +481,17 @@ describe("candidate provisioner private boundary", () => {
             },
           },
           previews: {
-            createIfNotExists: async () => ({
-              spec: { url: "https://candidate-broker.example/" },
-              tokens: {
-                create: async () => ({ value: "p".repeat(48) }),
-              },
-            }),
+            createIfNotExists: async (preview: {
+              metadata: { name: string };
+            }) => {
+              previewNames.push(preview.metadata.name);
+              return {
+                spec: { url: "https://candidate-broker.example/" },
+                tokens: {
+                  create: async () => ({ value: "p".repeat(48) }),
+                },
+              };
+            },
           },
           fetch: async (_port: number, path: string, init?: RequestInit) => {
             if (path === "/health") return Response.json({ ok: true });
@@ -552,6 +558,11 @@ describe("candidate provisioner private boundary", () => {
       candidateSandboxName(applicationId),
     ]);
     expect(bodyContractLabels[0]).toBe(bodyContractLabels[1]);
+    expect(previewNames).toEqual([
+      `${candidateFixedBrokerName(applicationId)}-p`,
+      `${candidateFixedBrokerName(applicationId)}-p`,
+    ]);
+    expect(previewNames.every((name) => name.length <= 49)).toBe(true);
     expect(processReadbacks).toBe(1);
     expect(processInputs.every((input) => !("waitForPorts" in input))).toBe(
       true,
