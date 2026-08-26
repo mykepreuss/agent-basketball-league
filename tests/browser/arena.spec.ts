@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("renders a replay-verified pre-Genesis game from the public API", async ({
+test("renders a replay-verified Founding Season game from the public API", async ({
   page,
   request,
 }, testInfo) => {
@@ -52,7 +52,7 @@ test("renders a replay-verified pre-Genesis game from the public API", async ({
       "canonical: false",
     );
     await expect(page.locator(".experiment-banner")).toContainText(
-      "No official Genesis league history exists yet",
+      "Signed founding history · building toward the Genesis root",
     );
     await expect(
       page.getByRole("heading", {

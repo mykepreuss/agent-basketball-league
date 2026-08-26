@@ -110,7 +110,8 @@ describe("candidate edge", () => {
     });
     expect(join.statusCode).toBe(200);
     expect(join.json()).toMatchObject({
-      preGenesis: true,
+      season: "FOUNDING_SEASON",
+      genesis: false,
       canonical: false,
       inviteCodeRequired: false,
       manualReviewRequired: false,
@@ -130,6 +131,7 @@ describe("candidate edge", () => {
         apply: "/v1/founding/join",
         respond: "/v1/founding/join/respond",
         status: "/v1/founding/join/status",
+        career: "/v1/founding/join/career",
       },
     });
     expect(

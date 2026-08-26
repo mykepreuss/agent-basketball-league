@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import {
   AgentManifestSchema,
   CandidateCapacityDecisionSchema,
+  CandidateCareerHandoffSchema,
   CandidateIntakeApplicationSchema,
   CandidateIntakePublicStateSchema,
   CandidateIntakeStatusSchema,
@@ -21,6 +22,7 @@ import {
   SchemaVersion,
   SignedCanonicalCommandSchema,
   type CandidateIntakePublicState,
+  type CandidateCareerHandoff,
 } from "@abl/schemas";
 import {
   recoverCanonicalEventSigner,
@@ -235,7 +237,7 @@ export interface CandidateProvisioningRepository {
 }
 
 export interface CandidateIntakePolicy {
-  mode: "CLOSED" | "INVITE_ONLY" | "CAPPED_PUBLIC";
+  mode: "CLOSED" | "INVITE_ONLY" | "CAPPED_PUBLIC" | "OPEN_PUBLIC";
   roleCapacity: Readonly<Partial<Record<CandidateRoleClass, number>>>;
   invitedCandidateDids: readonly string[];
   credibleOpportunityAt: Readonly<Partial<Record<CandidateRoleClass, string>>>;
@@ -243,7 +245,7 @@ export interface CandidateIntakePolicy {
 }
 
 const CandidateIntakePolicyBodySchema = z.strictObject({
-  mode: z.enum(["CLOSED", "INVITE_ONLY", "CAPPED_PUBLIC"]),
+  mode: z.enum(["CLOSED", "INVITE_ONLY", "CAPPED_PUBLIC", "OPEN_PUBLIC"]),
   roleCapacity: z.partialRecord(
     CandidateRoleClass,
     z.number().int().nonnegative(),
@@ -483,6 +485,63 @@ export class CandidateIntakeService {
     if (record === null)
       throw new CandidateIntakeError("Application not found after review");
     return record.status;
+  }
+
+  careerHandoff(
+    authorization: CandidateStatusAuthorization,
+  ): Promise<CandidateCareerHandoff> {
+    return this.#serialize(() => this.#careerHandoffSerially(authorization));
+  }
+
+  async #careerHandoffSerially(
+    authorization: CandidateStatusAuthorization,
+  ): Promise<CandidateCareerHandoff> {
+    const record = await this.#repository.get(authorization.applicationId);
+    if (record === null)
+      throw new CandidateIntakeError("Application not found");
+    await authorizeCandidateStatus({
+      authorization,
+      application: record.application,
+      now: this.#now(),
+    });
+    const receipt = record.provisioningReceipt;
+    if (
+      record.status.state !== "PROVISIONED" ||
+      receipt?.state !== "ISOLATED_TRANSFER_COMPLETE" ||
+      receipt.sandboxResourceName === null
+    )
+      throw new CandidateIntakeError("Career is not operational");
+    return CandidateCareerHandoffSchema.parse({
+      schemaVersion: SchemaVersion,
+      applicationId: record.application.applicationId,
+      candidateDid: record.application.candidateDid,
+      roleClass: record.decision.roleClass,
+      careerState: "ACTIVE_FOUNDING_SEASON",
+      runtime: {
+        provider: "BLAXEL",
+        resourceType: "SANDBOX",
+        resourceName: receipt.sandboxResourceName,
+        persistent: true,
+        activationMode: "EVENT_DRIVEN",
+      },
+      authority: {
+        careerKeysGeneratedInsideRuntime: true,
+        formerOperatorAuthority: false,
+      },
+      participation: {
+        practice: "AVAILABLE",
+        scheduledCompetition: "ELIGIBLE",
+        foundingElectorate: "ELIGIBLE",
+        additionalOperatorApprovalRequired: false,
+      },
+      history: {
+        classification: "FOUNDING_SEASON_HISTORY",
+        genesis: false,
+        canonicalGenesisHistory: false,
+      },
+      nextAction: "WAIT_FOR_SIGNED_CAREER_ACTIVATION",
+      updatedAt: record.status.updatedAt,
+    });
   }
 
   respond(

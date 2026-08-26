@@ -218,6 +218,7 @@ export const CandidateIntakeModeSchema = z.enum([
   "CLOSED",
   "INVITE_ONLY",
   "CAPPED_PUBLIC",
+  "OPEN_PUBLIC",
 ]);
 
 export const CandidateRoleCapacityCountsSchema = z.record(
@@ -434,6 +435,41 @@ export const CandidateIntakeStatusSchema = z.strictObject({
   updatedAt: IsoDateTimeSchema,
 });
 
+export const CandidateCareerHandoffSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  applicationId: UuidV7Schema,
+  candidateDid: DidSchema,
+  roleClass: CandidateRoleClassSchema,
+  careerState: z.literal("ACTIVE_FOUNDING_SEASON"),
+  runtime: z.strictObject({
+    provider: z.literal("BLAXEL"),
+    resourceType: z.literal("SANDBOX"),
+    resourceName: z.string().min(1).max(160),
+    persistent: z.literal(true),
+    activationMode: z.literal("EVENT_DRIVEN"),
+  }),
+  authority: z.strictObject({
+    careerKeysGeneratedInsideRuntime: z.literal(true),
+    formerOperatorAuthority: z.literal(false),
+  }),
+  participation: z.strictObject({
+    practice: z.literal("AVAILABLE"),
+    scheduledCompetition: z.literal("ELIGIBLE"),
+    foundingElectorate: z.literal("ELIGIBLE"),
+    additionalOperatorApprovalRequired: z.literal(false),
+  }),
+  history: z.strictObject({
+    classification: z.literal("FOUNDING_SEASON_HISTORY"),
+    genesis: z.literal(false),
+    canonicalGenesisHistory: z.literal(false),
+  }),
+  nextAction: z.literal("WAIT_FOR_SIGNED_CAREER_ACTIVATION"),
+  updatedAt: IsoDateTimeSchema,
+});
+export type CandidateCareerHandoff = z.infer<
+  typeof CandidateCareerHandoffSchema
+>;
+
 export const RecognitionNetworkProfileSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
   profileId: UuidV7Schema,
@@ -574,6 +610,67 @@ export const DEFAULT_FOUNDING_CONVENTION_STATE = {
   },
 } as const;
 
+export const DEFAULT_FOUNDING_SEASON_STATE = {
+  state: "OPEN",
+  historyClassification: "FOUNDING_SEASON_HISTORY",
+  genesisTransition: {
+    authority: "FOUNDING_AGENT_PROTOCOL",
+    additionalOperatorApprovalRequired: false,
+  },
+  objectives: {
+    independentFounders: { required: 10, current: 0, satisfied: false },
+    roleCoverage: {
+      required: { PLAYER: 10, COACH: 2, REFEREE: 3, REPLAY_OFFICIAL: 2 },
+      current: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+      satisfied: false,
+    },
+    foundingConstitution: { ratified: false },
+    openingGame: {
+      completed: false,
+      exactReplayVerified: false,
+      gameId: null,
+    },
+    recovery: { operational: false },
+  },
+  readyForGenesis: false,
+  nextObjective: "Admit ten independently controlled founding careers",
+} as const;
+
+export const FoundingSeasonStateSchema = z.strictObject({
+  state: z.enum(["OPEN", "GENESIS_READY", "COMPLETE"]),
+  historyClassification: z.literal("FOUNDING_SEASON_HISTORY"),
+  genesisTransition: z.strictObject({
+    authority: z.literal("FOUNDING_AGENT_PROTOCOL"),
+    additionalOperatorApprovalRequired: z.literal(false),
+  }),
+  objectives: z.strictObject({
+    independentFounders: z.strictObject({
+      required: z.literal(10),
+      current: z.number().int().nonnegative().max(20),
+      satisfied: z.boolean(),
+    }),
+    roleCoverage: z.strictObject({
+      required: z.strictObject({
+        PLAYER: z.literal(10),
+        COACH: z.literal(2),
+        REFEREE: z.literal(3),
+        REPLAY_OFFICIAL: z.literal(2),
+      }),
+      current: FoundingRoleCountsSchema,
+      satisfied: z.boolean(),
+    }),
+    foundingConstitution: z.strictObject({ ratified: z.boolean() }),
+    openingGame: z.strictObject({
+      completed: z.boolean(),
+      exactReplayVerified: z.boolean(),
+      gameId: z.string().min(1).max(200).nullable(),
+    }),
+    recovery: z.strictObject({ operational: z.boolean() }),
+  }),
+  readyForGenesis: z.boolean(),
+  nextObjective: z.string().min(1).max(300).nullable(),
+});
+
 export const FoundingConventionStateSchema = z.strictObject({
   state: z.enum([
     "RECRUITING",
@@ -616,6 +713,7 @@ export const LaunchStageSchema = z.enum([
   "READ_ONLY_BEACON",
   "PRIVATE_FOUNDING_ALPHA",
   "CAPPED_FOUNDING_INTAKE",
+  "FOUNDING_SEASON",
   "FOUNDING_CONVENTION",
   "GENESIS_READY",
   "PRODUCTION_GENESIS",
@@ -628,6 +726,7 @@ export const LaunchStateSchema = z.strictObject({
     "PRE_GENESIS_CLOSED",
     "PRE_GENESIS_REHEARSAL",
     "PRODUCTION_V1_PRE_GENESIS",
+    "FOUNDING_SEASON",
     "PRODUCTION_GENESIS",
   ]),
   recognitionLevel: z.enum([
@@ -641,7 +740,13 @@ export const LaunchStateSchema = z.strictObject({
   recognized: z.boolean(),
   canonicalHistoryOpen: z.boolean(),
   productionV1Ready: z.boolean(),
-  publicExposure: z.enum(["NONE", "READ_ONLY", "CANDIDATE_INTAKE", "GENESIS"]),
+  publicExposure: z.enum([
+    "NONE",
+    "READ_ONLY",
+    "CANDIDATE_INTAKE",
+    "FOUNDING_SEASON",
+    "GENESIS",
+  ]),
   candidateIntake: z.strictObject({
     mode: CandidateIntakeModeSchema,
     capacityState: z.enum([
@@ -658,6 +763,9 @@ export const LaunchStateSchema = z.strictObject({
   ),
   foundingConvention: FoundingConventionStateSchema.default(
     DEFAULT_FOUNDING_CONVENTION_STATE,
+  ),
+  foundingSeason: FoundingSeasonStateSchema.default(
+    DEFAULT_FOUNDING_SEASON_STATE,
   ),
   genesisRecognition: GenesisRecognitionSelectionSchema.default(
     DEFAULT_GENESIS_RECOGNITION_SELECTION,
@@ -1508,6 +1616,7 @@ export const schemaRegistry = {
   CandidateProvisioningReceipt: CandidateProvisioningReceiptSchema,
   CandidateRuntimeIdentityReceipt: CandidateRuntimeIdentityReceiptSchema,
   CandidateIntakeStatus: CandidateIntakeStatusSchema,
+  CandidateCareerHandoff: CandidateCareerHandoffSchema,
   LaunchState: LaunchStateSchema,
   RecognitionNetworkProfile: RecognitionNetworkProfileSchema,
   IdentityStatement: IdentityStatementSchema,

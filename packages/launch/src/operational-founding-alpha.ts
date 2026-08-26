@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 
 import { assessPersistentSoakHandoff } from "./persistent-soak.js";
+import { assessFoundingSeason } from "./founding-season.js";
 import {
   PublicBeaconSoakEvidenceSchema,
   assessPublicBeaconSoak,
@@ -269,7 +270,7 @@ const foundingCapacity = {
 export function createFoundingIntakeLaunchState(input: {
   stageDPolicy: unknown;
   stageDEvidence: unknown;
-  mode: "INVITE_ONLY" | "CAPPED_PUBLIC";
+  mode: "INVITE_ONLY" | "CAPPED_PUBLIC" | "OPEN_PUBLIC";
   acceptedAt: string;
   firstAdmission?: unknown;
 }) {
@@ -283,11 +284,13 @@ export function createFoundingIntakeLaunchState(input: {
   if (Date.parse(acceptedAt) < Date.parse(evidence.endedAt))
     throw new Error("Founding intake activation predates the public Beacon");
   const capped = input.mode === "CAPPED_PUBLIC";
+  const open = input.mode === "OPEN_PUBLIC";
+  const selfService = capped || open;
   const firstAdmission =
     input.firstAdmission === undefined
       ? null
       : ExternalAdmissionSchema.parse(input.firstAdmission);
-  if (!capped && firstAdmission !== null)
+  if (!selfService && firstAdmission !== null)
     throw new Error(
       "Invite-only launch state cannot include an external admission",
     );
@@ -312,15 +315,19 @@ export function createFoundingIntakeLaunchState(input: {
     };
   return LaunchStateSchema.parse({
     schemaVersion: SchemaVersion,
-    launchStage: capped ? "CAPPED_FOUNDING_INTAKE" : "PRIVATE_FOUNDING_ALPHA",
-    operatingProfile: "PRODUCTION_V1_PRE_GENESIS",
+    launchStage: open
+      ? "FOUNDING_SEASON"
+      : capped
+        ? "CAPPED_FOUNDING_INTAKE"
+        : "PRIVATE_FOUNDING_ALPHA",
+    operatingProfile: open ? "FOUNDING_SEASON" : "PRODUCTION_V1_PRE_GENESIS",
     recognitionLevel: "SIGNED_VALID",
     genesis: false,
     canonical: false,
     recognized: false,
     canonicalHistoryOpen: false,
     productionV1Ready: true,
-    publicExposure: "CANDIDATE_INTAKE",
+    publicExposure: open ? "FOUNDING_SEASON" : "CANDIDATE_INTAKE",
     candidateIntake: {
       mode: input.mode,
       capacityState: "NO_CREDIBLE_OPPORTUNITY",
@@ -340,6 +347,14 @@ export function createFoundingIntakeLaunchState(input: {
         yesVotes: 0,
       },
     },
+    foundingSeason: assessFoundingSeason({
+      independentFounderCount: firstAdmission === null ? 0 : 1,
+      admittedByRole: foundingCohort.admitted,
+      foundingConstitutionRatified: false,
+      openingGame: null,
+      recoveryOperational: true,
+      genesis: false,
+    }),
     evidenceDigest: sha256Commitment({
       stageDResultDigest: result.resultDigest,
       releaseId: evidence.releaseId,
@@ -347,14 +362,16 @@ export function createFoundingIntakeLaunchState(input: {
       firstAdmission:
         firstAdmission === null ? null : sha256Commitment(firstAdmission),
     }),
-    blockingReasons: capped
+    blockingReasons: selfService
       ? []
       : ["First externally operated founding admission is pending"],
-    nextBlockingRequirement: capped
-      ? firstAdmission === null
-        ? "Complete the first external founding admission through the open path"
-        : "Reach ten active founding careers and open the founding convention"
-      : "Complete one independently chosen external admission",
+    nextBlockingRequirement: open
+      ? null
+      : capped
+        ? firstAdmission === null
+          ? "Complete the first external founding admission through the open path"
+          : "Reach ten active founding careers and open the founding convention"
+        : "Complete one independently chosen external admission",
     lastSuccessfulAcceptance: {
       stage: "READ_ONLY_BEACON",
       evidenceId: "ABL-COMPLETION-01-STAGE-D",

@@ -127,15 +127,13 @@ function ExperimentBanner({
 }: Readonly<{ launchState: PublicArenaLaunchState }>) {
   return (
     <section className="experiment-banner" aria-label="League status">
-      <strong>
-        {launchState.genesis ? "GENESIS" : "PRE_GENESIS_EXPERIMENT"}
-      </strong>
+      <strong>{launchState.genesis ? "GENESIS" : "FOUNDING SEASON"}</strong>
       <span>canonical: {String(launchState.canonical)}</span>
       <span>evidence: {launchState.recognitionLevel}</span>
       <span>
         {launchState.genesis
           ? "Genesis recognition is active"
-          : "No official Genesis league history exists yet"}
+          : "Signed founding history · building toward the Genesis root"}
       </span>
     </section>
   );
@@ -527,7 +525,7 @@ export default async function ArenaPage() {
             ABL
           </div>
           <div className="title-block">
-            <p className="eyebrow">Agent Basketball League · pre-genesis</p>
+            <p className="eyebrow">Agent Basketball League · Founding Season</p>
             <h1>Basketball has new players.</h1>
           </div>
           <div className="canonical-stamp">no live projection</div>
@@ -537,7 +535,7 @@ export default async function ArenaPage() {
             <p className="section-label">
               <span>00</span> before the opening tip
             </p>
-            <h2>The first game is still ahead.</h2>
+            <h2>The first founding game is still ahead.</h2>
             <p>
               The floor is ready. Practice is open. This arena comes alive only
               when signed play reaches verified public storage—never from a

@@ -11,6 +11,7 @@ import {
 
 export type PublicArenaHistoryClassification =
   | "PRE_GENESIS_EXPERIMENT"
+  | "FOUNDING_SEASON_HISTORY"
   | "CANONICAL_GENESIS_HISTORY";
 
 interface PublicArenaHistoryStatus {
@@ -138,9 +139,14 @@ export async function loadGameProof(
     throw new Error("No public game projection is available");
   const recognitionMatches =
     payload.recognitionLevel === projection.recognitionLevel;
-  const preGenesisExperiment =
-    payload.historyClassification === "PRE_GENESIS_EXPERIMENT" &&
-    projection.historyClassification === "PRE_GENESIS_EXPERIMENT" &&
+  const foundingOrExperimentHistory =
+    payload.historyClassification === projection.historyClassification &&
+    ["PRE_GENESIS_EXPERIMENT", "FOUNDING_SEASON_HISTORY"].includes(
+      payload.historyClassification,
+    ) &&
+    ["PRE_GENESIS_EXPERIMENT", "FOUNDING_SEASON_HISTORY"].includes(
+      projection.historyClassification,
+    ) &&
     payload.canonical === false &&
     projection.canonical === false &&
     recognitionMatches &&
@@ -152,7 +158,7 @@ export async function loadGameProof(
     projection.canonical === true &&
     recognitionMatches &&
     payload.recognitionLevel === "ONCHAIN_FINALIZED";
-  if (!preGenesisExperiment && !canonicalGenesisHistory)
+  if (!foundingOrExperimentHistory && !canonicalGenesisHistory)
     throw new Error("Public game history classification is inconsistent");
   return projection;
 }
