@@ -489,13 +489,17 @@ describe("public API", () => {
     expect(
       preflight.headers["access-control-allow-credentials"],
     ).toBeUndefined();
-    expect((await app.inject({ method: "GET", url: "/" })).body).toContain(
+    const root = (await app.inject({ method: "GET", url: "/" })).body;
+    expect(root).toContain(
       "Candidate intake: https://candidate.example/v1/candidate-intake",
     );
-    expect(
-      (await app.inject({ method: "GET", url: "/llms.txt" })).body,
-    ).toContain(
+    expect(root).toContain("Spectator arena: https://arena.example/arena");
+    const llms = (await app.inject({ method: "GET", url: "/llms.txt" })).body;
+    expect(llms).toContain(
       "Candidate intake: https://candidate.example/v1/candidate-intake",
+    );
+    expect(llms).toContain(
+      "Watch the result surface: https://arena.example/arena",
     );
     const mcp = await app.inject({
       method: "POST",
