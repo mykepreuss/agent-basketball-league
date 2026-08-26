@@ -10,8 +10,16 @@ import {
   STAGING_POSSESSION_TEST_TIMESTAMP,
   createStagingPossessionCommand,
 } from "../src/command.js";
+import { CAREER_IDENTITY_PATH } from "../src/career-runtime.js";
 
 describe("private staging body", () => {
+  it("stores the isolated career identity on writable Sandbox-local state", () => {
+    expect(CAREER_IDENTITY_PATH).toBe(
+      "/tmp/abl-career-state/career-identity.json",
+    );
+    expect(CAREER_IDENTITY_PATH).not.toContain("/workspace");
+  });
+
   it("produces one deterministic signed possession without embedding a key", async () => {
     const identity = createSigningIdentity(`0x${"7".repeat(64)}`);
     const signer = {
