@@ -11,7 +11,7 @@ import { BlaxelJobCandidateProvisioningDispatcher } from "../src/provisioning-di
 describe("candidate provisioning dispatch", () => {
   beforeEach(() => run.mockReset());
 
-  it("coalesces concurrent status retries into one deterministic Job run", async () => {
+  it("coalesces concurrent status retries into one immediate Job run", async () => {
     let complete!: () => void;
     run.mockReturnValue(
       new Promise<void>((resolve) => {
@@ -34,8 +34,7 @@ describe("candidate provisioning dispatch", () => {
       "ALREADY_DISPATCHED",
     );
     expect(run).toHaveBeenCalledWith([{ applicationId, action: "PROVISION" }], {
-      allowQueue: true,
-      executionId: "candidate-0198e000000070008000000000000041",
+      allowQueue: false,
     });
   });
 

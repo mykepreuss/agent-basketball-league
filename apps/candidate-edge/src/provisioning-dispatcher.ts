@@ -29,8 +29,7 @@ export class BlaxelJobCandidateProvisioningDispatcher
     if (pending === undefined) {
       pending = blJob(this.#jobName)
         .run([{ applicationId: id, action: "PROVISION" }], {
-          allowQueue: true,
-          executionId: `candidate-${id.replaceAll("-", "")}`,
+          allowQueue: false,
         })
         .then(() => undefined);
       this.#pending.set(id, pending);
