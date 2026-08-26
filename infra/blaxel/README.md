@@ -76,3 +76,5 @@ pnpm stage-c:prepare-images <external-directory>
 ```
 
 The exact ordered workspace, manifest, image, and memory mapping is [`persistent-pre-genesis/deployment-map.json`](./persistent-pre-genesis/deployment-map.json). Apply only its individual manifest files to their declared workloads in the existing `agent-basketball-league` workspace. Recursive directory apply is prohibited because `abl-competition` also contains candidate-specific examples and inactive model manifests that are outside Stage C. The environment file must not enter Git. Never pass secrets directly on a command line because process listings and shell history may expose them.
+
+The persistent image preparation also produces `abl-stage-c-fixed-broker-image` and `abl-stage-c-career-body-image`. These are reusable, immutable candidate-runtime templates, not standing workloads: the existing candidate provisioner references their provider revisions and creates application-derived private Sandboxes only after an offer is signed. The career-body template runs the existing `@abl/staging-body` implementation from `/opt/abl`, and neither template creates a Blaxel Agent, Application, or Volume.
