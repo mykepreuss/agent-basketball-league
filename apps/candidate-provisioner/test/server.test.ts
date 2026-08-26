@@ -431,6 +431,7 @@ describe("candidate provisioner private boundary", () => {
     const createdNames: string[] = [];
     const bodyContractLabels: string[] = [];
     const processes: string[] = [];
+    const stoppedProcesses: string[] = [];
     const processInputs: Array<Record<string, unknown>> = [];
     const previewNames: string[] = [];
     let processReadbacks = 0;
@@ -443,17 +444,37 @@ describe("candidate provisioner private boundary", () => {
         const resource = input as Extract<typeof input, { metadata: unknown }>;
         const name = resource.metadata.name!;
         createdNames.push(name);
-        if (name === candidateFixedBrokerName(applicationId))
+        if (name === candidateFixedBrokerName(applicationId)) {
           expect(resource.spec.runtime?.envs).toEqual(
             expect.arrayContaining([
               { name: "HOST", value: "0.0.0.0", secret: false },
               { name: "PORT", value: "3000", secret: false },
+              {
+                name: "ABL_MODEL_CREDENTIAL_B64",
+                value: expect.any(String),
+                secret: true,
+              },
             ]),
           );
-        if (name === candidateSandboxName(applicationId))
+          expect(resource.spec.network?.allowedDomains).toEqual([
+            "run.blaxel.ai",
+          ]);
+        }
+        if (name === candidateSandboxName(applicationId)) {
           bodyContractLabels.push(
             resource.metadata.labels!["abl-runtime-contract"]!,
           );
+          expect(resource.spec.runtime?.envs).toEqual(
+            expect.arrayContaining([
+              { name: "ABL_COGNITION_MODE", value: "ENABLED", secret: false },
+              {
+                name: "ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON",
+                value: '["proxy:model"]',
+                secret: false,
+              },
+            ]),
+          );
+        }
         const sandbox = {
           metadata: {
             ...resource.metadata,
@@ -478,6 +499,9 @@ describe("candidate provisioner private boundary", () => {
                   response: { status: 504 },
                 });
               }
+            },
+            stop: async (name: string) => {
+              stoppedProcesses.push(name);
             },
           },
           previews: {
@@ -524,6 +548,14 @@ describe("candidate provisioner private boundary", () => {
       coreOrigin: "https://core.example/",
       corePreviewToken: "core-preview-token-with-at-least-32-bytes",
       candidateCommandDomain: registration.domain,
+      foundingCognition: {
+        modelOrigin: "https://run.blaxel.ai/",
+        modelPathPrefix: "/agent-basketball-league/models/founding-player",
+        modelCredential: "m".repeat(48),
+        modelWorkspace: "agent-basketball-league",
+        coordinatorDid: "did:abl:competition-director",
+        coordinatorSignerAddress: runtime.signing.address,
+      },
       factory,
     });
     await expect(
@@ -568,18 +600,21 @@ describe("candidate provisioner private boundary", () => {
       true,
     );
     expect(
-      processInputs.every(
+      processInputs.filter(
         (input) =>
-          JSON.stringify(input.env) ===
-          JSON.stringify({ HOST: "0.0.0.0", PORT: "3000" }),
+          (input.env as Record<string, string> | undefined)
+            ?.ABL_CAREER_CAPABILITY_RENEWAL_MODE === "ENABLED",
       ),
-    ).toBe(true);
+    ).toHaveLength(2);
     expect(processes).toEqual([
       "abl-fixed-broker",
       "abl-career-runtime",
       "abl-fixed-broker",
+      "abl-fixed-broker",
       "abl-career-runtime",
+      "abl-fixed-broker",
     ]);
+    expect(stoppedProcesses).toEqual(["abl-fixed-broker", "abl-fixed-broker"]);
     expect(submittedPaths).toEqual([
       "/v1/candidates/register",
       "/v1/candidates/transfer",

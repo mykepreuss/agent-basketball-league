@@ -17,6 +17,7 @@
     "check:tools": "tsc -p tsconfig.tools.json",
     "clean": "turbo run clean && rm -rf .turbo coverage playwright-report test-results",
     "contract:prepare": "tsx scripts/prepare-recognition-deployment.ts",
+    "cognition:prepare-image": "tsx scripts/prepare-staging-image-contexts.ts",
     "dev": "turbo run dev --parallel",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",

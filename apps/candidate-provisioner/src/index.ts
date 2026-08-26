@@ -89,6 +89,30 @@ const controlPlane =
               coreOrigin: required("ABL_CANDIDATE_CORE_ORIGIN"),
               corePreviewToken: required("ABL_CANDIDATE_CORE_PREVIEW_TOKEN"),
               candidateCommandDomain,
+              ...(z
+                .enum(["DISABLED", "ENABLED"])
+                .parse(
+                  process.env.ABL_CANDIDATE_COGNITION_MODE ?? "DISABLED",
+                ) === "DISABLED"
+                ? {}
+                : {
+                    foundingCognition: {
+                      modelOrigin: required("ABL_CANDIDATE_MODEL_ORIGIN"),
+                      modelPathPrefix: required(
+                        "ABL_CANDIDATE_MODEL_PATH_PREFIX",
+                      ),
+                      modelCredential: required(
+                        "ABL_CANDIDATE_MODEL_CREDENTIAL",
+                      ),
+                      modelWorkspace: required("ABL_CANDIDATE_MODEL_WORKSPACE"),
+                      coordinatorDid: required(
+                        "ABL_COMPETITION_COORDINATOR_DID",
+                      ),
+                      coordinatorSignerAddress: required(
+                        "ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS",
+                      ),
+                    },
+                  }),
             }
           : {}),
       });

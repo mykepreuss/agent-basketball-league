@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 import {
   signServiceRequest,
@@ -6,17 +6,27 @@ import {
   type SignedServiceRequestHeaders,
 } from "@abl/foundation";
 import {
+  recoverCanonicalEventSigner,
+  sha256Commitment,
   signCanonicalEvent,
+  verifyEventContent,
   type CanonicalEvent,
   type SigningIdentity,
 } from "@abl/recognition";
+import {
+  CAREER_CAPABILITY_AGGREGATE_TYPE,
+  CAREER_CAPABILITY_RENEWAL_EVENT_TYPE,
+  CAREER_CAPABILITY_RENEWAL_SCHEMA_LABEL,
+  CareerCapabilityRenewalPayloadSchema,
+  SignedCanonicalCommandSchema,
+} from "@abl/schemas";
 import { encryptContent } from "@abl/storage";
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
   type FastifyRequest,
 } from "fastify";
-import type { TypedDataDomain } from "viem";
+import type { Address, TypedDataDomain } from "viem";
 import { z } from "zod";
 
 const ProxyRequestSchema = z.strictObject({
@@ -124,9 +134,14 @@ export interface BodyBrokerOptions {
     domain: TypedDataDomain;
     allowedEvents: ReadonlySet<string>;
   };
+  careerCapabilityRenewal?: {
+    signerAddress: Address;
+    domain: TypedDataDomain;
+  };
   fetchImplementation?: typeof fetch;
   now?: () => number;
   createNonce?: () => string;
+  createCapabilityToken?: () => string;
   allowHttpForTest?: boolean;
 }
 
@@ -229,6 +244,15 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
   });
   const fetchImplementation = options.fetchImplementation ?? fetch;
   const createNonce = options.createNonce ?? randomUUID;
+  const createCapabilityToken =
+    options.createCapabilityToken ??
+    (() => randomBytes(32).toString("base64url"));
+  let activeCapability = {
+    token: options.clientCapability.token,
+    expiresAtMs: capabilityExpiresAt,
+    operations: new Set(options.clientCapability.operations),
+  };
+  const usedRenewalEvents = new Map<string, number>();
 
   function assertClientCapability(
     request: FastifyRequest,
@@ -239,11 +263,11 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
       typeof authorization === "string" && authorization.startsWith("Bearer ")
         ? authorization.slice("Bearer ".length)
         : "";
-    const expectedBytes = Buffer.from(options.clientCapability.token, "utf8");
+    const expectedBytes = Buffer.from(activeCapability.token, "utf8");
     const suppliedBytes = Buffer.from(supplied, "utf8");
     if (
-      now() >= capabilityExpiresAt ||
-      !options.clientCapability.operations.has(operation) ||
+      now() >= activeCapability.expiresAtMs ||
+      !activeCapability.operations.has(operation) ||
       suppliedBytes.length !== expectedBytes.length ||
       !timingSafeEqual(suppliedBytes, expectedBytes)
     ) {
@@ -311,6 +335,73 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
     status: "ok",
     boundary: "fixed-body-broker",
   }));
+
+  app.post("/v1/capabilities/renew", async (request, reply) => {
+    try {
+      const renewal = options.careerCapabilityRenewal;
+      if (renewal === undefined)
+        throw new BrokerPolicyError("Career capability renewal is disabled");
+      const command = SignedCanonicalCommandSchema.parse(request.body);
+      if (command.signatures.length !== 1)
+        throw new BrokerPolicyError(
+          "Career capability renewal requires one signature",
+        );
+      const event = {
+        ...command.event,
+        aggregateVersion: BigInt(command.event.aggregateVersion),
+      } as CanonicalEvent;
+      verifyEventContent(event);
+      const payload = CareerCapabilityRenewalPayloadSchema.parse(event.payload);
+      const eventTime = Date.parse(event.timestamp);
+      const expiresAtMs = Date.parse(payload.requestedExpiresAt);
+      const currentTime = now();
+      const operations = [...options.clientCapability.operations].sort();
+      const recovered = await recoverCanonicalEventSigner(
+        renewal.domain,
+        event,
+        command.signatures[0]! as `0x${string}`,
+      );
+      if (
+        recovered.toLowerCase() !== renewal.signerAddress.toLowerCase() ||
+        event.actorDid !== options.agentDid ||
+        event.aggregateType !== CAREER_CAPABILITY_AGGREGATE_TYPE ||
+        event.aggregateId !== options.agentDid ||
+        event.aggregateVersion !== 1n ||
+        event.eventType !== CAREER_CAPABILITY_RENEWAL_EVENT_TYPE ||
+        event.previousEventHash !== null ||
+        event.schemaDigest !==
+          sha256Commitment(CAREER_CAPABILITY_RENEWAL_SCHEMA_LABEL) ||
+        event.stateRoot !== sha256Commitment(payload) ||
+        !Number.isFinite(eventTime) ||
+        eventTime > currentTime + 5_000 ||
+        currentTime - eventTime > 60_000 ||
+        !Number.isFinite(expiresAtMs) ||
+        expiresAtMs <= currentTime ||
+        expiresAtMs - currentTime > maximumCapabilityLifetimeMs ||
+        JSON.stringify(payload.operations) !== JSON.stringify(operations) ||
+        usedRenewalEvents.has(event.eventHash)
+      )
+        throw new BrokerPolicyError("Career capability renewal denied");
+      for (const [eventHash, expiresAt] of usedRenewalEvents)
+        if (expiresAt <= currentTime) usedRenewalEvents.delete(eventHash);
+      const token = createCapabilityToken();
+      if (token.length < 32 || token.length > 512 || /[\r\n]/.test(token))
+        throw new BrokerPolicyError("Generated body capability is invalid");
+      usedRenewalEvents.set(event.eventHash, expiresAtMs);
+      activeCapability = {
+        token,
+        expiresAtMs,
+        operations: new Set(payload.operations),
+      };
+      return reply.send({
+        token,
+        expiresAt: payload.requestedExpiresAt,
+        operations: payload.operations,
+      });
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
 
   app.post("/v1/signing/canonical-event", async (request, reply) => {
     try {

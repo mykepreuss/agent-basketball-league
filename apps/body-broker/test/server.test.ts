@@ -7,7 +7,14 @@ import {
   createSigningIdentity,
   recoverCanonicalEventSigner,
   sha256Commitment,
+  signCanonicalEvent,
 } from "@abl/recognition";
+import {
+  CAREER_CAPABILITY_AGGREGATE_TYPE,
+  CAREER_CAPABILITY_RENEWAL_EVENT_TYPE,
+  CAREER_CAPABILITY_RENEWAL_SCHEMA_LABEL,
+  SchemaVersion,
+} from "@abl/schemas";
 import {
   decryptContent,
   generateDomainKey,
@@ -404,6 +411,100 @@ describe("fixed body broker", () => {
           url: "/v1/proxy",
           headers: authorizedHeaders,
           payload,
+        })
+      ).statusCode,
+    ).toBe(403);
+  });
+
+  it("renews an expired capability only for the career signer and exact operations", async () => {
+    let now = clock;
+    const careerIdentity = createSigningIdentity(`0x${"7".repeat(64)}`);
+    const renewedToken = "renewed-body-capability-token-000000000001";
+    const app = createBodyBroker({
+      agentDid: "did:abl:agent-a",
+      clientCapability: {
+        token: capabilityToken,
+        expiresAt: new Date(clock + 1_000).toISOString(),
+        operations: new Set(["proxy:model"]),
+      },
+      serviceIdentity,
+      routes,
+      storageDomainKeys: new Map(),
+      careerCapabilityRenewal: {
+        signerAddress: careerIdentity.address,
+        domain: recognitionDomain,
+      },
+      now: () => now,
+      createCapabilityToken: () => renewedToken,
+      fetchImplementation: async () =>
+        new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    });
+    apps.push(app);
+    now += 2_000;
+    const expiresAt = new Date(now + 4 * 60 * 60 * 1_000).toISOString();
+    const payload = {
+      schemaVersion: SchemaVersion,
+      operations: ["proxy:model"],
+      requestedExpiresAt: expiresAt,
+    } as const;
+    const event = createCanonicalEvent({
+      eventId: "018f36a0-0000-7000-8000-000000000001",
+      actorDid: "did:abl:agent-a",
+      nonce: "renewal-nonce-0001",
+      idempotencyKey: "018f36a0-0000-7000-8000-000000000002",
+      aggregateType: CAREER_CAPABILITY_AGGREGATE_TYPE,
+      aggregateId: "did:abl:agent-a",
+      aggregateVersion: 1n,
+      eventType: CAREER_CAPABILITY_RENEWAL_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: sha256Commitment(payload),
+      schemaDigest: sha256Commitment(CAREER_CAPABILITY_RENEWAL_SCHEMA_LABEL),
+      timestamp: new Date(now).toISOString(),
+    });
+    const command = {
+      event: { ...event, aggregateVersion: "1" },
+      signatures: [
+        await signCanonicalEvent(careerIdentity, recognitionDomain, event),
+      ],
+    };
+    const renewal = await app.inject({
+      method: "POST",
+      url: "/v1/capabilities/renew",
+      payload: command,
+    });
+    expect(renewal.statusCode).toBe(200);
+    expect(renewal.json()).toEqual({
+      token: renewedToken,
+      expiresAt,
+      operations: ["proxy:model"],
+    });
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/proxy",
+          headers: { authorization: `Bearer ${renewedToken}` },
+          payload: {
+            route: "model",
+            method: "POST",
+            path: "/v1/responses",
+            body: {},
+            expectedVersion: "0",
+            idempotencyKey: "idempotency-renewed-model-0001",
+          },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/capabilities/renew",
+          payload: command,
         })
       ).statusCode,
     ).toBe(403);

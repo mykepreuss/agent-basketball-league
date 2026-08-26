@@ -31,6 +31,7 @@ import type {
   RefereeDecisionBody,
   ReplayDecision,
   ReplayDecisionBody,
+  SignedPlayerDecision,
 } from "./types.js";
 
 export const REHEARSAL_RECOGNITION_DOMAIN: TypedDataDomain = {
@@ -565,6 +566,83 @@ export function publicPracticeScenario() {
       scenarioId: PUBLIC_PRACTICE_SCENARIO_ID,
       observation,
     }),
+  };
+}
+
+export function careerPracticeObservations(candidateDid: string) {
+  const did = z.string().startsWith("did:").max(500).parse(candidateDid);
+  return [0, 1].map((window) => {
+    const state = initialState();
+    const player = state.players.find(({ playerId }) => playerId === "H1")!;
+    player.did = did;
+    state.window = window;
+    state.gameClockMs -= window * 2_000;
+    state.shotClockMs -= window * 2_000;
+    const observation = observePlayer(state, player.playerId);
+    return {
+      windowId: `${state.possessionId}:w${window}`,
+      observation,
+    };
+  });
+}
+
+export async function resolveCareerPracticeDecisions(input: {
+  kind?: "PRACTICE" | "COMPETITION";
+  candidateDid: string;
+  signerAddress: Address;
+  decisions: readonly SignedPlayerDecision[];
+}) {
+  const observations = careerPracticeObservations(input.candidateDid);
+  if (
+    input.decisions.length !== observations.length ||
+    new Set(input.decisions.map(({ intent }) => intent.windowId)).size !==
+      observations.length
+  )
+    throw new Error("Career practice requires one decision per window");
+  const decisions = new Map(
+    input.decisions.map((decision) => [decision.intent.windowId, decision]),
+  );
+  const bodies = createRehearsalPlayerBodies({ terminalWindow: 1 });
+  bodies.set("H1", {
+    signerAddress: input.signerAddress,
+    decisionVersion: () => 1n,
+    async decide(observation) {
+      const windowId = observation.observationId
+        .split(":")
+        .slice(0, 2)
+        .join(":");
+      const decision = decisions.get(windowId);
+      if (decision === undefined)
+        throw new Error("Career practice decision window is missing");
+      return decision;
+    },
+  });
+  const rehearsal = await runFirstPossessionRehearsal({
+    bodies,
+    windowCount: 2,
+    playerDidOverrides: { H1: input.candidateDid },
+    captureSnapshots: true,
+  });
+  return {
+    sessionKind: input.kind ?? "PRACTICE",
+    practice: (input.kind ?? "PRACTICE") === "PRACTICE",
+    canonical: false as const,
+    genesis: false as const,
+    recognition: "SIGNED_VALID" as const,
+    candidateDid: input.candidateDid,
+    signerAddress: input.signerAddress,
+    decisionHashes: input.decisions.map(({ eventHash }) => eventHash),
+    outcome: {
+      score: rehearsal.result.finalState.score,
+      possessionTeam: rehearsal.result.finalState.possessionTeam,
+      gameClockMs: rehearsal.result.finalState.gameClockMs,
+      shotClockMs: rehearsal.result.finalState.shotClockMs,
+      ball: rehearsal.result.finalState.ball,
+      events: rehearsal.result.events,
+      snapshots: rehearsal.result.snapshots,
+    },
+    eventMerkleRoot: rehearsal.result.eventMerkleRoot,
+    finalStateRoot: rehearsal.result.finalStateRoot,
   };
 }
 
