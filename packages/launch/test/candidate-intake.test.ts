@@ -10,6 +10,7 @@ import {
 } from "@abl/schemas";
 import {
   createCanonicalEvent,
+  createAgentKeyBundle,
   createSigningIdentity,
   sha256Commitment,
   signCanonicalEvent,
@@ -20,10 +21,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   CANDIDATE_APPLICATION_DOMAIN,
+  CANDIDATE_RUNTIME_IDENTITY_DOMAIN,
   CandidateApplicationAuthorizationTypes,
   CandidateIntakeRepository,
   CandidateIntakeService,
   CandidateOpportunityResponseTypes,
+  CandidateRuntimeIdentityTypes,
   CandidateProvisioner,
   CandidateStatusAuthorizationTypes,
   candidateApplicationCommitment,
@@ -32,6 +35,7 @@ import {
   encryptCandidateEnvelope,
   encryptCandidateEnvelopeForRecipient,
   issueCandidateChallenge,
+  verifyCandidateRuntimeIdentityReceipt,
   type CandidateIntakeApplication,
   type CandidateIntakePolicy,
   type CandidateOpportunityResponse,
@@ -870,5 +874,64 @@ describe("candidate intake isolation boundary", () => {
         challengeToken: fixture.challenge.challengeToken,
       }),
     ).rejects.toThrow("oversized");
+  });
+
+  it("accepts only a distinct self-signed identity created by the career runtime", async () => {
+    const applicationId = uuidv7({ msecs: now + 20 });
+    const candidateDid = "did:abl:isolated-career";
+    const bundle = createAgentKeyBundle();
+    const createdAt = new Date(now).toISOString();
+    const signingKeyAttestation = hash("a");
+    const encryptionKeyAttestation = hash("b");
+    const runtimeAttestationDigest = hash("c");
+    const message = {
+      applicationId,
+      candidateDid,
+      roleClass: "PLAYER" as const,
+      signingAddress: bundle.signing.address,
+      signingKeyAttestation,
+      encryptionKeyAttestation,
+      runtimeAttestationDigest,
+      createdAt,
+    };
+    const receipt = {
+      schemaVersion: SchemaVersion,
+      ...message,
+      signingPublicKey: bundle.signing.publicKey,
+      encryptionPublicKey:
+        `0x${Buffer.from(bundle.encryption.publicKey).toString("hex")}` as const,
+      generatedInIsolatedRuntime: true as const,
+      humanInputRoutes: [] as const,
+      proofSignature: await privateKeyToAccount(
+        bundle.signing.privateKey,
+      ).signTypedData({
+        domain: CANDIDATE_RUNTIME_IDENTITY_DOMAIN,
+        types: CandidateRuntimeIdentityTypes,
+        primaryType: "CandidateRuntimeIdentity",
+        message,
+      }),
+    };
+    await expect(
+      verifyCandidateRuntimeIdentityReceipt({
+        receipt,
+        applicationId,
+        candidateDid,
+        roleClass: "PLAYER",
+        formerOperatorSigningAddress: identity.address,
+      }),
+    ).resolves.toMatchObject({
+      signingAddress: bundle.signing.address,
+      generatedInIsolatedRuntime: true,
+      humanInputRoutes: [],
+    });
+    await expect(
+      verifyCandidateRuntimeIdentityReceipt({
+        receipt,
+        applicationId,
+        candidateDid,
+        roleClass: "PLAYER",
+        formerOperatorSigningAddress: bundle.signing.address,
+      }),
+    ).rejects.toThrow("binding failed");
   });
 });

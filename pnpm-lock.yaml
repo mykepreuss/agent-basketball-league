@@ -82,6 +82,9 @@ importers:
       "@vitest/coverage-v8":
         specifier: 4.1.10
         version: 4.1.10(vitest@4.1.10)
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       prettier:
         specifier: 3.6.2
         version: 3.6.2
@@ -208,6 +211,9 @@ importers:
       "@abl/schemas":
         specifier: workspace:*
         version: link:../../packages/schemas
+      "@blaxel/core":
+        specifier: 0.3.13
+        version: 0.3.13(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))(bufferutil@4.0.7)(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(utf-8-validate@6.0.3)
       fastify:
         specifier: "catalog:"
         version: 5.11.3
@@ -230,9 +236,18 @@ importers:
 
   apps/candidate-provisioner:
     dependencies:
+      "@abl/career":
+        specifier: workspace:*
+        version: link:../../packages/career
       "@abl/launch":
         specifier: workspace:*
         version: link:../../packages/launch
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
       "@blaxel/core":
         specifier: 0.3.13
         version: 0.3.13(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))(bufferutil@4.0.7)(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(utf-8-validate@6.0.3)
@@ -242,6 +257,9 @@ importers:
       uuid:
         specifier: "catalog:"
         version: 14.0.1
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
       zod:
         specifier: "catalog:"
         version: 4.4.3
@@ -503,9 +521,21 @@ importers:
       "@abl/basketball":
         specifier: workspace:*
         version: link:../../packages/basketball
+      "@abl/career":
+        specifier: workspace:*
+        version: link:../../packages/career
+      "@abl/launch":
+        specifier: workspace:*
+        version: link:../../packages/launch
       "@abl/recognition":
         specifier: workspace:*
         version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      fastify:
+        specifier: "catalog:"
+        version: 5.11.3
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)

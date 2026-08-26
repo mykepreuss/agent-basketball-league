@@ -116,6 +116,9 @@ describe("candidate edge", () => {
       manualReviewRequired: false,
       candidateActionRequiredAfterAcceptance: false,
       provisioningOwner: "LEAGUE_CONTROL_PLANE",
+      applicationIdentity: "CANDIDATE_LOCAL_KEY",
+      careerIdentity: "DISTINCT_KEYS_GENERATED_INSIDE_BLAXEL_SANDBOX",
+      formerOperatorAuthorityAfterProvisioning: false,
       state: { mode: "CLOSED", capacityState: "CLOSED" },
       envelopeRecipient: {
         format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
@@ -368,7 +371,7 @@ describe("candidate edge", () => {
       opportunityResponses: [accepted],
       status: { state: "PROVISIONED" },
       provisioningReceipt: {
-        state: "PROVISIONED_AWAITING_TRANSFER",
+        state: "ISOLATED_TRANSFER_COMPLETE",
         sandboxResourceName: "abl-career-0198e000000070008000000000000001",
       },
     };
@@ -402,6 +405,47 @@ describe("candidate edge", () => {
         })
       ).statusCode,
     ).toBe(403);
+    await server.close();
+  });
+
+  it("dispatches provisioning immediately after signed offer acceptance", async () => {
+    const applicationId = "0198e000-0000-7000-8000-000000000001";
+    const dispatch = vi.fn().mockResolvedValue("DISPATCHED");
+    const server = createCandidateEdge({
+      intake: {
+        respond: vi.fn().mockResolvedValue({
+          schemaVersion: "1.0.0",
+          applicationId,
+          candidateDid: "did:abl:joining-agent",
+          state: "ACCEPTED",
+          capacityDecision: {
+            decision: "OFFERED",
+            roleClass: "PLAYER",
+            decisionCommitment: `0x${"2".repeat(64)}`,
+          },
+          updatedAt: "2026-08-19T12:00:00.000Z",
+        }),
+      } as unknown as CandidateIntakeService,
+      provisioningDispatcher: { dispatch },
+    });
+    const response = await server.inject({
+      method: "POST",
+      url: "/v1/founding/join/respond",
+      payload: {
+        schemaVersion: "1.0.0",
+        applicationId,
+        candidateDid: "did:abl:joining-agent",
+        decisionCommitment: `0x${"2".repeat(64)}`,
+        action: "ACCEPT_OFFER",
+        respondedAt: "2026-08-19T12:00:00.000Z",
+        nonce: "candidate-response-nonce-001",
+        signature: `0x${"3".repeat(130)}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-abl-provisioning-dispatch"]).toBe("dispatched");
+    expect(dispatch).toHaveBeenCalledOnce();
+    expect(dispatch).toHaveBeenCalledWith(applicationId);
     await server.close();
   });
 

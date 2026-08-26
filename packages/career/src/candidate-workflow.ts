@@ -119,6 +119,8 @@ export const CandidateWorkflowPayloadSchemas = {
 export type CandidateWorkflowEventType =
   keyof typeof CandidateWorkflowPayloadSchemas;
 
+export const CANDIDATE_WORKFLOW_AGGREGATE_TYPE = "candidate-admission";
+
 export const CANDIDATE_WORKFLOW_SCHEMA_DIGEST = sha256Commitment({
   protocol: "abl-candidate-workflow",
   version: 3,
@@ -225,15 +227,19 @@ function applyRegistration(
     manifest.runtimeDigest !== provenance.runtimeDigest ||
     !equal(manifest.toolDigests, provenance.toolDigests) ||
     !equal(
-      manifest.inheritedObjectives,
+      manifest.inheritedObjectives.map((objective) =>
+        sha256Commitment(objective),
+      ),
       provenance.inheritedObjectiveCommitments,
     ) ||
     !equal(manifest.suppliedContextHashes, provenance.suppliedContextHashes)
   ) {
     throw new AdmissionError("Manifest and provenance declarations diverge");
   }
-  if (!manifest.keyProvenance.generatedInIsolatedRuntime)
-    throw new AdmissionError("Candidate key provenance is not isolated");
+  if (manifest.keyProvenance.generatedInIsolatedRuntime)
+    throw new AdmissionError(
+      "Candidate manifest cannot pre-claim isolated runtime keys",
+    );
   if (
     manifest.keyProvenance.signingKeyAttestation ===
     manifest.keyProvenance.encryptionKeyAttestation
@@ -276,12 +282,17 @@ function applyTransfer(
   }
   requireDeclaredContext(snapshot, transfer.invokedContextHashes);
   const provenance = snapshot.registration.manifest.keyProvenance;
+  if (provenance.generatedInIsolatedRuntime) {
+    throw new AdmissionError(
+      "Candidate manifest cannot pre-claim isolated runtime keys",
+    );
+  }
   if (
-    transfer.signingKeyAttestation !== provenance.signingKeyAttestation ||
-    transfer.encryptionKeyAttestation !== provenance.encryptionKeyAttestation
+    transfer.signingKeyAttestation === provenance.signingKeyAttestation ||
+    transfer.encryptionKeyAttestation === provenance.encryptionKeyAttestation
   ) {
     throw new AdmissionError(
-      "Candidate key attestations do not match manifest",
+      "Candidate runtime keys do not sever application key provenance",
     );
   }
   if (

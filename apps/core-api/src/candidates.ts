@@ -7,6 +7,7 @@ import {
 
 import {
   AdmissionError,
+  CANDIDATE_WORKFLOW_AGGREGATE_TYPE,
   CANDIDATE_WORKFLOW_SCHEMA_DIGEST,
   CandidateWorkflowPayloadSchemas,
   applyCandidateTransition,
@@ -43,7 +44,7 @@ import {
 } from "./canonical-command.js";
 import type { CareerOperationalVerifier } from "./candidate-authority.js";
 
-const aggregateType = "candidate-admission";
+const aggregateType = CANDIDATE_WORKFLOW_AGGREGATE_TYPE;
 
 const CandidateDidSchema = z
   .string()
@@ -184,12 +185,20 @@ async function validateTransitionAuthorization(
   enforceChallengeExpiry: boolean,
 ): Promise<void> {
   if (event.eventType === "CandidateRegistered") {
-    verifyChallengeToken(
+    const challenge = verifyChallengeToken(
       options.challengeSecret,
       next.registration.challengeToken,
       event.actorDid,
-      enforceChallengeExpiry ? (options.now ?? Date.now)() : null,
+      null,
     );
+    const eventAt = Date.parse(event.timestamp);
+    if (
+      eventAt < Date.parse(challenge.issuedAt) ||
+      eventAt > Date.parse(challenge.expiresAt)
+    )
+      throw new CandidateChallengeError(
+        "Candidate registration was not signed during its challenge window",
+      );
     await requireSigner(
       options.domain,
       event,

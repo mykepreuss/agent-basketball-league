@@ -9,5 +9,10 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/launch" }]
+  "references": [
+    { "path": "../../packages/career" },
+    { "path": "../../packages/launch" },
+    { "path": "../../packages/recognition" },
+    { "path": "../../packages/schemas" }
+  ]
 }

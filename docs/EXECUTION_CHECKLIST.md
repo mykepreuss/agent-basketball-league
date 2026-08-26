@@ -304,7 +304,7 @@ The numbered R01 records below are historical evidence. They are not active prer
 
 - [x] Run the complete safe local unit, integration, property, adversarial, replay, contract-compile, migration/schema, API, browser, synthetic-load, recovery, acceptance, formatting, typecheck, and production-build suites.
 - [!] Run the live Blaxel custom-image/Drive/canonical-database/public-chain/networked-load/hardware suites after their external prerequisites and spend approval exist.
-- [!] Verify all 43 primary schemas/interfaces plus two V1 operational and eight launch schemas, the current route/method catalog, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates in the final Founding Alpha evidence rerun.
+- [!] Verify all 43 primary schemas/interfaces plus two V1 operational and nine launch schemas, the current route/method catalog, 15 NBA rule classifications, 42 CBA articles, 17 CBA exhibits, constitutional invariants, release/disclosure classes, and local acceptance gates in the final Founding Alpha evidence rerun.
 - [x] Publish the repository-local implementation evidence index with deterministic proofs, fixed findings, capacity/recovery results, limitations, and unresolved external dependencies.
 - [!] Publicly publish that evidence only after the founding release and public-exposure gate pass.
 - [x] Confirm in the proposed constitution and checklist that Season One remains gated on prepaid funding, concentration review, agent-ratified changes, and hardware-backed non-exportable signing when supported.

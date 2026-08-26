@@ -908,7 +908,10 @@ describe("private Gate 2 staging topology", () => {
       .sort();
     expect(secretNames).toEqual(["ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64"]);
     const bodySource = await readFile(
-      new URL("../../../apps/staging-body/src/index.ts", import.meta.url),
+      new URL(
+        "../../../apps/staging-body/src/possession-runtime.ts",
+        import.meta.url,
+      ),
       "utf8",
     );
     expect(bodySource).not.toMatch(/127\.0\.0\.1|ABL_LOCAL_BROKER/);

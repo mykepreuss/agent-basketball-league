@@ -550,8 +550,16 @@ describe("public API", () => {
           "NO_HUMAN_REVIEW",
           "NO_CONSOLE_STEP",
           "NO_SECOND_LEAGUE_APPROVAL",
+          "NO_REPOSITORY_CLONE",
+          "NO_HUMAN_PROVISIONING_HANDOFF",
         ],
       });
+      expect(join.client).toMatchObject({
+        name: "abl-join",
+        sha256: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+        runtime: "Node.js 24.18.0",
+      });
+      expect(join.client.url).toContain(`/${"b".repeat(40)}/`);
       const scenario = (
         await app.inject({
           method: "GET",

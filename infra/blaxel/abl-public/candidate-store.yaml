@@ -34,7 +34,7 @@ spec:
         value: ${ABL_CANDIDATE_CAPACITY_POLICY_JSON}
         secret: false
       - name: ABL_CANDIDATE_CHALLENGE_SECRET
-        value: ${ABL_CANDIDATE_CHALLENGE_SECRET}
+        value: ${ABL_CANDIDATE_CHALLENGE_HMAC_BASE64}
         secret: true
       - name: ABL_CANDIDATE_PROVISIONER_TOKEN
         value: ${ABL_CANDIDATE_PROVISIONER_TOKEN}

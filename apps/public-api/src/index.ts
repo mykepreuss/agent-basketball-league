@@ -812,6 +812,19 @@ const apiOptions: PublicApiOptions = {
   ...(process.env.ABL_RELEASE_ID === undefined
     ? {}
     : { sourceRevision: process.env.ABL_RELEASE_ID }),
+  ...(authority?.domain?.name === undefined ||
+  authority.domain.version === undefined ||
+  authority.domain.chainId === undefined ||
+  authority.domain.verifyingContract === undefined
+    ? {}
+    : {
+        candidateCommandDomain: {
+          name: authority.domain.name,
+          version: authority.domain.version,
+          chainId: Number(authority.domain.chainId),
+          verifyingContract: authority.domain.verifyingContract,
+        },
+      }),
 };
 if (projections !== undefined) apiOptions.projections = projections;
 if (contractProjections !== undefined)

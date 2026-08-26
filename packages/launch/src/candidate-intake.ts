@@ -16,6 +16,7 @@ import {
   CandidateOpportunityResponseSchema,
   CandidateProvenanceSchema,
   CandidateProvisioningReceiptSchema,
+  CandidateRuntimeIdentityReceiptSchema,
   CandidateRoleCapacityCountsSchema,
   SchemaVersion,
   SignedCanonicalCommandSchema,
@@ -24,6 +25,7 @@ import {
 import {
   recoverCanonicalEventSigner,
   sha256Commitment,
+  signingPublicKeyToAddress,
   verifyEventContent,
   type CanonicalEvent,
 } from "@abl/recognition";
@@ -69,6 +71,9 @@ export type CandidateOpportunityResponse = z.infer<
 export type CandidateProvisioningReceipt = z.infer<
   typeof CandidateProvisioningReceiptSchema
 >;
+export type CandidateRuntimeIdentityReceipt = z.infer<
+  typeof CandidateRuntimeIdentityReceiptSchema
+>;
 
 export const CandidateApplicationAuthorizationTypes = {
   CandidateApplication: [
@@ -84,6 +89,76 @@ export const CANDIDATE_APPLICATION_DOMAIN = {
   version: "1",
   chainId: 1,
 } as const satisfies TypedDataDomain;
+
+export const CANDIDATE_RUNTIME_IDENTITY_DOMAIN = {
+  name: "Agent Basketball League Career Runtime",
+  version: "1",
+  chainId: 1,
+} as const satisfies TypedDataDomain;
+
+export const CandidateRuntimeIdentityTypes = {
+  CandidateRuntimeIdentity: [
+    { name: "applicationId", type: "string" },
+    { name: "candidateDid", type: "string" },
+    { name: "roleClass", type: "string" },
+    { name: "signingAddress", type: "address" },
+    { name: "signingKeyAttestation", type: "bytes32" },
+    { name: "encryptionKeyAttestation", type: "bytes32" },
+    { name: "runtimeAttestationDigest", type: "bytes32" },
+    { name: "createdAt", type: "string" },
+  ],
+} as const;
+
+export async function verifyCandidateRuntimeIdentityReceipt(input: {
+  receipt: unknown;
+  applicationId: string;
+  candidateDid: string;
+  roleClass: CandidateRoleClass;
+  formerOperatorSigningAddress: string;
+}): Promise<CandidateRuntimeIdentityReceipt> {
+  const receipt = CandidateRuntimeIdentityReceiptSchema.parse(input.receipt);
+  if (
+    receipt.applicationId !== input.applicationId ||
+    receipt.candidateDid !== input.candidateDid ||
+    receipt.roleClass !== input.roleClass ||
+    signingPublicKeyToAddress(receipt.signingPublicKey as Hex) !==
+      getAddress(receipt.signingAddress) ||
+    getAddress(receipt.signingAddress) ===
+      getAddress(input.formerOperatorSigningAddress)
+  ) {
+    throw new CandidateIntakeError("Candidate runtime identity binding failed");
+  }
+  let recovered: string;
+  try {
+    recovered = getAddress(
+      await recoverTypedDataAddress({
+        domain: CANDIDATE_RUNTIME_IDENTITY_DOMAIN,
+        types: CandidateRuntimeIdentityTypes,
+        primaryType: "CandidateRuntimeIdentity",
+        message: {
+          applicationId: receipt.applicationId,
+          candidateDid: receipt.candidateDid,
+          roleClass: receipt.roleClass,
+          signingAddress: getAddress(receipt.signingAddress),
+          signingKeyAttestation: receipt.signingKeyAttestation as Hex,
+          encryptionKeyAttestation: receipt.encryptionKeyAttestation as Hex,
+          runtimeAttestationDigest: receipt.runtimeAttestationDigest as Hex,
+          createdAt: receipt.createdAt,
+        },
+        signature: receipt.proofSignature as Hex,
+      }),
+    );
+  } catch {
+    throw new CandidateIntakeError(
+      "Candidate runtime identity proof is invalid",
+    );
+  }
+  if (recovered !== getAddress(receipt.signingAddress))
+    throw new CandidateIntakeError(
+      "Candidate runtime identity signer mismatch",
+    );
+  return receipt;
+}
 
 export interface CandidateChallengeClaims {
   version: 1;
@@ -1613,9 +1688,14 @@ export interface CandidateSandboxControlPlane {
     roleClass: CandidateRoleClass;
     formerOperatorSigningAddress: string;
     commandCommitment: Hex;
+    candidateCommand?: unknown;
   }): Promise<{
-    state: "VERIFIED_NOT_PROVISIONED" | "PROVISIONED_AWAITING_TRANSFER";
+    state:
+      | "VERIFIED_NOT_PROVISIONED"
+      | "PROVISIONED_AWAITING_TRANSFER"
+      | "ISOLATED_TRANSFER_COMPLETE";
     sandboxResourceName: string | null;
+    formerOperatorAccessRemovedAt?: string | null;
   }>;
   deprovision(input: {
     applicationId: string;
@@ -1634,8 +1714,13 @@ export class DryRunCandidateControlPlane
   async provision(): Promise<{
     state: "VERIFIED_NOT_PROVISIONED";
     sandboxResourceName: null;
+    formerOperatorAccessRemovedAt: null;
   }> {
-    return { state: "VERIFIED_NOT_PROVISIONED", sandboxResourceName: null };
+    return {
+      state: "VERIFIED_NOT_PROVISIONED",
+      sandboxResourceName: null,
+      formerOperatorAccessRemovedAt: null,
+    };
   }
 
   async deprovision(): Promise<{
@@ -1766,6 +1851,7 @@ export class CandidateProvisioner {
       roleClass: record.decision.roleClass,
       formerOperatorSigningAddress: application.formerOperatorSigningAddress,
       commandCommitment,
+      candidateCommand: command,
     });
     const issuedAt = new Date(this.#now()).toISOString();
     const unsigned = {
@@ -1786,7 +1872,8 @@ export class CandidateProvisioner {
       controlPlaneMode: this.#controlPlane.mode,
       state: outcome.state,
       sandboxResourceName: outcome.sandboxResourceName,
-      formerOperatorAccessRemovedAt: null,
+      formerOperatorAccessRemovedAt:
+        outcome.formerOperatorAccessRemovedAt ?? null,
       issuedAt,
     };
     const receipt = CandidateProvisioningReceiptSchema.parse({

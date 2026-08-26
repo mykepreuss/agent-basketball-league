@@ -16,6 +16,8 @@ import Fastify, {
 } from "fastify";
 import { z } from "zod";
 
+import type { CandidateProvisioningDispatcher } from "./provisioning-dispatcher.js";
+
 const ChallengeRequestSchema = z.strictObject({ candidateDid: DidSchema });
 const AuthorityQuerySchema = CandidateCareerBindingSchema;
 const RegistrationSchema = z.strictObject({
@@ -134,6 +136,7 @@ export function createCandidateEdge(input: {
   };
   provisioningToken?: string;
   authorityToken?: string;
+  provisioningDispatcher?: CandidateProvisioningDispatcher;
   rateLimit?: CandidateRateLimitOptions;
 }): FastifyInstance {
   for (const [name, token] of [
@@ -153,6 +156,25 @@ export function createCandidateEdge(input: {
             publicKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
           })
           .parse(input.envelopeRecipient);
+
+  async function dispatchIfAccepted(
+    status: { applicationId: string; state: string },
+    reply: { header(name: string, value: string): unknown },
+  ): Promise<void> {
+    if (
+      status.state !== "ACCEPTED" ||
+      input.provisioningDispatcher === undefined
+    )
+      return;
+    try {
+      const state = await input.provisioningDispatcher.dispatch(
+        status.applicationId,
+      );
+      reply.header("x-abl-provisioning-dispatch", state.toLowerCase());
+    } catch {
+      reply.header("x-abl-provisioning-dispatch", "retry-on-status");
+    }
+  }
 
   function hasToken(
     expectedToken: string | undefined,
@@ -193,6 +215,9 @@ export function createCandidateEdge(input: {
     manualReviewRequired: false,
     candidateActionRequiredAfterAcceptance: false,
     provisioningOwner: "LEAGUE_CONTROL_PLANE",
+    applicationIdentity: "CANDIDATE_LOCAL_KEY",
+    careerIdentity: "DISTINCT_KEYS_GENERATED_INSIDE_BLAXEL_SANDBOX",
+    formerOperatorAuthorityAfterProvisioning: false,
     roleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
     envelopeRecipient:
       envelopeRecipient === null
@@ -267,8 +292,7 @@ export function createCandidateEdge(input: {
         sha256Commitment(accepted) !==
           query.data.opportunityResponseCommitment ||
         record.status.state !== "PROVISIONED" ||
-        (receipt?.state !== "PROVISIONED_AWAITING_TRANSFER" &&
-          receipt?.state !== "ISOLATED_TRANSFER_COMPLETE") ||
+        receipt?.state !== "ISOLATED_TRANSFER_COMPLETE" ||
         receipt.sandboxResourceName === null
       )
         return reply.code(403).send({ error: "candidate_not_operational" });
@@ -318,7 +342,9 @@ export function createCandidateEdge(input: {
     const parsed = CandidateOpportunityResponseSchema.safeParse(request.body);
     if (!parsed.success) return failClosed(reply);
     try {
-      return await input.intake.respond(parsed.data);
+      const status = await input.intake.respond(parsed.data);
+      await dispatchIfAccepted(status, reply);
+      return status;
     } catch (error) {
       if (error instanceof CandidateIntakeError || error instanceof z.ZodError)
         return failClosed(reply);
@@ -337,10 +363,12 @@ export function createCandidateEdge(input: {
       const parsed = StatusAuthorizationSchema.safeParse(request.body);
       if (!parsed.success) return failClosed(reply);
       try {
-        return await input.intake[operation]({
+        const status = await input.intake[operation]({
           ...parsed.data,
           signature: parsed.data.signature as `0x${string}`,
         });
+        await dispatchIfAccepted(status, reply);
+        return status;
       } catch (error) {
         if (
           error instanceof CandidateIntakeError ||

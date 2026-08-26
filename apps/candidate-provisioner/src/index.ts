@@ -48,6 +48,9 @@ const CandidateProvisioningTaskSchema = z.strictObject({
   applicationId: z.uuid(),
   action: z.enum(["PROVISION", "RECONCILE_CLOSED"]).default("PROVISION"),
 });
+const candidateCommandDomain = DomainSchema.parse(
+  JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),
+);
 const envelopeKey = secret("ABL_CANDIDATE_ENVELOPE_KEY");
 const controlPlaneMode = z
   .enum(["DRY_RUN", "APPROVED_LIVE"])
@@ -59,7 +62,9 @@ const genesisEvidenceDigest =
     ? verifiedGenesisEvidenceDigest()
     : undefined;
 const targetApplicationId =
-  liveRuntimeScope !== null && liveRuntimeScope.mode !== "CAPPED_FOUNDING"
+  liveRuntimeScope !== null &&
+  liveRuntimeScope.mode !== "CAPPED_FOUNDING" &&
+  liveRuntimeScope.mode !== "CAPPED_FOUNDING_AUTO"
     ? liveRuntimeScope.assignment.applicationId
     : null;
 const controlPlane =
@@ -79,6 +84,13 @@ const controlPlane =
         fixedBrokerImageReference: required(
           "ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE",
         ),
+        ...(liveRuntimeScope?.mode === "CAPPED_FOUNDING_AUTO"
+          ? {
+              coreOrigin: required("ABL_CANDIDATE_CORE_ORIGIN"),
+              corePreviewToken: required("ABL_CANDIDATE_CORE_PREVIEW_TOKEN"),
+              candidateCommandDomain,
+            }
+          : {}),
       });
 if (
   controlPlaneMode === "APPROVED_LIVE" &&
@@ -105,9 +117,7 @@ const provisioner = new CandidateProvisioner({
         envelopeRecipientKeyId: required("ABL_CANDIDATE_ENVELOPE_KEY_ID"),
       }),
   controlPlane,
-  candidateCommandDomain: DomainSchema.parse(
-    JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),
-  ),
+  candidateCommandDomain,
   policy: parseCandidateIntakePolicy(
     JSON.parse(required("ABL_CANDIDATE_CAPACITY_POLICY_JSON")),
   ),
@@ -116,8 +126,14 @@ const provisioner = new CandidateProvisioner({
 
 function candidateRuntimeScope(): CandidateRuntimeScope {
   const mode = z
-    .enum(["BOUNDED_SINGLE", "CAPPED_FOUNDING", "POST_GENESIS_SINGLE"])
+    .enum([
+      "BOUNDED_SINGLE",
+      "CAPPED_FOUNDING",
+      "CAPPED_FOUNDING_AUTO",
+      "POST_GENESIS_SINGLE",
+    ])
     .parse(process.env.ABL_CANDIDATE_RUNTIME_SCOPE ?? "BOUNDED_SINGLE");
+  if (mode === "CAPPED_FOUNDING_AUTO") return { mode };
   if (mode === "CAPPED_FOUNDING")
     return {
       mode,

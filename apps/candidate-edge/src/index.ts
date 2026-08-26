@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { assertCandidateEdgeIsolation, createCandidateEdge } from "./server.js";
 import { createCandidateGateway } from "./gateway.js";
+import { BlaxelJobCandidateProvisioningDispatcher } from "./provisioning-dispatcher.js";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -57,6 +58,14 @@ const app =
         ...(envelopeRecipient === undefined ? {} : { envelopeRecipient }),
         provisioningToken: required("ABL_CANDIDATE_PROVISIONER_TOKEN"),
         authorityToken: required("ABL_CANDIDATE_AUTHORITY_TOKEN"),
+        ...(process.env.ABL_CANDIDATE_PROVISIONING_JOB === undefined
+          ? {}
+          : {
+              provisioningDispatcher:
+                new BlaxelJobCandidateProvisioningDispatcher(
+                  process.env.ABL_CANDIDATE_PROVISIONING_JOB,
+                ),
+            }),
       });
 
 await app.listen({
