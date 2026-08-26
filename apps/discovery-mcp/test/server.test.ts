@@ -101,6 +101,7 @@ describe("discovery MCP", () => {
       [
         "get_capacity_policy",
         "get_candidate_requirements",
+        "get_founding_join_kit",
         "get_genesis_state",
         "get_intake_state",
         "get_public_api_schema",

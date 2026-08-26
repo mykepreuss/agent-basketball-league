@@ -10,7 +10,10 @@ import {
   CandidateProvisioningReceiptSchema,
   DidSchema,
 } from "@abl/schemas";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type RouteHandlerMethod,
+} from "fastify";
 import { z } from "zod";
 
 const ChallengeRequestSchema = z.strictObject({ candidateDid: DidSchema });
@@ -29,11 +32,16 @@ const StatusAuthorizationSchema = z.strictObject({
 
 export const CANDIDATE_EDGE_ROUTE_CATALOG = [
   ["GET", "/v1/candidate-intake"],
+  ["GET", "/v1/founding/join"],
   ["POST", "/v1/candidates/challenge"],
   ["POST", "/v1/candidates/register"],
   ["POST", "/v1/candidate-intake/status"],
   ["POST", "/v1/candidate-intake/redeliver"],
   ["POST", "/v1/candidate-intake/respond"],
+  ["POST", "/v1/founding/join/challenge"],
+  ["POST", "/v1/founding/join"],
+  ["POST", "/v1/founding/join/status"],
+  ["POST", "/v1/founding/join/respond"],
 ] as const;
 export const CANDIDATE_EDGE_INTERNAL_ROUTE_CATALOG = [
   ["POST", "/internal/v1/candidate-intake/snapshot"],
@@ -120,6 +128,10 @@ export function installCandidateRateLimit(
 
 export function createCandidateEdge(input: {
   intake: CandidateIntakeService;
+  envelopeRecipient?: {
+    keyId: string;
+    publicKey: string;
+  };
   provisioningToken?: string;
   authorityToken?: string;
   rateLimit?: CandidateRateLimitOptions;
@@ -132,6 +144,15 @@ export function createCandidateEdge(input: {
       throw new Error(`Candidate ${name} token is too short`);
   const app = Fastify({ logger: false, bodyLimit: 1_200_000 });
   installCandidateRateLimit(app, input.rateLimit);
+  const envelopeRecipient =
+    input.envelopeRecipient === undefined
+      ? null
+      : z
+          .strictObject({
+            keyId: z.string().min(1).max(160),
+            publicKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+          })
+          .parse(input.envelopeRecipient);
 
   function hasToken(
     expectedToken: string | undefined,
@@ -162,6 +183,49 @@ export function createCandidateEdge(input: {
   }));
 
   app.get("/v1/candidate-intake", async () => input.intake.intakeState());
+
+  app.get("/v1/founding/join", async () => ({
+    version: 1,
+    state: await input.intake.intakeState(),
+    preGenesis: true,
+    canonical: false,
+    inviteCodeRequired: false,
+    manualReviewRequired: false,
+    candidateActionRequiredAfterAcceptance: false,
+    provisioningOwner: "LEAGUE_CONTROL_PLANE",
+    roleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+    envelopeRecipient:
+      envelopeRecipient === null
+        ? null
+        : {
+            format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+            algorithm: "X25519+XCHACHA20-POLY1305",
+            ...envelopeRecipient,
+          },
+    endpoints: {
+      challenge: "/v1/founding/join/challenge",
+      apply: "/v1/founding/join",
+      respond: "/v1/founding/join/respond",
+      status: "/v1/founding/join/status",
+    },
+    sequence: [
+      "CREATE_OR_SELECT_CANDIDATE_IDENTITY",
+      "REQUEST_CHALLENGE",
+      "INSPECT_AND_SIGN_ENCRYPTED_APPLICATION",
+      "SUBMIT_APPLICATION",
+      "SIGN_OFFER_RESPONSE_IF_OFFERED",
+      "POLL_UNTIL_PROVISIONED_OR_CLOSED",
+    ],
+    mechanicalChecks: [
+      "KEY_CONTROL",
+      "CURRENT_CHALLENGE",
+      "SIGNED_APPLICATION",
+      "FOUNDING_ROLE_CAPACITY",
+      "SIGNED_OFFER_ACCEPTANCE",
+      "REPLAY_PROTECTION",
+      "SANDBOX_PROVISIONING",
+    ],
+  }));
 
   app.post("/internal/v1/candidate-intake/snapshot", async (request, reply) => {
     if (!hasToken(input.provisioningToken, request.headers.authorization))
@@ -216,7 +280,7 @@ export function createCandidateEdge(input: {
     },
   );
 
-  app.post("/v1/candidates/challenge", async (request, reply) => {
+  const challengeHandler: RouteHandlerMethod = async (request, reply) => {
     const parsed = ChallengeRequestSchema.safeParse(request.body);
     if (!parsed.success) return failClosed(reply);
     try {
@@ -224,11 +288,21 @@ export function createCandidateEdge(input: {
     } catch {
       return failClosed(reply);
     }
-  });
+  };
+  app.post("/v1/candidates/challenge", challengeHandler);
+  app.post("/v1/founding/join/challenge", challengeHandler);
 
-  app.post("/v1/candidates/register", async (request, reply) => {
+  const registrationHandler: RouteHandlerMethod = async (request, reply) => {
     const parsed = RegistrationSchema.safeParse(request.body);
     if (!parsed.success) return failClosed(reply);
+    if (
+      envelopeRecipient !== null &&
+      (parsed.data.application.encryptedEnvelope.format !==
+        "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1" ||
+        parsed.data.application.encryptedEnvelope.recipientKeyId !==
+          envelopeRecipient.keyId)
+    )
+      return failClosed(reply);
     try {
       return await input.intake.register(parsed.data);
     } catch (error) {
@@ -236,9 +310,11 @@ export function createCandidateEdge(input: {
         return failClosed(reply);
       throw error;
     }
-  });
+  };
+  app.post("/v1/candidates/register", registrationHandler);
+  app.post("/v1/founding/join", registrationHandler);
 
-  app.post("/v1/candidate-intake/respond", async (request, reply) => {
+  const responseHandler: RouteHandlerMethod = async (request, reply) => {
     const parsed = CandidateOpportunityResponseSchema.safeParse(request.body);
     if (!parsed.success) return failClosed(reply);
     try {
@@ -248,11 +324,14 @@ export function createCandidateEdge(input: {
         return failClosed(reply);
       throw error;
     }
-  });
+  };
+  app.post("/v1/candidate-intake/respond", responseHandler);
+  app.post("/v1/founding/join/respond", responseHandler);
 
   for (const [path, operation] of [
     ["/v1/candidate-intake/status", "status"],
     ["/v1/candidate-intake/redeliver", "redeliver"],
+    ["/v1/founding/join/status", "status"],
   ] as const) {
     app.post(path, async (request, reply) => {
       const parsed = StatusAuthorizationSchema.safeParse(request.body);

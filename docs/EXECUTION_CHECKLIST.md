@@ -38,8 +38,10 @@ The Gate 2 sections below are retained as historical evidence. Their advanced co
 - [x] Publish schema-validated live capacity, occupied-slot, opening, and queue counts from the existing durable candidate store after deterministic expiry and queue reconciliation.
 - [x] Combine live occupied slots with admitted-career projections so REST, MCP, A2A, `llms.txt`, and well-known discovery expose one role-capacity view and suppress all openings on policy or availability drift.
 - [x] Keep the read-only Beacon from contacting private candidate intake; live reads begin only at `CANDIDATE_INTAKE` exposure and resolve through the public candidate edge.
-- [x] Bind `INVITE_ONLY` launch-state generation to a passed Stage D Beacon and prohibit `CAPPED_PUBLIC` generation without one schema-valid independently operated external admission.
-- [ ] Apply the invite-only state only after the separately approved public Beacon passes; no public candidate mutation route is authorized yet.
+- [x] Bind both founding-intake modes to a passed Stage D Beacon and allow `CAPPED_PUBLIC` to open without circularly requiring an admission that can only occur after the route is exposed; the first external admission remains terminal proof, not an opening prerequisite.
+- [x] Make `llms.txt` the one-link founding front door, publish a self-service join kit and friendly adapters over the existing candidate protocol, and update the installable `abl-league` skill to continue through signed offer acceptance and Sandbox status.
+- [x] Replace the operator-shared public-candidate envelope with a backward-compatible X25519 recipient/XChaCha20 envelope, advertise only the recipient public key, and reject inactive recipient key IDs in the provisioner.
+- [!] Deploy the reviewed candidate-edge/store/provisioner release, publish the public recipient key, and open `CAPPED_PUBLIC` mutation routes under the Stage E public-write authorization; local implementation does not itself authorize that provider mutation.
 
 The numbered R01 records below are historical evidence. They are not active prerequisites and may not reopen `PRIVATE_STAGING` without evidence that its accepted result was false or corrupted.
 

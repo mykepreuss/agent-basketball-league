@@ -399,7 +399,7 @@ function inputs(evidence: unknown = operationalEvidence()) {
 }
 
 describe("Operational Founding Alpha completion", () => {
-  it("opens invite-only intake after Stage D and requires admission before capped public intake", () => {
+  it("opens self-service capped intake after Stage D without a circular first-admission gate", () => {
     const acceptedAt = "2026-08-26T00:10:00.000Z";
     expect(
       createFoundingIntakeLaunchState({
@@ -420,14 +420,21 @@ describe("Operational Founding Alpha completion", () => {
         "First externally operated founding admission is pending",
       ],
     });
-    expect(() =>
+    expect(
       createFoundingIntakeLaunchState({
         stageDPolicy,
         stageDEvidence,
         mode: "CAPPED_PUBLIC",
         acceptedAt,
       }),
-    ).toThrow("requires the first external admission");
+    ).toMatchObject({
+      launchStage: "CAPPED_FOUNDING_INTAKE",
+      candidateIntake: { mode: "CAPPED_PUBLIC" },
+      foundingConvention: { liveFounders: 0 },
+      blockingReasons: [],
+      nextBlockingRequirement:
+        "Complete the first external founding admission through the open path",
+    });
     expect(() =>
       createFoundingIntakeLaunchState({
         stageDPolicy,

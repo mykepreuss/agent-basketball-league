@@ -1,4 +1,9 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -1401,20 +1406,51 @@ export interface DecryptedCandidateEnvelope {
 }
 
 function candidateEnvelopeAssociatedData(input: {
+  format:
+    | "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1"
+    | "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1";
   applicationId: string;
   candidateDid: string;
   challengeId: string;
   recipientKeyId: string;
+  ephemeralPublicKey?: string;
 }): Uint8Array {
   return new TextEncoder().encode(
     JSON.stringify({
-      format: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
+      format: input.format,
       applicationId: input.applicationId,
       candidateDid: input.candidateDid,
       challengeId: input.challengeId,
       recipientKeyId: input.recipientKeyId,
+      ...(input.ephemeralPublicKey === undefined
+        ? {}
+        : { ephemeralPublicKey: input.ephemeralPublicKey }),
     }),
   );
+}
+
+function candidateEnvelopeKey(input: {
+  sharedSecret: Uint8Array;
+  ephemeralPublicKey: Uint8Array;
+  recipientPublicKey: Uint8Array;
+}): Uint8Array {
+  return createHash("sha256")
+    .update("ABL-CANDIDATE-X25519-XCHACHA20-V1\0")
+    .update(input.sharedSecret)
+    .update(input.ephemeralPublicKey)
+    .update(input.recipientPublicKey)
+    .digest();
+}
+
+export async function candidateEnvelopePublicKey(
+  recipientPrivateKey: Uint8Array,
+): Promise<Uint8Array> {
+  await sodium.ready;
+  if (recipientPrivateKey.byteLength !== 32)
+    throw new CandidateIntakeError(
+      "Candidate recipient private key must be 32 bytes",
+    );
+  return sodium.crypto_scalarmult_base(recipientPrivateKey);
 }
 
 export async function encryptCandidateEnvelope(input: {
@@ -1433,7 +1469,10 @@ export async function encryptCandidateEnvelope(input: {
   );
   const ciphertextBytes = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
     new TextEncoder().encode(JSON.stringify(input.content)),
-    candidateEnvelopeAssociatedData(input),
+    candidateEnvelopeAssociatedData({
+      ...input,
+      format: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
+    }),
     null,
     nonce,
     input.key,
@@ -1442,6 +1481,58 @@ export async function encryptCandidateEnvelope(input: {
   return {
     format: "ABL-CANDIDATE-ENVELOPE-XCHACHA20-V1",
     recipientKeyId: input.recipientKeyId,
+    nonce: Buffer.from(nonce).toString("base64url"),
+    ciphertext,
+    ciphertextCommitment: sha256Commitment(ciphertext),
+  };
+}
+
+export async function encryptCandidateEnvelopeForRecipient(input: {
+  recipientPublicKey: Uint8Array;
+  recipientKeyId: string;
+  applicationId: string;
+  candidateDid: string;
+  challengeId: string;
+  content: DecryptedCandidateEnvelope;
+}): Promise<CandidateIntakeApplication["encryptedEnvelope"]> {
+  await sodium.ready;
+  if (input.recipientPublicKey.byteLength !== 32)
+    throw new CandidateIntakeError(
+      "Candidate recipient public key must be 32 bytes",
+    );
+  const ephemeral = sodium.crypto_box_keypair();
+  const sharedSecret = sodium.crypto_scalarmult(
+    ephemeral.privateKey,
+    input.recipientPublicKey,
+  );
+  const key = candidateEnvelopeKey({
+    sharedSecret,
+    ephemeralPublicKey: ephemeral.publicKey,
+    recipientPublicKey: input.recipientPublicKey,
+  });
+  const nonce = sodium.randombytes_buf(
+    sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES,
+  );
+  const ephemeralPublicKey = Buffer.from(ephemeral.publicKey).toString(
+    "base64url",
+  );
+  const associatedData = candidateEnvelopeAssociatedData({
+    ...input,
+    format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+    ephemeralPublicKey,
+  });
+  const ciphertextBytes = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+    new TextEncoder().encode(JSON.stringify(input.content)),
+    associatedData,
+    null,
+    nonce,
+    key,
+  );
+  const ciphertext = Buffer.from(ciphertextBytes).toString("base64url");
+  return {
+    format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+    recipientKeyId: input.recipientKeyId,
+    ephemeralPublicKey,
     nonce: Buffer.from(nonce).toString("base64url"),
     ciphertext,
     ciphertextCommitment: sha256Commitment(ciphertext),
@@ -1461,17 +1552,45 @@ export async function decryptCandidateEnvelope(
   )
     throw new CandidateIntakeError("Candidate ciphertext commitment mismatch");
   try {
+    let decryptionKey = key;
+    if (
+      application.encryptedEnvelope.format ===
+      "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1"
+    ) {
+      const ephemeralPublicKey = Buffer.from(
+        application.encryptedEnvelope.ephemeralPublicKey,
+        "base64url",
+      );
+      if (ephemeralPublicKey.byteLength !== 32)
+        throw new CandidateIntakeError(
+          "Candidate ephemeral public key is invalid",
+        );
+      const recipientPublicKey = sodium.crypto_scalarmult_base(key);
+      decryptionKey = candidateEnvelopeKey({
+        sharedSecret: sodium.crypto_scalarmult(key, ephemeralPublicKey),
+        ephemeralPublicKey,
+        recipientPublicKey,
+      });
+    }
     const plaintext = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
       null,
       Buffer.from(application.encryptedEnvelope.ciphertext, "base64url"),
       candidateEnvelopeAssociatedData({
+        format: application.encryptedEnvelope.format,
         applicationId: application.applicationId,
         candidateDid: application.candidateDid,
         challengeId: application.challengeId,
         recipientKeyId: application.encryptedEnvelope.recipientKeyId,
+        ...(application.encryptedEnvelope.format ===
+        "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1"
+          ? {
+              ephemeralPublicKey:
+                application.encryptedEnvelope.ephemeralPublicKey,
+            }
+          : {}),
       }),
       Buffer.from(application.encryptedEnvelope.nonce, "base64url"),
-      key,
+      decryptionKey,
     );
     const parsed = JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
     return z
@@ -1533,6 +1652,7 @@ export class CandidateProvisioner {
   readonly #decryptEnvelope: (
     application: CandidateIntakeApplication,
   ) => Promise<DecryptedCandidateEnvelope>;
+  readonly #envelopeRecipientKeyId: string | null;
   readonly #controlPlane: CandidateSandboxControlPlane;
   readonly #candidateCommandDomain: TypedDataDomain;
   readonly #policy: CandidateIntakePolicy;
@@ -1545,6 +1665,7 @@ export class CandidateProvisioner {
     decryptEnvelope: (
       application: CandidateIntakeApplication,
     ) => Promise<DecryptedCandidateEnvelope>;
+    envelopeRecipientKeyId?: string;
     controlPlane?: CandidateSandboxControlPlane;
     candidateCommandDomain: TypedDataDomain;
     policy: CandidateIntakePolicy;
@@ -1554,6 +1675,7 @@ export class CandidateProvisioner {
     this.#challengeSecret = input.challengeSecret;
     this.#repository = input.repository;
     this.#decryptEnvelope = input.decryptEnvelope;
+    this.#envelopeRecipientKeyId = input.envelopeRecipientKeyId ?? null;
     this.#controlPlane =
       input.controlPlane ?? new DryRunCandidateControlPlane();
     this.#candidateCommandDomain = input.candidateCommandDomain;
@@ -1581,6 +1703,14 @@ export class CandidateProvisioner {
         "Submission time",
       ),
     });
+    if (
+      this.#envelopeRecipientKeyId !== null &&
+      application.encryptedEnvelope.recipientKeyId !==
+        this.#envelopeRecipientKeyId
+    )
+      throw new CandidateIntakeError(
+        "Candidate envelope recipient key is not active",
+      );
     if (
       !["OFFERED", "ACCEPTED"].includes(record.status.state) ||
       !candidateOccupiesCapacity(record, this.#now())

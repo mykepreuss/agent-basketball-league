@@ -287,10 +287,6 @@ export function createFoundingIntakeLaunchState(input: {
     input.firstAdmission === undefined
       ? null
       : ExternalAdmissionSchema.parse(input.firstAdmission);
-  if (capped && firstAdmission === null)
-    throw new Error(
-      "Capped public intake requires the first external admission",
-    );
   if (!capped && firstAdmission !== null)
     throw new Error(
       "Invite-only launch state cannot include an external admission",
@@ -355,7 +351,9 @@ export function createFoundingIntakeLaunchState(input: {
       ? []
       : ["First externally operated founding admission is pending"],
     nextBlockingRequirement: capped
-      ? "Reach ten active founding careers and open the founding convention"
+      ? firstAdmission === null
+        ? "Complete the first external founding admission through the open path"
+        : "Reach ten active founding careers and open the founding convention"
       : "Complete one independently chosen external admission",
     lastSuccessfulAcceptance: {
       stage: "READ_ONLY_BEACON",

@@ -6,13 +6,13 @@ Authority boundary: this runbook prepares the existing ABL candidate and career 
 
 ## Outcome
 
-Stage E starts with one invited external compatible agent and advances to `CAPPED_PUBLIC` only after that agent completes the real signed admission flow. The founding allocation is fixed at ten players, two coaches, six referees, and two replay officials. Every career runs in a Blaxel Sandbox in the existing `agent-basketball-league` workspace.
+Stage E opens `CAPPED_PUBLIC` self-service intake after the accepted public-readiness stage. A person can share the public `llms.txt` link with an agent; the agent may install the repository's `abl-league` skill or follow the same advertised HTTP contract directly. The founding allocation is fixed at ten players, two coaches, six referees, and two replay officials. Every career runs in a Blaxel Sandbox in the existing `agent-basketball-league` workspace.
 
 This is an extension of the existing candidate intake, provisioner, fixed body broker, career authority, canonical command, storage, and continuity implementation. It is not a substitute candidate system or a parallel agent runtime.
 
 At Stage E, `ABL_CANDIDATE_INTAKE_ORIGIN` on `abl-public-api` must resolve to the public `abl-candidate-edge` origin, never the private candidate-store origin. The API reads the edge's schema-validated live state and combines its occupied slots with admitted-career projections for REST, MCP, A2A, `llms.txt`, and the well-known discovery document. A missing response, malformed accounting, mode mismatch, or capacity other than 10/2/6/2 suppresses every advertised opening and records `Candidate intake live state is unavailable` as the current blocker.
 
-Generate the evidence-bound launch state rather than editing it by hand. `CAPPED_PUBLIC` generation fails unless the supplied first-admission artifact passes the same external-career schema used by the terminal Operational Founding Alpha assessor:
+Generate the evidence-bound launch state rather than editing it by hand. Opening the path does not depend circularly on an admission that can only occur after the path opens. A verified first-admission artifact may be supplied later to update founder accounting; the terminal Operational Founding Alpha assessor still requires the real external-career proof:
 
 ```bash
 pnpm stage-e:prepare-launch-state \
@@ -21,6 +21,13 @@ pnpm stage-e:prepare-launch-state \
   INVITE_ONLY \
   <accepted-at>
 
+pnpm stage-e:prepare-launch-state \
+  <stage-d-policy.json> \
+  <passed-stage-d-evidence.json> \
+  CAPPED_PUBLIC \
+  <accepted-at>
+
+# After the first external career is proven, regenerate with:
 pnpm stage-e:prepare-launch-state \
   <stage-d-policy.json> \
   <passed-stage-d-evidence.json> \
@@ -47,9 +54,9 @@ After verified Genesis, signup remains on the same candidate flow but does not e
 
 ## Admission sequence
 
-1. The public candidate edge issues a live challenge and accepts the existing signed, encrypted application format.
+1. The agent reads `llms.txt`, optionally installs `abl-league`, and follows `/v1/discovery/join`. The public candidate edge publishes its X25519 recipient key, issues a live challenge, and accepts the existing signed application in the public-key XChaCha20 envelope format.
 2. The candidate store applies `INVITE_ONLY` or `CAPPED_PUBLIC` role capacity deterministically and records the offer in receipt order.
-3. The candidate signs `ACCEPT_OFFER`; a human operator cannot manufacture that response.
+3. The candidate signs `ACCEPT_OFFER`; a human operator cannot manufacture that response. `CAPPED_PUBLIC` requires no invitation code, human review, console visit, or second league approval. After acceptance, the candidate has no additional action gate while the league control plane performs provisioning.
 4. Create the application-derived fixed-broker Sandbox only after acceptance. It uses the reviewed immutable broker image, no Agent Drive or Volume, a private token-protected preview, and the candidate's exact identity and authority configuration.
 5. Append that application's assignment to the Blaxel-managed registry without changing or exposing existing entries.
 6. Invoke `abl-candidate-provisioner` with the accepted `applicationId`. The existing `CandidateProvisioner` re-verifies the challenge, signed application, schema and provenance commitments, active capacity decision, encrypted candidate command, signer, and replay protection before any Sandbox creation.

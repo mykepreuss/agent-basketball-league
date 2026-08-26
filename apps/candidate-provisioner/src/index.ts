@@ -99,6 +99,11 @@ const provisioner = new CandidateProvisioner({
   repository,
   decryptEnvelope: (application) =>
     decryptCandidateEnvelope(application, envelopeKey),
+  ...(process.env.ABL_CANDIDATE_ENVELOPE_KEY_ID === undefined
+    ? {}
+    : {
+        envelopeRecipientKeyId: required("ABL_CANDIDATE_ENVELOPE_KEY_ID"),
+      }),
   controlPlane,
   candidateCommandDomain: DomainSchema.parse(
     JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),

@@ -27,8 +27,10 @@ import {
   CandidateProvisioner,
   CandidateStatusAuthorizationTypes,
   candidateApplicationCommitment,
+  candidateEnvelopePublicKey,
   decryptCandidateEnvelope,
   encryptCandidateEnvelope,
+  encryptCandidateEnvelopeForRecipient,
   issueCandidateChallenge,
   type CandidateIntakeApplication,
   type CandidateIntakePolicy,
@@ -299,6 +301,42 @@ describe("candidate intake isolation boundary", () => {
       decryptCandidateEnvelope(
         { ...encryptedApplication, candidateDid: "did:abl:tampered" },
         key,
+      ),
+    ).rejects.toThrow("decryption failed");
+  });
+
+  it("lets a public candidate encrypt to an X25519 recipient without a shared secret", async () => {
+    const fixture = await signedFixture();
+    const recipientPrivateKey = new Uint8Array(32).fill(9);
+    const recipientPublicKey =
+      await candidateEnvelopePublicKey(recipientPrivateKey);
+    const content = {
+      manifest: fixture.manifest,
+      provenance: fixture.provenance,
+      candidateCommand: fixture.command,
+    };
+    const encryptedEnvelope = await encryptCandidateEnvelopeForRecipient({
+      recipientPublicKey,
+      recipientKeyId: "candidate-public-recipient-v1",
+      applicationId: fixture.application.applicationId,
+      candidateDid: fixture.application.candidateDid,
+      challengeId: fixture.application.challengeId,
+      content,
+    });
+    expect(encryptedEnvelope).toMatchObject({
+      format: "ABL-CANDIDATE-ENVELOPE-X25519-XCHACHA20-V1",
+      recipientKeyId: "candidate-public-recipient-v1",
+    });
+    await expect(
+      decryptCandidateEnvelope(
+        { ...fixture.application, encryptedEnvelope },
+        recipientPrivateKey,
+      ),
+    ).resolves.toEqual(content);
+    await expect(
+      decryptCandidateEnvelope(
+        { ...fixture.application, encryptedEnvelope },
+        new Uint8Array(32).fill(10),
       ),
     ).rejects.toThrow("decryption failed");
   });
@@ -645,7 +683,9 @@ describe("candidate intake isolation boundary", () => {
       application: fixture.application,
       challengeToken: fixture.challenge.challengeToken,
     });
-    const makeProvisioner = () =>
+    const makeProvisioner = (
+      envelopeRecipientKeyId = "candidate-provisioner-v1",
+    ) =>
       new CandidateProvisioner({
         challengeSecret: secret,
         repository: store,
@@ -654,11 +694,18 @@ describe("candidate intake isolation boundary", () => {
           provenance: fixture.provenance,
           candidateCommand: fixture.command,
         }),
+        envelopeRecipientKeyId,
         candidateCommandDomain: commandDomain,
         policy: policy(),
         makeReceiptId: () => uuidv7({ msecs: now + 10 }),
         now: () => now + 60 * 60 * 1_000,
       });
+
+    await expect(
+      makeProvisioner("retired-candidate-recipient").process(
+        fixture.application.applicationId,
+      ),
+    ).rejects.toThrow("recipient key is not active");
 
     const first = await makeProvisioner().process(
       fixture.application.applicationId,
