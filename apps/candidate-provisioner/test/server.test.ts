@@ -431,6 +431,7 @@ describe("candidate provisioner private boundary", () => {
     const createdNames: string[] = [];
     const bodyContractLabels: string[] = [];
     const processes: string[] = [];
+    let transientBrokerFailure = true;
     const factory: CandidateSandboxFactory = {
       async get() {
         throw new Error("automatic provisioning does not preselect a broker");
@@ -459,6 +460,15 @@ describe("candidate provisioner private boundary", () => {
           process: {
             exec: async ({ name: processName }: { name: string }) => {
               processes.push(processName);
+              if (
+                processName === "abl-fixed-broker" &&
+                transientBrokerFailure
+              ) {
+                transientBrokerFailure = false;
+                throw Object.assign(new Error("temporary gateway timeout"), {
+                  response: { status: 504 },
+                });
+              }
             },
           },
           previews: {
@@ -534,6 +544,7 @@ describe("candidate provisioner private boundary", () => {
     ]);
     expect(bodyContractLabels[0]).toBe(bodyContractLabels[1]);
     expect(processes).toEqual([
+      "abl-fixed-broker",
       "abl-fixed-broker",
       "abl-career-runtime",
       "abl-fixed-broker",

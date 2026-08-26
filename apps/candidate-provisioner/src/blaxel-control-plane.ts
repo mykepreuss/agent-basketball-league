@@ -444,17 +444,19 @@ export class BlaxelCandidateSandboxControlPlane
       region: this.#region,
       imageReference: this.#fixedBrokerImageReference,
     });
-    await broker.process.exec({
-      name: "abl-fixed-broker",
-      command: "node dist/index.js",
-      workingDir: "/opt/abl",
-      waitForCompletion: false,
-      waitForPorts: [3_000],
-      keepAlive: true,
-      timeout: 0,
-      restartOnFailure: true,
-      maxRestarts: -1,
-    });
+    await retrySandboxGatewayOperation(() =>
+      broker.process.exec({
+        name: "abl-fixed-broker",
+        command: "node dist/index.js",
+        workingDir: "/opt/abl",
+        waitForCompletion: false,
+        waitForPorts: [3_000],
+        keepAlive: true,
+        timeout: 0,
+        restartOnFailure: true,
+        maxRestarts: -1,
+      }),
+    );
     const brokerPreview = await broker.previews.createIfNotExists({
       metadata: { name: `${brokerName}-private` },
       spec: { port: 3_000, public: false },
@@ -541,17 +543,19 @@ export class BlaxelCandidateSandboxControlPlane
       envs,
       persistent: true,
     });
-    await sandbox.process.exec({
-      name: "abl-career-runtime",
-      command: "node dist/index.js",
-      workingDir: "/opt/abl",
-      waitForCompletion: false,
-      waitForPorts: [3_000],
-      keepAlive: true,
-      timeout: 0,
-      restartOnFailure: true,
-      maxRestarts: -1,
-    });
+    await retrySandboxGatewayOperation(() =>
+      sandbox.process.exec({
+        name: "abl-career-runtime",
+        command: "node dist/index.js",
+        workingDir: "/opt/abl",
+        waitForCompletion: false,
+        waitForPorts: [3_000],
+        keepAlive: true,
+        timeout: 0,
+        restartOnFailure: true,
+        maxRestarts: -1,
+      }),
+    );
     const identityResponse = await sandbox.fetch(3_000, "/v1/career/identity");
     if (!identityResponse.ok)
       throw new Error("Candidate career identity readback failed");
@@ -711,6 +715,31 @@ export class BlaxelCandidateSandboxControlPlane
 
 function environment(name: string, value: string, secret = false) {
   return { name, value, secret };
+}
+
+async function retrySandboxGatewayOperation<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const maximumAttempts = 3;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= maximumAttempts || !isTransientSandboxGatewayError(error))
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+  }
+}
+
+function isTransientSandboxGatewayError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as {
+    status?: unknown;
+    response?: { status?: unknown };
+  };
+  const status = candidate.response?.status ?? candidate.status;
+  return status === 502 || status === 503 || status === 504;
 }
 
 function environmentContract(
