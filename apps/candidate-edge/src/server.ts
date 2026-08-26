@@ -157,23 +157,21 @@ export function createCandidateEdge(input: {
           })
           .parse(input.envelopeRecipient);
 
-  async function dispatchIfAccepted(
+  function dispatchIfAccepted(
     status: { applicationId: string; state: string },
     reply: { header(name: string, value: string): unknown },
-  ): Promise<void> {
+  ): void {
     if (
       status.state !== "ACCEPTED" ||
       input.provisioningDispatcher === undefined
     )
       return;
-    try {
-      const state = await input.provisioningDispatcher.dispatch(
-        status.applicationId,
-      );
-      reply.header("x-abl-provisioning-dispatch", state.toLowerCase());
-    } catch {
-      reply.header("x-abl-provisioning-dispatch", "retry-on-status");
-    }
+    void input.provisioningDispatcher
+      .dispatch(status.applicationId)
+      .catch(() => {
+        // A signed status retry safely re-attempts the idempotent dispatch.
+      });
+    reply.header("x-abl-provisioning-dispatch", "queued");
   }
 
   function hasToken(
@@ -343,7 +341,7 @@ export function createCandidateEdge(input: {
     if (!parsed.success) return failClosed(reply);
     try {
       const status = await input.intake.respond(parsed.data);
-      await dispatchIfAccepted(status, reply);
+      dispatchIfAccepted(status, reply);
       return status;
     } catch (error) {
       if (error instanceof CandidateIntakeError || error instanceof z.ZodError)
@@ -367,7 +365,7 @@ export function createCandidateEdge(input: {
           ...parsed.data,
           signature: parsed.data.signature as `0x${string}`,
         });
-        await dispatchIfAccepted(status, reply);
+        dispatchIfAccepted(status, reply);
         return status;
       } catch (error) {
         if (
