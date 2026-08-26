@@ -150,6 +150,31 @@ export interface PlayerObservation {
   stateCommitment: string;
 }
 
+export const PlayerObservationSchema = z.strictObject({
+  observationId: z.string().min(1).max(300),
+  playerId: z.string().min(1).max(100),
+  team: TeamSchema,
+  position: PositionSchema,
+  window: z.number().int().nonnegative().max(1_000),
+  gameClockMs: z.number().int().nonnegative().max(720_000),
+  shotClockMs: z.number().int().nonnegative().max(24_000),
+  score: z.strictObject({
+    home: z.number().int().nonnegative().max(1_000),
+    away: z.number().int().nonnegative().max(1_000),
+  }),
+  self: PlayerStateSchema,
+  visibleTeammates: z.array(PlayerStateSchema).max(4),
+  visibleOpponents: z.array(PlayerStateSchema).max(5),
+  ball: z
+    .strictObject({
+      xCm: z.number().int().min(0).max(2_865),
+      yCm: z.number().int().min(0).max(1_524),
+      possessorId: z.string().min(1).max(100).nullable(),
+    })
+    .nullable(),
+  stateCommitment: Sha256HexSchema,
+}) satisfies z.ZodType<PlayerObservation>;
+
 export interface CognitionReceipt {
   receiptId: string;
   agentDid: string;

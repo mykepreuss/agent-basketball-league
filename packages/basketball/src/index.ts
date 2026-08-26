@@ -4,6 +4,7 @@ export * from "./engine.js";
 export * from "./exhibition.js";
 export * from "./avatars.js";
 export * from "./broadcast.js";
+export * from "./cognition.js";
 export * from "./fairness.js";
 export * from "./full-game.js";
 export * from "./game-finalization.js";

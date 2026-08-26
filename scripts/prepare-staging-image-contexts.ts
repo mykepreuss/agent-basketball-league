@@ -28,10 +28,13 @@ const corepackPath = execFileSync("which", ["corepack"], {
 const lifecycleEvent = process.env.npm_lifecycle_event;
 const foundingAlpha = lifecycleEvent === "founding-alpha:prepare-images";
 const persistentStageC = lifecycleEvent === "stage-c:prepare-images";
+const cognitionOnly = lifecycleEvent === "cognition:prepare-image";
 let imageNamePrefix = "abl-stage";
 if (foundingAlpha) imageNamePrefix = "abl-alpha-r01";
 else if (persistentStageC) imageNamePrefix = "abl-stage-c";
-const imageNameSuffix = foundingAlpha || persistentStageC ? "-image" : "";
+else if (cognitionOnly) imageNamePrefix = "abl";
+const imageNameSuffix =
+  foundingAlpha || persistentStageC || cognitionOnly ? "-image" : "";
 
 interface ImageService {
   directory: string;
@@ -129,9 +132,19 @@ const persistentImageServices = [
     type: "job",
   },
 ] satisfies readonly ImageService[];
-const imageServices: readonly ImageService[] = persistentStageC
-  ? persistentImageServices
-  : privateProofImageServices;
+const cognitionImageServices = [
+  {
+    directory: "competition-director",
+    packageName: "@abl/competition-director",
+    memory: 2048,
+    type: "job",
+  },
+] as const satisfies readonly ImageService[];
+const imageServices: readonly ImageService[] = cognitionOnly
+  ? cognitionImageServices
+  : persistentStageC
+    ? persistentImageServices
+    : privateProofImageServices;
 const imageContextIgnore = ".git\n.DS_Store\n";
 const developmentEntries = [
   ".turbo",
@@ -359,18 +372,23 @@ async function prepareRuntimePackageTree(packageRoot: string): Promise<void> {
 await mkdir(outputRoot, { recursive: true, mode: 0o700 });
 const buildPackageNames = new Set([
   ...imageServices.map(({ packageName }) => packageName),
-  "@abl/arena",
-  ...(persistentStageC ? [] : ["@abl/staging-body"]),
+  ...(cognitionOnly ? [] : ["@abl/arena"]),
+  ...(persistentStageC || cognitionOnly ? [] : ["@abl/staging-body"]),
 ]);
-const arenaBuildSourceDigest = await sourceDigest([
-  "apps/arena/app",
-  "apps/arena/next.config.mjs",
-  "apps/arena/package.json",
-  "packages/projections/src",
-  "packages/schemas/src",
-  "pnpm-lock.yaml",
-]);
-const arenaBuildId = `abl-${arenaBuildSourceDigest.slice(2, 34)}`;
+const arenaBuildSourceDigest = cognitionOnly
+  ? null
+  : await sourceDigest([
+      "apps/arena/app",
+      "apps/arena/next.config.mjs",
+      "apps/arena/package.json",
+      "packages/projections/src",
+      "packages/schemas/src",
+      "pnpm-lock.yaml",
+    ]);
+const arenaBuildId =
+  arenaBuildSourceDigest === null
+    ? null
+    : `abl-${arenaBuildSourceDigest.slice(2, 34)}`;
 pnpm(
   [
     ...[...buildPackageNames].flatMap((packageName) => [
@@ -379,7 +397,7 @@ pnpm(
     ]),
     "build",
   ],
-  { ABL_ARENA_BUILD_ID: arenaBuildId },
+  arenaBuildId === null ? {} : { ABL_ARENA_BUILD_ID: arenaBuildId },
 );
 for (const service of imageServices) {
   const context = join(outputRoot, service.directory);
@@ -420,60 +438,62 @@ for (const service of imageServices) {
   await Promise.all(contextFiles);
 }
 
-const arenaContext = join(outputRoot, "arena");
-const arenaApp = join(arenaContext, "app");
-const arenaRoot = join(repositoryRoot, "apps/arena");
-await mkdir(arenaContext, { recursive: true, mode: 0o700 });
-pnpm([
-  "--config.node-linker=hoisted",
-  "--config.inject-workspace-packages=true",
-  "--filter",
-  "@abl/arena",
-  "deploy",
-  "--prod",
-  arenaApp,
-]);
-await rm(join(arenaApp, ".next"), { recursive: true, force: true });
-await cp(join(arenaRoot, ".next/standalone/apps/arena"), arenaApp, {
-  recursive: true,
-  dereference: true,
-  force: true,
-});
-await cp(join(arenaRoot, ".next/static"), join(arenaApp, ".next/static"), {
-  recursive: true,
-});
-await rm(join(arenaApp, ".next/cache"), { recursive: true, force: true });
-await prepareRuntimePackageTree(arenaApp);
-execFileSync(
-  process.execPath,
-  [
-    "--input-type=module",
-    "--eval",
-    'await Promise.all([import("next"), import("@swc/helpers/_/_interop_require_default")])',
-  ],
-  { cwd: arenaApp, env: process.env, stdio: "pipe" },
-);
-await Promise.all([
-  cp(
-    join(templatesRoot, "Dockerfile.sandbox-service"),
-    join(arenaContext, "Dockerfile"),
-  ),
-  cp(
-    join(templatesRoot, "sandbox-service-entrypoint"),
-    join(arenaContext, "sandbox-service-entrypoint"),
-  ),
-  writeFile(join(arenaContext, ".blaxelignore"), imageContextIgnore),
-  writeFile(
-    join(arenaContext, "blaxel.toml"),
-    configuration("arena", 4096, "sandbox"),
-  ),
-]);
+const arenaContext = cognitionOnly ? null : join(outputRoot, "arena");
+if (arenaContext !== null) {
+  const arenaApp = join(arenaContext, "app");
+  const arenaRoot = join(repositoryRoot, "apps/arena");
+  await mkdir(arenaContext, { recursive: true, mode: 0o700 });
+  pnpm([
+    "--config.node-linker=hoisted",
+    "--config.inject-workspace-packages=true",
+    "--filter",
+    "@abl/arena",
+    "deploy",
+    "--prod",
+    arenaApp,
+  ]);
+  await rm(join(arenaApp, ".next"), { recursive: true, force: true });
+  await cp(join(arenaRoot, ".next/standalone/apps/arena"), arenaApp, {
+    recursive: true,
+    dereference: true,
+    force: true,
+  });
+  await cp(join(arenaRoot, ".next/static"), join(arenaApp, ".next/static"), {
+    recursive: true,
+  });
+  await rm(join(arenaApp, ".next/cache"), { recursive: true, force: true });
+  await prepareRuntimePackageTree(arenaApp);
+  execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      'await Promise.all([import("next"), import("@swc/helpers/_/_interop_require_default")])',
+    ],
+    { cwd: arenaApp, env: process.env, stdio: "pipe" },
+  );
+  await Promise.all([
+    cp(
+      join(templatesRoot, "Dockerfile.sandbox-service"),
+      join(arenaContext, "Dockerfile"),
+    ),
+    cp(
+      join(templatesRoot, "sandbox-service-entrypoint"),
+      join(arenaContext, "sandbox-service-entrypoint"),
+    ),
+    writeFile(join(arenaContext, ".blaxelignore"), imageContextIgnore),
+    writeFile(
+      join(arenaContext, "blaxel.toml"),
+      configuration("arena", 4096, "sandbox"),
+    ),
+  ]);
+}
 
 const bodyContext = join(outputRoot, "body-program");
 let bodyProgramArchive:
   | Awaited<ReturnType<typeof packageStagingBody>>
   | undefined;
-if (!persistentStageC) {
+if (!persistentStageC && !cognitionOnly) {
   await mkdir(bodyContext, { recursive: true, mode: 0o700 });
   pnpm([
     "--config.node-linker=hoisted",
@@ -498,7 +518,7 @@ if (!persistentStageC) {
 const sandboxImageContexts = imageServices
   .filter(({ type }) => type === "sandbox")
   .map(({ directory }) => join(outputRoot, directory))
-  .concat(arenaContext);
+  .concat(arenaContext === null ? [] : [arenaContext]);
 const hostedImageContexts = imageServices
   .filter(({ type }) => type !== "sandbox")
   .map(({ directory }) => join(outputRoot, directory));
@@ -514,7 +534,7 @@ const imageSourceDigests = Object.fromEntries(
     ),
   ),
 );
-if (!persistentStageC)
+if (!persistentStageC && !cognitionOnly)
   imageSourceDigests[`${imageNamePrefix}-body${imageNameSuffix}`] =
     await bodyImageSourceDigest();
 const imageSetHash = createHash("sha256");
@@ -527,11 +547,11 @@ const contexts = {
   outputRoot,
   sandboxImageContexts,
   hostedImageContexts,
-  arenaBuildId,
-  arenaBuildSourceDigest,
+  ...(arenaBuildId === null ? {} : { arenaBuildId }),
+  ...(arenaBuildSourceDigest === null ? {} : { arenaBuildSourceDigest }),
   imageSourceDigests,
   imageSetDigest: `0x${imageSetHash.digest("hex")}`,
-  ...(persistentStageC
+  ...(persistentStageC || cognitionOnly
     ? {}
     : {
         bodyProgram: bodyContext,

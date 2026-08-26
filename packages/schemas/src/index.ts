@@ -51,6 +51,29 @@ export const SignedCanonicalAssemblyCommandSchema = z.strictObject({
   signatures: z.array(Eip712SignatureSchema).min(1).max(45),
 });
 
+export const CAREER_CAPABILITY_AGGREGATE_TYPE = "career-capability" as const;
+export const CAREER_CAPABILITY_RENEWAL_EVENT_TYPE =
+  "CapabilityRenewalRequested" as const;
+export const CAREER_CAPABILITY_RENEWAL_SCHEMA_LABEL =
+  "CareerCapabilityRenewalRequested:1.0.0" as const;
+export const BrokerCapabilityOperationsSchema = z
+  .array(z.string().regex(/^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/))
+  .min(1)
+  .max(16)
+  .refine(
+    (operations) =>
+      new Set(operations).size === operations.length &&
+      operations.every(
+        (operation, index) => index === 0 || operations[index - 1]! < operation,
+      ),
+    "Broker capability operations must be unique and sorted",
+  );
+export const CareerCapabilityRenewalPayloadSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  operations: BrokerCapabilityOperationsSchema,
+  requestedExpiresAt: IsoDateTimeSchema,
+});
+
 export const DisclosureClassSchema = z.enum([
   "PUBLIC_NOW",
   "SEALED_30D",

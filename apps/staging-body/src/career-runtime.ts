@@ -23,8 +23,17 @@ import type { Hex, TypedDataDomain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 
+import {
+  BrokerCareerModelClient,
+  CareerActivationResultSchema,
+  executeCareerPlayerActivation,
+  requestCareerCapabilityRenewal,
+  verifyCareerPlayerActivationCommand,
+} from "./cognition-runtime.js";
+
 export const CAREER_IDENTITY_PATH =
   "/tmp/abl-career-state/career-identity.json";
+export const CAREER_ACTIVATION_ROOT = "/tmp/abl-career-state/activations";
 const privateKeySchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const DomainSchema = z
   .strictObject({
@@ -41,6 +50,10 @@ const PersistentIdentitySchema = z.strictObject({
   signingPrivateKey: privateKeySchema,
   encryptionSecretKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   receipt: CandidateRuntimeIdentityReceiptSchema,
+});
+const PersistedCareerActivationSchema = z.strictObject({
+  commandEventHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  result: CareerActivationResultSchema,
 });
 const TransferSigningRequestSchema = z.strictObject({
   event: z.strictObject({
@@ -185,6 +198,114 @@ export async function runCareerRuntime(): Promise<void> {
   const commandDomain = DomainSchema.parse(
     JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),
   ) satisfies TypedDataDomain;
+  const cognitionEnabled =
+    z
+      .enum(["DISABLED", "ENABLED"])
+      .parse(process.env.ABL_COGNITION_MODE ?? "DISABLED") === "ENABLED";
+  if (cognitionEnabled && roleClass !== "PLAYER")
+    throw new Error(
+      "The founding cognition runtime currently supports players",
+    );
+  const cognitionIdentity = {
+    privateKey: identity.signingPrivateKey as Hex,
+    publicKey: identity.receipt.signingPublicKey as Hex,
+    address: identity.receipt.signingAddress as `0x${string}`,
+    candidateDid,
+    applicationId,
+    roleClass: "PLAYER" as const,
+  };
+  const brokerOrigin = cognitionEnabled
+    ? required("ABL_FIXED_BROKER_ORIGIN")
+    : null;
+  const brokerPreviewToken = cognitionEnabled
+    ? process.env.ABL_FIXED_BROKER_PREVIEW_TOKEN
+    : undefined;
+  const brokerCapabilityOperations = cognitionEnabled
+    ? z
+        .array(z.string())
+        .parse(
+          JSON.parse(required("ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON")),
+        )
+    : [];
+  const modelClient = cognitionEnabled
+    ? new BrokerCareerModelClient({
+        origin: brokerOrigin!,
+        capabilityToken: required("ABL_FIXED_BROKER_CAPABILITY_TOKEN"),
+        ...(brokerPreviewToken === undefined
+          ? {}
+          : {
+              previewToken: brokerPreviewToken,
+            }),
+        modelPath: required("ABL_MODEL_ROUTE_PATH"),
+        renewCapability: () =>
+          requestCareerCapabilityRenewal({
+            origin: brokerOrigin!,
+            ...(brokerPreviewToken === undefined
+              ? {}
+              : { previewToken: brokerPreviewToken }),
+            identity: cognitionIdentity,
+            domain: commandDomain,
+            operations: brokerCapabilityOperations,
+          }),
+      })
+    : null;
+  const coordinator = cognitionEnabled
+    ? {
+        did: z
+          .string()
+          .startsWith("did:")
+          .parse(required("ABL_COMPETITION_COORDINATOR_DID")),
+        signerAddress: z
+          .string()
+          .regex(/^0x[0-9a-fA-F]{40}$/)
+          .parse(
+            required("ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS"),
+          ) as `0x${string}`,
+      }
+    : null;
+  const pendingActivations = new Map<
+    string,
+    { commandEventHash: string; result: Promise<unknown> }
+  >();
+
+  function activationPath(activationId: string): string {
+    return `${CAREER_ACTIVATION_ROOT}/${sha256Commitment(activationId).slice(2)}.json`;
+  }
+
+  async function readActivation(
+    activationId: string,
+    commandEventHash: string,
+  ) {
+    try {
+      const stored = PersistedCareerActivationSchema.parse(
+        JSON.parse(await readFile(activationPath(activationId), "utf8")),
+      );
+      if (stored.commandEventHash !== commandEventHash)
+        throw new Error("Activation ID is bound to another signed command");
+      return stored.result;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
+  async function persistActivation(
+    activationId: string,
+    commandEventHash: string,
+    result: unknown,
+  ) {
+    await mkdir(CAREER_ACTIVATION_ROOT, { recursive: true, mode: 0o700 });
+    const path = activationPath(activationId);
+    const temporaryPath = `${path}.${process.pid}.tmp`;
+    await writeFile(
+      temporaryPath,
+      `${JSON.stringify({ commandEventHash, result })}\n`,
+      {
+        mode: 0o600,
+      },
+    );
+    await rename(temporaryPath, path);
+  }
   const app = Fastify({ logger: false, bodyLimit: 256_000 });
   app.get("/health", async () => ({
     status: "ok",
@@ -193,8 +314,68 @@ export async function runCareerRuntime(): Promise<void> {
     candidateDid,
     applicationId,
     identityCommitment: sha256Commitment(identity.receipt),
+    cognitionReady: cognitionEnabled,
   }));
   app.get("/v1/career/identity", async () => identity.receipt);
+  app.post("/v1/career/activations", async (request, reply) => {
+    if (
+      !cognitionEnabled ||
+      modelClient === null ||
+      coordinator === null ||
+      roleClass !== "PLAYER"
+    )
+      return reply.code(503).send({
+        error: "career_cognition_not_enabled",
+        retryable: false,
+      });
+    let verified;
+    try {
+      verified = await verifyCareerPlayerActivationCommand({
+        command: request.body,
+        identity: cognitionIdentity,
+        coordinatorDid: coordinator.did,
+        coordinatorSignerAddress: coordinator.signerAddress,
+        domain: commandDomain,
+      });
+    } catch {
+      return reply.code(400).send({ error: "invalid_career_activation" });
+    }
+    const activationId = verified.activation.activationId;
+    const commandEventHash = verified.event.eventHash;
+    let existing;
+    try {
+      existing = await readActivation(activationId, commandEventHash);
+    } catch {
+      return reply.code(409).send({ error: "activation_id_conflict" });
+    }
+    if (existing !== null) return existing;
+    let pending = pendingActivations.get(activationId);
+    if (pending !== undefined && pending.commandEventHash !== commandEventHash)
+      return reply.code(409).send({ error: "activation_id_conflict" });
+    if (pending === undefined) {
+      const result = executeCareerPlayerActivation({
+        command: request.body,
+        identity: cognitionIdentity,
+        coordinatorDid: coordinator.did,
+        coordinatorSignerAddress: coordinator.signerAddress,
+        domain: commandDomain,
+        modelClient,
+      }).then(async (result) => {
+        await persistActivation(activationId, commandEventHash, result);
+        return result;
+      });
+      pending = { commandEventHash, result };
+      pendingActivations.set(activationId, pending);
+    }
+    try {
+      return await pending.result;
+    } catch {
+      return reply.code(403).send({ error: "career_activation_rejected" });
+    } finally {
+      if (pendingActivations.get(activationId) === pending)
+        pendingActivations.delete(activationId);
+    }
+  });
   app.post("/v1/career/sign-transfer", async (request, reply) => {
     const parsed = TransferSigningRequestSchema.safeParse(request.body);
     if (!parsed.success)

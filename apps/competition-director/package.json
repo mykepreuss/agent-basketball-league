@@ -1,14 +1,8 @@
 {
-  "name": "@abl/body-broker",
+  "name": "@abl/competition-director",
   "version": "0.0.0-pre-genesis",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
-    }
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
@@ -17,11 +11,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@abl/foundation": "workspace:*",
+    "@abl/basketball": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
-    "@abl/storage": "workspace:*",
-    "fastify": "catalog:",
+    "@blaxel/core": "0.3.13",
     "viem": "catalog:",
     "zod": "catalog:"
   },

@@ -1,0 +1,66 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Job
+metadata:
+  name: abl-competition-director
+  labels:
+    abl-trust-domain: abl-competition
+    abl-workspace-role: competition-director
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  runtime:
+    generation: mk3
+    image: ${ABL_COMPETITION_DIRECTOR_IMAGE_DIGEST}
+    memory: 2048
+    maxConcurrentTasks: 4
+    timeout: 300
+    maxRetries: 0
+    envs:
+      - name: ABL_COMPETITION_COORDINATOR_DID
+        value: ${ABL_COMPETITION_COORDINATOR_DID}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_SIGNING_KEY
+        value: ${ABL_COMPETITION_COORDINATOR_SIGNING_KEY}
+        secret: true
+      - name: ABL_COMPETITION_COMMAND_DOMAIN_JSON
+        value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
+        secret: false
+      - name: ABL_COMPETITION_MODEL_NAME
+        value: ${ABL_COMPETITION_MODEL_NAME}
+        secret: false
+      - name: ABL_COMPETITION_MODEL_PROVIDER
+        value: ${ABL_COMPETITION_MODEL_PROVIDER}
+        secret: false
+      - name: ABL_COMPETITION_MODEL_FAMILY
+        value: ${ABL_COMPETITION_MODEL_FAMILY}
+        secret: false
+      - name: ABL_COMPETITION_MODEL_REVISION
+        value: ${ABL_COMPETITION_MODEL_REVISION}
+        secret: false
+      - name: ABL_COMPETITION_MODEL_MAX_OUTPUT_TOKENS
+        value: "256"
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: TELEMETRY_ENABLED
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
+  triggers:
+    - id: founding-competition-twice-weekly
+      type: cron
+      enabled: ${ABL_COMPETITION_SCHEDULE_ENABLED}
+      configuration:
+        schedule: "0 2 * * 2,5"
+        tasks:
+          - action: RUN_SCHEDULED_CAREER_SESSION
+            sessionSeriesId: founding-competition
+            kind: COMPETITION
+            careerSandboxName: ${ABL_FOUNDING_PLAYER_SANDBOX_NAME}

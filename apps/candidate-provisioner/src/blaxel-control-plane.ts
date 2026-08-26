@@ -155,6 +155,14 @@ export interface BlaxelCandidateControlPlaneOptions {
   coreOrigin?: string;
   corePreviewToken?: string;
   candidateCommandDomain?: TypedDataDomain;
+  foundingCognition?: {
+    modelOrigin: string;
+    modelPathPrefix: string;
+    modelCredential: string;
+    modelWorkspace: string;
+    coordinatorDid: string;
+    coordinatorSignerAddress: string;
+  };
   memory?: number;
   factory?: CandidateSandboxFactory;
 }
@@ -173,6 +181,14 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #coreOrigin: string | null;
   readonly #corePreviewToken: string | null;
   readonly #candidateCommandDomain: TypedDataDomain | null;
+  readonly #foundingCognition: {
+    modelOrigin: string;
+    modelPathPrefix: string;
+    modelCredential: string;
+    modelWorkspace: string;
+    coordinatorDid: string;
+    coordinatorSignerAddress: `0x${string}`;
+  } | null;
   readonly #memory: number;
   readonly #factory: CandidateSandboxFactory;
 
@@ -206,6 +222,45 @@ export class BlaxelCandidateSandboxControlPlane
         : HttpsOriginSchema.parse(options.coreOrigin);
     this.#corePreviewToken = options.corePreviewToken ?? null;
     this.#candidateCommandDomain = options.candidateCommandDomain ?? null;
+    this.#foundingCognition =
+      options.foundingCognition === undefined
+        ? null
+        : {
+            modelOrigin: HttpsOriginSchema.parse(
+              options.foundingCognition.modelOrigin,
+            ),
+            modelPathPrefix: z
+              .string()
+              .regex(/^\/[A-Za-z0-9._~/-]+$/)
+              .refine(
+                (value) =>
+                  value !== "/" &&
+                  !value.endsWith("/") &&
+                  !value.includes("//") &&
+                  !value.includes(".."),
+              )
+              .parse(options.foundingCognition.modelPathPrefix),
+            modelCredential: z
+              .string()
+              .min(32)
+              .max(4_096)
+              .refine((value) => !/[\r\n]/.test(value))
+              .parse(options.foundingCognition.modelCredential),
+            modelWorkspace: WorkspaceNameSchema.parse(
+              options.foundingCognition.modelWorkspace,
+            ),
+            coordinatorDid: z
+              .string()
+              .startsWith("did:")
+              .max(500)
+              .parse(options.foundingCognition.coordinatorDid),
+            coordinatorSignerAddress: z
+              .string()
+              .regex(/^0x[0-9a-fA-F]{40}$/)
+              .parse(
+                options.foundingCognition.coordinatorSignerAddress,
+              ) as `0x${string}`,
+          };
     if (
       this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO" &&
       (this.#coreOrigin === null ||
@@ -214,6 +269,13 @@ export class BlaxelCandidateSandboxControlPlane
     )
       throw new Error(
         "Automatic founding provisioning requires core authority",
+      );
+    if (
+      this.#foundingCognition !== null &&
+      this.#runtimeScope.mode !== "CAPPED_FOUNDING_AUTO"
+    )
+      throw new Error(
+        "Founding cognition is available only to automatic founding careers",
       );
     this.#memory = z
       .number()
@@ -379,6 +441,18 @@ export class BlaxelCandidateSandboxControlPlane
       timestamp: registrationEvent.timestamp,
       payload: registrationEvent.payload,
     });
+    const cognition =
+      input.roleClass === "PLAYER" ? this.#foundingCognition : null;
+    const commandDomain =
+      cognition === null
+        ? null
+        : z
+            .strictObject({
+              chainId: z.number().int().positive(),
+              verifyingContract: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+            })
+            .passthrough()
+            .parse(this.#candidateCommandDomain);
 
     const capabilityToken = randomBytes(32).toString("base64url");
     const capabilityExpiresAt = new Date(
@@ -391,6 +465,7 @@ export class BlaxelCandidateSandboxControlPlane
       environment("ABL_CORE_ROUTE_MODE", "DISABLED"),
       environment("ABL_PRIVATE_ROUTE_MODE", "DISABLED"),
       environment("ABL_MODEL_ROUTE_MODE", "DISABLED"),
+      environment("ABL_CAREER_CAPABILITY_RENEWAL_MODE", "DISABLED"),
       environment("ABL_CANONICAL_SIGNING_MODE", "DISABLED"),
       environment("ABL_AGENT_DID", input.candidateDid),
       environment("ABL_SERVICE_ID", `candidate-${input.applicationId}`),
@@ -405,6 +480,23 @@ export class BlaxelCandidateSandboxControlPlane
         randomBytes(32).toString("base64"),
         true,
       ),
+      ...(cognition === null
+        ? []
+        : [
+            environment("ABL_MODEL_ORIGIN", cognition.modelOrigin),
+            environment("ABL_MODEL_PATH_PREFIX", cognition.modelPathPrefix),
+            environment("ABL_MODEL_WORKSPACE", cognition.modelWorkspace),
+            environment(
+              "ABL_MODEL_CREDENTIAL_B64",
+              Buffer.from(cognition.modelCredential).toString("base64"),
+              true,
+            ),
+            environment("ABL_DOMAIN_CHAIN_ID", String(commandDomain!.chainId)),
+            environment(
+              "ABL_DOMAIN_VERIFYING_CONTRACT",
+              commandDomain!.verifyingContract,
+            ),
+          ]),
       environment("DO_NOT_TRACK", "1"),
       environment("BL_ENABLE_OPENTELEMETRY", "false"),
       environment("TELEMETRY_ENABLED", "false"),
@@ -427,7 +519,10 @@ export class BlaxelCandidateSandboxControlPlane
       spec: {
         enabled: true,
         region: this.#region,
-        network: { allowedDomains: [] },
+        network: {
+          allowedDomains:
+            cognition === null ? [] : [new URL(cognition.modelOrigin).hostname],
+        },
         runtime: {
           image: this.#fixedBrokerImageReference,
           memory: 1_024,
@@ -464,7 +559,11 @@ export class BlaxelCandidateSandboxControlPlane
     });
     const brokerOrigin = HttpsOriginSchema.parse(brokerPreview.spec.url);
     const brokerPreviewToken = await brokerPreview.tokens.create(
-      new Date(capabilityExpiresAt),
+      new Date(
+        cognition === null
+          ? capabilityExpiresAt
+          : Date.now() + 30 * 24 * 60 * 60 * 1_000,
+      ),
     );
 
     const fixedBrokerHost = new URL(brokerOrigin).hostname;
@@ -489,6 +588,32 @@ export class BlaxelCandidateSandboxControlPlane
         true,
       ),
       environment("ABL_FIXED_BROKER_CAPABILITY_TOKEN", capabilityToken, true),
+      environment(
+        "ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON",
+        JSON.stringify(
+          cognition === null ? ["runtime:health"] : ["proxy:model"],
+        ),
+      ),
+      environment(
+        "ABL_COGNITION_MODE",
+        cognition === null ? "DISABLED" : "ENABLED",
+      ),
+      ...(cognition === null
+        ? []
+        : [
+            environment(
+              "ABL_MODEL_ROUTE_PATH",
+              `${cognition.modelPathPrefix}/v1/chat/completions`,
+            ),
+            environment(
+              "ABL_COMPETITION_COORDINATOR_DID",
+              cognition.coordinatorDid,
+            ),
+            environment(
+              "ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS",
+              cognition.coordinatorSignerAddress,
+            ),
+          ]),
       environment("BL_SANDBOX_USER_ENABLED", "true"),
       environment("DO_NOT_TRACK", "1"),
       environment("BL_ENABLE_OPENTELEMETRY", "false"),
@@ -569,6 +694,33 @@ export class BlaxelCandidateSandboxControlPlane
       roleClass: input.roleClass,
       formerOperatorSigningAddress: input.formerOperatorSigningAddress,
     });
+    if (cognition !== null) {
+      await broker.process.stop("abl-fixed-broker");
+      await ensureSandboxProcessStarted(broker.process, {
+        name: "abl-fixed-broker",
+        command: "node dist/index.js",
+        env: {
+          HOST: "0.0.0.0",
+          PORT: "3000",
+          ABL_MODEL_ROUTE_MODE: "ENABLED",
+          ABL_CAREER_CAPABILITY_RENEWAL_MODE: "ENABLED",
+          ABL_CAREER_SIGNER_ADDRESS: identity.signingAddress,
+        },
+        workingDir: "/opt/abl",
+        waitForCompletion: false,
+        keepAlive: true,
+        timeout: 0,
+        restartOnFailure: true,
+        maxRestarts: -1,
+      });
+      const cognitionBrokerHealth = await waitForSandboxResponse(
+        broker,
+        3_000,
+        "/health",
+      );
+      if (!cognitionBrokerHealth.ok)
+        throw new Error("Candidate cognition broker readiness failed");
+    }
     const transferredAt = identity.createdAt;
     const transferPayload = {
       signingPublicKey: identity.signingPublicKey,

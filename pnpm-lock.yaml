@@ -174,6 +174,9 @@ importers:
       "@abl/recognition":
         specifier: workspace:*
         version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
       "@abl/storage":
         specifier: workspace:*
         version: link:../../packages/storage
@@ -282,6 +285,37 @@ importers:
       "@abl/schemas":
         specifier: workspace:*
         version: link:../../packages/schemas
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
+    devDependencies:
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  apps/competition-director:
+    dependencies:
+      "@abl/basketball":
+        specifier: workspace:*
+        version: link:../../packages/basketball
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      "@blaxel/core":
+        specifier: 0.3.13
+        version: 0.3.13(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))(bufferutil@4.0.7)(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(utf-8-validate@6.0.3)
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
       zod:
         specifier: "catalog:"
         version: 4.4.3

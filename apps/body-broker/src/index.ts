@@ -71,6 +71,21 @@ function routeEnabled(name: "ABL_CORE_ROUTE_MODE" | "ABL_PRIVATE_ROUTE_MODE") {
   );
 }
 
+function recognitionDomain() {
+  return {
+    name: "ABL Recognition",
+    version: "1",
+    chainId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .parse(required("ABL_DOMAIN_CHAIN_ID")),
+    verifyingContract: addressSchema.parse(
+      required("ABL_DOMAIN_VERIFYING_CONTRACT"),
+    ) as Address,
+  };
+}
+
 const coreRouteEnabled = routeEnabled("ABL_CORE_ROUTE_MODE");
 const privateRouteEnabled = routeEnabled("ABL_PRIVATE_ROUTE_MODE");
 const modelRouteEnabled =
@@ -95,17 +110,37 @@ if (privateRouteEnabled)
     capability: "private:ciphertext",
     credential: upstreamCredential("ABL_PRIVATE"),
   });
-if (modelRouteEnabled)
+if (modelRouteEnabled) {
+  const modelPathPrefix = z
+    .string()
+    .regex(/^\/[A-Za-z0-9._~/-]+$/)
+    .refine(
+      (value) =>
+        value !== "/" &&
+        !value.endsWith("/") &&
+        !value.includes("//") &&
+        !value.includes(".."),
+    )
+    .parse(required("ABL_MODEL_PATH_PREFIX"));
+  const modelWorkspace = process.env.ABL_MODEL_WORKSPACE;
   routes.push({
     name: "model",
     targetOrigin: required("ABL_MODEL_ORIGIN"),
     methods: new Set(["POST"]),
-    pathPrefixes: ["/v1/responses"],
+    pathPrefixes: [`${modelPathPrefix}/v1/chat/completions`],
     capability: "model:invoke",
-    credential: {
-      authorization: `Bearer ${secretText("ABL_MODEL_CREDENTIAL")}`,
-    },
+    credential:
+      modelWorkspace === undefined
+        ? {
+            authorization: `Bearer ${secretText("ABL_MODEL_CREDENTIAL")}`,
+          }
+        : createBlaxelUpstreamCredential({
+            mode: "BLAXEL_ACCESS_TOKEN",
+            token: secretText("ABL_MODEL_CREDENTIAL"),
+            workspace: modelWorkspace,
+          }),
   });
+}
 
 const domainId = privateRouteEnabled
   ? required("ABL_PERSONAL_DOMAIN_ID")
@@ -129,18 +164,7 @@ const canonicalSigning = canonicalSigningEnabled
       identity: createSigningIdentity(
         privateKeySchema.parse(secretText("ABL_AGENT_SIGNING_KEY")) as Hex,
       ),
-      domain: {
-        name: "ABL Recognition",
-        version: "1",
-        chainId: z.coerce
-          .number()
-          .int()
-          .positive()
-          .parse(required("ABL_DOMAIN_CHAIN_ID")),
-        verifyingContract: addressSchema.parse(
-          required("ABL_DOMAIN_VERIFYING_CONTRACT"),
-        ) as Address,
-      },
+      domain: recognitionDomain(),
       allowedEvents: new Set([
         "player-decision:ActionIntentSubmitted",
         "game-possession:PossessionResolved",
@@ -162,6 +186,19 @@ const app = createBodyBroker({
   routes,
   storageDomainKeys,
   ...(canonicalSigning === null ? {} : { canonicalSigning }),
+  ...(z
+    .enum(["DISABLED", "ENABLED"])
+    .parse(process.env.ABL_CAREER_CAPABILITY_RENEWAL_MODE ?? "DISABLED") ===
+  "DISABLED"
+    ? {}
+    : {
+        careerCapabilityRenewal: {
+          signerAddress: addressSchema.parse(
+            required("ABL_CAREER_SIGNER_ADDRESS"),
+          ) as Address,
+          domain: recognitionDomain(),
+        },
+      }),
 });
 
 await app.listen({
