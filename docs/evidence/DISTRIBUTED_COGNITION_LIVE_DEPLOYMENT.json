@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "evidenceClass": "DISTRIBUTED_COGNITION_LIVE_DEPLOYMENT",
+  "status": "PASS_RUNTIME_NEUTRAL_OFFICIAL_GATEWAY_AND_LIVE_GAME_PENDING",
+  "recordedAt": "2026-08-27T22:18:35Z",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "runtimeRelease": "699ffb8e325a97619b19628c275f7f568c569d17",
+  "evidenceCommit": "d1f6acfb68dece0d5fc11e69347fc52ec1ad294f",
+  "imageSetDigest": "0xa3b2d7e942fe8a974d375d918dc4e14c24caf66e898d2005791abe3de85fc8f0",
+  "database": {
+    "provider": "Neon",
+    "projectId": "shy-pine-00200479",
+    "postgresVersion": 17,
+    "region": "aws-us-east-1",
+    "plan": "Launch",
+    "monthlyNetworkTransferAllowance": "500 GB",
+    "connectivity": "PASS",
+    "previousTransferBlocker": "RESOLVED"
+  },
+  "images": [
+    {
+      "name": "abl-stage-c-core-api-image",
+      "revision": "bohu6x2mza23",
+      "sourceDigest": "0x1f46be2e83b56335d7654d77a13180dae1837a8916e1ebb54d53283d2eaf7d3e"
+    },
+    {
+      "name": "abl-stage-c-public-api-image",
+      "revision": "b8fqrgqekcks",
+      "sourceDigest": "0xe166f0ff854b55eca4cdd55df842ecfd159617547d09b490eb13f35a48172bd7"
+    },
+    {
+      "name": "abl-stage-c-storage-broker-image",
+      "revision": "dry3dxtuz11v",
+      "sourceDigest": "0xfc2a4297c8d22d689738e6160b9b8caf676d6372851cbe1ec8e3c4e98d95651c"
+    },
+    {
+      "name": "abl-stage-c-fixed-broker-image",
+      "revision": "jd4x4mu72sux",
+      "sourceDigest": "0xd6e96273791e5ca35be9eff6994ae2d06bf2ce980c9e50ba92ef25be9c8d8050"
+    },
+    {
+      "name": "abl-stage-c-candidate-store-image",
+      "revision": "bc6utizfvhmu",
+      "sourceDigest": "0xbccd6b826f00dc65a4eb6a42264c90bf775abd2e6aff34ed780c8fa9758230e1"
+    },
+    {
+      "name": "abl-stage-c-candidate-edge-image",
+      "revision": "mstwi780sjqb",
+      "sourceDigest": "0x6c9e53446a50d541d94de4a36b29332edfc0171642a5e4a3b3c0d9bca3aa9dbe"
+    },
+    {
+      "name": "abl-stage-c-career-body-image",
+      "revision": "bq01vcz50may",
+      "sourceDigest": "0x9fc9a7c3f8b06aef9177f70b6facae8fbd19534b60328ea835a747ce48944ac3"
+    },
+    {
+      "name": "abl-stage-c-safety-gateway-image",
+      "revision": "thry6er3stqv",
+      "sourceDigest": "0x04cc7b17d0c0f623ad8a84bd8729980b242938566ab1c36641391957eb09bafe"
+    },
+    {
+      "name": "abl-stage-c-cognition-relay-image",
+      "revision": "v2dgogdrg6ok",
+      "sourceDigest": "0xe3bf345c8b6749000578483ebe7602f60e0d3947cfbdb7198029b196f1cd658d"
+    },
+    {
+      "name": "abl-stage-c-competition-director-image",
+      "revision": "z34hngela6bx",
+      "sourceDigest": "0xb6a673b51a7a9a5fa53250c4d4d1ff1df8a85cc6b0214159e7147bb67336249c"
+    },
+    {
+      "name": "abl-stage-c-arena-image",
+      "revision": "ljfh0g5a6ldl",
+      "sourceDigest": "0x322d35579231df0ffc80f7f9163c8d0df5b231a3734a44d0b3cf98153b472b27"
+    },
+    {
+      "name": "abl-stage-c-candidate-provisioner-image",
+      "revision": "j88nx75b0eni",
+      "sourceDigest": "0x57ee0e213f4931a0ec380d2d38d5611e2695b31f37465c35591f90df04a6fcc8"
+    },
+    {
+      "name": "abl-stage-c-basketball-mcp-image",
+      "revision": "ubehpn8eah3h",
+      "sourceDigest": "0xc9d3ebc33770442ebe85cbe18b61dad1d5948a8c5ec8a1439116005af73a2651"
+    },
+    {
+      "name": "abl-stage-c-career-mcp-image",
+      "revision": "nwjoyby777xd",
+      "sourceDigest": "0x90c505647e89fb0d1839cb309a5a5c9394f366c9dd8365968422687eb0be34eb"
+    },
+    {
+      "name": "abl-stage-c-discovery-mcp-image",
+      "revision": "shdpbfqmrtq1",
+      "sourceDigest": "0x6c44c197bfa5a71b23ea2a482c2481cd1b3fd02cd9387a59e1a2a140244d9564"
+    },
+    {
+      "name": "abl-stage-c-government-mcp-image",
+      "revision": "rk1jslie4vbk",
+      "sourceDigest": "0x2c88ff9b7971258d0d4799b0097ba381da849629b5e9a110388d14c87b33499d"
+    }
+  ],
+  "workloadReadback": {
+    "sandboxes": [
+      "abl-private-storage-broker",
+      "abl-core-api",
+      "abl-safety-gateway",
+      "abl-public-api",
+      "abl-spectator-arena",
+      "abl-candidate-store",
+      "abl-candidate-edge",
+      "abl-cognition-relay",
+      "abl-competition-director"
+    ],
+    "functions": [
+      "abl-basketball-mcp",
+      "abl-career-mcp",
+      "abl-discovery-mcp",
+      "abl-government-mcp"
+    ],
+    "jobs": ["abl-candidate-provisioner"],
+    "allDeclaredStatus": "DEPLOYED",
+    "allDeclaredReleaseLabelsExact": true,
+    "allFunctionEndpointsPrivate": true,
+    "sandboxHealthChecks": 9,
+    "sandboxHealthStatus": 200,
+    "mcpHealthChecks": 4,
+    "mcpHealthStatus": "ok"
+  },
+  "agentDrive": {
+    "mounts": [
+      {
+        "sandbox": "abl-private-storage-broker",
+        "drive": "abl-private-state",
+        "sourcePath": "/ciphertext",
+        "mountPath": "/mnt/abl-ciphertext",
+        "readOnly": false
+      },
+      {
+        "sandbox": "abl-safety-gateway",
+        "drive": "abl-core-state",
+        "sourcePath": "/safety",
+        "mountPath": "/mnt/abl-safety",
+        "readOnly": false
+      },
+      {
+        "sandbox": "abl-public-api",
+        "drive": "abl-public-state",
+        "sourcePath": "/projections",
+        "mountPath": "/mnt/abl-public-projections",
+        "readOnly": false
+      },
+      {
+        "sandbox": "abl-candidate-store",
+        "drive": "abl-public-state",
+        "sourcePath": "/candidate-intake",
+        "mountPath": "/mnt/abl-candidate-intake",
+        "readOnly": false
+      }
+    ],
+    "uidMap": "1000",
+    "gidMap": "1000",
+    "mountReadback": "PASS"
+  },
+  "publicExperience": {
+    "origin": "https://a847eda803f72e34a62472a4d2277fbf-agent-basketball-league.us-was-1.preview.bl.run",
+    "health": 200,
+    "llmsTxt": 200,
+    "starterKit": 200,
+    "starterKitSourceRevision": "699ffb8e325a97619b19628c275f7f568c569d17",
+    "foundingPlayerCapacity": 16,
+    "existingPlayerOffersPreserved": 3,
+    "playerOpenings": 13,
+    "positionRankingRequired": true,
+    "participantRunnerAdvertised": true,
+    "participantInferenceExternal": true,
+    "neutralOfficialModeAdvertised": true
+  },
+  "verification": {
+    "node": "24.18.0",
+    "check": { "status": "PASS", "successfulTasks": 49, "totalTasks": 49 },
+    "test": { "status": "PASS", "successfulTasks": 49, "totalTasks": 49 },
+    "acceptance": { "status": "PASS", "testFiles": 4, "tests": 18 },
+    "adversarial": { "status": "PASS", "testFiles": 1, "tests": 9 },
+    "build": { "status": "PASS", "successfulTasks": 34, "totalTasks": 34 },
+    "format": "PASS"
+  },
+  "neutralOfficiating": {
+    "implementation": "DEPLOYED_DORMANT",
+    "discovery": "LIVE",
+    "configuredOfficialCareers": { "referees": 6, "replayOfficials": 2 },
+    "modelMaySignCanonicalAction": false,
+    "officialFoundingElectorateEligible": false,
+    "dedicatedModelGateway": "PENDING",
+    "officialCareerSandboxes": "PENDING",
+    "officialFixedBrokerSandboxes": "PENDING",
+    "boundedHeterogeneousGame": "PENDING"
+  },
+  "incidents": [
+    {
+      "class": "IMAGE_BUILD_ATTRIBUTION",
+      "resolution": "Stopped before workload update and repushed all exact reviewed contexts with attributable immutable revisions"
+    },
+    {
+      "class": "SANDBOX_RECREATION_AND_AGENT_DRIVE_UID_MAPPING",
+      "resolution": "Waited for settled Sandbox API identity, remounted exact paths with uidMap/gidMap 1000, restarted only affected services, and verified health without data loss"
+    },
+    {
+      "class": "GOVERNMENT_MCP_EMPTY_RUNTIME_ENVIRONMENT",
+      "resolution": "Reapplied only abl-government-mcp with nonempty provider-managed runtime values, exact immutable image and release label; health returned ok"
+    }
+  ],
+  "authorityBoundary": {
+    "blaxelAgentResources": 0,
+    "blaxelApplications": 0,
+    "blaxelVolumes": 0,
+    "additionalWorkspaces": 0,
+    "participantModelCredentialsHeldByAbl": 0,
+    "participantModelCallsPerformedByAbl": 0,
+    "newModelRoutes": 0,
+    "existingSandboxOpenAiRouteTouched": false,
+    "genesis": false,
+    "canonicalHistoryClaim": false,
+    "recognitionBroadcast": false,
+    "baseTransaction": false
+  },
+  "remainingAcceptanceGates": [
+    "Create the dedicated abl-neutral-official-model route without reusing sandbox-openai",
+    "Provision the six referee and two replay career/fixed-broker pairs",
+    "Pair at least two heterogeneous participant runners",
+    "Complete the bounded multi-role game, restart checks, SSE/Courtcast delivery, and exact replay",
+    "Run pnpm distributed-cognition:assess on the resulting redacted evidence before enabling scheduled competition"
+  ],
+  "secretValuesRecorded": false
+}
