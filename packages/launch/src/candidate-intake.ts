@@ -1387,8 +1387,7 @@ function verifyCapacityPolicy(input: {
   if (
     decision.applicationId !== application.applicationId ||
     decision.candidateDid !== application.candidateDid ||
-    !application.requestedRoleClasses.includes(decision.roleClass) ||
-    decision.capacityRuleDigest !== input.policy.policyCommitment
+    !application.requestedRoleClasses.includes(decision.roleClass)
   )
     throw new CandidateIntakeError("Candidate capacity binding failed");
   const receiptKey = `${application.submittedAt}:${application.applicationId}`;
@@ -1430,7 +1429,24 @@ function verifyCapacityPolicy(input: {
   const comparableExpected = { ...expected } as Record<string, unknown>;
   if (!("offeredPosition" in decision))
     delete comparableExpected.offeredPosition;
-  if (sha256Commitment(comparableExpected) !== sha256Commitment(decision))
+  if (decision.capacityRuleDigest === input.policy.policyCommitment) {
+    if (sha256Commitment(comparableExpected) !== sha256Commitment(decision))
+      throw new CandidateIntakeError("Candidate capacity decision is invalid");
+    return;
+  }
+
+  // Capacity can expand between an offer and provisioning. Preserve a valid
+  // signed offer only when the current policy independently reaches the same
+  // decision. A contraction or any other semantic change still fails closed.
+  const comparableDecision = { ...decision } as Record<string, unknown>;
+  delete comparableExpected.capacityRuleDigest;
+  delete comparableExpected.decisionCommitment;
+  delete comparableDecision.capacityRuleDigest;
+  delete comparableDecision.decisionCommitment;
+  if (
+    sha256Commitment(comparableExpected) !==
+    sha256Commitment(comparableDecision)
+  )
     throw new CandidateIntakeError("Candidate capacity decision is invalid");
 }
 

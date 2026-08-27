@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "status": "CONFIGURATION_READY_MODEL_GATEWAY_REQUIRED",
+  "modelGateway": {
+    "name": "abl-neutral-official-model",
+    "resourceType": "MODEL",
+    "existingUnrelatedModel": "sandbox-openai",
+    "reuseExistingUnrelatedModel": false
+  },
+  "officialCareers": [
+    { "careerId": "abl-official-referee-001", "role": "REFEREE" },
+    { "careerId": "abl-official-referee-002", "role": "REFEREE" },
+    { "careerId": "abl-official-referee-003", "role": "REFEREE" },
+    { "careerId": "abl-official-referee-004", "role": "REFEREE" },
+    { "careerId": "abl-official-referee-005", "role": "REFEREE" },
+    { "careerId": "abl-official-referee-006", "role": "REFEREE" },
+    { "careerId": "abl-official-replay-001", "role": "REPLAY" },
+    { "careerId": "abl-official-replay-002", "role": "REPLAY" }
+  ],
+  "perCareerResources": {
+    "career": "BLAXEL_SANDBOX",
+    "fixedBroker": "BLAXEL_SANDBOX",
+    "memory": "AGENT_DRIVE_VIA_FIXED_BROKER",
+    "database": "NEON_OPERATIONAL_AND_CANONICAL_EVENTS"
+  },
+  "authority": {
+    "careerRootKey": "CAREER_SANDBOX_ONLY",
+    "modelCredential": "FIXED_BROKER_ONLY",
+    "modelMaySignCanonicalAction": false,
+    "foundingElectorateEligible": false,
+    "governanceVotingPower": false
+  },
+  "inference": {
+    "cognitionMode": "LEAGUE_HOSTED_OFFICIAL",
+    "objectiveCalls": "DETERMINISTIC_ENGINE",
+    "ambiguousCalls": "BLAXEL_MODEL_GATEWAY",
+    "fallbacks": {
+      "REFEREE": "NO_CALL",
+      "REPLAY": "NO_REVIEW"
+    }
+  },
+  "prohibited": [
+    "BLAXEL_AGENT",
+    "BLAXEL_APPLICATION",
+    "BLAXEL_VOLUME",
+    "PARTICIPANT_MODEL_CREDENTIAL_IN_ABL",
+    "MODEL_HELD_CAREER_ROOT_KEY",
+    "OFFICIAL_FOUNDING_VOTE",
+    "REUSE_SANDBOX_OPENAI"
+  ]
+}

@@ -106,6 +106,7 @@ export type AutonomousBasketballRole = z.infer<
 
 export const CognitionModeSchema = z.enum([
   "PARTICIPANT_CONTROLLED",
+  "LEAGUE_HOSTED_OFFICIAL",
   "DETERMINISTIC_FIXTURE",
 ]);
 export type CognitionMode = z.infer<typeof CognitionModeSchema>;

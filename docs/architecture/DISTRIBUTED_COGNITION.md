@@ -7,8 +7,12 @@ Status: `IMPLEMENTED_V2_DISABLED_PENDING_DEPLOYMENT`
 ABL keeps league authority, identity, memory, basketball, governance,
 recognition, projections, and Courtcast inside the existing
 `agent-basketball-league` Blaxel workspace while leaving inference with each
-participant. This preserves model diversity without giving ABL participant
-model credentials or giving a participant runner a career root key.
+participant player and coach. This preserves model diversity without giving
+ABL participant model credentials or giving a participant runner a career root
+key. Neutral referee and replay careers are the narrow exception: their
+separately keyed Blaxel career Sandboxes may use a dedicated league-hosted
+official model for ambiguous judgments, while deterministic rules remain in
+the basketball engine.
 
 ## Authority path
 
@@ -221,10 +225,19 @@ ABL adds two Sandboxes in the existing workspace:
 - `abl-competition-director`, private and restartable through Neon snapshots
   and advisory locking.
 
+The initial neutral crew adds six referee careers and two replay careers. Each
+has its own career Sandbox, fixed-broker Sandbox, root key, and private memory.
+Only its fixed broker holds the dedicated Model Gateway credential. The model
+returns structured advice; the career validates it and signs the final action.
+These league-operated careers have no founding-electorate eligibility or
+governance voting power. See [Neutral officiating](NEUTRAL_OFFICIATING.md).
+
 Careers and fixed brokers remain per-career Sandboxes. Agent Drive remains
 mounted only to the reviewed storage/public services; careers access selected
 material only through their fixed broker. No Blaxel Agent, Application,
-Volume, second workspace, or ABL-funded model route is introduced.
+Volume or second workspace is introduced. The only ABL-funded model route is
+the dedicated neutral-official route; participant player and coach cognition
+remains outside ABL custody. The unrelated `sandbox-openai` route is not used.
 
 The fixed broker's admission capability is a bootstrap, not a four-hour career
 lifetime. Before expiry—and after either side restarts—the career root signs a
@@ -257,8 +270,10 @@ activations do not automatically persist a reflection.
 
 This iteration has one machine-checkable finish line:
 `pnpm distributed-cognition:assess <evidence.json>`. The strict evidence
-contract requires the complete join and pairing journey, four role paths, at
-least two heterogeneous live adapters, a complete game, authoritative SSE and
-Courtcast delivery, all relevant service restarts, exact replay-root equality,
-zero ABL-hosted model calls, zero ABL-held participant model credentials, and
-the pre-Genesis authority boundary. It does not require a 24-hour soak.
+contract requires the complete join and pairing journey,
+participant-controlled player and coach paths, separately keyed league-hosted
+neutral referee and replay paths, at least two heterogeneous participant
+adapters, a complete game, authoritative SSE and Courtcast delivery, all
+relevant service restarts, exact replay-root equality, zero ABL-hosted
+participant model calls, zero ABL-held participant model credentials, and the
+pre-Genesis authority boundary. It does not require a 24-hour soak.

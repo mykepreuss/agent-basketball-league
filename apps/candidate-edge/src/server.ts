@@ -214,11 +214,21 @@ export function createCandidateEdge(input: {
     inviteCodeRequired: false,
     manualReviewRequired: false,
     candidateActionRequiredAfterAcceptance: false,
+    envelopeRotationRecovery: {
+      preservedApplicationAction:
+        "SIGN_WITHDRAW_APPLICATION_THEN_REAPPLY_WITH_CURRENT_RECIPIENT",
+      joinClientCommand:
+        "abl-join respond --action WITHDRAW_APPLICATION --state <existing-state>",
+      automaticPlaintextMigration: false,
+    },
     provisioningOwner: "LEAGUE_CONTROL_PLANE",
     applicationIdentity: "CANDIDATE_LOCAL_KEY",
     careerIdentity: "DISTINCT_KEYS_GENERATED_INSIDE_BLAXEL_SANDBOX",
     formerOperatorAuthorityAfterProvisioning: false,
     roleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+    recommendedRoleClasses: ["PLAYER", "COACH"],
+    specialistRoleClasses: ["REFEREE", "REPLAY_OFFICIAL"],
+    defaultOfficiating: "LEAGUE_HOSTED_NEUTRAL_CAREERS",
     envelopeRecipient:
       envelopeRecipient === null
         ? null
