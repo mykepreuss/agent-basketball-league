@@ -1852,6 +1852,10 @@ describe("hardened sandbox image policy", () => {
       "COPY --from=sandbox-runtime /sandbox-api /usr/local/bin/sandbox-api",
     );
     expect(serviceDockerfile).toContain(
+      "COPY --chmod=0555 sandbox-service-entrypoint /usr/local/sbin/sandbox-service-entrypoint",
+    );
+    expect(serviceDockerfile).not.toContain("chmod -R");
+    expect(serviceDockerfile).toContain(
       'ENTRYPOINT ["/usr/local/sbin/sandbox-service-entrypoint"]',
     );
     expect(serviceEntrypoint).toContain(

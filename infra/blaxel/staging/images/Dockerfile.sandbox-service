@@ -10,9 +10,7 @@ ENV NODE_ENV=production \
 WORKDIR /opt/abl
 COPY --from=sandbox-runtime /sandbox-api /usr/local/bin/sandbox-api
 COPY --chown=node:node app/ /opt/abl/
-COPY sandbox-service-entrypoint /usr/local/sbin/sandbox-service-entrypoint
-RUN chmod -R a+rX /opt/abl \
-  && chmod 0555 /usr/local/sbin/sandbox-service-entrypoint
+COPY --chmod=0555 sandbox-service-entrypoint /usr/local/sbin/sandbox-service-entrypoint
 
 # The operator mounts the approved Drive path before starting the application
 # through the Sandbox process API. Every managed process runs as the node user.
