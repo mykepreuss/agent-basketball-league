@@ -40,6 +40,9 @@ spec:
       - name: ABL_CAREER_PAIRING_TOKEN
         value: ${ABL_CAREER_PAIRING_INTERNAL_TOKEN}
         secret: true
+      - name: ABL_CAREER_PAIRING_ROUTER_PREVIEW_TOKEN
+        value: ${ABL_COMPETITION_DIRECTOR_PREVIEW_TOKEN}
+        secret: true
       - name: ABL_RUNNER_PAIRING_ENABLED
         value: "false"
         secret: false

@@ -80,6 +80,9 @@ spec:
       - name: ABL_CANDIDATE_COGNITION_RELAY_INTERNAL_TOKEN
         value: ${ABL_COGNITION_RELAY_INTERNAL_TOKEN}
         secret: true
+      - name: ABL_CANDIDATE_COGNITION_RELAY_PREVIEW_TOKEN
+        value: ${ABL_COGNITION_RELAY_PREVIEW_TOKEN}
+        secret: true
       - name: ABL_CANDIDATE_RUNNER_BUNDLE_DIGEST
         value: ${ABL_RUNNER_BUNDLE_DIGEST}
         secret: false

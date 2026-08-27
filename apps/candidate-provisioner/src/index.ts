@@ -103,6 +103,9 @@ const controlPlane =
                       relayInternalToken: required(
                         "ABL_CANDIDATE_COGNITION_RELAY_INTERNAL_TOKEN",
                       ),
+                      relayPreviewToken: required(
+                        "ABL_CANDIDATE_COGNITION_RELAY_PREVIEW_TOKEN",
+                      ),
                       runnerBundleDigest: required(
                         "ABL_CANDIDATE_RUNNER_BUNDLE_DIGEST",
                       ),

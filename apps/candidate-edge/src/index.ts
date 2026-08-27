@@ -53,6 +53,9 @@ const runnerPairing =
               headers: {
                 authorization: `Bearer ${required("ABL_COMPETITION_INTERNAL_TOKEN")}`,
                 "content-type": "application/json",
+                "x-blaxel-preview-token": required(
+                  "ABL_COMPETITION_DIRECTOR_PREVIEW_TOKEN",
+                ),
               },
               body: "{}",
               redirect: "error",
@@ -72,6 +75,9 @@ const runnerPairing =
             {
               headers: {
                 authorization: `Bearer ${required("ABL_COMPETITION_INTERNAL_TOKEN")}`,
+                "x-blaxel-preview-token": required(
+                  "ABL_COMPETITION_DIRECTOR_PREVIEW_TOKEN",
+                ),
               },
               redirect: "error",
               signal: AbortSignal.timeout(10_000),
