@@ -10,6 +10,7 @@ import {
   getWorkspaceServiceAccounts,
   listApiKeysForServiceAccount,
   listModels,
+  updateSandbox,
 } from "@blaxel/core";
 import { roleDecisionSchemaDigest } from "../packages/cognition/src/index.js";
 import {
@@ -89,6 +90,75 @@ async function health(sandbox: SandboxInstance, path = "/health") {
   throw new Error(
     `${sandbox.metadata.name}${path} did not become healthy (last ${lastStatus})`,
   );
+}
+
+async function deployCompetitionDirector(
+  image: string,
+  releaseCommit: string,
+): Promise<SandboxInstance> {
+  const current = await getSandbox({
+    path: { sandboxName: directorSandboxName },
+    query: { show_secrets: true },
+    throwOnError: true,
+  });
+  const director = current.data;
+  if (director.spec.runtime === undefined)
+    throw new Error("Competition director has no runtime configuration");
+  const updated = await updateSandbox({
+    path: { sandboxName: directorSandboxName },
+    body: {
+      metadata: {
+        name: director.metadata.name,
+        ...(director.metadata.displayName === undefined
+          ? {}
+          : { displayName: director.metadata.displayName }),
+        ...(director.metadata.externalId === undefined
+          ? {}
+          : { externalId: director.metadata.externalId }),
+        labels: {
+          ...director.metadata.labels,
+          "abl-release": releaseCommit,
+        },
+      },
+      spec: {
+        ...director.spec,
+        runtime: {
+          ...director.spec.runtime,
+          image,
+        },
+      },
+    },
+    throwOnError: true,
+  });
+  if (updated.data.spec.runtime?.image !== image)
+    throw new Error("Competition director immutable image readback drifted");
+  let deployed = new SandboxInstance(updated.data);
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    deployed = await SandboxInstance.get(directorSandboxName);
+    if (deployed.status === "DEPLOYED") break;
+    if (deployed.status === "FAILED")
+      throw new Error("Competition director deployment failed");
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  if (
+    deployed.status !== "DEPLOYED" ||
+    deployed.spec.runtime?.image !== image ||
+    deployed.metadata.labels?.["abl-release"] !== releaseCommit
+  )
+    throw new Error("Competition director deployment readback drifted");
+  const response = await health(deployed);
+  const body = z
+    .object({
+      status: z.literal("ok"),
+      neutralOfficials: z.object({
+        policy: z.literal("BLAXEL_HOSTED_NEUTRAL_OFFICIALS_V1"),
+        requiredCareerCount: z.literal(8),
+      }),
+    })
+    .parse(await response.json());
+  if (body.neutralOfficials.requiredCareerCount !== 8)
+    throw new Error("Competition director neutral-official registry drifted");
+  return deployed;
 }
 
 async function modelReadback() {
@@ -431,6 +501,7 @@ const releaseCommit = z
 const authorizationId = required("ABL_NEUTRAL_OFFICIAL_AUTHORIZATION_ID");
 const careerImage = required("ABL_NEUTRAL_OFFICIAL_CAREER_IMAGE");
 const brokerImage = required("ABL_NEUTRAL_OFFICIAL_BROKER_IMAGE");
+const directorImage = required("ABL_NEUTRAL_OFFICIAL_DIRECTOR_IMAGE");
 const { model } = await modelReadback();
 const allSandboxes = (
   await SandboxInstance.list({ limit: 200, showTerminated: false })
@@ -540,6 +611,7 @@ if (mode === "DRY_RUN") {
       modelStatus: model.status,
       targetSandboxCount: exactSandboxNames.length,
       existingTargetCount: existingTargets.length,
+      directorImage,
       preparationDigest: preparation.packetDigest,
       secretValuesRecorded: false,
     })}\n`,
@@ -548,6 +620,7 @@ if (mode === "DRY_RUN") {
 }
 
 const startedAt = new Date().toISOString();
+await deployCompetitionDirector(directorImage, releaseCommit);
 const credential = await modelServiceApiKey(true);
 if (credential.apiKey === null)
   throw new Error("Dedicated model service credential was not created");
