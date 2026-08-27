@@ -94,6 +94,11 @@ const cognitionRelayEnabled =
     .enum(["DISABLED", "ENABLED"])
     .parse(process.env.ABL_COGNITION_RELAY_ROUTE_MODE ?? "DISABLED") ===
   "ENABLED";
+const officialModelEnabled =
+  z
+    .enum(["DISABLED", "ENABLED"])
+    .parse(process.env.ABL_OFFICIAL_MODEL_ROUTE_MODE ?? "DISABLED") ===
+  "ENABLED";
 const routes: BrokerRoute[] = [];
 if (coreRouteEnabled)
   routes.push({
@@ -125,6 +130,28 @@ if (cognitionRelayEnabled)
       "x-blaxel-preview-token": secretText("ABL_COGNITION_RELAY_PREVIEW_TOKEN"),
     },
   });
+if (officialModelEnabled) {
+  const workspace = z
+    .string()
+    .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+    .parse(required("ABL_OFFICIAL_MODEL_WORKSPACE"));
+  const modelId = z
+    .string()
+    .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+    .parse(required("ABL_OFFICIAL_MODEL_ID"));
+  routes.push({
+    name: "official-model",
+    targetOrigin: required("ABL_OFFICIAL_MODEL_ORIGIN"),
+    methods: new Set(["POST"]),
+    pathPrefixes: [`/${workspace}/models/${modelId}/v1/chat/completions`],
+    capability: "official-model:infer",
+    credential: createBlaxelUpstreamCredential({
+      mode: "BLAXEL_ACCESS_TOKEN",
+      token: secretText("ABL_OFFICIAL_MODEL_ACCESS_TOKEN"),
+      workspace,
+    }),
+  });
+}
 
 const domainId = privateRouteEnabled
   ? required("ABL_PERSONAL_DOMAIN_ID")
@@ -143,6 +170,7 @@ if (privateRouteEnabled) {
   clientOperations.add("context:inspect");
 }
 if (cognitionRelayEnabled) clientOperations.add("proxy:cognition-relay");
+if (officialModelEnabled) clientOperations.add("proxy:official-model");
 if (!canonicalSigningEnabled && routes.length === 0)
   clientOperations.add("runtime:health");
 const storageDomainKeys = new Map<string, Uint8Array>();

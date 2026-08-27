@@ -2,8 +2,8 @@
 export const RUNNER_CLIENT_MANIFEST = {
   version: 1,
   file: "skills/abl-league/dist/abl-runner.mjs",
-  sha256: "0x7f9e6adc7fab52bfb72dfd6ac3c83b6b383f2184c6bac700b578ae5458240ce8",
-  bytes: 1179022,
+  sha256: "0x96fbdd60212d038779a0708e8249096fcdd4bbdbc21585643413748d4244bde8",
+  bytes: 1179047,
   node: "24.18.0",
   adapters: ["COMMAND", "OPENAI_COMPATIBLE", "DETERMINISTIC_TEST"],
 } as const;

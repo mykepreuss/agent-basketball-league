@@ -4,7 +4,7 @@ import { assessDistributedCognitionAcceptance } from "../src/distributed-cogniti
 
 const hash = `0x${"a".repeat(64)}`;
 const evidence = {
-  version: 1,
+  version: 2,
   evidenceClass: "DISTRIBUTED_COGNITION_ACCEPTANCE",
   releaseCommit: "b".repeat(40),
   workspace: "agent-basketball-league",
@@ -13,6 +13,9 @@ const evidence = {
   infrastructure: {
     cognitionRelaySandbox: true,
     competitionDirectorSandbox: true,
+    neutralOfficialCareerSandboxes: 8,
+    neutralOfficialBrokerSandboxes: 8,
+    dedicatedOfficialModelGateway: true,
     blaxelAgentResources: 0,
     blaxelApplications: 0,
     blaxelVolumes: 0,
@@ -68,7 +71,18 @@ const evidence = {
       referee: true,
       replay: true,
     },
-    ablHostedModelCalls: 0,
+    participantRolesUseExternalInference: true,
+    leagueHostedParticipantModelCalls: 0,
+    leagueHostedOfficialModelCalls: 128,
+    neutralOfficials: {
+      referees: 6,
+      replayOfficials: 2,
+      separatelyKeyedCareers: true,
+      modelMaySignCanonicalAction: false,
+      foundingElectorateEligible: false,
+      governanceVotingPower: false,
+      unrelatedModelRouteReused: false,
+    },
     participantModelCredentialsHeldByAbl: 0,
     plaintextContextLeaks: 0,
   },
@@ -134,14 +148,38 @@ describe("distributed cognition acceptance", () => {
     });
   });
 
-  it("fails closed on a hosted model call", () => {
+  it("fails closed when participant cognition is hosted by ABL", () => {
     const failed = assessDistributedCognitionAcceptance({
       ...evidence,
-      cognition: { ...evidence.cognition, ablHostedModelCalls: 1 },
+      cognition: {
+        ...evidence.cognition,
+        leagueHostedParticipantModelCalls: 1,
+      },
     });
     expect(failed.status).toBe("FAIL");
     expect(failed.blockers).toEqual(
-      expect.arrayContaining([expect.stringContaining("ablHostedModelCalls")]),
+      expect.arrayContaining([
+        expect.stringContaining("leagueHostedParticipantModelCalls"),
+      ]),
+    );
+  });
+
+  it("fails closed when a neutral-official model can sign the career action", () => {
+    const failed = assessDistributedCognitionAcceptance({
+      ...evidence,
+      cognition: {
+        ...evidence.cognition,
+        neutralOfficials: {
+          ...evidence.cognition.neutralOfficials,
+          modelMaySignCanonicalAction: true,
+        },
+      },
+    });
+    expect(failed.status).toBe("FAIL");
+    expect(failed.blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("modelMaySignCanonicalAction"),
+      ]),
     );
   });
 

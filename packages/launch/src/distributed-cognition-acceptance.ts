@@ -16,7 +16,7 @@ const RestartedServiceSchema = z.enum([
 
 export const DistributedCognitionAcceptanceEvidenceSchema = z
   .strictObject({
-    version: z.literal(1),
+    version: z.literal(2),
     evidenceClass: z.literal("DISTRIBUTED_COGNITION_ACCEPTANCE"),
     releaseCommit: CommitSchema,
     workspace: z.literal("agent-basketball-league"),
@@ -25,6 +25,9 @@ export const DistributedCognitionAcceptanceEvidenceSchema = z
     infrastructure: z.strictObject({
       cognitionRelaySandbox: z.literal(true),
       competitionDirectorSandbox: z.literal(true),
+      neutralOfficialCareerSandboxes: z.literal(8),
+      neutralOfficialBrokerSandboxes: z.literal(8),
+      dedicatedOfficialModelGateway: z.literal(true),
       blaxelAgentResources: z.literal(0),
       blaxelApplications: z.literal(0),
       blaxelVolumes: z.literal(0),
@@ -81,7 +84,18 @@ export const DistributedCognitionAcceptanceEvidenceSchema = z
         referee: z.literal(true),
         replay: z.literal(true),
       }),
-      ablHostedModelCalls: z.literal(0),
+      participantRolesUseExternalInference: z.literal(true),
+      leagueHostedParticipantModelCalls: z.literal(0),
+      leagueHostedOfficialModelCalls: z.number().int().positive(),
+      neutralOfficials: z.strictObject({
+        referees: z.literal(6),
+        replayOfficials: z.literal(2),
+        separatelyKeyedCareers: z.literal(true),
+        modelMaySignCanonicalAction: z.literal(false),
+        foundingElectorateEligible: z.literal(false),
+        governanceVotingPower: z.literal(false),
+        unrelatedModelRouteReused: z.literal(false),
+      }),
       participantModelCredentialsHeldByAbl: z.literal(0),
       plaintextContextLeaks: z.literal(0),
     }),

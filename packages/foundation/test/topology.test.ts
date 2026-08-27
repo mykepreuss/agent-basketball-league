@@ -2144,4 +2144,66 @@ describe("hardened sandbox image policy", () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it("keeps neutral-official model authority in eight fixed brokers", async () => {
+    const plan = z
+      .object({
+        workspace: z.literal("agent-basketball-league"),
+        modelGateway: z.object({
+          name: z.literal("abl-neutral-official-model"),
+          reuseExistingUnrelatedModel: z.literal(false),
+        }),
+        officialCareers: z
+          .array(
+            z.object({
+              careerId: z.string().min(1),
+              role: z.enum(["REFEREE", "REPLAY"]),
+            }),
+          )
+          .length(8),
+        prohibited: z.array(z.string()),
+      })
+      .parse(
+        await readJson(
+          new URL("neutral-officials/resource-plan.json", infraRoot),
+        ),
+      );
+    expect(
+      new Set(plan.officialCareers.map(({ careerId }) => careerId)).size,
+    ).toBe(8);
+    expect(
+      plan.officialCareers.filter(({ role }) => role === "REFEREE"),
+    ).toHaveLength(6);
+    expect(plan.prohibited).toEqual(
+      expect.arrayContaining([
+        "BLAXEL_AGENT",
+        "BLAXEL_APPLICATION",
+        "BLAXEL_VOLUME",
+        "REUSE_SANDBOX_OPENAI",
+      ]),
+    );
+
+    const career = parse(
+      await readFile(
+        new URL("neutral-officials/career-sandbox.yaml", infraRoot),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const broker = parse(
+      await readFile(
+        new URL("neutral-officials/fixed-broker-sandbox.yaml", infraRoot),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    expect(envMap(career).get("ABL_COGNITION_MODE")).toBe(
+      "LEAGUE_HOSTED_OFFICIAL",
+    );
+    expect(envMap(career).has("ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64")).toBe(
+      false,
+    );
+    expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ROUTE_MODE")).toBe("ENABLED");
+    expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64")).toBe(
+      "${ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64}",
+    );
+  });
 });

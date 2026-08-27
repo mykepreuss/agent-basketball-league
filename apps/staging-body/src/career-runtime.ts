@@ -79,6 +79,8 @@ import {
   type ActiveCareerRunner,
   type CareerContextAssembly,
   type CareerRelayClient,
+  type HostedOfficialInferenceClient,
+  type HostedOfficialInferenceResult,
 } from "./cognition-runtime.js";
 
 export const CAREER_IDENTITY_PATH =
@@ -206,6 +208,26 @@ function required(name: string): string {
   if (value === undefined || value === "")
     throw new Error(`Missing required environment value: ${name}`);
   return value;
+}
+
+const forbiddenCareerCredentialNames = [
+  "ABL_OFFICIAL_MODEL_ACCESS_TOKEN",
+  "ABL_MODEL_API_KEY",
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "GOOGLE_API_KEY",
+] as const;
+
+export function assertCareerRuntimeCredentialIsolation(
+  environment: Readonly<Record<string, string | undefined>>,
+): void {
+  const forbidden = forbiddenCareerCredentialNames.filter(
+    (name) => environment[name] !== undefined,
+  );
+  if (forbidden.length > 0)
+    throw new Error(
+      `Career runtime received forbidden model authority: ${forbidden.join(", ")}`,
+    );
 }
 
 function deterministicUuid(subject: string): string {
@@ -422,7 +444,9 @@ async function loadOrCreatePositionProfile(input: {
   return attestation;
 }
 
-class FixedBrokerClient implements CareerRelayClient {
+class FixedBrokerClient
+  implements CareerRelayClient, HostedOfficialInferenceClient
+{
   readonly #origin: URL;
   #capability: string;
   #capabilityExpiresAt: number;
@@ -435,6 +459,12 @@ class FixedBrokerClient implements CareerRelayClient {
   >;
   readonly #careerPrivateKey: Hex;
   readonly #personalDomainId: string;
+  readonly #officialModel: {
+    modelId: string;
+    workspace: string;
+    serviceBuildDigest: `0x${string}`;
+    adapterBuildDigest: `0x${string}`;
+  } | null;
 
   public constructor(input: {
     origin: string;
@@ -446,6 +476,12 @@ class FixedBrokerClient implements CareerRelayClient {
     careerIdentity: z.infer<typeof CandidateRuntimeIdentityReceiptSchema>;
     careerPrivateKey: Hex;
     personalDomainId: string;
+    officialModel?: {
+      modelId: string;
+      workspace: string;
+      serviceBuildDigest: `0x${string}`;
+      adapterBuildDigest: `0x${string}`;
+    };
   }) {
     this.#origin = new URL(input.origin);
     this.#capability = input.capability;
@@ -456,6 +492,7 @@ class FixedBrokerClient implements CareerRelayClient {
     this.#careerIdentity = input.careerIdentity;
     this.#careerPrivateKey = input.careerPrivateKey;
     this.#personalDomainId = input.personalDomainId;
+    this.#officialModel = input.officialModel ?? null;
   }
 
   async #ensureCapability(force = false): Promise<void> {
@@ -767,6 +804,90 @@ class FixedBrokerClient implements CareerRelayClient {
       throw new Error(`Relay activation transition failed: ${response.status}`);
   }
 
+  public async decide(input: {
+    activation: Extract<RoleActivation, { role: "REFEREE" | "REPLAY" }>;
+    contextManifest: Parameters<
+      HostedOfficialInferenceClient["decide"]
+    >[0]["contextManifest"];
+    officialContext: unknown;
+    deadlineAt: string;
+  }): Promise<HostedOfficialInferenceResult> {
+    if (this.#officialModel === null)
+      throw new Error("League-hosted official model is not configured");
+    const startedAt = new Date().toISOString();
+    const response = await this.#post("/v1/proxy", {
+      route: "official-model",
+      method: "POST",
+      path: `/${this.#officialModel.workspace}/models/${this.#officialModel.modelId}/v1/chat/completions`,
+      body: {
+        messages: [
+          {
+            role: "system",
+            content:
+              input.activation.role === "REFEREE"
+                ? "You are a neutral ABL referee. Return one JSON object matching the supplied referee decision schema. Apply the official observation only; do not invent events or favor a team."
+                : "You are a neutral ABL replay official. Return one JSON object matching the supplied replay decision schema. Review only the supplied evidence and do not invent events or favor a team.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              role: input.activation.role,
+              activationId: input.activation.activationId,
+              deadlineAt: input.deadlineAt,
+              observation: input.activation.officialObservation,
+              officialContext: input.officialContext,
+              contextManifest: input.contextManifest,
+            }),
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0,
+      },
+      expectedVersion: "0",
+      idempotencyKey: deterministicUuid(
+        `${input.activation.activationId}:official-model`,
+      ),
+    });
+    if (!response.ok)
+      throw new Error(`Official model request failed: ${response.status}`);
+    const body = z
+      .object({
+        model: z.string().min(1).optional(),
+        choices: z
+          .array(
+            z.object({
+              message: z.object({ content: z.string().min(2).max(64_000) }),
+            }),
+          )
+          .min(1)
+          .max(8),
+        usage: z
+          .object({
+            prompt_tokens: z.number().int().nonnegative().optional(),
+            completion_tokens: z.number().int().nonnegative().optional(),
+          })
+          .optional(),
+      })
+      .parse(await response.json());
+    const completedAt = new Date().toISOString();
+    return {
+      decision: JSON.parse(body.choices[0]!.message.content) as unknown,
+      serviceId: `abl-official-model:${this.#officialModel.modelId}`,
+      serviceBuildDigest: this.#officialModel.serviceBuildDigest,
+      adapterBuildDigest: this.#officialModel.adapterBuildDigest,
+      providerProductModel:
+        body.model ?? `blaxel/${this.#officialModel.modelId}`,
+      provenanceLevel: "PROVIDER_ATTESTED",
+      startedAt,
+      completedAt,
+      usage: {
+        inputTokens: body.usage?.prompt_tokens ?? null,
+        outputTokens: body.usage?.completion_tokens ?? null,
+        normalizedResourceUnits: null,
+      },
+    };
+  }
+
   public async registerOffer(offer: RunnerPairingOffer): Promise<void> {
     const response = await this.#proxy(
       "POST",
@@ -914,6 +1035,7 @@ class FixedBrokerClient implements CareerRelayClient {
 }
 
 export async function runCareerRuntime(): Promise<void> {
+  assertCareerRuntimeCredentialIsolation(process.env);
   if (required("ABL_RUNTIME_RESOURCE_TYPE") !== "SANDBOX")
     throw new Error("ABL career bodies require a Blaxel Sandbox runtime");
   const applicationId = z.uuid().parse(required("ABL_APPLICATION_ID"));
@@ -933,8 +1055,21 @@ export async function runCareerRuntime(): Promise<void> {
     JSON.parse(required("ABL_CANDIDATE_COMMAND_DOMAIN_JSON")),
   ) satisfies TypedDataDomain;
   const cognitionMode = z
-    .enum(["DISABLED", "PARTICIPANT_CONTROLLED", "DETERMINISTIC_FIXTURE"])
+    .enum([
+      "DISABLED",
+      "PARTICIPANT_CONTROLLED",
+      "LEAGUE_HOSTED_OFFICIAL",
+      "DETERMINISTIC_FIXTURE",
+    ])
     .parse(process.env.ABL_COGNITION_MODE ?? "DISABLED");
+  if (
+    cognitionMode === "LEAGUE_HOSTED_OFFICIAL" &&
+    roleClass !== "REFEREE" &&
+    roleClass !== "REPLAY_OFFICIAL"
+  )
+    throw new Error(
+      "League-hosted cognition may be assigned only to referee or replay careers",
+    );
   const declaredPlayerPositionProfile =
     process.env.ABL_PLAYER_POSITION_PROFILE_JSON === undefined
       ? null
@@ -971,6 +1106,29 @@ export async function runCareerRuntime(): Promise<void> {
           careerIdentity: identity.receipt,
           careerPrivateKey: identity.signingPrivateKey as Hex,
           personalDomainId: required("ABL_CAREER_PERSONAL_DOMAIN_ID"),
+          ...(cognitionMode !== "LEAGUE_HOSTED_OFFICIAL"
+            ? {}
+            : {
+                officialModel: {
+                  modelId: required("ABL_OFFICIAL_MODEL_ID"),
+                  workspace: z
+                    .string()
+                    .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+                    .parse(required("ABL_OFFICIAL_MODEL_WORKSPACE")),
+                  serviceBuildDigest: z
+                    .string()
+                    .regex(/^0x[0-9a-f]{64}$/)
+                    .parse(
+                      required("ABL_OFFICIAL_MODEL_SERVICE_BUILD_DIGEST"),
+                    ) as `0x${string}`,
+                  adapterBuildDigest: z
+                    .string()
+                    .regex(/^0x[0-9a-f]{64}$/)
+                    .parse(
+                      required("ABL_OFFICIAL_MODEL_ADAPTER_BUILD_DIGEST"),
+                    ) as `0x${string}`,
+                },
+              }),
         });
   const cognitionIdentity = {
     privateKey: identity.signingPrivateKey as Hex,
@@ -1732,7 +1890,13 @@ export async function runCareerRuntime(): Promise<void> {
         coordinatorDid: coordinator.did,
         coordinatorSignerAddress: coordinator.signerAddress,
         domain: commandDomain,
-        runner: await activeRunner(),
+        runner:
+          cognitionMode === "PARTICIPANT_CONTROLLED"
+            ? await activeRunner()
+            : null,
+        cognitionMode,
+        hostedOfficial:
+          cognitionMode === "LEAGUE_HOSTED_OFFICIAL" ? broker : null,
         contextProvider: {
           assemble: (activation) => broker.context(activation),
           persistReflection: (reflection) =>

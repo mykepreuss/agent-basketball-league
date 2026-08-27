@@ -373,6 +373,87 @@ describe("distributed career cognition runtime", () => {
     });
   }
 
+  for (const role of ["REFEREE", "REPLAY"] as const) {
+    it(`uses league-hosted inference while retaining ${role.toLowerCase()} career signing authority`, async () => {
+      const { command } = await activationCommand(role);
+      const result = await executeDistributedCareerActivation({
+        command,
+        identity: identity(role),
+        coordinatorDid,
+        coordinatorSignerAddress: coordinator.address,
+        domain,
+        runner: null,
+        cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+        hostedOfficial: {
+          async decide() {
+            return {
+              decision: decisionFor(role),
+              serviceId: "abl-neutral-official-model",
+              serviceBuildDigest: sha256Commitment("official-service-v1"),
+              adapterBuildDigest: sha256Commitment("official-adapter-v1"),
+              providerProductModel: "blaxel/abl-neutral-official-model",
+              provenanceLevel: "PROVIDER_ATTESTED",
+              startedAt: "2026-08-26T12:00:01.000Z",
+              completedAt,
+              usage: {
+                inputTokens: 120,
+                outputTokens: 12,
+                normalizedResourceUnits: null,
+              },
+            };
+          },
+        },
+        contextProvider,
+        relay: await relayFor(role),
+        now: () => now,
+      });
+      expect(result).toMatchObject({
+        state: "CAREER_SIGNED",
+        participantInferenceAttempted: false,
+        participantResultAccepted: true,
+        decision: {
+          receipt: {
+            cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+            runnerId: "abl-neutral-official-model",
+            provenanceLevel: "PROVIDER_ATTESTED",
+            fallback: "NONE",
+          },
+        },
+      });
+      await expect(
+        recoverCanonicalEventSigner(
+          domain,
+          {
+            ...result.decision.authorizationEvent,
+            aggregateVersion: BigInt(
+              result.decision.authorizationEvent.aggregateVersion,
+            ),
+          } as CanonicalEvent,
+          result.decision.signature,
+        ),
+      ).resolves.toBe(career.address);
+    });
+  }
+
+  it("rejects league-hosted cognition for a player career", async () => {
+    const { command } = await activationCommand("PLAYER");
+    await expect(
+      executeDistributedCareerActivation({
+        command,
+        identity: identity("PLAYER"),
+        coordinatorDid,
+        coordinatorSignerAddress: coordinator.address,
+        domain,
+        runner: null,
+        cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+        hostedOfficial: null,
+        contextProvider,
+        relay: await relayFor("PLAYER"),
+        now: () => now,
+      }),
+    ).rejects.toThrow("restricted to officials");
+  });
+
   it("uses the career-owned HOLD fallback when no fresh runner lease exists", async () => {
     const { command } = await activationCommand("PLAYER");
     const result = await executeDistributedCareerActivation({

@@ -1129,6 +1129,34 @@ describe("candidate intake isolation boundary", () => {
     ).rejects.toThrow("capacity");
   });
 
+  it("preserves an existing offer when the same role capacity expands", async () => {
+    const store = await repository();
+    const fixture = await signedFixture();
+    await service(store, policy(10)).register({
+      application: fixture.application,
+      challengeToken: fixture.challenge.challengeToken,
+    });
+
+    await expect(
+      new CandidateProvisioner({
+        challengeSecret: secret,
+        repository: store,
+        decryptEnvelope: async () => ({
+          manifest: fixture.manifest,
+          provenance: fixture.provenance,
+          candidateCommand: fixture.command,
+        }),
+        candidateCommandDomain: commandDomain,
+        policy: policy(16),
+        makeReceiptId: () => uuidv7({ msecs: now + 10 }),
+        now: () => now + 60 * 60 * 1_000,
+      }).process(fixture.application.applicationId),
+    ).resolves.toMatchObject({
+      state: "VERIFIED_NOT_PROVISIONED",
+      controlPlaneMode: "DRY_RUN",
+    });
+  });
+
   it("rejects an invalid provisioning receipt before changing durable status", async () => {
     const store = await repository();
     const fixture = await signedFixture();

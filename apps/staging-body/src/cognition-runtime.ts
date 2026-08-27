@@ -150,6 +150,27 @@ export interface ActiveCareerRunner {
   adapterBuildDigest: `0x${string}`;
 }
 
+export interface HostedOfficialInferenceResult {
+  decision: unknown;
+  serviceId: string;
+  serviceBuildDigest: `0x${string}`;
+  adapterBuildDigest: `0x${string}`;
+  providerProductModel: string;
+  provenanceLevel: CognitionReceiptV2["provenanceLevel"];
+  startedAt: string;
+  completedAt: string;
+  usage: CognitionReceiptV2["usage"];
+}
+
+export interface HostedOfficialInferenceClient {
+  decide(input: {
+    activation: Extract<RoleActivation, { role: "REFEREE" | "REPLAY" }>;
+    contextManifest: ContextManifestV2;
+    officialContext: unknown;
+    deadlineAt: string;
+  }): Promise<HostedOfficialInferenceResult>;
+}
+
 export interface CareerActivationResult {
   activationId: string;
   gameId: string;
@@ -422,6 +443,11 @@ export async function executeDistributedCareerActivation(input: {
   coordinatorSignerAddress: `0x${string}`;
   domain: TypedDataDomain;
   runner: ActiveCareerRunner | null;
+  cognitionMode?:
+    | "PARTICIPANT_CONTROLLED"
+    | "LEAGUE_HOSTED_OFFICIAL"
+    | "DETERMINISTIC_FIXTURE";
+  hostedOfficial?: HostedOfficialInferenceClient | null;
   contextProvider: CareerContextProvider;
   relay: CareerRelayClient;
   now?: () => number;
@@ -435,6 +461,13 @@ export async function executeDistributedCareerActivation(input: {
       new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
   const verified = await verifyCareerRoleActivationCommand(input);
   const { activation } = verified;
+  const cognitionMode = input.cognitionMode ?? "PARTICIPANT_CONTROLLED";
+  if (
+    cognitionMode === "LEAGUE_HOSTED_OFFICIAL" &&
+    activation.role !== "REFEREE" &&
+    activation.role !== "REPLAY"
+  )
+    throw new Error("League-hosted cognition is restricted to officials");
   const expiredRecovery = verified.remainingMs <= 0;
   const activationCommitment = sha256Commitment(activation);
   const transition = async (
@@ -462,12 +495,17 @@ export async function executeDistributedCareerActivation(input: {
   let participantResultAccepted = false;
   let rawDecision: unknown = null;
   let inferenceResult: InferenceResult | null = null;
+  let hostedResult: HostedOfficialInferenceResult | null = null;
   let manifestCommitment = sha256Commitment({
     activationId: activation.activationId,
     fallback: true,
   });
 
-  if (input.runner !== null && !expiredRecovery) {
+  if (
+    cognitionMode === "PARTICIPANT_CONTROLLED" &&
+    input.runner !== null &&
+    !expiredRecovery
+  ) {
     try {
       const current = new Date(now()).toISOString();
       await verifyRunner({
@@ -565,6 +603,43 @@ export async function executeDistributedCareerActivation(input: {
       rawDecision = null;
       inferenceResult = null;
     }
+  } else if (
+    cognitionMode === "LEAGUE_HOSTED_OFFICIAL" &&
+    input.hostedOfficial !== null &&
+    input.hostedOfficial !== undefined &&
+    !expiredRecovery &&
+    (activation.role === "REFEREE" || activation.role === "REPLAY")
+  ) {
+    try {
+      const current = new Date(now()).toISOString();
+      const manifest = await signedContextManifest({
+        identity: input.identity,
+        activation,
+        assembly,
+        now: current,
+      });
+      manifestCommitment = sha256Commitment(manifest);
+      await transition("DELIVERED", manifestCommitment);
+      hostedResult = await input.hostedOfficial.decide({
+        activation,
+        contextManifest: manifest,
+        officialContext: assembly.officialContext,
+        deadlineAt: activation.deadlineAt,
+      });
+      if (
+        Date.parse(hostedResult.completedAt) >
+          Date.parse(activation.deadlineAt) ||
+        Date.parse(hostedResult.startedAt) < Date.parse(activation.openedAt)
+      )
+        throw new Error("Hosted official result missed its decision window");
+      await transition("RESULT_RECEIVED", manifestCommitment);
+      rawDecision = hostedResult.decision;
+      participantResultAccepted = true;
+    } catch {
+      participantResultAccepted = false;
+      rawDecision = null;
+      hostedResult = null;
+    }
   }
 
   const fallback = !participantResultAccepted;
@@ -578,6 +653,7 @@ export async function executeDistributedCareerActivation(input: {
     await transition("VALIDATED", manifestCommitment);
   const completedAt =
     inferenceResult?.completedAt ??
+    hostedResult?.completedAt ??
     (expiredRecovery ? activation.deadlineAt : new Date(now()).toISOString());
   const finalDecisionSignature = await privateKeyToAccount(
     input.identity.privateKey,
@@ -599,37 +675,49 @@ export async function executeDistributedCareerActivation(input: {
     activationId: activation.activationId,
     careerDid: activation.careerDid,
     role: activation.role,
-    cognitionMode: "PARTICIPANT_CONTROLLED",
+    cognitionMode,
     activationCommitment: sha256Commitment(activation),
     observationCommitment: activation.observationCommitment,
     contextManifestCommitment: manifestCommitment,
-    runnerId: input.runner?.delegation.runnerId ?? "unpaired-career-fallback",
+    runnerId:
+      hostedResult?.serviceId ??
+      input.runner?.delegation.runnerId ??
+      "unpaired-career-fallback",
     runnerBuildDigest:
-      input.runner?.runnerBuildDigest ?? sha256Commitment("unpaired"),
+      hostedResult?.serviceBuildDigest ??
+      input.runner?.runnerBuildDigest ??
+      sha256Commitment("unpaired"),
     adapterBuildDigest:
-      input.runner?.adapterBuildDigest ?? sha256Commitment("unpaired"),
+      hostedResult?.adapterBuildDigest ??
+      input.runner?.adapterBuildDigest ??
+      sha256Commitment("unpaired"),
     providerProductModel:
+      hostedResult?.providerProductModel ??
       inferenceResult?.providerProductModel ??
       "career/deterministic/fallback-v2",
     provenanceLevel:
-      inferenceResult?.provenanceLevel ?? "LOCAL_ARTIFACT_VERIFIED",
+      hostedResult?.provenanceLevel ??
+      inferenceResult?.provenanceLevel ??
+      "LOCAL_ARTIFACT_VERIFIED",
     ambientProductContext: inferenceResult?.ambientProductContext ?? "NONE",
     kernelHash: assembly.kernelHash,
     toolHash: assembly.toolHash,
-    startedAt: inferenceResult?.startedAt ?? completedAt,
+    startedAt:
+      hostedResult?.startedAt ?? inferenceResult?.startedAt ?? completedAt,
     completedAt,
     deadlineMs:
       Date.parse(activation.deadlineAt) - Date.parse(activation.openedAt),
-    attempts: participantInferenceAttempted ? 1 : 0,
+    attempts: participantInferenceAttempted || hostedResult !== null ? 1 : 0,
     transportRetries: 0,
     fallback: fallback ? fallbackCode(activation.role) : "NONE",
     usage:
-      inferenceResult?.usage === undefined || inferenceResult.usage === null
+      hostedResult?.usage ??
+      (inferenceResult?.usage === undefined || inferenceResult.usage === null
         ? null
         : {
             ...inferenceResult.usage,
             normalizedResourceUnits: null,
-          },
+          }),
     telemetryContentPolicy: "CONTENT_FREE",
     disclosedPersonalMaterialCommitments: assembly.materials
       .filter(

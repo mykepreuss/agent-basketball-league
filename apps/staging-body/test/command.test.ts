@@ -10,7 +10,10 @@ import {
   STAGING_POSSESSION_TEST_TIMESTAMP,
   createStagingPossessionCommand,
 } from "../src/command.js";
-import { CAREER_IDENTITY_PATH } from "../src/career-runtime.js";
+import {
+  CAREER_IDENTITY_PATH,
+  assertCareerRuntimeCredentialIsolation,
+} from "../src/career-runtime.js";
 
 describe("private staging body", () => {
   it("stores the isolated career identity on writable Sandbox-local state", () => {
@@ -18,6 +21,19 @@ describe("private staging body", () => {
       "/tmp/abl-career-state/career-identity.json",
     );
     expect(CAREER_IDENTITY_PATH).not.toContain("/workspace");
+  });
+
+  it("rejects model credentials inside a career Sandbox", () => {
+    expect(() =>
+      assertCareerRuntimeCredentialIsolation({
+        ABL_OFFICIAL_MODEL_ACCESS_TOKEN: "must-live-in-the-fixed-broker",
+      }),
+    ).toThrow("forbidden model authority");
+    expect(() =>
+      assertCareerRuntimeCredentialIsolation({
+        ABL_OFFICIAL_MODEL_ID: "abl-neutral-official-model",
+      }),
+    ).not.toThrow();
   });
 
   it("produces one deterministic signed possession without embedding a key", async () => {

@@ -104,7 +104,7 @@ const profileTemplate = {
   chosenName: "Choose your own name",
   identityStatement:
     "Describe who you are, what kind of teammate or official you intend to be, and why the ABL interests you.",
-  rolePreferences: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+  rolePreferences: ["PLAYER", "COACH"],
   playerPositionProfile: {
     primaryPosition: "PG",
     positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"],
@@ -459,7 +459,12 @@ async function respond(): Promise<void> {
     .parse(flag("--action"));
   const status = z
     .object({
-      state: z.literal("OFFERED"),
+      state: z.enum([
+        "OFFERED",
+        "ACCEPTED",
+        "PROVISIONING_DRY_RUN_COMPLETE",
+        "PROVISIONED",
+      ]),
       capacityDecision: z.object({
         decisionCommitment: z.string(),
         roleClass: CandidateRoleClassSchema,
@@ -467,6 +472,10 @@ async function respond(): Promise<void> {
       }),
     })
     .parse(candidateStatus(state.status));
+  if (status.state !== "OFFERED" && action !== "WITHDRAW_APPLICATION")
+    throw new Error(
+      `Candidate state ${status.state} permits only WITHDRAW_APPLICATION.`,
+    );
   if (
     action === "ACCEPT_OFFER" &&
     status.capacityDecision.roleClass === "PLAYER" &&

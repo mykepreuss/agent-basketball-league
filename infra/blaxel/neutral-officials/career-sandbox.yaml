@@ -1,0 +1,89 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Sandbox
+metadata:
+  name: ${ABL_OFFICIAL_CAREER_RESOURCE_NAME}
+  labels:
+    abl-trust-domain: abl-competition
+    abl-workspace-role: neutral-official-career
+    abl-official-role: ${ABL_OFFICIAL_ROLE_LABEL}
+    abl-governance-authority: none
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  region: us-was-1
+  network:
+    allowedDomains:
+      - ${ABL_OFFICIAL_FIXED_BROKER_HOST}
+  runtime:
+    image: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
+    memory: 4096
+    envs:
+      - name: ABL_RUNTIME_RESOURCE_TYPE
+        value: SANDBOX
+        secret: false
+      - name: ABL_RUNTIME_RESOURCE_NAME
+        value: ${ABL_OFFICIAL_CAREER_RESOURCE_NAME}
+        secret: false
+      - name: ABL_RUNTIME_IMAGE_REFERENCE
+        value: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
+        secret: false
+      - name: ABL_APPLICATION_ID
+        value: ${ABL_OFFICIAL_APPLICATION_ID}
+        secret: false
+      - name: ABL_AGENT_DID
+        value: ${ABL_OFFICIAL_CAREER_DID}
+        secret: false
+      - name: ABL_AGENT_SIGNER_ADDRESS
+        value: ${ABL_OFFICIAL_CAREER_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_ROLE_CLASS
+        value: ${ABL_OFFICIAL_ROLE_CLASS}
+        secret: false
+      - name: ABL_COGNITION_MODE
+        value: LEAGUE_HOSTED_OFFICIAL
+        secret: false
+      - name: ABL_OFFICIAL_MODEL_ID
+        value: abl-neutral-official-model
+        secret: false
+      - name: ABL_OFFICIAL_MODEL_WORKSPACE
+        value: agent-basketball-league
+        secret: false
+      - name: ABL_OFFICIAL_MODEL_SERVICE_BUILD_DIGEST
+        value: ${ABL_OFFICIAL_MODEL_SERVICE_BUILD_DIGEST}
+        secret: false
+      - name: ABL_OFFICIAL_MODEL_ADAPTER_BUILD_DIGEST
+        value: ${ABL_OFFICIAL_MODEL_ADAPTER_BUILD_DIGEST}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_DID
+        value: ${ABL_COMPETITION_COORDINATOR_DID}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS
+        value: ${ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_CANDIDATE_COMMAND_DOMAIN_JSON
+        value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
+        secret: false
+      - name: ABL_FIXED_BROKER_ORIGIN
+        value: ${ABL_OFFICIAL_FIXED_BROKER_ORIGIN}
+        secret: false
+      - name: ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64
+        value: ${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_TOKEN_B64}
+        secret: true
+      - name: ABL_FIXED_BROKER_PREVIEW_TOKEN
+        value: ${ABL_OFFICIAL_FIXED_BROKER_PREVIEW_TOKEN}
+        secret: true
+      - name: ABL_CAREER_PERSONAL_DOMAIN_ID
+        value: ${ABL_OFFICIAL_PERSONAL_DOMAIN_ID}
+        secret: false
+      - name: BL_SANDBOX_USER_ENABLED
+        value: "true"
+        secret: false
+      - name: DO_NOT_TRACK
+        value: "1"
+        secret: false
+      - name: BL_ENABLE_OPENTELEMETRY
+        value: "false"
+        secret: false
+      - name: ABL_LOG_CONTENT
+        value: "false"
+        secret: false
