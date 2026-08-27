@@ -33,15 +33,6 @@ spec:
       - name: ABL_CANDIDATE_STORE_PREVIEW_TOKEN
         value: ${ABL_CANDIDATE_STORE_PREVIEW_TOKEN}
         secret: true
-      - name: ABL_RUNNER_BUNDLE_DIGEST
-        value: ${ABL_RUNNER_BUNDLE_DIGEST}
-        secret: false
-      - name: ABL_COMPETITION_DIRECTOR_ORIGIN
-        value: ${ABL_COMPETITION_DIRECTOR_ORIGIN}
-        secret: false
-      - name: ABL_COMPETITION_INTERNAL_TOKEN
-        value: ${ABL_COMPETITION_INTERNAL_TOKEN}
-        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false
