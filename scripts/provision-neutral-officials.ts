@@ -146,6 +146,17 @@ async function deployCompetitionDirector(
     deployed.metadata.labels?.["abl-release"] !== releaseCommit
   )
     throw new Error("Competition director deployment readback drifted");
+  await ensureSandboxProcessStarted(deployed, {
+    name: "abl-competition-director",
+    command: "node dist/index.js",
+    env: { HOST: "0.0.0.0", PORT: "3000" },
+    workingDir: "/opt/abl",
+    waitForCompletion: false,
+    keepAlive: true,
+    timeout: 0,
+    restartOnFailure: true,
+    maxRestarts: -1,
+  });
   const response = await health(deployed);
   const body = z
     .object({
