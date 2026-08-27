@@ -2,22 +2,73 @@
   "version": 1,
   "workspace": "agent-basketball-league",
   "region": "us-was-1",
-  "status": "CONFIGURATION_READY_MODEL_GATEWAY_REQUIRED",
+  "status": "PREPARED_EXTERNAL_MODEL_INTEGRATION_REQUIRED",
   "modelGateway": {
     "name": "abl-neutral-official-model",
     "resourceType": "MODEL",
+    "sandbox": false,
+    "externalProviderIntegrationRequired": true,
+    "integrationConnectionNamePattern": "^abl-neutral-official-[a-z0-9-]+$",
     "existingUnrelatedModel": "sandbox-openai",
     "reuseExistingUnrelatedModel": false
   },
   "officialCareers": [
-    { "careerId": "abl-official-referee-001", "role": "REFEREE" },
-    { "careerId": "abl-official-referee-002", "role": "REFEREE" },
-    { "careerId": "abl-official-referee-003", "role": "REFEREE" },
-    { "careerId": "abl-official-referee-004", "role": "REFEREE" },
-    { "careerId": "abl-official-referee-005", "role": "REFEREE" },
-    { "careerId": "abl-official-referee-006", "role": "REFEREE" },
-    { "careerId": "abl-official-replay-001", "role": "REPLAY" },
-    { "careerId": "abl-official-replay-002", "role": "REPLAY" }
+    {
+      "careerId": "abl-official-referee-001",
+      "careerResourceName": "abl-official-referee-001",
+      "fixedBrokerResourceName": "abl-official-referee-001-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-referee-002",
+      "careerResourceName": "abl-official-referee-002",
+      "fixedBrokerResourceName": "abl-official-referee-002-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-referee-003",
+      "careerResourceName": "abl-official-referee-003",
+      "fixedBrokerResourceName": "abl-official-referee-003-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-referee-004",
+      "careerResourceName": "abl-official-referee-004",
+      "fixedBrokerResourceName": "abl-official-referee-004-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-referee-005",
+      "careerResourceName": "abl-official-referee-005",
+      "fixedBrokerResourceName": "abl-official-referee-005-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-referee-006",
+      "careerResourceName": "abl-official-referee-006",
+      "fixedBrokerResourceName": "abl-official-referee-006-broker",
+      "role": "REFEREE",
+      "roleClass": "REFEREE"
+    },
+    {
+      "careerId": "abl-official-replay-001",
+      "careerResourceName": "abl-official-replay-001",
+      "fixedBrokerResourceName": "abl-official-replay-001-broker",
+      "role": "REPLAY",
+      "roleClass": "REPLAY_OFFICIAL"
+    },
+    {
+      "careerId": "abl-official-replay-002",
+      "careerResourceName": "abl-official-replay-002",
+      "fixedBrokerResourceName": "abl-official-replay-002-broker",
+      "role": "REPLAY",
+      "roleClass": "REPLAY_OFFICIAL"
+    }
   ],
   "perCareerResources": {
     "career": "BLAXEL_SANDBOX",
@@ -27,6 +78,8 @@
   },
   "authority": {
     "careerRootKey": "CAREER_SANDBOX_ONLY",
+    "careerRootKeyCreation": "GENERATED_INSIDE_CAREER_SANDBOX",
+    "careerRootKeyExported": false,
     "modelCredential": "FIXED_BROKER_ONLY",
     "modelMaySignCanonicalAction": false,
     "foundingElectorateEligible": false,

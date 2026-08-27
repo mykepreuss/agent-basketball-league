@@ -1,0 +1,24 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Model
+metadata:
+  name: abl-neutral-official-model
+  labels:
+    abl-trust-domain: abl-competition
+    abl-workspace-role: neutral-official-model-gateway
+    abl-authority: advisory-only
+    abl-release: ${ABL_RELEASE_ID}
+spec:
+  enabled: true
+  sandbox: false
+  flavors:
+    - name: all
+      type: cpu
+  integrationConnections:
+    - ${ABL_OFFICIAL_MODEL_INTEGRATION_CONNECTION}
+  policies: []
+  runtime:
+    endpointName: ${ABL_OFFICIAL_MODEL_ENDPOINT_NAME}
+    generation: mk3
+    model: ${ABL_OFFICIAL_MODEL_PROVIDER_MODEL}
+    organization: ${ABL_OFFICIAL_MODEL_PROVIDER_ORGANIZATION}
+    type: ${ABL_OFFICIAL_MODEL_PROVIDER_TYPE}

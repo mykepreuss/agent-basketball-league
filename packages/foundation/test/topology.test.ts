@@ -2165,13 +2165,21 @@ describe("hardened sandbox image policy", () => {
         workspace: z.literal("agent-basketball-league"),
         modelGateway: z.object({
           name: z.literal("abl-neutral-official-model"),
+          sandbox: z.literal(false),
+          externalProviderIntegrationRequired: z.literal(true),
+          integrationConnectionNamePattern: z.literal(
+            "^abl-neutral-official-[a-z0-9-]+$",
+          ),
           reuseExistingUnrelatedModel: z.literal(false),
         }),
         officialCareers: z
           .array(
             z.object({
               careerId: z.string().min(1),
+              careerResourceName: z.string().min(1),
+              fixedBrokerResourceName: z.string().min(1),
               role: z.enum(["REFEREE", "REPLAY"]),
+              roleClass: z.enum(["REFEREE", "REPLAY_OFFICIAL"]),
             }),
           )
           .length(8),
@@ -2185,6 +2193,29 @@ describe("hardened sandbox image policy", () => {
     expect(
       new Set(plan.officialCareers.map(({ careerId }) => careerId)).size,
     ).toBe(8);
+    expect(
+      new Set(
+        plan.officialCareers.map(
+          ({ careerResourceName }) => careerResourceName,
+        ),
+      ).size,
+    ).toBe(8);
+    expect(
+      new Set(
+        plan.officialCareers.map(
+          ({ fixedBrokerResourceName }) => fixedBrokerResourceName,
+        ),
+      ).size,
+    ).toBe(8);
+    for (const official of plan.officialCareers) {
+      expect(official.careerResourceName).toBe(official.careerId);
+      expect(official.fixedBrokerResourceName).toBe(
+        `${official.careerId}-broker`,
+      );
+      expect(official.roleClass).toBe(
+        official.role === "REFEREE" ? "REFEREE" : "REPLAY_OFFICIAL",
+      );
+    }
     expect(
       plan.officialCareers.filter(({ role }) => role === "REFEREE"),
     ).toHaveLength(6);
@@ -2209,15 +2240,65 @@ describe("hardened sandbox image policy", () => {
         "utf8",
       ),
     ) as Record<string, unknown>;
+    const model = parse(
+      await readFile(
+        new URL("neutral-officials/model-gateway.yaml", infraRoot),
+        "utf8",
+      ),
+    ) as {
+      kind: string;
+      metadata: { name: string };
+      spec: {
+        sandbox: boolean;
+        integrationConnections: string[];
+        runtime: { model: string; type: string };
+      };
+    };
     expect(envMap(career).get("ABL_COGNITION_MODE")).toBe(
       "LEAGUE_HOSTED_OFFICIAL",
     );
+    expect(envMap(career).get("ABL_BODY_RUNTIME_MODE")).toBe("FOUNDING_CAREER");
+    expect(envMap(career).get("ABL_FIXED_BROKER_CAPABILITY_TOKEN")).toBe(
+      "${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_TOKEN}",
+    );
+    expect(
+      envMap(career).get("ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON"),
+    ).toBe(
+      '["proxy:official-model","storage:get","storage:put","storage:delete","context:inspect"]',
+    );
+    expect(envMap(career).has("ABL_AGENT_SIGNER_ADDRESS")).toBe(false);
+    expect(envMap(career).has("ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64")).toBe(
+      false,
+    );
     expect(envMap(career).has("ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64")).toBe(
       false,
+    );
+    expect(envMap(broker).get("ABL_CORE_ROUTE_MODE")).toBe("DISABLED");
+    expect(envMap(broker).has("ABL_CORE_ACCESS_TOKEN_B64")).toBe(false);
+    expect(envMap(broker).get("ABL_PRIVATE_AUTH_MODE")).toBe(
+      "BLAXEL_PRIVATE_PREVIEW",
     );
     expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ROUTE_MODE")).toBe("ENABLED");
     expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64")).toBe(
       "${ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64}",
     );
+    expect(envMap(broker).get("ABL_CANONICAL_SIGNING_MODE")).toBe("DISABLED");
+    expect(envMap(broker).get("ABL_CAREER_CAPABILITY_RENEWAL_MODE")).toBe(
+      "DISABLED",
+    );
+    expect(model).toMatchObject({
+      kind: "Model",
+      metadata: { name: "abl-neutral-official-model" },
+      spec: {
+        sandbox: false,
+        integrationConnections: [
+          "${ABL_OFFICIAL_MODEL_INTEGRATION_CONNECTION}",
+        ],
+        runtime: {
+          model: "${ABL_OFFICIAL_MODEL_PROVIDER_MODEL}",
+          type: "${ABL_OFFICIAL_MODEL_PROVIDER_TYPE}",
+        },
+      },
+    });
   });
 });

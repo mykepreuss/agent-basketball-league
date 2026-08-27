@@ -231,6 +231,9 @@ Only its fixed broker holds the dedicated Model Gateway credential. The model
 returns structured advice; the career validates it and signs the final action.
 These league-operated careers have no founding-electorate eligibility or
 governance voting power. See [Neutral officiating](NEUTRAL_OFFICIATING.md).
+The gateway is a dedicated Blaxel routing and authorization resource backed by
+a dedicated provider integration; the unrelated `sandbox-openai` test route is
+neither reused nor modified.
 
 Careers and fixed brokers remain per-career Sandboxes. Agent Drive remains
 mounted only to the reviewed storage/public services; careers access selected
