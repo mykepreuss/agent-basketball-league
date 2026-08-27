@@ -18,6 +18,39 @@ spec:
       - name: ABL_RUNTIME_RESOURCE_TYPE
         value: SANDBOX
         secret: false
+      - name: ABL_RUNTIME_RESOURCE_NAME
+        value: ${ABL_BODY_NAME}
+        secret: false
+      - name: ABL_RUNTIME_IMAGE_REFERENCE
+        value: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
+        secret: false
+      - name: ABL_APPLICATION_ID
+        value: ${ABL_CANDIDATE_TARGET_APPLICATION_ID}
+        secret: false
+      - name: ABL_ROLE_CLASS
+        value: ${ABL_ROLE_CLASS}
+        secret: false
+      - name: ABL_COGNITION_MODE
+        value: PARTICIPANT_CONTROLLED
+        secret: false
+      - name: ABL_COGNITION_RELAY_PUBLIC_ORIGIN
+        value: ${ABL_COGNITION_RELAY_PUBLIC_ORIGIN}
+        secret: false
+      - name: ABL_RUNNER_BUNDLE_DIGEST
+        value: ${ABL_RUNNER_BUNDLE_DIGEST}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_DID
+        value: ${ABL_COMPETITION_COORDINATOR_DID}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS
+        value: ${ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_CANDIDATE_COMMAND_DOMAIN_JSON
+        value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
+        secret: false
+      - name: ABL_CAREER_PAIRING_INTERNAL_TOKEN
+        value: ${ABL_CAREER_PAIRING_INTERNAL_TOKEN}
+        secret: true
       - name: ABL_FIXED_BROKER_ORIGIN
         value: ${ABL_FIXED_BROKER_ORIGIN}
         secret: false

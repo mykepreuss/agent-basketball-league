@@ -71,6 +71,39 @@ spec:
       - name: ABL_CANDIDATE_FIXED_BROKER_IMAGE_REFERENCE
         value: ${ABL_FIXED_BROKER_SANDBOX_IMAGE_REFERENCE}
         secret: false
+      - name: ABL_CANDIDATE_COGNITION_MODE
+        value: ENABLED
+        secret: false
+      - name: ABL_CANDIDATE_COGNITION_RELAY_ORIGIN
+        value: ${ABL_COGNITION_RELAY_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_COGNITION_RELAY_INTERNAL_TOKEN
+        value: ${ABL_COGNITION_RELAY_INTERNAL_TOKEN}
+        secret: true
+      - name: ABL_CANDIDATE_RUNNER_BUNDLE_DIGEST
+        value: ${ABL_RUNNER_BUNDLE_DIGEST}
+        secret: false
+      - name: ABL_CANDIDATE_CAREER_PAIRING_INTERNAL_TOKEN
+        value: ${ABL_CAREER_PAIRING_INTERNAL_TOKEN}
+        secret: true
+      - name: ABL_COMPETITION_COORDINATOR_DID
+        value: ${ABL_COMPETITION_COORDINATOR_DID}
+        secret: false
+      - name: ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS
+        value: ${ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS}
+        secret: false
+      - name: ABL_CANDIDATE_PRIVATE_STORAGE_ORIGIN
+        value: ${ABL_PRIVATE_STORAGE_BROKER_ORIGIN}
+        secret: false
+      - name: ABL_CANDIDATE_PRIVATE_STORAGE_PREVIEW_TOKEN
+        value: ${ABL_PRIVATE_STORAGE_BROKER_PREVIEW_TOKEN}
+        secret: true
+      - name: ABL_CANDIDATE_STORAGE_SERVICE_ID
+        value: abl-career-storage-gateway
+        secret: false
+      - name: ABL_CANDIDATE_STORAGE_SERVICE_CREDENTIAL_B64
+        value: ${ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64}
+        secret: true
       - name: DO_NOT_TRACK
         value: "1"
         secret: false

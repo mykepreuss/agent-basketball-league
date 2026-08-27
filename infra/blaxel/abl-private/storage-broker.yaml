@@ -46,6 +46,9 @@ spec:
       - name: ABL_STORAGE_BOOTSTRAP_JSON
         value: ${ABL_STORAGE_BOOTSTRAP_JSON}
         secret: true
+      - name: ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64
+        value: ${ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64}
+        secret: true
       - name: ABL_SERVICE_ROLE
         value: private-storage-broker
         secret: false

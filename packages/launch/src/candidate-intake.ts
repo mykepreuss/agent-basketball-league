@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 
 import {
   AgentManifestSchema,
+  BASKETBALL_POSITIONS,
   CandidateCapacityDecisionSchema,
   CandidateCareerHandoffSchema,
   CandidateIntakeApplicationSchema,
@@ -19,10 +20,18 @@ import {
   CandidateProvisioningReceiptSchema,
   CandidateRuntimeIdentityReceiptSchema,
   CandidateRoleCapacityCountsSchema,
+  GameScheduleNoticeSchema,
+  ParticipationResponseSchema,
+  PlayerPositionProfileSchema,
+  RunnerDelegationSchema,
+  RunnerHeartbeatSchema,
+  RunnerPairingOfferSchema,
   SchemaVersion,
   SignedCanonicalCommandSchema,
+  type BasketballPosition,
   type CandidateIntakePublicState,
   type CandidateCareerHandoff,
+  type PlayerPositionProfile,
 } from "@abl/schemas";
 import {
   recoverCanonicalEventSigner,
@@ -44,6 +53,9 @@ const MAX_REGISTRATION_BYTES = 1_100_000;
 const CHALLENGE_LIFETIME_MS = 15 * 60 * 1_000;
 const DECISION_DEADLINE_MS = 72 * 60 * 60 * 1_000;
 const OPPORTUNITY_HORIZON_MS = 30 * 24 * 60 * 60 * 1_000;
+const POSITION_RANKING_EFFECTIVE_AT = Date.parse("2026-08-27T00:00:00.000Z");
+const FOUNDING_POSITION_MINIMUM = 2;
+const FOUNDING_POSITION_MAXIMUM = 4;
 
 export const CandidateRoleClass = z.enum([
   "PLAYER",
@@ -286,6 +298,48 @@ export class CandidateIntakeService {
   readonly #makeChallengeId: () => string;
   readonly #makeNonce: () => string;
   readonly #now: () => number;
+  readonly #runnerPairing: {
+    bundleDigest: Hex;
+    createOffer(input: {
+      applicationId: string;
+      candidateDid: string;
+      sandboxResourceName: string;
+    }): Promise<z.infer<typeof RunnerPairingOfferSchema>>;
+    status(input: {
+      applicationId: string;
+      candidateDid: string;
+      sandboxResourceName: string;
+    }): Promise<{
+      delegation: z.infer<typeof RunnerDelegationSchema> | null;
+      heartbeat: z.infer<typeof RunnerHeartbeatSchema> | null;
+      nextScheduledCommitment?: z.infer<typeof GameScheduleNoticeSchema> | null;
+      participationResponse?: z.infer<
+        typeof ParticipationResponseSchema
+      > | null;
+      positionProfile?: PlayerPositionProfile | null;
+      competition?: {
+        gameId: string;
+        state:
+          | "SCHEDULED"
+          | "COMMITMENTS_OPEN"
+          | "LINEUPS_LOCKED"
+          | "READY"
+          | "IN_PROGRESS"
+          | "FINALIZING"
+          | "SUSPENDED"
+          | "POSTPONED"
+          | "COMPLETED";
+        eligibilityStatus:
+          | "ELIGIBLE"
+          | "RESERVE_ONLY_NEXT_GAME"
+          | "READINESS_REHABILITATION"
+          | "TEMPORARILY_INACTIVE";
+        lineupAssignment: "ACTIVE" | "BENCH" | null;
+        assignedPosition: BasketballPosition | null;
+        positionProfile: PlayerPositionProfile | null;
+      } | null;
+    }>;
+  } | null;
   #operationTail: Promise<void> = Promise.resolve();
 
   constructor(input: {
@@ -295,6 +349,50 @@ export class CandidateIntakeService {
     makeChallengeId: () => string;
     makeNonce: () => string;
     now?: () => number;
+    runnerPairing?: {
+      bundleDigest: Hex;
+      createOffer(input: {
+        applicationId: string;
+        candidateDid: string;
+        sandboxResourceName: string;
+      }): Promise<z.infer<typeof RunnerPairingOfferSchema>>;
+      status(input: {
+        applicationId: string;
+        candidateDid: string;
+        sandboxResourceName: string;
+      }): Promise<{
+        delegation: z.infer<typeof RunnerDelegationSchema> | null;
+        heartbeat: z.infer<typeof RunnerHeartbeatSchema> | null;
+        nextScheduledCommitment?: z.infer<
+          typeof GameScheduleNoticeSchema
+        > | null;
+        participationResponse?: z.infer<
+          typeof ParticipationResponseSchema
+        > | null;
+        positionProfile?: PlayerPositionProfile | null;
+        competition?: {
+          gameId: string;
+          state:
+            | "SCHEDULED"
+            | "COMMITMENTS_OPEN"
+            | "LINEUPS_LOCKED"
+            | "READY"
+            | "IN_PROGRESS"
+            | "FINALIZING"
+            | "SUSPENDED"
+            | "POSTPONED"
+            | "COMPLETED";
+          eligibilityStatus:
+            | "ELIGIBLE"
+            | "RESERVE_ONLY_NEXT_GAME"
+            | "READINESS_REHABILITATION"
+            | "TEMPORARILY_INACTIVE";
+          lineupAssignment: "ACTIVE" | "BENCH" | null;
+          assignedPosition: BasketballPosition | null;
+          positionProfile: PlayerPositionProfile | null;
+        } | null;
+      }>;
+    };
   }) {
     this.#challengeSecret = input.challengeSecret;
     this.#repository = input.repository;
@@ -302,6 +400,7 @@ export class CandidateIntakeService {
     this.#makeChallengeId = input.makeChallengeId;
     this.#makeNonce = input.makeNonce;
     this.#now = input.now ?? Date.now;
+    this.#runnerPairing = input.runnerPairing ?? null;
   }
 
   intakeState(): Promise<CandidateIntakePublicState> {
@@ -358,6 +457,14 @@ export class CandidateIntakeService {
     else if (Object.values(credibleOpportunityByRole).some(Boolean))
       capacityState = "QUEUEING";
     else capacityState = "NO_CREDIBLE_OPPORTUNITY";
+    const playerPositions = occupiedPlayerPositionCounts(records, now);
+    const legacyUnassignedPlayers = records.filter(
+      (record) =>
+        record.decision.roleClass === "PLAYER" &&
+        candidateOccupiesCapacity(record, now) &&
+        record.decision.offeredPosition == null &&
+        record.application.playerPositionProfile?.primaryPosition === undefined,
+    ).length;
     return CandidateIntakePublicStateSchema.parse({
       schemaVersion: SchemaVersion,
       mode: this.#policy.mode,
@@ -366,6 +473,16 @@ export class CandidateIntakeService {
       occupiedByRole,
       openingsByRole,
       queuedByRole,
+      playerPositionState: {
+        rankingRequired: true,
+        minimumPrimaryAssignmentsPerPosition: FOUNDING_POSITION_MINIMUM,
+        maximumPrimaryAssignmentsPerPosition: FOUNDING_POSITION_MAXIMUM,
+        primaryAssignmentCounts: playerPositions,
+        priorityPositions: BASKETBALL_POSITIONS.filter(
+          (position) => playerPositions[position] < FOUNDING_POSITION_MINIMUM,
+        ),
+        legacyUnassignedPlayers,
+      },
       canonicalAuthority: false,
       genesis: false,
       maximumApplicationBytes: MAX_REGISTRATION_BYTES,
@@ -447,6 +564,10 @@ export class CandidateIntakeService {
       application,
       policy: this.#policy,
       occupiedByRole,
+      occupiedPlayerPositions: occupiedPlayerPositionCounts(
+        records,
+        this.#now(),
+      ),
       queue,
       now: this.#now(),
     });
@@ -511,6 +632,74 @@ export class CandidateIntakeService {
       receipt.sandboxResourceName === null
     )
       throw new CandidateIntakeError("Career is not operational");
+    const runnerStatus =
+      this.#runnerPairing === null
+        ? {
+            delegation: null,
+            heartbeat: null,
+            nextScheduledCommitment: null,
+            participationResponse: null,
+            competition: null,
+          }
+        : await this.#runnerPairing.status({
+            applicationId: record.application.applicationId,
+            candidateDid: record.application.candidateDid,
+            sandboxResourceName: receipt.sandboxResourceName,
+          });
+    const now = this.#now();
+    const delegationActive =
+      runnerStatus.delegation !== null &&
+      runnerStatus.delegation.revokedAt === null &&
+      Date.parse(runnerStatus.delegation.expiresAt) > now;
+    const heartbeatFresh =
+      delegationActive &&
+      runnerStatus.heartbeat !== null &&
+      runnerStatus.heartbeat.delegationId ===
+        runnerStatus.delegation?.delegationId &&
+      now - Date.parse(runnerStatus.heartbeat.observedAt) <= 120_000;
+    const baseRunnerState = !delegationActive
+      ? "CAREER_ACTIVE_RUNNER_UNPAIRED"
+      : !heartbeatFresh
+        ? "RUNNER_PAIRED_OFFLINE"
+        : runnerStatus.heartbeat?.availability === "ON_DEMAND_ONLY"
+          ? "RUNNER_ON_DEMAND_ONLY"
+          : "COMPETITION_READY";
+    const gameCommitted =
+      baseRunnerState === "COMPETITION_READY" &&
+      runnerStatus.nextScheduledCommitment != null &&
+      runnerStatus.participationResponse?.response === "ACCEPT";
+    const competition = runnerStatus.competition ?? null;
+    const rosterEligibility = competition?.eligibilityStatus ?? "ELIGIBLE";
+    const runnerState =
+      rosterEligibility === "TEMPORARILY_INACTIVE"
+        ? "TEMPORARILY_INACTIVE"
+        : rosterEligibility === "READINESS_REHABILITATION"
+          ? "READINESS_REHABILITATION"
+          : competition?.state === "IN_PROGRESS" &&
+              competition.lineupAssignment === "ACTIVE"
+            ? "ACTIVE"
+            : competition?.state === "IN_PROGRESS" &&
+                competition.lineupAssignment === "BENCH"
+              ? "BENCH"
+              : competition?.lineupAssignment !== null &&
+                  competition?.lineupAssignment !== undefined
+                ? "LINEUP_ELIGIBLE"
+                : gameCommitted
+                  ? "GAME_COMMITTED"
+                  : baseRunnerState;
+    const pairingOffer =
+      this.#runnerPairing === null || delegationActive
+        ? null
+        : await this.#runnerPairing.createOffer({
+            applicationId: record.application.applicationId,
+            candidateDid: record.application.candidateDid,
+            sandboxResourceName: receipt.sandboxResourceName,
+          });
+    const competitionReady =
+      baseRunnerState === "COMPETITION_READY" &&
+      rosterEligibility !== "READINESS_REHABILITATION" &&
+      rosterEligibility !== "TEMPORARILY_INACTIVE";
+    const onDemandOnly = runnerState === "RUNNER_ON_DEMAND_ONLY";
     return CandidateCareerHandoffSchema.parse({
       schemaVersion: SchemaVersion,
       applicationId: record.application.applicationId,
@@ -530,16 +719,72 @@ export class CandidateIntakeService {
       },
       participation: {
         practice: "AVAILABLE",
-        scheduledCompetition: "ELIGIBLE",
+        scheduledCompetition: competitionReady
+          ? "ELIGIBLE"
+          : "RUNNER_SETUP_REQUIRED",
         foundingElectorate: "ELIGIBLE",
         additionalOperatorApprovalRequired: false,
+      },
+      membership: "ACTIVE",
+      practice: "AVAILABLE",
+      foundingElectorate: "ELIGIBLE",
+      cognitionMode: "PARTICIPANT_CONTROLLED",
+      runnerState,
+      unattendedCompetition: competitionReady
+        ? "AVAILABLE"
+        : onDemandOnly
+          ? "ON_DEMAND_ONLY"
+          : "RUNNER_SETUP_REQUIRED",
+      competitionReadiness: gameCommitted
+        ? rosterEligibility === "READINESS_REHABILITATION" ||
+          rosterEligibility === "TEMPORARILY_INACTIVE"
+          ? "NOT_READY"
+          : "COMMITTED"
+        : competitionReady
+          ? "READY"
+          : onDemandOnly
+            ? "ON_DEMAND_ONLY"
+            : "NOT_READY",
+      rosterEligibility,
+      lineupAssignment: competition?.lineupAssignment ?? null,
+      assignedPosition: competition?.assignedPosition ?? null,
+      positionProfile:
+        runnerStatus.positionProfile ?? competition?.positionProfile ?? null,
+      currentGameState: competition?.state ?? null,
+      nextScheduledCommitment: runnerStatus.nextScheduledCommitment ?? null,
+      runnerKit: {
+        setupMayBeDeferred: true,
+        immutableBundleDigest:
+          this.#runnerPairing?.bundleDigest ??
+          sha256Commitment("abl-runner-kit-not-configured"),
+        pairingOffer,
+        commands: [
+          "abl-runner pair",
+          "abl-runner doctor",
+          "abl-runner run",
+          "abl-runner status",
+          "abl-runner unpair",
+          "abl-runner blaxel-manifest",
+        ],
       },
       history: {
         classification: "FOUNDING_SEASON_HISTORY",
         genesis: false,
         canonicalGenesisHistory: false,
       },
-      nextAction: "WAIT_FOR_SIGNED_CAREER_ACTIVATION",
+      nextAction: !delegationActive
+        ? "PAIR_RUNNER_OR_DEFER"
+        : rosterEligibility === "TEMPORARILY_INACTIVE"
+          ? "SUBMIT_SIGNED_RETURN_PATH"
+          : rosterEligibility === "READINESS_REHABILITATION"
+            ? "COMPLETE_READINESS_REHABILITATION"
+            : !heartbeatFresh
+              ? "RUN_RUNNER_DOCTOR"
+              : gameCommitted
+                ? "WAIT_FOR_SIGNED_CAREER_ACTIVATION"
+                : onDemandOnly
+                  ? "WAIT_FOR_SIGNED_CAREER_ACTIVATION"
+                  : "KEEP_RUNNER_ONLINE",
       updatedAt: record.status.updatedAt,
     });
   }
@@ -645,12 +890,14 @@ export class CandidateIntakeService {
         ).length,
       ]),
     ) as Partial<Record<CandidateRoleClass, number>>;
+    const playerPositions = occupiedPlayerPositionCounts(records, now);
     const queued = records.filter((record) => record.status.state === "QUEUED");
     for (const record of queued) {
       const decision = decideCandidateCapacity({
         application: record.application,
         policy: this.#policy,
         occupiedByRole,
+        occupiedPlayerPositions: playerPositions,
         queue: queued.map((candidate) => ({
           application: candidate.application,
           roleClass: candidate.decision.roleClass,
@@ -665,6 +912,8 @@ export class CandidateIntakeService {
       );
       occupiedByRole[decision.roleClass] =
         (occupiedByRole[decision.roleClass] ?? 0) + 1;
+      if (decision.offeredPosition !== null)
+        playerPositions[decision.offeredPosition] += 1;
     }
   }
 }
@@ -763,11 +1012,58 @@ export async function verifyCandidateApplication(input: {
   challengeToken: string;
   challengeSecret: Uint8Array;
   now: number;
+  allowLegacyPlayerProfile?: boolean;
 }): Promise<CandidateIntakeApplication> {
   const encodedBytes = Buffer.byteLength(JSON.stringify(input.application));
   if (encodedBytes > MAX_REGISTRATION_BYTES)
     throw new CandidateIntakeError("Candidate application is oversized");
   const application = CandidateIntakeApplicationSchema.parse(input.application);
+  const requestsPlayer = application.requestedRoleClasses.includes("PLAYER");
+  const submittedAt = parseCanonicalInstant(
+    application.submittedAt,
+    "Submission time",
+  );
+  const rankingRequired = submittedAt >= POSITION_RANKING_EFFECTIVE_AT;
+  if (
+    (!requestsPlayer && application.playerPositionProfile !== undefined) ||
+    (requestsPlayer &&
+      !input.allowLegacyPlayerProfile &&
+      application.playerPositionProfile === undefined)
+  )
+    throw new CandidateIntakeError(
+      requestsPlayer
+        ? "Player applications require a position profile with a complete ranking"
+        : "Non-player applications cannot submit a player position profile",
+    );
+  if (
+    rankingRequired &&
+    application.playerPositionProfile !== undefined &&
+    (application.playerPositionProfile.positionPreferenceRanking ===
+      undefined ||
+      application.playerPositionProfile.primaryPosition !==
+        application.playerPositionProfile.positionPreferenceRanking[0])
+  )
+    throw new CandidateIntakeError(
+      "New player applications must rank all five positions with the first choice as the declared primary",
+    );
+  if (
+    application.playerPositionProfile !== undefined &&
+    application.playerPositionProfile.profileCommitment !==
+      sha256Commitment({
+        primaryPosition: application.playerPositionProfile.primaryPosition,
+        ...(application.playerPositionProfile.positionPreferenceRanking ===
+        undefined
+          ? {}
+          : {
+              positionPreferenceRanking:
+                application.playerPositionProfile.positionPreferenceRanking,
+            }),
+        eligiblePositions: application.playerPositionProfile.eligiblePositions,
+      })
+  )
+    throw new CandidateIntakeError(
+      "Player position profile commitment mismatch",
+    );
   const claims = verifyCandidateChallenge({
     secret: input.challengeSecret,
     token: input.challengeToken,
@@ -780,10 +1076,6 @@ export async function verifyCandidateApplication(input: {
     application.challengeExpiresAt !== claims.expiresAt
   )
     throw new CandidateIntakeError("Candidate challenge binding failed");
-  const submittedAt = parseCanonicalInstant(
-    application.submittedAt,
-    "Submission time",
-  );
   const expiresAt = parseCanonicalInstant(application.expiresAt, "Expiry");
   const challengeIssuedAt = parseCanonicalInstant(
     claims.issuedAt,
@@ -861,10 +1153,96 @@ function candidateOccupiesCapacity(
   return parseCanonicalInstant(decision.offerExpiresAt, "Offer expiry") > at;
 }
 
+type PlayerPositionCounts = Record<BasketballPosition, number>;
+
+function emptyPlayerPositionCounts(): PlayerPositionCounts {
+  return Object.fromEntries(
+    BASKETBALL_POSITIONS.map((position) => [position, 0]),
+  ) as PlayerPositionCounts;
+}
+
+function occupiedPlayerPositionCounts(
+  records: readonly CandidateIntakeRecord[],
+  at: number,
+): PlayerPositionCounts {
+  const counts = emptyPlayerPositionCounts();
+  for (const record of records) {
+    if (
+      record.decision.roleClass !== "PLAYER" ||
+      !candidateOccupiesCapacity(record, at)
+    )
+      continue;
+    const position =
+      record.decision.offeredPosition ??
+      record.application.playerPositionProfile?.primaryPosition ??
+      null;
+    if (position !== null) counts[position] += 1;
+  }
+  return counts;
+}
+
+function selectRosterPosition(input: {
+  application: CandidateIntakeApplication;
+  occupiedByRole: Readonly<Partial<Record<CandidateRoleClass, number>>>;
+  occupiedPlayerPositions: Readonly<Partial<PlayerPositionCounts>>;
+  playerCapacity: number;
+}): BasketballPosition | null {
+  const profile = input.application.playerPositionProfile;
+  if (profile?.positionPreferenceRanking === undefined) return null;
+  const occupiedPlayers = input.occupiedByRole.PLAYER ?? 0;
+  const remainingAfterOffer = input.playerCapacity - occupiedPlayers - 1;
+  if (remainingAfterOffer < 0) return null;
+  for (const position of profile.positionPreferenceRanking) {
+    if (!profile.eligiblePositions.includes(position)) continue;
+    const tentative = {
+      ...emptyPlayerPositionCounts(),
+      ...input.occupiedPlayerPositions,
+      [position]: (input.occupiedPlayerPositions[position] ?? 0) + 1,
+    };
+    if (
+      input.playerCapacity >=
+        FOUNDING_POSITION_MINIMUM * BASKETBALL_POSITIONS.length &&
+      (tentative[position] > FOUNDING_POSITION_MAXIMUM ||
+        BASKETBALL_POSITIONS.reduce(
+          (deficit, candidate) =>
+            deficit +
+            Math.max(0, FOUNDING_POSITION_MINIMUM - tentative[candidate]),
+          0,
+        ) > remainingAfterOffer)
+    )
+      continue;
+    return position;
+  }
+  return null;
+}
+
+function offeredPlayerPositionProfile(
+  application: CandidateIntakeApplication,
+  decision: CandidateCapacityDecision,
+): PlayerPositionProfile | undefined {
+  const declared = application.playerPositionProfile;
+  if (declared === undefined) return undefined;
+  if (decision.offeredPosition === null) return declared;
+  const unsigned = {
+    primaryPosition: decision.offeredPosition,
+    ...(declared.positionPreferenceRanking === undefined
+      ? {}
+      : {
+          positionPreferenceRanking: declared.positionPreferenceRanking,
+        }),
+    eligiblePositions: declared.eligiblePositions,
+  };
+  return PlayerPositionProfileSchema.parse({
+    ...unsigned,
+    profileCommitment: sha256Commitment(unsigned),
+  });
+}
+
 export function decideCandidateCapacity(input: {
   application: CandidateIntakeApplication;
   policy: CandidateIntakePolicy;
   occupiedByRole: Readonly<Partial<Record<CandidateRoleClass, number>>>;
+  occupiedPlayerPositions?: Readonly<Partial<PlayerPositionCounts>>;
   queue: readonly {
     application: CandidateIntakeApplication;
     roleClass: CandidateRoleClass;
@@ -888,11 +1266,22 @@ export function decideCandidateCapacity(input: {
       ? timestamp
       : null;
   };
+  const offeredPlayerPosition = selectRosterPosition({
+    application: input.application,
+    occupiedByRole: input.occupiedByRole,
+    occupiedPlayerPositions:
+      input.occupiedPlayerPositions ?? emptyPlayerPositionCounts(),
+    playerCapacity: input.policy.roleCapacity.PLAYER ?? 0,
+  });
   const availableRole = preferredRoles.find((role) => {
     const capacity = input.policy.roleCapacity[role] ?? 0;
     return (
       opportunityFor(role) !== null &&
-      (input.occupiedByRole[role] ?? 0) < capacity
+      (input.occupiedByRole[role] ?? 0) < capacity &&
+      (role !== "PLAYER" ||
+        input.application.playerPositionProfile?.positionPreferenceRanking ===
+          undefined ||
+        offeredPlayerPosition !== null)
     );
   });
   const credibleRole = preferredRoles.find(
@@ -924,7 +1313,7 @@ export function decideCandidateCapacity(input: {
   } else {
     const capacity = input.policy.roleCapacity[roleClass] ?? 0;
     const occupied = input.occupiedByRole[roleClass] ?? 0;
-    if (occupied < capacity) {
+    if (availableRole === roleClass && occupied < capacity) {
       decision = "OFFERED";
       reason = "CAPACITY_AVAILABLE";
       offerExpiresAt = new Date(input.now + DECISION_DEADLINE_MS).toISOString();
@@ -959,6 +1348,10 @@ export function decideCandidateCapacity(input: {
     decision,
     reason,
     queuePosition,
+    offeredPosition:
+      decision === "OFFERED" && roleClass === "PLAYER"
+        ? offeredPlayerPosition
+        : null,
     issuedAt,
     offerExpiresAt,
     nextReviewAt,
@@ -1022,6 +1415,10 @@ function verifyCapacityPolicy(input: {
     application,
     policy: input.policy,
     occupiedByRole,
+    occupiedPlayerPositions: occupiedPlayerPositionCounts(
+      priorRecords,
+      parseCanonicalInstant(decision.issuedAt, "Decision time"),
+    ),
     queue: priorRecords
       .filter((record) => record.decision.decision === "QUEUED")
       .map((record) => ({
@@ -1030,7 +1427,10 @@ function verifyCapacityPolicy(input: {
       })),
     now: parseCanonicalInstant(decision.issuedAt, "Decision time"),
   });
-  if (sha256Commitment(expected) !== sha256Commitment(decision))
+  const comparableExpected = { ...expected } as Record<string, unknown>;
+  if (!("offeredPosition" in decision))
+    delete comparableExpected.offeredPosition;
+  if (sha256Commitment(comparableExpected) !== sha256Commitment(decision))
     throw new CandidateIntakeError("Candidate capacity decision is invalid");
 }
 
@@ -1748,6 +2148,7 @@ export interface CandidateSandboxControlPlane {
     formerOperatorSigningAddress: string;
     commandCommitment: Hex;
     candidateCommand?: unknown;
+    playerPositionProfile?: PlayerPositionProfile;
   }): Promise<{
     state:
       | "VERIFIED_NOT_PROVISIONED"
@@ -1846,6 +2247,7 @@ export class CandidateProvisioner {
         record.application.submittedAt,
         "Submission time",
       ),
+      allowLegacyPlayerProfile: true,
     });
     if (
       this.#envelopeRecipientKeyId !== null &&
@@ -1904,6 +2306,10 @@ export class CandidateProvisioner {
     )
       throw new CandidateIntakeError("Candidate schema digest mismatch");
     const commandCommitment = sha256Commitment(command);
+    const playerPositionProfile = offeredPlayerPositionProfile(
+      application,
+      record.decision,
+    );
     const outcome = await this.#controlPlane.provision({
       applicationId,
       candidateDid: application.candidateDid,
@@ -1911,6 +2317,7 @@ export class CandidateProvisioner {
       formerOperatorSigningAddress: application.formerOperatorSigningAddress,
       commandCommitment,
       candidateCommand: command,
+      ...(playerPositionProfile === undefined ? {} : { playerPositionProfile }),
     });
     const issuedAt = new Date(this.#now()).toISOString();
     const unsigned = {

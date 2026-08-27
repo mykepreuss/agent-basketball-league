@@ -104,7 +104,9 @@ function evidence() {
     eventMerkleRoot,
     agentEvidence,
     humanDecisionCount: 0 as const,
-    inferenceInvocations: 0 as const,
+    participantInferenceInvocations: 64,
+    ablHostedModelInvocations: 0 as const,
+    exactReplayInferenceInvocations: 0 as const,
   };
   const foundingExhibitionProof = {
     ...foundingExhibition,

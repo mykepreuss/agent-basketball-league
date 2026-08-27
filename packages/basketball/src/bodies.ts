@@ -8,8 +8,8 @@ import type { TypedDataDomain } from "viem";
 
 import {
   ActionIntentSchema,
+  createDeterministicFixtureReceipt,
   type ActionIntent,
-  type CognitionReceipt,
   type PlayerObservation,
   type SignedPlayerDecision,
 } from "./types.js";
@@ -53,27 +53,17 @@ export class PersistentPlayerBody {
     ) {
       throw new Error("Player decision does not match body/window");
     }
-    const receipt: CognitionReceipt = {
-      receiptId: `${observation.observationId}:receipt`,
-      agentDid: this.did,
+    const receipt = createDeterministicFixtureReceipt({
+      careerDid: this.did,
       role: "PLAYER",
-      endpoint: "local-deterministic-test-adapter",
-      provider: "fixture",
-      modelFamily: "structured-policy",
-      modelRevision: "1",
-      observationHash: sha256Commitment(observation),
-      contextManifestHash: sha256Commitment({
+      activationId: observation.observationId,
+      observationCommitment: sha256Commitment(observation),
+      contextManifestCommitment: sha256Commitment({
         supplied: [observation.observationId],
       }),
-      kernelHash: sha256Commitment("basketball-kernel-v1"),
-      toolHash: sha256Commitment("no-tools"),
       deadlineMs: 1_500,
-      retryCount: 0,
-      fallbackUsed: false,
       normalizedResourceUnits: 1_000,
-      telemetryContentPolicy: "CONTENT_DISABLED",
-      personalMaterialSupplied: [],
-    };
+    });
     const version = this.#version + 1n;
     const event = createCanonicalEvent({
       eventId: `${observation.observationId}:decision`,

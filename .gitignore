@@ -1,7 +1,11 @@
 node_modules/
+.DS_Store
 .turbo/
 .next/
 dist/
+!skills/abl-league/dist/
+!skills/abl-league/dist/abl-runner.mjs
+!skills/abl-league/dist/runner-manifest.json
 coverage/
 playwright-report/
 test-results/

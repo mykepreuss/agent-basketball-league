@@ -1,24 +1,40 @@
 import {
-  CAREER_PLAYER_ACTIVATION_AGGREGATE_TYPE,
-  CAREER_PLAYER_ACTIVATION_EVENT_TYPE,
-  CAREER_PLAYER_ACTIVATION_SCHEMA_DIGEST,
-  CareerPlayerActivationPayloadSchema,
-  publicPracticeScenario,
-} from "@abl/basketball";
+  createRunnerEncryptionKeyPair,
+  CAREER_ROLE_ACTIVATION_AGGREGATE_TYPE,
+  CAREER_ROLE_ACTIVATION_EVENT_TYPE,
+  CAREER_ROLE_ACTIVATION_SCHEMA_DIGEST,
+  roleDecisionSchemaDigest,
+  runnerDelegationMessage,
+  sealRunnerResult,
+  signRunnerDelegation,
+  signRunnerRequest,
+} from "@abl/cognition";
 import {
   createCanonicalEvent,
   createSigningIdentity,
   recoverCanonicalEventSigner,
+  sha256Bytes,
   sha256Commitment,
   signCanonicalEvent,
+  type CanonicalEvent,
 } from "@abl/recognition";
+import type {
+  InferenceRequest,
+  InferenceResult,
+  RoleActivation,
+  RunnerDelegation,
+} from "@abl/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
-  BrokerCareerModelClient,
-  executeCareerPlayerActivation,
-  type CareerModelClient,
+  executeDistributedCareerActivation,
+  type CareerContextProvider,
+  type CareerRelayClient,
 } from "../src/cognition-runtime.js";
+import {
+  selectCompetitionCatalogEntries,
+  verifyCatalogPlaintext,
+} from "../src/career-runtime.js";
 
 const domain = {
   name: "ABL Recognition",
@@ -28,235 +44,539 @@ const domain = {
 };
 const coordinator = createSigningIdentity(`0x${"1".repeat(64)}`);
 const career = createSigningIdentity(`0x${"2".repeat(64)}`);
-const applicationId = "0198e000-0000-7000-8000-000000000001";
+const runner = createSigningIdentity(`0x${"3".repeat(64)}`);
+const careerEncryption = createRunnerEncryptionKeyPair();
+const runnerEncryption = createRunnerEncryptionKeyPair();
+const careerDid = "did:abl:career-player-1";
 const coordinatorDid = "did:abl:competition-director";
 const openedAt = "2026-08-26T12:00:00.000Z";
+const completedAt = "2026-08-26T12:00:02.000Z";
 const now = Date.parse("2026-08-26T12:00:01.000Z");
 
+function uuid(index: number): string {
+  return `0198e000-0000-7000-8000-${String(index).padStart(12, "0")}`;
+}
+
 async function activationCommand(
-  signer = coordinator,
-  deadlineAt = "2026-08-26T12:00:20.000Z",
+  role: RoleActivation["role"] = "PLAYER",
+  expectedOutputSchemaDigest = roleDecisionSchemaDigest(role),
+  kind: RoleActivation["kind"] = "COMPETITION",
 ) {
-  const scenario = publicPracticeScenario();
-  const activation = CareerPlayerActivationPayloadSchema.parse({
+  const common = {
     schemaVersion: "1.0.0" as const,
-    activationId: "founding-practice-window-0001",
-    kind: "PRACTICE" as const,
-    applicationId,
-    candidateDid: scenario.observation.self.did,
-    roleClass: "PLAYER" as const,
-    windowId: scenario.decisionRequirements.windowId,
-    observation: scenario.observation,
+    activationId: `activation-${role.toLowerCase()}-0001`,
+    gameId: "founding-exhibition-1",
+    kind,
+    careerDid,
+    role,
+    officialObservation: { role, window: 1 },
+    observationCommitment: sha256Commitment({ role, window: 1 }),
+    stateRoot: sha256Commitment({ role, gameState: 1 }),
+    contextPolicyCommitment: sha256Commitment("minimum-necessary-v2"),
+    expectedOutputSchemaDigest,
     openedAt,
-    deadlineAt,
-    model: {
-      name: "approved-player-model",
-      provider: "blaxel",
-      family: "structured-player",
-      revision: "1",
-      maxOutputTokens: 256,
-    },
-    context: {
-      manifestHash: sha256Commitment("manifest"),
-      kernelHash: sha256Commitment("kernel"),
-      toolHash: sha256Commitment("tools"),
-      personalMaterialSupplied: [],
-    },
-  });
+    deadlineAt: "2026-08-26T12:00:20.000Z",
+  };
+  const activation: RoleActivation =
+    role === "PLAYER"
+      ? {
+          ...common,
+          role,
+          playerId: "H1",
+          teamId: "HOME",
+          windowId: "window-1",
+        }
+      : role === "COACH"
+        ? { ...common, role, teamId: "HOME", windowId: "window-1" }
+        : role === "REFEREE"
+          ? {
+              ...common,
+              role,
+              possessionId: "possession-1",
+              officiatingSequence: 1,
+            }
+          : {
+              ...common,
+              role,
+              possessionId: "possession-1",
+              reviewSequence: 1,
+            };
   const event = createCanonicalEvent({
-    eventId: "0198e001-0000-7000-8000-000000000001",
+    eventId: uuid(1),
     actorDid: coordinatorDid,
     nonce: `${activation.activationId}:nonce`,
-    idempotencyKey: "0198e001-0000-7000-8000-000000000002",
-    aggregateType: CAREER_PLAYER_ACTIVATION_AGGREGATE_TYPE,
+    idempotencyKey: uuid(2),
+    aggregateType: CAREER_ROLE_ACTIVATION_AGGREGATE_TYPE,
     aggregateId: activation.activationId,
     aggregateVersion: 1n,
-    eventType: CAREER_PLAYER_ACTIVATION_EVENT_TYPE,
+    eventType: CAREER_ROLE_ACTIVATION_EVENT_TYPE,
     previousEventHash: null,
     payload: activation,
     stateRoot: sha256Commitment(activation),
-    schemaDigest: CAREER_PLAYER_ACTIVATION_SCHEMA_DIGEST,
+    schemaDigest: CAREER_ROLE_ACTIVATION_SCHEMA_DIGEST,
     timestamp: openedAt,
   });
   return {
     activation,
     command: {
-      event: { ...event, aggregateVersion: event.aggregateVersion.toString() },
-      signatures: [await signCanonicalEvent(signer, domain, event)],
+      event: { ...event, aggregateVersion: "1" },
+      signatures: [await signCanonicalEvent(coordinator, domain, event)],
     },
   };
 }
 
-function identity(candidateDid: string) {
+async function delegation(): Promise<RunnerDelegation> {
+  const scopes = [
+    "RUNNER_HEARTBEAT",
+    "ACTIVATION_CLAIM",
+    "RESULT_SUBMISSION",
+  ] as const;
+  const unsigned = {
+    schemaVersion: "1.0.0" as const,
+    delegationId: uuid(3),
+    careerDid,
+    runnerId: "runner-1",
+    delegateSigningAddress: runner.address,
+    delegateEncryptionPublicKey:
+      `0x${Buffer.from(runnerEncryption.publicKey).toString("hex")}` as const,
+    scopes: [...scopes],
+    issuedAt: openedAt,
+    expiresAt: "2026-09-25T12:00:00.000Z",
+  };
   return {
-    ...career,
-    candidateDid,
-    applicationId,
-    roleClass: "PLAYER" as const,
+    ...unsigned,
+    revokedAt: null,
+    careerSignature: await signRunnerDelegation(
+      career.privateKey,
+      runnerDelegationMessage(unsigned, sha256Commitment([...scopes].sort())),
+    ),
   };
 }
 
-describe("career cognition runtime", () => {
-  it("renews a denied short-lived broker capability and retries once", async () => {
-    const { activation } = await activationCommand();
-    const authorizations: string[] = [];
-    const modelClient = new BrokerCareerModelClient({
-      origin: "https://broker.example/",
-      capabilityToken: "expired-capability-token-000000000001",
-      modelPath:
-        "/agent-basketball-league/models/founding-player/v1/chat/completions",
-      renewCapability: async () => "renewed-capability-token-000000000001",
-      fetchImplementation: async (_url, init) => {
-        const authorization = new Headers(init?.headers).get("authorization")!;
-        authorizations.push(authorization);
-        if (authorizations.length === 1)
-          return Response.json(
-            { error: "broker_policy_denied" },
-            { status: 403 },
-          );
-        return Response.json({
-          model: "founding-player-1",
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  windowId: activation.windowId,
-                  playerId: activation.observation.playerId,
-                  action: "HOLD",
-                }),
-              },
-            },
-          ],
-          usage: { prompt_tokens: 100, completion_tokens: 10 },
-        });
-      },
-    });
-
-    await expect(modelClient.decide(activation, 1_000)).resolves.toMatchObject({
-      intent: { action: "HOLD" },
-      modelRevision: "founding-player-1",
-      inputTokens: 100,
-      outputTokens: 10,
-    });
-    expect(authorizations).toEqual([
-      "Bearer expired-capability-token-000000000001",
-      "Bearer renewed-capability-token-000000000001",
-    ]);
-  });
-
-  it("turns a model decision into a career-signed player command", async () => {
-    const { activation, command } = await activationCommand();
-    const modelClient: CareerModelClient = {
-      async decide() {
-        return {
-          intent: {
-            windowId: activation.windowId,
-            playerId: activation.observation.playerId,
-            action: "SHOOT",
-            shot: "LAYUP",
-          },
-          modelRevision: "structured-player-2026-08-26",
-          inputTokens: 400,
-          outputTokens: 32,
-        };
-      },
+const contextProvider: CareerContextProvider = {
+  async assemble(activation) {
+    const policyBase = {
+      schemaVersion: "1.0.0" as const,
+      policyId: uuid(4),
+      careerDid,
+      minimumNecessary: true as const,
+      allowedDisclosureClasses: ["COMPETITIVE_SEALED"] as const,
+      allowedMemoryDomains: ["STRATEGIC"] as const,
+      allowPrivateFilm: true,
+      allowPracticeLessons: true,
     };
-    const result = await executeCareerPlayerActivation({
-      command,
-      identity: identity(activation.candidateDid),
-      coordinatorDid,
-      coordinatorSignerAddress: coordinator.address,
-      domain,
-      modelClient,
-      now: () => now,
-    });
-
-    expect(result).toMatchObject({
-      activationId: activation.activationId,
-      state: "COMPLETED",
-      canonical: false,
-      genesis: false,
-      modelAttempted: true,
-      modelDecisionAccepted: true,
-      decision: {
-        intent: { action: "SHOOT", shot: "LAYUP" },
-        receipt: {
-          fallbackUsed: false,
-          normalizedResourceUnits: 432,
-          telemetryContentPolicy: "CONTENT_DISABLED",
-        },
+    return {
+      policy: {
+        ...policyBase,
+        allowedDisclosureClasses: [...policyBase.allowedDisclosureClasses],
+        allowedMemoryDomains: [...policyBase.allowedMemoryDomains],
+        policyCommitment: sha256Commitment(policyBase),
       },
-    });
-    await expect(
-      recoverCanonicalEventSigner(
-        domain,
-        result.decision.authorizationEvent,
-        result.decision.signature,
-      ),
-    ).resolves.toBe(career.address);
-  });
-
-  it("signs a deterministic HOLD when inference fails", async () => {
-    const { activation, command } = await activationCommand();
-    const result = await executeCareerPlayerActivation({
-      command,
-      identity: identity(activation.candidateDid),
-      coordinatorDid,
-      coordinatorSignerAddress: coordinator.address,
-      domain,
-      modelClient: {
-        async decide() {
-          throw new Error("provider unavailable");
+      materials: [
+        {
+          commitment: sha256Commitment("protect the paint"),
+          disclosureClass: "COMPETITIVE_SEALED" as const,
+          source: "MEMORY" as const,
+          content: "protect the paint",
         },
-      },
-      now: () => now,
-    });
+      ],
+      officialContext: { observation: activation.observationCommitment },
+      fallbackDecision:
+        activation.role === "PLAYER"
+          ? { action: "HOLD" }
+          : activation.role === "COACH"
+            ? { instruction: "RETAIN_CURRENT_TACTIC_AND_LINEUP" }
+            : activation.role === "REFEREE"
+              ? { call: "NO_CALL" }
+              : { ruling: "NO_REVIEW" },
+      kernelHash: sha256Commitment("kernel-v2"),
+      toolHash: sha256Commitment("career-tools-v2"),
+    };
+  },
+};
 
-    expect(result.modelAttempted).toBe(true);
-    expect(result.modelDecisionAccepted).toBe(false);
-    expect(result.decision.intent).toEqual({
-      windowId: activation.windowId,
-      playerId: activation.observation.playerId,
-      action: "HOLD",
-    });
-    expect(result.decision.receipt.fallbackUsed).toBe(true);
-    expect(result.decision.receipt.normalizedResourceUnits).toBe(0);
-  });
+function decisionFor(role: RoleActivation["role"]): unknown {
+  if (role === "PLAYER") return { action: "SHOOT", shot: "LAYUP" };
+  if (role === "COACH") return { instruction: "PACE", targetPlayerIds: ["H1"] };
+  if (role === "REFEREE") return { call: "NO_CALL", confidenceBps: 8_000 };
+  return {
+    ruling: "CONFIRM",
+    reviewable: true,
+    evidenceCommitment: sha256Commitment("replay evidence"),
+  };
+}
 
-  it("rejects the wrong coordinator and expired windows", async () => {
-    const wrongSigner = createSigningIdentity(`0x${"3".repeat(64)}`);
-    const wrong = await activationCommand(wrongSigner);
-    const expired = await activationCommand(
-      coordinator,
-      "2026-08-26T12:00:00.500Z",
+async function relayFor(
+  role: RoleActivation["role"],
+): Promise<CareerRelayClient> {
+  let result: InferenceResult | null = null;
+  return {
+    async transition() {},
+    async enqueue(request: InferenceRequest) {
+      const sealed = await sealRunnerResult({
+        requestId: request.requestId,
+        activationId: request.activation.activationId,
+        careerDid,
+        runnerId: "runner-1",
+        recipientPublicKey: careerEncryption.publicKey,
+        result: decisionFor(role),
+      });
+      const resultCommitment = sha256Commitment({
+        requestId: request.requestId,
+        activationId: request.activation.activationId,
+        ciphertextCommitment: sealed.ciphertextCommitment,
+        completedAt,
+      });
+      result = {
+        schemaVersion: "1.0.0",
+        resultId: uuid(5),
+        requestId: request.requestId,
+        activationId: request.activation.activationId,
+        careerDid,
+        runnerId: "runner-1",
+        ciphertext: sealed.ciphertext,
+        ciphertextBytes: sealed.ciphertextBytes,
+        ciphertextCommitment: sealed.ciphertextCommitment,
+        aadCommitment: sealed.aadCommitment,
+        providerProductModel: "codex/gpt-5.6-sol",
+        provenanceLevel: "PRODUCT_SURFACE_REPORTED",
+        ambientProductContext: "DISCLOSED_PRODUCT_CONTEXT",
+        startedAt: "2026-08-26T12:00:01.000Z",
+        completedAt,
+        usage: null,
+        delegateSignature: await signRunnerRequest(runner.privateKey, {
+          runnerId: "runner-1",
+          careerDid,
+          delegationId: uuid(3),
+          method: "RESULT_ATTESTATION",
+          path: request.activation.activationId,
+          bodyCommitment: resultCommitment,
+          nonce: "0",
+          idempotencyKey: request.requestId,
+          timestamp: completedAt,
+        }),
+      };
+      return "CREATED";
+    },
+    async result() {
+      return result;
+    },
+  };
+}
+
+function identity(role: RoleActivation["role"]) {
+  return {
+    ...career,
+    candidateDid: careerDid,
+    applicationId: uuid(6),
+    role,
+    encryptionSecretKey: careerEncryption.secretKey,
+    encryptionPublicKey:
+      `0x${Buffer.from(careerEncryption.publicKey).toString("hex")}` as const,
+  };
+}
+
+describe("distributed career cognition runtime", () => {
+  it("excludes case-restricted context and verifies retrieved bytes", () => {
+    const allowedBytes = Buffer.from("switch every screen", "utf8");
+    const allowed = {
+      kind: "MEMORY" as const,
+      objectId: "strategy-1",
+      domainId: "career-domain-1",
+      version: 1,
+      contentCommitment: sha256Bytes(allowedBytes),
+      disclosureClass: "COMPETITIVE_SEALED" as const,
+      tags: ["player"],
+    };
+    const selected = selectCompetitionCatalogEntries(
+      [
+        allowed,
+        {
+          ...allowed,
+          objectId: "restricted-1",
+          disclosureClass: "CASE_RESTRICTED",
+        },
+      ],
+      new Set(["player"]),
     );
-    const modelClient: CareerModelClient = {
-      async decide() {
-        throw new Error("must not be invoked");
-      },
-    };
+    expect(selected.map(({ objectId }) => objectId)).toEqual(["strategy-1"]);
+    expect(
+      verifyCatalogPlaintext(allowed, allowedBytes.toString("base64")),
+    ).toEqual(allowedBytes);
+    expect(() =>
+      verifyCatalogPlaintext(
+        allowed,
+        Buffer.from("tampered", "utf8").toString("base64"),
+      ),
+    ).toThrow("commitment mismatch");
+  });
 
-    await expect(
-      executeCareerPlayerActivation({
-        command: wrong.command,
-        identity: identity(wrong.activation.candidateDid),
+  for (const role of ["PLAYER", "COACH", "REFEREE", "REPLAY"] as const) {
+    it(`accepts one delegate result and career-signs the ${role.toLowerCase()} decision`, async () => {
+      const { command } = await activationCommand(role);
+      const result = await executeDistributedCareerActivation({
+        command,
+        identity: identity(role),
         coordinatorDid,
         coordinatorSignerAddress: coordinator.address,
         domain,
-        modelClient,
+        runner: {
+          delegation: await delegation(),
+          runnerBuildDigest: sha256Commitment("runner-v2"),
+          adapterBuildDigest: sha256Commitment(`adapter:${role}`),
+        },
+        contextProvider,
+        relay: await relayFor(role),
         now: () => now,
-      }),
-    ).rejects.toThrow("authority is invalid");
+      });
+      expect(result).toMatchObject({
+        role,
+        state: "CAREER_SIGNED",
+        participantInferenceAttempted: true,
+        participantResultAccepted: true,
+        decision: { receipt: { fallback: "NONE" } },
+      });
+      expect(result.decision.authorizationEvent.aggregateId).toBe(
+        role === "PLAYER"
+          ? "H1"
+          : role === "COACH"
+            ? "window-1"
+            : "possession-1",
+      );
+      expect(result.decision.authorizationEvent.eventType).toBe(
+        role === "PLAYER"
+          ? "ActionIntentSubmitted"
+          : role === "COACH"
+            ? "CoachInstructionSubmitted"
+            : role === "REFEREE"
+              ? "RefereeDecisionSubmitted"
+              : "ReplayDecisionSubmitted",
+      );
+      expect(result.decision.authorizationEvent.aggregateVersion).toBe("1");
+      expect(() => JSON.stringify(result)).not.toThrow();
+      if (role === "REFEREE" || role === "REPLAY")
+        expect(result.decision).toMatchObject({
+          possessionId: "possession-1",
+        });
+      await expect(
+        recoverCanonicalEventSigner(
+          domain,
+          {
+            ...result.decision.authorizationEvent,
+            aggregateVersion: BigInt(
+              result.decision.authorizationEvent.aggregateVersion,
+            ),
+          } as CanonicalEvent,
+          result.decision.signature,
+        ),
+      ).resolves.toBe(career.address);
+    });
+  }
+
+  it("uses the career-owned HOLD fallback when no fresh runner lease exists", async () => {
+    const { command } = await activationCommand("PLAYER");
+    const result = await executeDistributedCareerActivation({
+      command,
+      identity: identity("PLAYER"),
+      coordinatorDid,
+      coordinatorSignerAddress: coordinator.address,
+      domain,
+      runner: null,
+      contextProvider,
+      relay: await relayFor("PLAYER"),
+      now: () => now,
+    });
+    expect(result).toMatchObject({
+      state: "FALLBACK_SIGNED",
+      participantInferenceAttempted: false,
+      participantResultAccepted: false,
+      decision: {
+        intent: { action: "HOLD" },
+        receipt: { fallback: "PLAYER_HOLD" },
+      },
+    });
+  });
+
+  it("recovers an unfinished signed activation with one deterministic expired-window fallback", async () => {
+    const { command, activation } = await activationCommand("PLAYER");
+    const result = await executeDistributedCareerActivation({
+      command,
+      identity: identity("PLAYER"),
+      coordinatorDid,
+      coordinatorSignerAddress: coordinator.address,
+      domain,
+      runner: {
+        delegation: await delegation(),
+        runnerBuildDigest: sha256Commitment("runner-v2"),
+        adapterBuildDigest: sha256Commitment("adapter:recovery"),
+      },
+      contextProvider,
+      relay: await relayFor("PLAYER"),
+      now: () => Date.parse(activation.deadlineAt) + 60_000,
+      expiredFallbackWindowMs: 120_000,
+    });
+    expect(result).toMatchObject({
+      state: "FALLBACK_SIGNED",
+      participantInferenceAttempted: false,
+      participantResultAccepted: false,
+      decision: {
+        intent: { action: "HOLD" },
+        receipt: {
+          completedAt: activation.deadlineAt,
+          fallback: "PLAYER_HOLD",
+        },
+      },
+    });
+  });
+
+  it("rejects an unfinished activation outside the bounded recovery window", async () => {
+    const { command, activation } = await activationCommand("PLAYER");
     await expect(
-      executeCareerPlayerActivation({
-        command: expired.command,
-        identity: identity(expired.activation.candidateDid),
+      executeDistributedCareerActivation({
+        command,
+        identity: identity("PLAYER"),
         coordinatorDid,
         coordinatorSignerAddress: coordinator.address,
         domain,
-        modelClient,
+        runner: null,
+        contextProvider,
+        relay: await relayFor("PLAYER"),
+        now: () => Date.parse(activation.deadlineAt) + 120_001,
+        expiredFallbackWindowMs: 120_000,
+      }),
+    ).rejects.toThrow("deadline is invalid");
+  });
+
+  for (const [role, fallback, decision] of [
+    [
+      "COACH",
+      "COACH_RETAIN",
+      { instruction: "RETAIN_CURRENT_TACTIC_AND_LINEUP" },
+    ],
+    ["REFEREE", "REFEREE_NO_CALL", { call: "NO_CALL" }],
+    ["REPLAY", "REPLAY_NO_REVIEW", { ruling: "NO_REVIEW" }],
+  ] as const) {
+    it(`uses the career-owned ${role.toLowerCase()} fallback without a runner`, async () => {
+      const { command } = await activationCommand(role);
+      const result = await executeDistributedCareerActivation({
+        command,
+        identity: identity(role),
+        coordinatorDid,
+        coordinatorSignerAddress: coordinator.address,
+        domain,
+        runner: null,
+        contextProvider,
+        relay: await relayFor(role),
+        now: () => now,
+      });
+      expect(result).toMatchObject({
+        state: "FALLBACK_SIGNED",
+        participantInferenceAttempted: false,
+        participantResultAccepted: false,
+        decision: { ...decision, receipt: { fallback } },
+      });
+    });
+  }
+
+  it("persists an agent-selected practice reflection after career signing", async () => {
+    const { command } = await activationCommand(
+      "PLAYER",
+      roleDecisionSchemaDigest("PLAYER"),
+      "PRACTICE",
+    );
+    const reflections: Parameters<
+      NonNullable<CareerContextProvider["persistReflection"]>
+    >[0][] = [];
+    const result = await executeDistributedCareerActivation({
+      command,
+      identity: identity("PLAYER"),
+      coordinatorDid,
+      coordinatorSignerAddress: coordinator.address,
+      domain,
+      runner: null,
+      contextProvider: {
+        ...contextProvider,
+        async persistReflection(reflection) {
+          reflections.push(reflection);
+        },
+      },
+      relay: await relayFor("PLAYER"),
+      now: () => now,
+    });
+    expect(result.state).toBe("FALLBACK_SIGNED");
+    expect(reflections).toHaveLength(1);
+    expect(reflections[0]).toMatchObject({
+      activation: { kind: "PRACTICE", role: "PLAYER" },
+      participantResultAccepted: false,
+      fallback: "PLAYER_HOLD",
+      selectedAt: new Date(now).toISOString(),
+    });
+    expect(reflections[0]?.decisionCommitment).toMatch(/^0x[0-9a-f]{64}$/u);
+  });
+
+  it("does not retry an already-signed practice decision when reflection storage is unavailable", async () => {
+    const { command } = await activationCommand(
+      "PLAYER",
+      roleDecisionSchemaDigest("PLAYER"),
+      "PRACTICE",
+    );
+    const result = await executeDistributedCareerActivation({
+      command,
+      identity: identity("PLAYER"),
+      coordinatorDid,
+      coordinatorSignerAddress: coordinator.address,
+      domain,
+      runner: null,
+      contextProvider: {
+        ...contextProvider,
+        async persistReflection() {
+          throw new Error("Agent Drive unavailable");
+        },
+      },
+      relay: await relayFor("PLAYER"),
+      now: () => now,
+    });
+    expect(result).toMatchObject({
+      state: "FALLBACK_SIGNED",
+      participantResultAccepted: false,
+      decision: { receipt: { fallback: "PLAYER_HOLD" } },
+    });
+  });
+
+  it("rejects a role activation signed by an unrecognized director", async () => {
+    const { command } = await activationCommand("PLAYER");
+    await expect(
+      executeDistributedCareerActivation({
+        command,
+        identity: identity("PLAYER"),
+        coordinatorDid,
+        coordinatorSignerAddress: createSigningIdentity().address,
+        domain,
+        runner: null,
+        contextProvider,
+        relay: await relayFor("PLAYER"),
         now: () => now,
       }),
-    ).rejects.toThrow("after its deadline");
+    ).rejects.toThrow("activation authority is invalid");
+  });
+
+  it("rejects a director-signed activation under the wrong role schema", async () => {
+    const { command } = await activationCommand(
+      "PLAYER",
+      roleDecisionSchemaDigest("COACH"),
+    );
+    await expect(
+      executeDistributedCareerActivation({
+        command,
+        identity: identity("PLAYER"),
+        coordinatorDid,
+        coordinatorSignerAddress: coordinator.address,
+        domain,
+        runner: null,
+        contextProvider,
+        relay: await relayFor("PLAYER"),
+        now: () => now,
+      }),
+    ).rejects.toThrow("activation authority is invalid");
   });
 });

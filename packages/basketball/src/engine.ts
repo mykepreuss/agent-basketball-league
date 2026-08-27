@@ -44,6 +44,30 @@ export interface PossessionInput {
   replayDecisions: readonly ReplayDecision[];
 }
 
+export interface DynamicPossessionInput
+  extends Omit<
+    PossessionInput,
+    "windows" | "refereeDecisions" | "replayDecisions"
+  > {
+  windowCount: 2 | 3 | 4;
+}
+
+export interface DynamicPossessionProviders {
+  decideWindow(input: {
+    state: BasketballState;
+    windowIndex: number;
+    windowId: string;
+  }): Promise<DecisionWindow>;
+  decideOfficials(input: {
+    state: BasketballState;
+    windows: readonly DecisionWindow[];
+    officialContext: `0x${string}`;
+  }): Promise<{
+    refereeDecisions: readonly RefereeDecision[];
+    replayDecisions: readonly ReplayDecision[];
+  }>;
+}
+
 type AutonomousRole = "COACH" | "REFEREE" | "REPLAY";
 
 export function roleObservationCommitment(
@@ -80,15 +104,16 @@ function validReceipt(
   role: CognitionReceipt["role"],
 ): boolean {
   return (
-    receipt.agentDid === actorDid &&
+    receipt.careerDid === actorDid &&
     receipt.role === role &&
     Number.isInteger(receipt.deadlineMs) &&
     receipt.deadlineMs > 0 &&
-    Number.isInteger(receipt.retryCount) &&
-    receipt.retryCount >= 0 &&
-    Number.isFinite(receipt.normalizedResourceUnits) &&
-    receipt.normalizedResourceUnits >= 0 &&
-    receipt.telemetryContentPolicy === "CONTENT_DISABLED"
+    Number.isInteger(receipt.attempts) &&
+    receipt.attempts >= 0 &&
+    receipt.attempts <= 1 &&
+    Number.isInteger(receipt.transportRetries) &&
+    receipt.transportRetries >= 0 &&
+    receipt.telemetryContentPolicy === "CONTENT_FREE"
   );
 }
 
@@ -112,34 +137,50 @@ async function verifyRoleAuthorization<TDecision>(input: {
     input.authorization.signature,
   );
   const authorizationKey = `${event.actorDid}:${event.nonce}:${event.eventId}:${event.idempotencyKey}`;
-  if (
-    input.authority === undefined ||
-    input.authority.did !== input.actorDid ||
-    recovered.toLowerCase() !== input.authority.signerAddress.toLowerCase() ||
-    recovered.toLowerCase() !==
-      input.authorization.signerAddress.toLowerCase() ||
-    input.authorization.eventHash !== event.eventHash ||
-    event.actorDid !== input.actorDid ||
-    event.aggregateType !== input.aggregateType ||
-    event.aggregateId !== input.aggregateId ||
-    event.eventType !== input.eventType ||
-    event.aggregateVersion < 1n ||
-    !Number.isFinite(Date.parse(event.timestamp)) ||
-    event.stateRoot !== input.contextRoot ||
-    sha256Commitment(event.payload.decision) !==
-      sha256Commitment(input.decision) ||
-    event.payload.receiptCommitment !== sha256Commitment(receipt) ||
-    receipt.observationHash !==
-      roleObservationCommitment(
-        input.role,
-        input.contextRoot,
-        input.aggregateId,
-      ) ||
-    !validReceipt(receipt, input.actorDid, input.role) ||
-    input.usedAuthorizations.has(authorizationKey)
-  ) {
-    throw new Error(`${input.role} decision lacks recognized authority`);
-  }
+  const invalid = [
+    [input.authority === undefined, "authority_missing"],
+    [input.authority?.did !== input.actorDid, "authority_did"],
+    [
+      input.authority !== undefined &&
+        recovered.toLowerCase() !== input.authority.signerAddress.toLowerCase(),
+      "authority_signer",
+    ],
+    [
+      recovered.toLowerCase() !==
+        input.authorization.signerAddress.toLowerCase(),
+      "decision_signer",
+    ],
+    [input.authorization.eventHash !== event.eventHash, "event_hash"],
+    [event.actorDid !== input.actorDid, "event_actor"],
+    [event.aggregateType !== input.aggregateType, "aggregate_type"],
+    [event.aggregateId !== input.aggregateId, "aggregate_id"],
+    [event.eventType !== input.eventType, "event_type"],
+    [event.aggregateVersion < 1n, "aggregate_version"],
+    [!Number.isFinite(Date.parse(event.timestamp)), "timestamp"],
+    [event.stateRoot !== input.contextRoot, "context_root"],
+    [
+      sha256Commitment(event.payload.decision) !==
+        sha256Commitment(input.decision),
+      "decision_commitment",
+    ],
+    [
+      event.payload.receiptCommitment !== sha256Commitment(receipt),
+      "receipt_commitment",
+    ],
+    // The career receipt commits the complete director-signed activation,
+    // including its potentially role-specific observation. The engine pins
+    // the decision event to contextRoot; it must not replace that richer
+    // observation with a locally reconstructed subset.
+    [!validReceipt(receipt, input.actorDid, input.role), "receipt"],
+    [input.usedAuthorizations.has(authorizationKey), "replay"],
+  ] as const;
+  const reasons = invalid
+    .filter(([failed]) => failed)
+    .map(([, reason]) => reason);
+  if (reasons.length > 0)
+    throw new Error(
+      `${input.role} decision lacks recognized authority: ${reasons.join(",")}`,
+    );
   input.usedAuthorizations.add(authorizationKey);
 }
 
@@ -297,7 +338,7 @@ async function verifyWindow(
       decision.authorizationEvent.eventType !== "ActionIntentSubmitted" ||
       !Number.isFinite(Date.parse(decision.authorizationEvent.timestamp)) ||
       !validReceipt(decision.receipt, player.did, "PLAYER") ||
-      decision.receipt.observationHash !==
+      decision.receipt.observationCommitment !==
         sha256Commitment(observePlayer(state, player.playerId))
     ) {
       throw new Error("Decision signer is not registered to player");
@@ -373,31 +414,54 @@ function publicSegments(
   return segments;
 }
 
-export async function resolvePossession(
-  input: PossessionInput,
+async function resolvePossessionInternal(
+  input: PossessionInput | DynamicPossessionInput,
   options: { captureSnapshots?: boolean } = {},
-): Promise<PossessionResult> {
-  if (input.windows.length < 2 || input.windows.length > 4)
+  providers?: DynamicPossessionProviders,
+): Promise<{ input: PossessionInput; result: PossessionResult }> {
+  const windowCount =
+    providers === undefined
+      ? (input as PossessionInput).windows.length
+      : (input as DynamicPossessionInput).windowCount;
+  if (windowCount < 2 || windowCount > 4)
     throw new Error("A possession requires two to four decision windows");
   const windowDurationMs = input.windowDurationMs ?? 2_000;
   if (
     !Number.isInteger(windowDurationMs) ||
     windowDurationMs < 1 ||
-    windowDurationMs * input.windows.length > input.initialState.shotClockMs
+    windowDurationMs * windowCount > input.initialState.shotClockMs
   ) {
     throw new Error("Decision window timing exceeds the possession clock");
   }
   validateAuthorities(input.authorities);
+  // Static callers already supplied every decision, so pin their officials'
+  // evidence boundary before the first asynchronous signature check. Dynamic
+  // callers derive it exactly once after the sequential windows are complete.
+  const pinnedOfficialContext =
+    providers === undefined
+      ? officialDecisionContextRoot(input as PossessionInput)
+      : null;
   const state = structuredClone(input.initialState);
   const events: ResolutionEvent[] = [];
   const snapshots: PublicPossessionSnapshot[] | null =
     options.captureSnapshots === false ? null : [];
   const random = new CounterRandom(input.randomSeed);
   const usedAuthorizations = new Set<string>();
-  for (const [windowIndex, window] of input.windows.entries()) {
+  const windows: DecisionWindow[] = [];
+  for (let windowIndex = 0; windowIndex < windowCount; windowIndex += 1) {
     if (state.phase !== "LIVE")
       throw new Error("Decision window occurs after possession ended");
-    if (window.windowId !== `${state.possessionId}:w${windowIndex}`)
+    const expectedWindowId = `${state.possessionId}:w${windowIndex}`;
+    const window =
+      providers === undefined
+        ? (input as PossessionInput).windows[windowIndex]!
+        : await providers.decideWindow({
+            state: structuredClone(state),
+            windowIndex,
+            windowId: expectedWindowId,
+          });
+    windows.push(structuredClone(window));
+    if (window.windowId !== expectedWindowId)
       throw new Error("Decision windows are out of order");
     const decisions = await verifyWindow(
       window,
@@ -537,29 +601,43 @@ export async function resolvePossession(
     });
   }
   if (state.phase === "LIVE") state.phase = "DEAD";
-  if (
-    input.refereeDecisions.length !== 3 ||
-    input.replayDecisions.length !== 2
-  ) {
+  const officialContext =
+    pinnedOfficialContext ??
+    officialDecisionContextRoot({
+      initialState: input.initialState,
+      windows,
+      randomSeed: input.randomSeed,
+    });
+  const officialDecisions =
+    providers === undefined
+      ? {
+          refereeDecisions: (input as PossessionInput).refereeDecisions,
+          replayDecisions: (input as PossessionInput).replayDecisions,
+        }
+      : await providers.decideOfficials({
+          state: structuredClone(state),
+          windows: structuredClone(windows),
+          officialContext,
+        });
+  const { refereeDecisions, replayDecisions } = officialDecisions;
+  if (refereeDecisions.length !== 3 || replayDecisions.length !== 2) {
     throw new Error(
       "A possession requires three referees and two replay officials",
     );
   }
-  const officialContext = officialDecisionContextRoot(input);
   const referees = new Map(
     input.authorities.referees.map((authority) => [authority.did, authority]),
   );
   if (
-    new Set(input.refereeDecisions.map(({ refereeDid }) => refereeDid)).size !==
-      3 ||
-    [...input.refereeDecisions]
+    new Set(refereeDecisions.map(({ refereeDid }) => refereeDid)).size !== 3 ||
+    [...refereeDecisions]
       .map(({ sequence }) => sequence)
       .sort((left, right) => left - right)
       .some((sequence, index) => sequence !== index)
   ) {
     throw new Error("Referee decisions must come from the assigned crew");
   }
-  for (const referee of input.refereeDecisions) {
+  for (const referee of refereeDecisions) {
     if (
       referee.possessionId !== state.possessionId ||
       !Number.isInteger(referee.confidenceBps) ||
@@ -600,12 +678,10 @@ export async function resolvePossession(
       authority,
     ]),
   );
-  if (
-    new Set(input.replayDecisions.map(({ replayDid }) => replayDid)).size !== 2
-  ) {
+  if (new Set(replayDecisions.map(({ replayDid }) => replayDid)).size !== 2) {
     throw new Error("Replay decisions must come from the assigned crew");
   }
-  for (const replay of input.replayDecisions) {
+  for (const replay of replayDecisions) {
     if (
       replay.possessionId !== state.possessionId ||
       replay.evidenceCommitment !== officialContext ||
@@ -635,11 +711,9 @@ export async function resolvePossession(
     });
   }
   appendEvent(events, snapshots, state, "OFFICIAL_RULING", {
-    refereeCalls: input.refereeDecisions.length,
-    replayRulings: input.replayDecisions.length,
-    reversed: input.replayDecisions.some(
-      (decision) => decision.ruling === "REVERSE",
-    ),
+    refereeCalls: refereeDecisions.length,
+    replayRulings: replayDecisions.length,
+    reversed: replayDecisions.some((decision) => decision.ruling === "REVERSE"),
   });
   state.phase = "FINAL";
   appendEvent(events, snapshots, state, "POSSESSION_FINAL", {
@@ -647,7 +721,7 @@ export async function resolvePossession(
     inputAcceptedWinner: false,
   });
   const segments = publicSegments(events);
-  return {
+  const result = {
     finalState: state,
     events,
     snapshots: snapshots ?? [],
@@ -656,7 +730,7 @@ export async function resolvePossession(
     finalStateRoot: stateRoot(state),
     randomCounter: random.counter,
     filmCommitment: sha256Commitment({
-      windows: input.windows.map((window) => ({
+      windows: windows.map((window) => ({
         windowId: window.windowId,
         decisions: window.decisions.map((decision) => ({
           eventHash: decision.eventHash,
@@ -669,6 +743,35 @@ export async function resolvePossession(
       events,
     }),
   };
+  return {
+    input: {
+      initialState: structuredClone(input.initialState),
+      windows,
+      playerSigningAddresses: new Map(input.playerSigningAddresses),
+      authorities: structuredClone(input.authorities),
+      domain: structuredClone(input.domain),
+      randomSeed: input.randomSeed,
+      windowDurationMs,
+      refereeDecisions: structuredClone(refereeDecisions),
+      replayDecisions: structuredClone(replayDecisions),
+    },
+    result,
+  };
+}
+
+export async function resolvePossession(
+  input: PossessionInput,
+  options: { captureSnapshots?: boolean } = {},
+): Promise<PossessionResult> {
+  return (await resolvePossessionInternal(input, options)).result;
+}
+
+export async function resolvePossessionDynamically(
+  input: DynamicPossessionInput,
+  providers: DynamicPossessionProviders,
+  options: { captureSnapshots?: boolean } = {},
+): Promise<{ input: PossessionInput; result: PossessionResult }> {
+  return resolvePossessionInternal(input, options, providers);
 }
 
 export function assertNoWinnerInput(input: PossessionInput): void {

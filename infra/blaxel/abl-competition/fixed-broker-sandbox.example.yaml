@@ -13,7 +13,7 @@ spec:
     allowedDomains:
       - ${ABL_CORE_HOST}
       - ${ABL_PRIVATE_HOST}
-      - ${ABL_MODEL_HOST}
+      - ${ABL_COGNITION_RELAY_HOST}
     proxy:
       routing: []
       bypass: []
@@ -55,11 +55,14 @@ spec:
       - name: ABL_PRIVATE_ACCESS_TOKEN_B64
         value: ${ABL_PRIVATE_ACCESS_TOKEN_B64}
         secret: true
-      - name: ABL_MODEL_ORIGIN
-        value: ${ABL_MODEL_ORIGIN}
+      - name: ABL_COGNITION_RELAY_ORIGIN
+        value: ${ABL_COGNITION_RELAY_ORIGIN}
         secret: false
-      - name: ABL_MODEL_ROUTE_MODE
+      - name: ABL_COGNITION_RELAY_ROUTE_MODE
         value: ENABLED
+        secret: false
+      - name: ABL_CANONICAL_SIGNING_MODE
+        value: DISABLED
         secret: false
       - name: ABL_AGENT_DID
         value: ${ABL_AGENT_DID}
@@ -82,14 +85,11 @@ spec:
       - name: ABL_SERVICE_CREDENTIAL_B64
         value: ${ABL_SERVICE_CREDENTIAL_B64}
         secret: true
-      - name: ABL_MODEL_CREDENTIAL_B64
-        value: ${ABL_MODEL_CREDENTIAL_B64}
+      - name: ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64
+        value: ${ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64}
         secret: true
       - name: ABL_DOMAIN_KEY_B64
         value: ${ABL_DOMAIN_KEY_B64}
-        secret: true
-      - name: ABL_AGENT_SIGNING_KEY_B64
-        value: ${ABL_AGENT_SIGNING_KEY_B64}
         secret: true
       - name: ABL_DOMAIN_CHAIN_ID
         value: ${ABL_DOMAIN_CHAIN_ID}

@@ -5,8 +5,10 @@ import {
   FINALIZED_GAME_SCHEMA_DIGEST,
   GAME_FINALIZED_EVENT_TYPE,
   finalizedGameStateRoot,
+  isRoleCompleteFoundingExhibitionFinalizer,
   replayFinalizedGamePayload,
   requireFinalizedGameEvidence,
+  requireFinalizedGamePossessionEvidence,
   requireFinalizedGameScheduleEvidence,
   type FinalizedGameEvidenceReader,
   type FinalizedGameScheduleEvidenceReader,
@@ -19,7 +21,10 @@ import {
   type CanonicalStore,
 } from "@abl/database";
 import { assessGenesisStartupEvidence } from "@abl/launch";
-import { validatePossessionResolvedPayload } from "@abl/projections";
+import {
+  createCanonicalPossessionEvidenceReader,
+  validatePossessionResolvedPayload,
+} from "@abl/projections";
 import {
   recoverCanonicalEventSigner,
   sha256Commitment,
@@ -338,6 +343,7 @@ function commandValidationError(message: string): Error {
 function roleCommandAggregateTypes(roleClass: string): readonly string[] {
   switch (roleClass) {
     case "PLAYER":
+      return ["game-possession", FINALIZED_GAME_AGGREGATE_TYPE];
     case "COACH":
     case "REFEREE":
     case "REPLAY_OFFICIAL":
@@ -601,23 +607,33 @@ export function createLiveCoreApi(
           );
         }
       } else {
-        if (
-          finalizedGames === undefined ||
-          !finalizedGames.finalizerDids.has(event.actorDid)
-        ) {
-          throw authorizationError(
-            "Actor is not a configured finalized-game authority",
-          );
-        }
+        if (finalizedGames === undefined)
+          throw authorizationError("Finalized-game authority is unavailable");
         try {
           UuidV7Schema.parse(event.eventId);
           UuidV7Schema.parse(event.idempotencyKey);
           UuidV7Schema.parse(event.aggregateId);
           const replayed = replayFinalizedGamePayload(event.payload);
-          await requireFinalizedGameEvidence(
-            replayed.payload,
-            finalizedGames.evidence,
+          const configuredFinalizer = finalizedGames.finalizerDids.has(
+            event.actorDid,
           );
+          const foundingParticipantFinalizer =
+            isRoleCompleteFoundingExhibitionFinalizer(
+              replayed.payload,
+              event.actorDid,
+            );
+          if (!configuredFinalizer && !foundingParticipantFinalizer)
+            throw new Error("Actor is not a finalized-game authority");
+          if (configuredFinalizer)
+            await requireFinalizedGameEvidence(
+              replayed.payload,
+              finalizedGames.evidence,
+            );
+          else
+            await requireFinalizedGamePossessionEvidence(
+              replayed.payload,
+              createCanonicalPossessionEvidenceReader(options.store),
+            );
           await requireFinalizedGameScheduleEvidence(
             replayed.payload,
             finalizedGames.scheduleEvidence,

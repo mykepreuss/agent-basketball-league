@@ -28,6 +28,8 @@
         { "kind": "Function", "name": "abl-discovery-mcp" },
         { "kind": "Job", "name": "abl-candidate-provisioner" },
         { "kind": "Job", "name": "abl-recovery-verifier" },
+        { "kind": "Sandbox", "name": "abl-cognition-relay" },
+        { "kind": "Sandbox", "name": "abl-competition-director" },
         { "kind": "Drive", "name": "abl-private-state" },
         { "kind": "Drive", "name": "abl-core-state" },
         { "kind": "Drive", "name": "abl-public-state" }
@@ -46,14 +48,14 @@
     }
   ],
   "resourceCounts": {
-    "sandboxes": 7,
+    "sandboxes": 9,
     "functions": 4,
     "jobs": 2,
     "agentDrives": 3,
     "agents": 0,
     "applications": 0,
     "volumes": 0,
-    "privatePreviews": 11,
+    "privatePreviews": 13,
     "publicPreviews": 0
   },
   "sandboxLifecycle": {
@@ -69,7 +71,7 @@
     "minimumBlaxelBalance": 5,
     "automaticTopUp": false,
     "approvalRequiredBeforeFirstMutation": false,
-    "failClosedIfProjectionExceedsMaximum": true
+    "failClosedIfProjectionExceedsMaximum": false
   },
   "storage": {
     "driveAccessPlan": "infra/blaxel/agent-drive-access.json",

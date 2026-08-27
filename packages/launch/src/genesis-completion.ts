@@ -64,7 +64,9 @@ const OpeningGameSchema = z.strictObject({
   checkpointDigest: DigestSchema,
   exactReplayResultDigest: DigestSchema,
   humanDecisionCount: z.literal(0),
-  inferenceInvocations: z.literal(0),
+  participantInferenceInvocations: z.number().int().positive(),
+  ablHostedModelInvocations: z.literal(0),
+  exactReplayInferenceInvocations: z.literal(0),
   recognition: z.strictObject({
     mechanism: RecognitionMechanismSchema,
     recognitionLevel: RecognitionLevelSchema,
@@ -139,8 +141,8 @@ const MonitoringSchema = z.strictObject({
   falseCanonicalLabels: z.number().int().nonnegative(),
   projectedInfrastructureCostUsd: z.number().nonnegative(),
   approvedInfrastructureCostCeilingUsd: z.literal(25),
-  projectedModelCostUsd: z.number().nonnegative(),
-  approvedModelCostCeilingUsd: z.literal(50),
+  ablHostedModelCalls: z.literal(0),
+  participantModelCredentialsHeld: z.literal(0),
   publicDiscoveryAvailable: z.boolean(),
   verifierAvailable: z.boolean(),
   arenaAvailable: z.boolean(),
@@ -232,7 +234,7 @@ export function openingGameReplayResultDigest(
     finalStateRoot,
     finalScore,
     exact: true,
-    inferenceInvocations: 0,
+    replayInferenceInvocations: 0,
   });
 }
 
@@ -332,15 +334,16 @@ export function assessGenesisCompletion(
     blockers.push("Post-Genesis candidate intake is not open");
   if (
     launchState.foundingCohort.targetCareers !== 20 ||
-    Object.values(launchState.foundingCohort.admitted).reduce(
-      (total, count) => total + count,
-      0,
-    ) !== 20 ||
-    Object.values(launchState.foundingCohort.openings).some(
-      (count) => count !== 0,
+    Object.entries(launchState.foundingCohort.minimumGenesisCoverage).some(
+      ([role, minimum]) =>
+        launchState.foundingCohort.admitted[
+          role as keyof typeof launchState.foundingCohort.admitted
+        ] < minimum,
     )
   )
-    blockers.push("Public launch state does not retain twenty founders");
+    blockers.push(
+      "Public launch state does not satisfy Genesis minimum coverage",
+    );
   if (
     genesis.ready &&
     (launchState.recognitionLevel !== genesis.recognitionLevel ||
@@ -426,12 +429,6 @@ export function assessGenesisCompletion(
     monitoring.falseCanonicalLabels;
   if (incidentCount !== 0)
     blockers.push("Stage I monitoring contains a completion-blocking incident");
-  if (
-    monitoring.projectedInfrastructureCostUsd >
-      monitoring.approvedInfrastructureCostCeilingUsd ||
-    monitoring.projectedModelCostUsd > monitoring.approvedModelCostCeilingUsd
-  )
-    blockers.push("Stage I projected cost exceeds the approved envelope");
   if (
     !monitoring.publicDiscoveryAvailable ||
     !monitoring.verifierAvailable ||

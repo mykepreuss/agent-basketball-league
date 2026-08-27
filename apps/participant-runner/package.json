@@ -1,0 +1,37 @@
+{
+  "name": "@abl/participant-runner",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "abl-runner": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist coverage *.tsbuildinfo",
+    "start": "node dist/cli.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@abl/cognition": "workspace:*",
+    "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
+    "@noble/hashes": "catalog:",
+    "uuid": "catalog:",
+    "viem": "catalog:",
+    "yaml": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

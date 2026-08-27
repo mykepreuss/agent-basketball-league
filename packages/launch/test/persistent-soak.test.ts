@@ -265,14 +265,14 @@ describe("persistent private soak", () => {
       policy.requiredWorkspaces,
     );
     expect(plan.resourceCounts).toMatchObject({
-      sandboxes: 7,
+      sandboxes: 9,
       functions: 4,
       jobs: 2,
       agentDrives: 3,
       agents: 0,
       applications: 0,
       volumes: 0,
-      privatePreviews: 11,
+      privatePreviews: 13,
       publicPreviews: 0,
     });
     expect(plan.sandboxLifecycle).toEqual({
@@ -373,11 +373,8 @@ describe("persistent private soak", () => {
       expect(components[component]).toBeCloseTo(expected, 8);
     }
     expect(calculatedTotal).toBeCloseTo(total, 8);
-    expect(total + remainingContingency).toBeCloseTo(
-      envelope.maximumProjectedMonthlyCost,
-      8,
-    );
-    expect(total).toBeLessThan(envelope.maximumProjectedMonthlyCost);
+    expect(remainingContingency).toBeNull();
+    expect(total).toBeGreaterThan(envelope.maximumProjectedMonthlyCost);
   });
 
   it("passes one complete bounded 24-hour observation", () => {

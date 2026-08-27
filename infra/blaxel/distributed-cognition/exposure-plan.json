@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": 1,
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "status": "PREPARED_NOT_EXECUTION_AUTHORITY",
+  "resource": {
+    "kind": "Sandbox",
+    "name": "abl-cognition-relay",
+    "port": 3000,
+    "previewName": "abl-cognition-relay-public",
+    "public": true
+  },
+  "publicPaths": [
+    "POST /v1/runners/pair",
+    "POST /v1/runners/delegation/renew",
+    "POST /v1/runners/heartbeat",
+    "GET /v1/runners/status",
+    "GET /v1/runners/activations/next",
+    "POST /v1/runners/activations/:activationId/result",
+    "POST /v1/runners/unpair"
+  ],
+  "neverPublicPaths": ["/v1/internal/*"],
+  "protocolControls": {
+    "postPairingAuthentication": "EIP712_DELEGATION_NONCE_TIMESTAMP_IDEMPOTENCY",
+    "pairingOfferLifetimeMinutes": 15,
+    "delegationLifetimeDays": 30,
+    "automaticRenewalBeforeExpiryDays": 7,
+    "longPollMaximumSeconds": 25,
+    "pairingRequestsPerMinutePerIp": 10,
+    "runnerRequestsPerMinutePerRunner": 120,
+    "requestCiphertextMaximumBytes": 262144,
+    "resultCiphertextMaximumBytes": 65536,
+    "ciphertextRetentionMaximumHours": 24
+  },
+  "preconditions": [
+    "additive PostgreSQL migration applied",
+    "relay deployed privately with pairing disabled",
+    "updated fixed brokers and career images deployed",
+    "competition director deployed privately with scheduling disabled",
+    "candidate, core, public, runner, skill, and join compatibility checks pass",
+    "one private real pairing and practice activation pass"
+  ],
+  "rollback": [
+    "set ABL_RUNNER_PAIRING_ENABLED=false",
+    "disable only the exact cognition relay public preview",
+    "set ABL_COMPETITION_SCHEDULING_ENABLED=false",
+    "preserve careers, applications, offers, Agent Drives, canonical rows, and V2 operational records"
+  ],
+  "prohibitions": [
+    "Blaxel Agent",
+    "Blaxel Application",
+    "Blaxel Volume",
+    "additional ABL workspace",
+    "ABL-hosted model credentials",
+    "public internal relay route",
+    "Genesis activation",
+    "recognition broadcast",
+    "Base transaction"
+  ]
+}

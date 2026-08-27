@@ -242,6 +242,9 @@ importers:
       "@abl/career":
         specifier: workspace:*
         version: link:../../packages/career
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
       "@abl/launch":
         specifier: workspace:*
         version: link:../../packages/launch
@@ -299,11 +302,45 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
 
+  apps/cognition-relay:
+    dependencies:
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      fastify:
+        specifier: "catalog:"
+        version: 5.11.3
+      postgres:
+        specifier: "catalog:"
+        version: 3.4.9
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
+    devDependencies:
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
   apps/competition-director:
     dependencies:
       "@abl/basketball":
         specifier: workspace:*
         version: link:../../packages/basketball
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
       "@abl/recognition":
         specifier: workspace:*
         version: link:../../packages/recognition
@@ -313,6 +350,12 @@ importers:
       "@blaxel/core":
         specifier: 0.3.13
         version: 0.3.13(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))(bufferutil@4.0.7)(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(utf-8-validate@6.0.3)
+      fastify:
+        specifier: "catalog:"
+        version: 5.11.3
+      postgres:
+        specifier: "catalog:"
+        version: 3.4.9
       viem:
         specifier: "catalog:"
         version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
@@ -429,11 +472,54 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
 
+  apps/participant-runner:
+    dependencies:
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      "@noble/hashes":
+        specifier: "catalog:"
+        version: 2.3.0
+      uuid:
+        specifier: "catalog:"
+        version: 14.0.1
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
+      yaml:
+        specifier: "catalog:"
+        version: 2.9.0
+      zod:
+        specifier: "catalog:"
+        version: 4.4.3
+    devDependencies:
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
   apps/private-storage-broker:
     dependencies:
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
       "@abl/foundation":
         specifier: workspace:*
         version: link:../../packages/foundation
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../../packages/recognition
       "@abl/storage":
         specifier: workspace:*
         version: link:../../packages/storage
@@ -558,6 +644,9 @@ importers:
       "@abl/career":
         specifier: workspace:*
         version: link:../../packages/career
+      "@abl/cognition":
+        specifier: workspace:*
+        version: link:../../packages/cognition
       "@abl/launch":
         specifier: workspace:*
         version: link:../../packages/launch
@@ -666,6 +755,37 @@ importers:
       zod:
         specifier: "catalog:"
         version: 4.4.3
+    devDependencies:
+      "@types/node":
+        specifier: "catalog:"
+        version: 26.2.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/cognition:
+    dependencies:
+      "@abl/recognition":
+        specifier: workspace:*
+        version: link:../recognition
+      "@abl/schemas":
+        specifier: workspace:*
+        version: link:../schemas
+      "@noble/curves":
+        specifier: "catalog:"
+        version: 2.3.0
+      "@noble/hashes":
+        specifier: "catalog:"
+        version: 2.3.0
+      libsodium-wrappers-sumo:
+        specifier: "catalog:"
+        version: 0.8.4
+      viem:
+        specifier: "catalog:"
+        version: 2.55.13(bufferutil@4.0.7)(typescript@6.0.3)(utf-8-validate@6.0.3)(zod@4.4.3)
     devDependencies:
       "@types/node":
         specifier: "catalog:"

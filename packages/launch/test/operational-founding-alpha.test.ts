@@ -204,7 +204,7 @@ const privateProofEvidence = {
   acceptedPath: {
     applicationId,
     careerDid: "did:abl:private-proof-career",
-    inferenceInvocations: 0,
+    ablHostedModelInvocations: 0,
     publicGameCount: 1,
     publicSegmentCount: 6,
     sseVerified: true,
@@ -252,10 +252,28 @@ function operationalEvidence() {
       },
       foundingCohort: {
         targetCareers: 20,
-        capacity: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
-        openings: { PLAYER: 9, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+        minimumGenesisCoverage: {
+          PLAYER: 10,
+          COACH: 2,
+          REFEREE: 6,
+          REPLAY_OFFICIAL: 2,
+        },
+        admissionCapacity: {
+          PLAYER: 16,
+          COACH: 2,
+          REFEREE: 6,
+          REPLAY_OFFICIAL: 2,
+        },
+        capacity: { PLAYER: 16, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+        openings: { PLAYER: 15, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
         offers: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
         admitted: { PLAYER: 1, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+        competitionReady: {
+          PLAYER: 0,
+          COACH: 0,
+          REFEREE: 0,
+          REPLAY_OFFICIAL: 0,
+        },
         activeGames: 0,
         offerWindowHours: 72,
         selection: "RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE",
@@ -373,10 +391,8 @@ function operationalEvidence() {
       falseGenesisClaims: 0,
       projectedInfrastructureCostUsd: 24,
       approvedInfrastructureCostCeilingUsd: 25,
-      projectedModelCostUsd: 49,
-      approvedModelCostCeilingUsd: 50,
-      projectedCareerModelCostUsd: 19,
-      approvedCareerModelCostCeilingUsd: 20,
+      ablHostedModelCalls: 0,
+      participantModelCredentialsHeld: 0,
       blaxelBalanceUsd: 10,
       minimumBlaxelBalanceUsd: 5,
       automaticTopUp: false,
@@ -481,7 +497,7 @@ describe("Operational Founding Alpha completion", () => {
       candidateIntake: { mode: "CAPPED_PUBLIC" },
       foundingCohort: {
         admitted: { PLAYER: 1 },
-        openings: { PLAYER: 9 },
+        openings: { PLAYER: 15 },
       },
       foundingConvention: { liveFounders: 1 },
       blockingReasons: [],
@@ -520,7 +536,7 @@ describe("Operational Founding Alpha completion", () => {
     );
   });
 
-  it("rejects inconsistent role accounting and budget or incident drift", () => {
+  it("rejects inconsistent role accounting or incident drift", () => {
     const evidence = operationalEvidence();
     const result = assessOperationalFoundingAlpha(
       inputs({
@@ -546,7 +562,6 @@ describe("Operational Founding Alpha completion", () => {
       expect.arrayContaining([
         "Founding role accounting differs for PLAYER",
         "Operational monitoring contains a completion-blocking incident",
-        "Operational projected cost exceeds an approved ceiling",
       ]),
     );
   });

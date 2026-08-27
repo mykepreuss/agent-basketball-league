@@ -18,6 +18,7 @@ import {
   AgentManifestSchema,
   CandidateProvenanceSchema,
   SchemaVersion,
+  type PlayerPositionProfile,
 } from "@abl/schemas";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -434,6 +435,14 @@ describe("candidate provisioner private boundary", () => {
     const stoppedProcesses: string[] = [];
     const processInputs: Array<Record<string, unknown>> = [];
     const previewNames: string[] = [];
+    const playerPositionProfile: PlayerPositionProfile = {
+      primaryPosition: "PG",
+      eligiblePositions: ["PG", "SG"],
+      profileCommitment: sha256Commitment({
+        primaryPosition: "PG",
+        eligiblePositions: ["PG", "SG"],
+      }),
+    };
     let processReadbacks = 0;
     let transientBrokerFailure = true;
     const factory: CandidateSandboxFactory = {
@@ -450,14 +459,15 @@ describe("candidate provisioner private boundary", () => {
               { name: "HOST", value: "0.0.0.0", secret: false },
               { name: "PORT", value: "3000", secret: false },
               {
-                name: "ABL_MODEL_CREDENTIAL_B64",
+                name: "ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64",
                 value: expect.any(String),
                 secret: true,
               },
             ]),
           );
           expect(resource.spec.network?.allowedDomains).toEqual([
-            "run.blaxel.ai",
+            "relay.example",
+            "private-storage.example",
           ]);
         }
         if (name === candidateSandboxName(applicationId)) {
@@ -466,10 +476,20 @@ describe("candidate provisioner private boundary", () => {
           );
           expect(resource.spec.runtime?.envs).toEqual(
             expect.arrayContaining([
-              { name: "ABL_COGNITION_MODE", value: "ENABLED", secret: false },
+              {
+                name: "ABL_COGNITION_MODE",
+                value: "PARTICIPANT_CONTROLLED",
+                secret: false,
+              },
               {
                 name: "ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON",
-                value: '["proxy:model"]',
+                value:
+                  '["proxy:cognition-relay","storage:get","storage:put","storage:delete","context:inspect"]',
+                secret: false,
+              },
+              {
+                name: "ABL_PLAYER_POSITION_PROFILE_JSON",
+                value: JSON.stringify(playerPositionProfile),
                 secret: false,
               },
             ]),
@@ -548,13 +568,19 @@ describe("candidate provisioner private boundary", () => {
       coreOrigin: "https://core.example/",
       corePreviewToken: "core-preview-token-with-at-least-32-bytes",
       candidateCommandDomain: registration.domain,
-      foundingCognition: {
-        modelOrigin: "https://run.blaxel.ai/",
-        modelPathPrefix: "/agent-basketball-league/models/founding-player",
-        modelCredential: "m".repeat(48),
-        modelWorkspace: "agent-basketball-league",
+      distributedCognition: {
+        relayOrigin: "https://relay.example/",
+        relayInternalToken: "r".repeat(48),
+        runnerBundleDigest: `0x${"f".repeat(64)}`,
+        careerPairingInternalToken: "p".repeat(48),
         coordinatorDid: "did:abl:competition-director",
         coordinatorSignerAddress: runtime.signing.address,
+        privateStorageOrigin: "https://private-storage.example/",
+        privateStoragePreviewToken: "s".repeat(48),
+        storageServiceId: "abl-career-storage-gateway",
+        storageServiceCredentialBase64: Buffer.from(
+          "career-storage-service-credential-0001",
+        ).toString("base64"),
       },
       factory,
     });
@@ -563,6 +589,7 @@ describe("candidate provisioner private boundary", () => {
         applicationId,
         candidateDid,
         roleClass: "PLAYER",
+        playerPositionProfile,
         formerOperatorSigningAddress: registration.applicant.address,
         commandCommitment: hash("e"),
         candidateCommand: registration.command,
@@ -577,6 +604,7 @@ describe("candidate provisioner private boundary", () => {
         applicationId,
         candidateDid,
         roleClass: "PLAYER",
+        playerPositionProfile,
         formerOperatorSigningAddress: registration.applicant.address,
         commandCommitment: hash("e"),
         candidateCommand: registration.command,
@@ -745,8 +773,8 @@ describe("candidate provisioner private boundary", () => {
     await app.close();
   });
 
-  it("caps the founding assignment registry at twenty unique careers", () => {
-    const assignments = Array.from({ length: 21 }, (_, index) =>
+  it("caps the founding assignment registry at twenty-six unique careers", () => {
+    const assignments = Array.from({ length: 27 }, (_, index) =>
       assignment(
         `0198e000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`,
         `capacity-${index + 1}`,

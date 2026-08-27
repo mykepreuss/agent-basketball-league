@@ -5,7 +5,7 @@ import { assessFoundingSeason } from "../src/founding-season.js";
 const fullCoverage = {
   PLAYER: 10,
   COACH: 2,
-  REFEREE: 3,
+  REFEREE: 6,
   REPLAY_OFFICIAL: 2,
 } as const;
 
@@ -27,14 +27,14 @@ describe("founding season", () => {
 
     expect(state.state).toBe("OPEN");
     expect(state.nextObjective).toBe(
-      "Admit ten independently controlled founding careers",
+      "Admit twenty independently controlled founding careers",
     );
     expect(state.readyForGenesis).toBe(false);
   });
 
   it("becomes Genesis-ready from objective league evidence alone", () => {
     const state = assessFoundingSeason({
-      independentFounderCount: 17,
+      independentFounderCount: 20,
       admittedByRole: fullCoverage,
       foundingConstitutionRatified: true,
       openingGame: {
@@ -52,7 +52,7 @@ describe("founding season", () => {
 
   it("preserves the completed Founding Season after Genesis", () => {
     const state = assessFoundingSeason({
-      independentFounderCount: 17,
+      independentFounderCount: 20,
       admittedByRole: fullCoverage,
       foundingConstitutionRatified: true,
       openingGame: {

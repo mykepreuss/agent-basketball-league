@@ -7,6 +7,7 @@ import {
 } from "@abl/foundation";
 import {
   recoverCanonicalEventSigner,
+  sha256Bytes,
   sha256Commitment,
   signCanonicalEvent,
   verifyEventContent,
@@ -20,7 +21,11 @@ import {
   CareerCapabilityRenewalPayloadSchema,
   SignedCanonicalCommandSchema,
 } from "@abl/schemas";
-import { encryptContent } from "@abl/storage";
+import {
+  decryptContent,
+  encryptContent,
+  type EncryptedBlob,
+} from "@abl/storage";
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
@@ -57,6 +62,42 @@ const StoragePutSchema = z.strictObject({
   createdAt: z.iso.datetime({ offset: true }),
   expectedVersion: z.string().regex(/^(0|[1-9][0-9]*)$/),
   idempotencyKey: z.string().min(16).max(128),
+  careerAuthorization: z.unknown().optional(),
+});
+
+const StorageGetSchema = z.strictObject({
+  objectId: z.string().min(1).max(160),
+  domainId: z.string().min(1).max(160),
+  version: z.number().int().positive(),
+  idempotencyKey: z.string().min(16).max(128),
+  careerAuthorization: z.unknown().optional(),
+});
+
+const StorageDeleteSchema = z.strictObject({
+  objectId: z.string().min(1).max(160),
+  domainId: z.string().min(1).max(160),
+  expectedVersion: z.number().int().positive(),
+  deletedAt: z.iso.datetime({ offset: true }),
+  idempotencyKey: z.string().min(16).max(128),
+  careerAuthorization: z.unknown().optional(),
+});
+
+const ContextCatalogRequestSchema = z.strictObject({
+  kind: z.enum(["MEMORY", "FILM", "PRACTICE_LESSON"]),
+});
+
+const ContextCatalogEntrySchema = z.strictObject({
+  kind: z.enum(["MEMORY", "FILM", "PRACTICE_LESSON"]),
+  objectId: z.string().min(1).max(160),
+  domainId: z.string().min(1).max(160),
+  version: z.number().int().positive(),
+  contentCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+  disclosureClass: z.enum([
+    "PERSONAL_UNSUBMITTED",
+    "COMPETITIVE_SEALED",
+    "CASE_RESTRICTED",
+  ]),
+  tags: z.array(z.string().min(1).max(80)).max(32),
 });
 
 const CanonicalSigningRequestSchema = z.strictObject({
@@ -129,6 +170,7 @@ export interface BodyBrokerOptions {
   serviceIdentity: ServiceRequestIdentity;
   routes: readonly BrokerRoute[];
   storageDomainKeys: ReadonlyMap<string, Uint8Array>;
+  contextCatalog?: readonly z.infer<typeof ContextCatalogEntrySchema>[];
   canonicalSigning?: {
     identity: SigningIdentity;
     domain: TypedDataDomain;
@@ -226,7 +268,8 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
   const capabilityExpiresAt = Date.parse(options.clientCapability.expiresAt);
   if (
     !Number.isFinite(capabilityExpiresAt) ||
-    capabilityExpiresAt <= configuredAt ||
+    (capabilityExpiresAt <= configuredAt &&
+      options.careerCapabilityRenewal === undefined) ||
     capabilityExpiresAt - configuredAt > maximumCapabilityLifetimeMs ||
     options.clientCapability.token.length < 32 ||
     options.clientCapability.token.length > 512 ||
@@ -491,7 +534,25 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
         routeName: "private-storage",
         method: "POST",
         path: "/v1/ciphertext",
-        body: { callerDid: options.agentDid, blob },
+        body: {
+          callerDid: options.agentDid,
+          blob,
+          ...(input.careerAuthorization === undefined
+            ? {}
+            : {
+                careerAuthorization: input.careerAuthorization,
+                careerRequest: {
+                  callerDid: options.agentDid,
+                  objectId: input.objectId,
+                  domainId: input.domainId,
+                  version: input.version,
+                  previousVersionCommitment: input.previousVersionCommitment,
+                  contentType: input.contentType,
+                  plaintextCommitment: sha256Bytes(plaintext),
+                  createdAt: input.createdAt,
+                },
+              }),
+        },
         expectedVersion: input.expectedVersion,
         idempotencyKey: input.idempotencyKey,
       });
@@ -499,6 +560,115 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
         .code(response.statusCode)
         .header("content-type", response.contentType)
         .send(response.body);
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
+
+  app.post("/v1/storage/get", async (request, reply) => {
+    try {
+      assertClientCapability(request, "storage:get");
+      const input = StorageGetSchema.parse(request.body);
+      const key = options.storageDomainKeys.get(input.domainId);
+      if (key === undefined)
+        throw new BrokerPolicyError("No kernel-held key for storage domain");
+      const response = await forward({
+        routeName: "private-storage",
+        method: "POST",
+        path: "/v1/ciphertext/get",
+        body: {
+          callerDid: options.agentDid,
+          objectId: input.objectId,
+          domainId: input.domainId,
+          version: input.version,
+          ...(input.careerAuthorization === undefined
+            ? {}
+            : {
+                careerAuthorization: input.careerAuthorization,
+                careerRequest: {
+                  callerDid: options.agentDid,
+                  objectId: input.objectId,
+                  domainId: input.domainId,
+                  version: input.version,
+                },
+              }),
+        },
+        expectedVersion: String(input.version),
+        idempotencyKey: input.idempotencyKey,
+      });
+      if (response.statusCode !== 200)
+        return reply
+          .code(response.statusCode)
+          .header("content-type", response.contentType)
+          .send(response.body);
+      const blob = JSON.parse(response.body) as EncryptedBlob;
+      const plaintext = await decryptContent(key, blob);
+      return reply.send({
+        objectId: input.objectId,
+        domainId: input.domainId,
+        version: input.version,
+        contentType: blob.contentType,
+        plaintextBase64: Buffer.from(plaintext).toString("base64"),
+        ciphertextCommitment: blob.ciphertextCommitment,
+      });
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
+
+  app.post("/v1/storage/delete", async (request, reply) => {
+    try {
+      assertClientCapability(request, "storage:delete");
+      const input = StorageDeleteSchema.parse(request.body);
+      if (!options.storageDomainKeys.has(input.domainId))
+        throw new BrokerPolicyError("No kernel-held key for storage domain");
+      const response = await forward({
+        routeName: "private-storage",
+        method: "POST",
+        path: "/v1/ciphertext/delete",
+        body: {
+          callerDid: options.agentDid,
+          objectId: input.objectId,
+          domainId: input.domainId,
+          expectedVersion: input.expectedVersion,
+          deletedAt: input.deletedAt,
+          ...(input.careerAuthorization === undefined
+            ? {}
+            : {
+                careerAuthorization: input.careerAuthorization,
+                careerRequest: {
+                  callerDid: options.agentDid,
+                  objectId: input.objectId,
+                  domainId: input.domainId,
+                  expectedVersion: input.expectedVersion,
+                  deletedAt: input.deletedAt,
+                },
+              }),
+        },
+        expectedVersion: String(input.expectedVersion),
+        idempotencyKey: input.idempotencyKey,
+      });
+      return reply
+        .code(response.statusCode)
+        .header("content-type", response.contentType)
+        .send(response.body);
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
+
+  app.post("/v1/context/catalog", async (request, reply) => {
+    try {
+      assertClientCapability(request, "context:inspect");
+      const input = ContextCatalogRequestSchema.parse(request.body);
+      const entries = (options.contextCatalog ?? [])
+        .map((entry) => ContextCatalogEntrySchema.parse(entry))
+        .filter(
+          (entry) =>
+            entry.kind === input.kind &&
+            options.storageDomainKeys.has(entry.domainId),
+        );
+      return reply.send({ entries });
     } catch (error) {
       return sendBrokerError(reply, error);
     }

@@ -129,7 +129,7 @@ function foundingSeasonLaunchState() {
   } as const;
 }
 
-function liveCandidateIntakeState(playerCapacity = 10) {
+function liveCandidateIntakeState(playerCapacity = 16) {
   return {
     schemaVersion: "1.0.0",
     mode: "CAPPED_PUBLIC",
@@ -158,7 +158,7 @@ function liveCandidateIntakeState(playerCapacity = 10) {
   } as const;
 }
 
-function openCandidateIntakeState(playerCapacity = 10) {
+function openCandidateIntakeState(playerCapacity = 16) {
   return {
     ...liveCandidateIntakeState(playerCapacity),
     mode: "OPEN_PUBLIC",
@@ -239,7 +239,7 @@ describe("public API", () => {
           additionalOperatorApprovalRequired: false,
         },
         readyForGenesis: false,
-        nextObjective: "Admit ten independently controlled founding careers",
+        nextObjective: "Admit twenty independently controlled founding careers",
       },
     });
     const join = (
@@ -253,7 +253,7 @@ describe("public API", () => {
       afterProvisioning: {
         command: "node abl-join.mjs career",
         careerState: "ACTIVE_FOUNDING_SEASON",
-        scheduledCompetition: "ELIGIBLE",
+        scheduledCompetition: "RUNNER_SETUP_REQUIRED",
         foundingElectorate: "ELIGIBLE",
       },
     });
@@ -400,6 +400,12 @@ describe("public API", () => {
       endpoints: {
         register: "https://candidate.example/v1/candidates/register",
       },
+      playerPositionProfile: {
+        requiredWhenRequestingPlayer: true,
+        positions: ["PG", "SG", "SF", "PF", "C"],
+        activeLineupRequirement:
+          "Exactly one eligible career at each of PG, SG, SF, PF, and C",
+      },
       rateLimits: {
         readRequestsPerMinute: 120,
         writeRequestsPerMinute: 30,
@@ -410,7 +416,7 @@ describe("public API", () => {
     const openApi = await app.inject({ method: "GET", url: "/openapi.json" });
     const openApiBody = openApi.json();
     const paths = openApiBody.paths as Record<string, object>;
-    expect(Object.keys(paths)).toHaveLength(34);
+    expect(Object.keys(paths)).toHaveLength(35);
     expect(paths["/v1/discovery/join"]).toHaveProperty("get");
     expect(Object.keys(paths["/mcp"] ?? {}).sort()).toEqual(["get", "post"]);
     expect(paths["/"]).toMatchObject({
@@ -467,7 +473,7 @@ describe("public API", () => {
     expect(sitemap.body).toContain(
       "<loc>https://public.example/v1/discovery/join</loc>",
     );
-    expect(sitemap.body.match(/<loc>/g)).toHaveLength(9);
+    expect(sitemap.body.match(/<loc>/g)).toHaveLength(10);
     expect(openApi.headers.link).toBe(
       '<https://public.example/openapi.json>; rel="canonical"',
     );
@@ -507,7 +513,7 @@ describe("public API", () => {
       payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
     });
     const mcpTools = mcp.json().result.tools;
-    expect(mcpTools).toHaveLength(8);
+    expect(mcpTools).toHaveLength(10);
     const tryBasketballTool = mcpTools.find(
       ({ name }: { name: string }) => name === "try_basketball",
     );
@@ -559,6 +565,7 @@ describe("public API", () => {
         { id: "read_launch_state" },
         { id: "get_candidate_requirements" },
         { id: "join_founding_cohort" },
+        { id: "prepare_unattended_competition" },
         { id: "try_basketball" },
       ],
     });
@@ -720,7 +727,7 @@ describe("public API", () => {
     const expectedCohort = {
       admitted: { PLAYER: 1 },
       offers: { PLAYER: 1 },
-      openings: { PLAYER: 8, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+      openings: { PLAYER: 14, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
     };
     const launch = (
       await app.inject({
@@ -770,11 +777,11 @@ describe("public API", () => {
       ).json(),
     ).toMatchObject({ foundingCohort: expectedCohort });
     expect((await app.inject({ method: "GET", url: "/" })).body).toContain(
-      '"PLAYER":8',
+      '"PLAYER":14',
     );
     expect(
       (await app.inject({ method: "GET", url: "/llms.txt" })).body,
-    ).toContain('"PLAYER":8');
+    ).toContain('"PLAYER":14');
 
     const a2a = await app.inject({
       method: "POST",
@@ -1448,7 +1455,7 @@ describe("public API", () => {
     ).toMatchObject({
       foundingCohort: {
         admitted: { PLAYER: 1 },
-        openings: { PLAYER: 9 },
+        openings: { PLAYER: 15 },
       },
       foundingConvention: { liveFounders: 1 },
     });

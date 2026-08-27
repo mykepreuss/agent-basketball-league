@@ -8,12 +8,22 @@ import {
   type ServiceRequestIdentity,
 } from "@abl/foundation";
 import {
+  createCareerStorageAuthorization,
+  personalCareerDomainId,
+} from "@abl/cognition";
+import {
+  createSigningIdentity,
+  sha256Bytes,
+  sha256Commitment,
+} from "@abl/recognition";
+import {
   CiphertextBroker,
   DriveCiphertextRepository,
   encryptContent,
   generateDomainKey,
   type StorageDomainPolicy,
 } from "@abl/storage";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createPrivateStorageBroker } from "../src/server.js";
@@ -28,6 +38,11 @@ const verificationIdentity: ServiceRequestIdentity = {
   serviceId: "core-memory-verifier",
   secret: new TextEncoder().encode("memory-verifier-transport-secret-0001"),
   capabilities: new Set(["private:commitment:verify"]),
+};
+const careerGatewayIdentity: ServiceRequestIdentity = {
+  serviceId: "abl-career-storage-gateway",
+  secret: new TextEncoder().encode("career-storage-gateway-secret-0001"),
+  capabilities: new Set(["private:ciphertext"]),
 };
 const policy: StorageDomainPolicy = {
   domainId: "personal:agent-a",
@@ -114,6 +129,26 @@ function signed(
   };
 }
 
+function signedAs(
+  serviceIdentity: ServiceRequestIdentity,
+  body: unknown,
+  nonce: string,
+  expectedVersion: string,
+  path: string,
+): Record<string, string> {
+  return {
+    ...signServiceRequest(serviceIdentity, {
+      method: "POST",
+      path,
+      body: new TextEncoder().encode(JSON.stringify(body)),
+      nonce,
+      timestamp: new Date(now).toISOString(),
+      expectedVersion,
+      capability: "private:ciphertext",
+    }),
+  };
+}
+
 function verificationHeaders(
   body: unknown,
   nonce: string,
@@ -134,6 +169,140 @@ function verificationHeaders(
 }
 
 describe("private ciphertext broker service", () => {
+  it("lazily provisions one personal domain only with career-root authorization", async () => {
+    const root = await mkdtemp(join(tmpdir(), "abl-career-storage-"));
+    const repository = new DriveCiphertextRepository(root);
+    await repository.initialize();
+    const broker = new CiphertextBroker();
+    const app = createPrivateStorageBroker({
+      broker,
+      repository,
+      verifier: new ServiceRequestVerifier([careerGatewayIdentity], {
+        now: () => now,
+      }),
+      serviceActorBindings: new Map([
+        [careerGatewayIdentity.serviceId, "did:abl:career-storage-gateway"],
+      ]),
+    });
+    apps.push(app);
+
+    const career = createSigningIdentity();
+    const careerDid = "did:abl:career-storage-test";
+    const createdAt = new Date(now).toISOString();
+    const identityMessage = {
+      applicationId: "0198e000-0000-7000-8000-000000000501",
+      candidateDid: careerDid,
+      roleClass: "PLAYER" as const,
+      signingAddress: career.address,
+      signingKeyAttestation: sha256Commitment("storage-signing"),
+      encryptionKeyAttestation: sha256Commitment("storage-encryption"),
+      runtimeAttestationDigest: sha256Commitment("storage-runtime"),
+      createdAt,
+    };
+    const careerIdentity = {
+      schemaVersion: "1.0.0" as const,
+      ...identityMessage,
+      signingPublicKey: career.publicKey,
+      encryptionPublicKey: `0x${"2".repeat(64)}`,
+      generatedInIsolatedRuntime: true as const,
+      humanInputRoutes: [] as const,
+      proofSignature: await privateKeyToAccount(
+        career.privateKey,
+      ).signTypedData({
+        domain: {
+          name: "Agent Basketball League Career Runtime",
+          version: "1",
+          chainId: 1,
+        },
+        types: {
+          CandidateRuntimeIdentity: [
+            { name: "applicationId", type: "string" },
+            { name: "candidateDid", type: "string" },
+            { name: "roleClass", type: "string" },
+            { name: "signingAddress", type: "address" },
+            { name: "signingKeyAttestation", type: "bytes32" },
+            { name: "encryptionKeyAttestation", type: "bytes32" },
+            { name: "runtimeAttestationDigest", type: "bytes32" },
+            { name: "createdAt", type: "string" },
+          ],
+        },
+        primaryType: "CandidateRuntimeIdentity",
+        message: identityMessage,
+      }),
+    };
+    const domainId = personalCareerDomainId(careerDid);
+    const blob = await encryptContent({
+      key: await generateDomainKey(),
+      objectId: "career-foundation-v1",
+      domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: "application/json",
+      plaintext: new TextEncoder().encode('{"objective":"compete"}'),
+      createdAt,
+    });
+    const careerRequest = {
+      callerDid: careerDid,
+      objectId: blob.objectId,
+      domainId,
+      version: 1,
+      previousVersionCommitment: null,
+      contentType: blob.contentType,
+      plaintextCommitment: sha256Bytes(
+        new TextEncoder().encode('{"objective":"compete"}'),
+      ),
+      createdAt,
+    };
+    const careerAuthorization = await createCareerStorageAuthorization({
+      identity: careerIdentity,
+      privateKey: career.privateKey,
+      operation: "PUT",
+      request: careerRequest,
+      issuedAt: new Date().toISOString(),
+      nonce: "7001",
+    });
+    const body = {
+      callerDid: careerDid,
+      blob,
+      careerRequest,
+      careerAuthorization,
+    };
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext",
+      headers: signedAs(
+        careerGatewayIdentity,
+        body,
+        "service-career-storage-0001",
+        "0",
+        "/v1/ciphertext",
+      ),
+      payload: body,
+    });
+    expect(response.statusCode).toBe(201);
+    expect(broker.domainPolicy(domainId)).toMatchObject({
+      kind: "PERSONAL",
+      members: { [careerDid]: ["READ", "WRITE", "ADMIN"] },
+    });
+    await expect(repository.loadState()).resolves.toMatchObject({
+      policies: [{ domainId }],
+    });
+
+    const replay = await app.inject({
+      method: "POST",
+      url: "/v1/ciphertext",
+      headers: signedAs(
+        careerGatewayIdentity,
+        body,
+        "service-career-storage-0002",
+        "0",
+        "/v1/ciphertext",
+      ),
+      payload: body,
+    });
+    expect(replay.statusCode).toBe(403);
+  });
+
   it("accepts bound, signed ciphertext and persists exactly its commitment", async () => {
     const { app, repository } = await fixture();
     const key = await generateDomainKey();

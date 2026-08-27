@@ -161,18 +161,16 @@ function removeEnvironment(
   );
 }
 
-function disableModelRoute(manifest: Manifest): void {
+function removeModelRoute(manifest: Manifest): void {
   if (manifest.metadata.name !== "abl-alpha-r01-fixed-broker") return;
   if (manifest.spec.network?.allowedDomains !== undefined)
     manifest.spec.network.allowedDomains =
       manifest.spec.network.allowedDomains.filter(
         (domain) => !domain.includes("MODEL"),
       );
-  const envs = (manifest.spec.runtime.envs ?? []).filter(
+  manifest.spec.runtime.envs = (manifest.spec.runtime.envs ?? []).filter(
     ({ name }) => !name.startsWith("ABL_MODEL_"),
   );
-  envs.push({ name: "ABL_MODEL_ROUTE_MODE", value: "DISABLED", secret: false });
-  manifest.spec.runtime.envs = envs;
 }
 
 function configurePrivateServiceLinks(manifest: Manifest): void {
@@ -269,7 +267,7 @@ export async function renderFoundingAlphaManifests(outputPath?: string) {
     manifest.metadata.name = spec.targetName;
     manifest.spec.runtime.image = `\${${spec.imageEnvironmentName}}`;
     makePrivateAndBounded(manifest);
-    disableModelRoute(manifest);
+    removeModelRoute(manifest);
     configurePrivateServiceLinks(manifest);
     const contents = stringify(manifest, { lineWidth: 100 });
     const path = join(outputRoot, `${spec.targetName}.yaml`);

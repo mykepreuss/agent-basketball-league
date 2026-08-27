@@ -12,9 +12,12 @@
   },
   "dependencies": {
     "@abl/basketball": "workspace:*",
+    "@abl/cognition": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",
     "@blaxel/core": "0.3.13",
+    "fastify": "catalog:",
+    "postgres": "catalog:",
     "viem": "catalog:",
     "zod": "catalog:"
   },

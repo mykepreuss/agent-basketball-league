@@ -96,20 +96,36 @@ const controlPlane =
                 ) === "DISABLED"
                 ? {}
                 : {
-                    foundingCognition: {
-                      modelOrigin: required("ABL_CANDIDATE_MODEL_ORIGIN"),
-                      modelPathPrefix: required(
-                        "ABL_CANDIDATE_MODEL_PATH_PREFIX",
+                    distributedCognition: {
+                      relayOrigin: required(
+                        "ABL_CANDIDATE_COGNITION_RELAY_ORIGIN",
                       ),
-                      modelCredential: required(
-                        "ABL_CANDIDATE_MODEL_CREDENTIAL",
+                      relayInternalToken: required(
+                        "ABL_CANDIDATE_COGNITION_RELAY_INTERNAL_TOKEN",
                       ),
-                      modelWorkspace: required("ABL_CANDIDATE_MODEL_WORKSPACE"),
+                      runnerBundleDigest: required(
+                        "ABL_CANDIDATE_RUNNER_BUNDLE_DIGEST",
+                      ),
+                      careerPairingInternalToken: required(
+                        "ABL_CANDIDATE_CAREER_PAIRING_INTERNAL_TOKEN",
+                      ),
                       coordinatorDid: required(
                         "ABL_COMPETITION_COORDINATOR_DID",
                       ),
                       coordinatorSignerAddress: required(
                         "ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS",
+                      ),
+                      privateStorageOrigin: required(
+                        "ABL_CANDIDATE_PRIVATE_STORAGE_ORIGIN",
+                      ),
+                      privateStoragePreviewToken: required(
+                        "ABL_CANDIDATE_PRIVATE_STORAGE_PREVIEW_TOKEN",
+                      ),
+                      storageServiceId: required(
+                        "ABL_CANDIDATE_STORAGE_SERVICE_ID",
+                      ),
+                      storageServiceCredentialBase64: required(
+                        "ABL_CANDIDATE_STORAGE_SERVICE_CREDENTIAL_B64",
                       ),
                     },
                   }),

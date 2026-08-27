@@ -13,6 +13,7 @@
   "dependencies": {
     "@abl/basketball": "workspace:*",
     "@abl/career": "workspace:*",
+    "@abl/cognition": "workspace:*",
     "@abl/launch": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",

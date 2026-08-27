@@ -21,6 +21,10 @@ import { TeamSchema } from "./types.js";
 
 export const FINALIZED_GAME_AGGREGATE_TYPE = "finalized-game";
 export const GAME_FINALIZED_EVENT_TYPE = "GameFinalized";
+export const CAREER_GAME_FINALIZATION_PROPOSAL_AGGREGATE_TYPE =
+  "career-game-finalization-proposal";
+export const CAREER_GAME_FINALIZATION_PROPOSAL_EVENT_TYPE =
+  "CareerGameFinalizationProposed";
 
 export const FinalizedGameAuthorityDidsSchema = z
   .array(DidSchema)
@@ -172,9 +176,9 @@ export const AgentPlayedGameEvidenceSchema = z.strictObject({
   authorityEvidence: z
     .strictObject({
       participants: z.strictObject({
-        players: z.array(DidSchema).length(10),
+        players: z.array(DidSchema).min(10).max(16),
         coaches: z.array(DidSchema).length(2),
-        referees: z.array(DidSchema).length(6),
+        referees: z.array(DidSchema).min(3).max(6),
         replayOfficials: z.array(DidSchema).length(2),
       }),
       decisionRoots: z.strictObject({
@@ -189,7 +193,7 @@ export const AgentPlayedGameEvidenceSchema = z.strictObject({
       if (new Set(roleDids).size !== roleDids.length)
         context.addIssue({
           code: "custom",
-          message: "Founding exhibition roles require twenty distinct careers",
+          message: "Founding exhibition role careers must be distinct",
         });
       for (const [role, dids] of Object.entries(participants)) {
         if (new Set(dids).size !== dids.length)
@@ -223,7 +227,7 @@ export type AgentPlayedPossessionAuthorityDids = z.infer<
   typeof AgentPlayedPossessionAuthorityDidsSchema
 >;
 
-const AgentPlayedPossessionEvidenceSchema = z.strictObject({
+export const AgentPlayedPossessionEvidenceSchema = z.strictObject({
   possessionId: z.string().min(1).max(100),
   playerDecisionHashes: z.array(Sha256Schema).length(20),
   coachDecisionHashes: z.array(Sha256Schema).length(4),
@@ -372,10 +376,30 @@ export type AgentPlayedGameEvidence = z.infer<
 >;
 export type FinalizedGamePayload = z.infer<typeof FinalizedGamePayloadSchema>;
 
+export const CareerGameFinalizationProposalPayloadSchema = z.strictObject({
+  finalizedGame: FinalizedGamePayloadSchema,
+  recordedAt: IsoDateTimeSchema,
+});
+
+export const CAREER_GAME_FINALIZATION_PROPOSAL_SCHEMA_DIGEST = sha256Commitment(
+  {
+    protocol: "abl-career-game-finalization-proposal",
+    version: 1,
+    aggregateType: CAREER_GAME_FINALIZATION_PROPOSAL_AGGREGATE_TYPE,
+    eventType: CAREER_GAME_FINALIZATION_PROPOSAL_EVENT_TYPE,
+  },
+);
+
 export interface FinalizedGameEvidenceReader {
   finalizedGameEvidence(
     gameId: string,
   ): Promise<AgentPlayedGameEvidence | null>;
+}
+
+export interface FinalizedGamePossessionEvidenceReader {
+  finalizedGamePossessionEvidence(
+    gameId: string,
+  ): Promise<readonly AgentPlayedPossessionEvidence[] | null>;
 }
 
 export const FinalizedGameEvidenceRegistrySchema = z
@@ -392,7 +416,7 @@ function evidenceBody(evidence: AgentPlayedGameEvidence) {
   return body;
 }
 
-type AgentPlayedPossessionEvidence = z.infer<
+export type AgentPlayedPossessionEvidence = z.infer<
   typeof AgentPlayedPossessionEvidenceSchema
 >;
 
@@ -476,17 +500,20 @@ export function createAgentPlayedGameEvidence(input: {
   gameId: string;
   gameInput: FullGameInput;
   commands: readonly GameCommand[];
-  proof: ReturnType<FullGameEngine["proof"]>;
-  possessionProofs: readonly {
-    possessionId: string;
-    playerDecisionHashes: readonly Hex[];
-    coachDecisionHashes: readonly Hex[];
-    refereeDecisionHashes: readonly Hex[];
-    replayDecisionHashes: readonly Hex[];
-    authorityDids?: AgentPlayedPossessionAuthorityDids;
-    eventMerkleRoot: Hex;
-    finalStateRoot: Hex;
-  }[];
+  proof: FinalizedGamePayload["proof"] | ReturnType<FullGameEngine["proof"]>;
+  possessionProofs: readonly (
+    | AgentPlayedPossessionEvidence
+    | {
+        possessionId: string;
+        playerDecisionHashes: readonly Hex[];
+        coachDecisionHashes: readonly Hex[];
+        refereeDecisionHashes: readonly Hex[];
+        replayDecisionHashes: readonly Hex[];
+        authorityDids?: AgentPlayedPossessionAuthorityDids;
+        eventMerkleRoot: Hex;
+        finalStateRoot: Hex;
+      }
+  )[];
 }): AgentPlayedGameEvidence {
   const possessionProofs = z
     .array(AgentPlayedPossessionEvidenceSchema)
@@ -639,6 +666,18 @@ export function replayRoleCompleteFoundingExhibition(input: unknown): {
   return { ...replay, authorityEvidence };
 }
 
+export function isRoleCompleteFoundingExhibitionFinalizer(
+  payload: FinalizedGamePayload,
+  actorDid: string,
+): boolean {
+  return (
+    payload.competition === null &&
+    payload.agentEvidence.authorityEvidence?.participants.players.includes(
+      actorDid,
+    ) === true
+  );
+}
+
 export async function requireFinalizedGameEvidence(
   payload: FinalizedGamePayload,
   reader: FinalizedGameEvidenceReader,
@@ -650,6 +689,29 @@ export async function requireFinalizedGameEvidence(
   ) {
     throw new Error("Finalized game lacks independently registered evidence");
   }
+}
+
+export async function requireFinalizedGamePossessionEvidence(
+  payload: FinalizedGamePayload,
+  reader: FinalizedGamePossessionEvidenceReader | undefined,
+): Promise<void> {
+  const possessionProofs =
+    reader === undefined
+      ? null
+      : await reader.finalizedGamePossessionEvidence(payload.gameId);
+  if (possessionProofs === null)
+    throw new Error("Finalized game lacks canonical possession evidence");
+  const expected = createAgentPlayedGameEvidence({
+    gameId: payload.gameId,
+    gameInput: payload.input,
+    commands: payload.commands,
+    proof: payload.proof,
+    possessionProofs,
+  });
+  if (sha256Commitment(expected) !== sha256Commitment(payload.agentEvidence))
+    throw new Error(
+      "Finalized game evidence does not match canonical possessions",
+    );
 }
 
 export async function requireFinalizedGameScheduleEvidence(

@@ -36,7 +36,7 @@ const DeploymentMapSchema = z.strictObject({
   region: z.literal("us-was-1"),
   publicExposure: z.literal("NONE"),
   recursiveDirectoryApplyAllowed: z.literal(false),
-  workloads: z.array(WorkloadSchema).length(13),
+  workloads: z.array(WorkloadSchema).length(15),
   prohibitions: z.array(z.string().min(1)).min(1),
 });
 const ResourcePlanSchema = z
@@ -53,10 +53,10 @@ const ResourcePlanSchema = z
       }),
     ),
     resourceCounts: z.object({
-      sandboxes: z.literal(7),
+      sandboxes: z.literal(9),
       functions: z.literal(4),
       jobs: z.literal(2),
-      privatePreviews: z.literal(11),
+      privatePreviews: z.literal(13),
       publicPreviews: z.literal(0),
     }),
   })
@@ -64,7 +64,7 @@ const ResourcePlanSchema = z
 const CostEnvelopeSchema = z
   .object({
     usageCaps: z.object({
-      sandboxAllocatedGiB: z.literal(21),
+      sandboxAllocatedGiB: z.literal(25),
       mcpAllocatedGiB: z.literal(8),
       jobAllocatedGiB: z.literal(6),
     }),
@@ -132,6 +132,8 @@ const expectedTrustDomains = new Map<string, z.infer<typeof TrustDomainSchema>>(
     ["abl-discovery-mcp", "abl-public"],
     ["abl-candidate-provisioner", "abl-core"],
     ["abl-recovery-verifier", "abl-core"],
+    ["abl-cognition-relay", "abl-competition"],
+    ["abl-competition-director", "abl-competition"],
   ],
 );
 
@@ -165,7 +167,7 @@ export async function validatePersistentDeployment(
   const costEnvelope = CostEnvelopeSchema.parse(
     JSON.parse(costEnvelopeSource) as unknown,
   );
-  const expectedOrdinals = Array.from({ length: 13 }, (_, index) => index + 1);
+  const expectedOrdinals = Array.from({ length: 15 }, (_, index) => index + 1);
   if (
     JSON.stringify(deployment.workloads.map(({ ordinal }) => ordinal)) !==
     JSON.stringify(expectedOrdinals)
@@ -255,7 +257,8 @@ export async function validatePersistentDeployment(
       throw new Error(`Manifest memory differs for ${workload.name}`);
     if (manifest.spec.runtime.image !== `\${${workload.imageEnvironment}}`)
       throw new Error(`Manifest image input differs for ${workload.name}`);
-    if (workload.privateEndpoint !== (workload.kind !== "Job"))
+    const expectedPrivateEndpoint = workload.kind !== "Job";
+    if (workload.privateEndpoint !== expectedPrivateEndpoint)
       throw new Error(
         `Private endpoint classification differs for ${workload.name}`,
       );
@@ -281,6 +284,25 @@ export async function validatePersistentDeployment(
   if (candidateWorkspace !== "agent-basketball-league")
     throw new Error(
       "Candidate provisioner does not target agent-basketball-league",
+    );
+  const environmentValue = (
+    manifest: z.infer<typeof ManifestSchema>,
+    name: string,
+  ) => manifest.spec.runtime.envs?.find((entry) => entry.name === name)?.value;
+  const storageBroker = manifestsByName.get("abl-private-storage-broker");
+  if (
+    storageBroker === undefined ||
+    environmentValue(
+      storageBroker,
+      "ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64",
+    ) !== "${ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64}" ||
+    environmentValue(
+      candidateProvisioner,
+      "ABL_CANDIDATE_STORAGE_SERVICE_CREDENTIAL_B64",
+    ) !== "${ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64}"
+  )
+    throw new Error(
+      "Career storage gateway credential is not paired across provisioning and storage",
     );
 
   const privateEndpointCount = deployment.workloads.filter(

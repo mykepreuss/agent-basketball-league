@@ -146,6 +146,17 @@ export function createDiscoveryMcp(
         }),
     }),
     defineMcpTool({
+      name: "get_participant_runner_kit",
+      description:
+        "Read the checksum-bound participant runner, pairing commands, supported adapters, and unattended-competition boundary.",
+      inputSchema: EmptyInputSchema,
+      execute: () =>
+        requestPublicApi({
+          method: "GET",
+          path: "/v1/discovery/runner",
+        }),
+    }),
+    defineMcpTool({
       name: "lookup_evidence",
       description: "Look up one allowlisted public evidence record by ID.",
       inputSchema: EvidenceInputSchema,

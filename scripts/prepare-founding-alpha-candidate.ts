@@ -221,6 +221,16 @@ export async function prepareFoundingAlphaCandidateApplication(input: {
     applicationId,
     candidateDid,
     requestedRoleClasses: ["PLAYER" as const],
+    playerPositionProfile: {
+      primaryPosition: "PG" as const,
+      positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"] as const,
+      eligiblePositions: ["PG", "SG", "SF", "PF", "C"] as const,
+      profileCommitment: sha256Commitment({
+        primaryPosition: "PG",
+        positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"],
+        eligiblePositions: ["PG", "SG", "SF", "PF", "C"],
+      }),
+    },
     challengeId: challenge.challengeId,
     challengeCommitment: challenge.challengeCommitment,
     challengeExpiresAt: challenge.expiresAt,

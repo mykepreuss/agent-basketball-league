@@ -23,7 +23,7 @@ const FoundingRoleSchema = z.enum([
   "REPLAY_OFFICIAL",
 ]);
 const FoundingRoleCountsSchema = z.strictObject({
-  PLAYER: z.number().int().nonnegative().max(10),
+  PLAYER: z.number().int().nonnegative().max(16),
   COACH: z.number().int().nonnegative().max(2),
   REFEREE: z.number().int().nonnegative().max(6),
   REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
@@ -69,7 +69,7 @@ const PrivateProofSchema = z
       .object({
         applicationId: z.string().uuid(),
         careerDid: DidSchema,
-        inferenceInvocations: z.literal(0),
+        ablHostedModelInvocations: z.literal(0),
         publicGameCount: z.number().int().positive(),
         publicSegmentCount: z.number().int().positive(),
         sseVerified: z.literal(true),
@@ -195,10 +195,8 @@ export const OperationalFoundingAlphaEvidenceSchema = z
       falseGenesisClaims: z.number().int().nonnegative(),
       projectedInfrastructureCostUsd: z.number().nonnegative(),
       approvedInfrastructureCostCeilingUsd: z.literal(25),
-      projectedModelCostUsd: z.number().nonnegative(),
-      approvedModelCostCeilingUsd: z.literal(50),
-      projectedCareerModelCostUsd: z.number().nonnegative(),
-      approvedCareerModelCostCeilingUsd: z.literal(20),
+      ablHostedModelCalls: z.literal(0),
+      participantModelCredentialsHeld: z.literal(0),
       blaxelBalanceUsd: z.number().nonnegative(),
       minimumBlaxelBalanceUsd: z.literal(5),
       automaticTopUp: z.literal(false),
@@ -261,7 +259,7 @@ function failureResult(blockers: readonly string[]) {
 }
 
 const foundingCapacity = {
-  PLAYER: 10,
+  PLAYER: 16,
   COACH: 2,
   REFEREE: 6,
   REPLAY_OFFICIAL: 2,
@@ -491,7 +489,7 @@ export function assessOperationalFoundingAlpha(
 
   const cohort = launchState.foundingCohort;
   if (!sameRoleCounts(cohort.capacity, foundingCapacity))
-    blockers.push("Founding role capacity is not 10/2/6/2");
+    blockers.push("Founding admission capacity is not 16/2/6/2");
   for (const role of FoundingRoleSchema.options)
     if (
       cohort.openings[role] + cohort.offers[role] + cohort.admitted[role] !==
@@ -525,14 +523,6 @@ export function assessOperationalFoundingAlpha(
     blockers.push(
       "Operational monitoring contains a completion-blocking incident",
     );
-  if (
-    monitoring.projectedInfrastructureCostUsd >
-      monitoring.approvedInfrastructureCostCeilingUsd ||
-    monitoring.projectedModelCostUsd > monitoring.approvedModelCostCeilingUsd ||
-    monitoring.projectedCareerModelCostUsd >
-      monitoring.approvedCareerModelCostCeilingUsd
-  )
-    blockers.push("Operational projected cost exceeds an approved ceiling");
   if (monitoring.blaxelBalanceUsd < monitoring.minimumBlaxelBalanceUsd)
     blockers.push("Blaxel balance fell below the approved floor");
 

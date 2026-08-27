@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   createBlaxelUpstreamCredential,
   createBodyBroker,
+  type BodyBrokerOptions,
   type BrokerRoute,
 } from "./server.js";
 
@@ -88,8 +89,10 @@ function recognitionDomain() {
 
 const coreRouteEnabled = routeEnabled("ABL_CORE_ROUTE_MODE");
 const privateRouteEnabled = routeEnabled("ABL_PRIVATE_ROUTE_MODE");
-const modelRouteEnabled =
-  z.enum(["DISABLED", "ENABLED"]).parse(required("ABL_MODEL_ROUTE_MODE")) ===
+const cognitionRelayEnabled =
+  z
+    .enum(["DISABLED", "ENABLED"])
+    .parse(process.env.ABL_COGNITION_RELAY_ROUTE_MODE ?? "DISABLED") ===
   "ENABLED";
 const routes: BrokerRoute[] = [];
 if (coreRouteEnabled)
@@ -110,37 +113,17 @@ if (privateRouteEnabled)
     capability: "private:ciphertext",
     credential: upstreamCredential("ABL_PRIVATE"),
   });
-if (modelRouteEnabled) {
-  const modelPathPrefix = z
-    .string()
-    .regex(/^\/[A-Za-z0-9._~/-]+$/)
-    .refine(
-      (value) =>
-        value !== "/" &&
-        !value.endsWith("/") &&
-        !value.includes("//") &&
-        !value.includes(".."),
-    )
-    .parse(required("ABL_MODEL_PATH_PREFIX"));
-  const modelWorkspace = process.env.ABL_MODEL_WORKSPACE;
+if (cognitionRelayEnabled)
   routes.push({
-    name: "model",
-    targetOrigin: required("ABL_MODEL_ORIGIN"),
-    methods: new Set(["POST"]),
-    pathPrefixes: [`${modelPathPrefix}/v1/chat/completions`],
-    capability: "model:invoke",
-    credential:
-      modelWorkspace === undefined
-        ? {
-            authorization: `Bearer ${secretText("ABL_MODEL_CREDENTIAL")}`,
-          }
-        : createBlaxelUpstreamCredential({
-            mode: "BLAXEL_ACCESS_TOKEN",
-            token: secretText("ABL_MODEL_CREDENTIAL"),
-            workspace: modelWorkspace,
-          }),
+    name: "cognition-relay",
+    targetOrigin: required("ABL_COGNITION_RELAY_ORIGIN"),
+    methods: new Set(["GET", "POST"]),
+    pathPrefixes: ["/v1/internal"],
+    capability: "cognition:deliver",
+    credential: {
+      authorization: `Bearer ${secretText("ABL_COGNITION_RELAY_INTERNAL_TOKEN")}`,
+    },
   });
-}
 
 const domainId = privateRouteEnabled
   ? required("ABL_PERSONAL_DOMAIN_ID")
@@ -152,13 +135,21 @@ const canonicalSigningEnabled =
 const clientOperations = new Set<string>();
 if (canonicalSigningEnabled) clientOperations.add("canonical-event:sign");
 if (coreRouteEnabled) clientOperations.add("proxy:core");
-if (privateRouteEnabled) clientOperations.add("storage:put");
-if (modelRouteEnabled) clientOperations.add("proxy:model");
+if (privateRouteEnabled) {
+  clientOperations.add("storage:get");
+  clientOperations.add("storage:put");
+  clientOperations.add("storage:delete");
+  clientOperations.add("context:inspect");
+}
+if (cognitionRelayEnabled) clientOperations.add("proxy:cognition-relay");
 if (!canonicalSigningEnabled && routes.length === 0)
   clientOperations.add("runtime:health");
 const storageDomainKeys = new Map<string, Uint8Array>();
 if (domainId !== null)
   storageDomainKeys.set(domainId, secretBytes("ABL_DOMAIN_KEY"));
+const contextCatalog = JSON.parse(
+  process.env.ABL_CONTEXT_CATALOG_JSON ?? "[]",
+) as NonNullable<BodyBrokerOptions["contextCatalog"]>;
 const canonicalSigning = canonicalSigningEnabled
   ? {
       identity: createSigningIdentity(
@@ -185,6 +176,7 @@ const app = createBodyBroker({
   },
   routes,
   storageDomainKeys,
+  contextCatalog,
   ...(canonicalSigning === null ? {} : { canonicalSigning }),
   ...(z
     .enum(["DISABLED", "ENABLED"])

@@ -1,5 +1,5 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Job
+kind: Sandbox
 metadata:
   name: abl-competition-director
   labels:
@@ -9,14 +9,28 @@ metadata:
 spec:
   enabled: true
   region: us-was-1
+  network:
+    allowedDomains:
+      - ${ABL_NEON_HOST}
+      - ${ABL_CAREER_PRIVATE_DOMAIN}
   runtime:
-    generation: mk3
     image: ${ABL_COMPETITION_DIRECTOR_IMAGE_DIGEST}
     memory: 2048
-    maxConcurrentTasks: 4
-    timeout: 300
-    maxRetries: 0
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
+    terminationGracePeriodSeconds: 30
     envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: DATABASE_URL
+        value: ${ABL_COMPETITION_DATABASE_URL}
+        secret: true
       - name: ABL_COMPETITION_COORDINATOR_DID
         value: ${ABL_COMPETITION_COORDINATOR_DID}
         secret: false
@@ -26,20 +40,17 @@ spec:
       - name: ABL_COMPETITION_COMMAND_DOMAIN_JSON
         value: ${ABL_CANDIDATE_COMMAND_DOMAIN_JSON}
         secret: false
-      - name: ABL_COMPETITION_MODEL_NAME
-        value: ${ABL_COMPETITION_MODEL_NAME}
+      - name: ABL_CAREER_PAIRING_INTERNAL_TOKEN
+        value: ${ABL_CAREER_PAIRING_INTERNAL_TOKEN}
+        secret: true
+      - name: ABL_COMPETITION_INTERNAL_TOKEN
+        value: ${ABL_COMPETITION_INTERNAL_TOKEN}
+        secret: true
+      - name: ABL_COMPETITION_DIRECTOR_INSTANCE_ID
+        value: ${ABL_COMPETITION_DIRECTOR_INSTANCE_ID}
         secret: false
-      - name: ABL_COMPETITION_MODEL_PROVIDER
-        value: ${ABL_COMPETITION_MODEL_PROVIDER}
-        secret: false
-      - name: ABL_COMPETITION_MODEL_FAMILY
-        value: ${ABL_COMPETITION_MODEL_FAMILY}
-        secret: false
-      - name: ABL_COMPETITION_MODEL_REVISION
-        value: ${ABL_COMPETITION_MODEL_REVISION}
-        secret: false
-      - name: ABL_COMPETITION_MODEL_MAX_OUTPUT_TOKENS
-        value: "256"
+      - name: ABL_COMPETITION_SCHEDULING_ENABLED
+        value: "false"
         secret: false
       - name: DO_NOT_TRACK
         value: "1"
@@ -53,14 +64,3 @@ spec:
       - name: ABL_LOG_CONTENT
         value: "false"
         secret: false
-  triggers:
-    - id: founding-competition-twice-weekly
-      type: cron
-      enabled: ${ABL_COMPETITION_SCHEDULE_ENABLED}
-      configuration:
-        schedule: "0 2 * * 2,5"
-        tasks:
-          - action: RUN_SCHEDULED_CAREER_SESSION
-            sessionSeriesId: founding-competition
-            kind: COMPETITION
-            careerSandboxName: ${ABL_FOUNDING_PLAYER_SANDBOX_NAME}

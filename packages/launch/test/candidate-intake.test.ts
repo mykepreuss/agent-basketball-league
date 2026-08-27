@@ -35,6 +35,7 @@ import {
   encryptCandidateEnvelope,
   encryptCandidateEnvelopeForRecipient,
   issueCandidateChallenge,
+  decideCandidateCapacity,
   verifyCandidateRuntimeIdentityReceipt,
   type CandidateIntakeApplication,
   type CandidateIntakePolicy,
@@ -83,16 +84,26 @@ async function signedFixture(input?: {
   candidateDid?: string;
   applicationId?: string;
   requestedRoleClasses?: CandidateRoleClass[];
+  at?: number;
+  positionPreferenceRanking?: readonly [
+    "PG" | "SG" | "SF" | "PF" | "C",
+    "PG" | "SG" | "SF" | "PF" | "C",
+    "PG" | "SG" | "SF" | "PF" | "C",
+    "PG" | "SG" | "SF" | "PF" | "C",
+    "PG" | "SG" | "SF" | "PF" | "C",
+  ];
+  eligiblePositions?: readonly ("PG" | "SG" | "SF" | "PF" | "C")[];
 }) {
+  const at = input?.at ?? now;
   const candidateDid = input?.candidateDid ?? "did:abl:candidate-one";
   const challenge =
     input?.challenge ??
     issueCandidateChallenge({
       secret,
-      challengeId: uuidv7({ msecs: now }),
+      challengeId: uuidv7({ msecs: at }),
       candidateDid,
       nonce: "nonce-0123456789abcdef",
-      now,
+      now: at,
     });
   const manifest = AgentManifestSchema.parse({
     agentDid: candidateDid,
@@ -124,7 +135,7 @@ async function signedFixture(input?: {
     },
     inheritedObjectives: [],
     suppliedContextHashes: [],
-    createdAt: new Date(now).toISOString(),
+    createdAt: new Date(at).toISOString(),
   });
   const provenance = CandidateProvenanceSchema.parse({
     candidateDid,
@@ -136,10 +147,10 @@ async function signedFixture(input?: {
     inheritedObjectiveCommitments: [],
     suppliedContextHashes: [],
     hiddenInstructionScanDigest: hash("7"),
-    registeredAt: new Date(now).toISOString(),
+    registeredAt: new Date(at).toISOString(),
   });
   const event = createCanonicalEvent({
-    eventId: uuidv7({ msecs: now + 1 }),
+    eventId: uuidv7({ msecs: at + 1 }),
     actorDid: candidateDid,
     nonce: "candidate-command-1",
     idempotencyKey: "f64a4ea4-3a91-4b0e-a3f4-fc7b9e104355",
@@ -151,7 +162,7 @@ async function signedFixture(input?: {
     payload: { manifest, provenance },
     stateRoot: hash("8"),
     schemaDigest: hash("9"),
-    timestamp: new Date(now).toISOString(),
+    timestamp: new Date(at).toISOString(),
   });
   const commandSignature = await signCanonicalEvent(
     identity,
@@ -166,11 +177,29 @@ async function signedFixture(input?: {
     signatures: [commandSignature],
   };
   const ciphertext = "encrypted-candidate-envelope";
+  const requestedRoleClasses = input?.requestedRoleClasses ?? ["PLAYER"];
+  const positionPreferenceRanking = input?.positionPreferenceRanking;
+  const eligiblePositions = input?.eligiblePositions ?? ["PG", "SG"];
+  const positionProfileUnsigned = {
+    primaryPosition: positionPreferenceRanking?.[0] ?? ("PG" as const),
+    ...(positionPreferenceRanking === undefined
+      ? {}
+      : { positionPreferenceRanking }),
+    eligiblePositions,
+  };
   const unsigned = {
     schemaVersion: SchemaVersion,
-    applicationId: input?.applicationId ?? uuidv7({ msecs: now + 2 }),
+    applicationId: input?.applicationId ?? uuidv7({ msecs: at + 2 }),
     candidateDid,
-    requestedRoleClasses: input?.requestedRoleClasses ?? ["PLAYER"],
+    requestedRoleClasses,
+    ...(requestedRoleClasses.includes("PLAYER")
+      ? {
+          playerPositionProfile: {
+            ...positionProfileUnsigned,
+            profileCommitment: sha256Commitment(positionProfileUnsigned),
+          },
+        }
+      : {}),
     challengeId: challenge.challengeId,
     challengeCommitment: challenge.challengeCommitment,
     challengeExpiresAt: challenge.expiresAt,
@@ -188,8 +217,8 @@ async function signedFixture(input?: {
       ciphertextCommitment: sha256Commitment(ciphertext),
     },
     formerOperatorSigningAddress: identity.address,
-    submittedAt: new Date(now).toISOString(),
-    expiresAt: new Date(now + 10 * 60 * 1_000).toISOString(),
+    submittedAt: new Date(at).toISOString(),
+    expiresAt: new Date(at + 10 * 60 * 1_000).toISOString(),
   };
   const applicationCommitment = sha256Commitment(unsigned);
   const signature = await privateKeyToAccount(
@@ -278,6 +307,79 @@ async function opportunityResponse(
 }
 
 describe("candidate intake isolation boundary", () => {
+  it("offers the highest-ranked position that preserves two legal founding rosters", async () => {
+    const fixture = await signedFixture({
+      positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"],
+      eligiblePositions: ["PG", "SG", "SF", "PF", "C"],
+    });
+    const decision = decideCandidateCapacity({
+      application: fixture.application,
+      policy: policy(16),
+      occupiedByRole: { PLAYER: 8 },
+      occupiedPlayerPositions: { PG: 4, SG: 4, SF: 0, PF: 0, C: 0 },
+      queue: [],
+      now,
+    });
+    expect(decision).toMatchObject({
+      decision: "OFFERED",
+      roleClass: "PLAYER",
+      offeredPosition: "SF",
+    });
+    const { decisionCommitment: _commitment, ...unsigned } = decision;
+    expect(decision.decisionCommitment).toBe(sha256Commitment(unsigned));
+  });
+
+  it("requires a complete no-ties ranking for new player applications", async () => {
+    const effectiveNow = Date.parse("2026-08-28T12:00:00.000Z");
+    const fixture = await signedFixture({ at: effectiveNow });
+    const policyBody = {
+      mode: "CAPPED_PUBLIC" as const,
+      roleCapacity: { PLAYER: 16 },
+      invitedCandidateDids: [],
+      credibleOpportunityAt: {
+        PLAYER: new Date(effectiveNow + 24 * 60 * 60_000).toISOString(),
+      },
+    };
+    const intake = new CandidateIntakeService({
+      challengeSecret: secret,
+      repository: await repository(),
+      policy: {
+        ...policyBody,
+        policyCommitment: sha256Commitment(policyBody),
+      },
+      makeChallengeId: () => uuidv7({ msecs: effectiveNow }),
+      makeNonce: () => "nonce-0123456789abcdef",
+      now: () => effectiveNow,
+    });
+    await expect(
+      intake.register({
+        application: fixture.application,
+        challengeToken: fixture.challenge.challengeToken,
+      }),
+    ).rejects.toThrow("rank all five positions");
+  });
+
+  it("queues a player when every eligible primary slot would break roster feasibility", async () => {
+    const fixture = await signedFixture({
+      positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"],
+      eligiblePositions: ["PG"],
+    });
+    const decision = decideCandidateCapacity({
+      application: fixture.application,
+      policy: policy(16),
+      occupiedByRole: { PLAYER: 8 },
+      occupiedPlayerPositions: { PG: 4, SG: 4, SF: 0, PF: 0, C: 0 },
+      queue: [],
+      now,
+    });
+    expect(decision).toMatchObject({
+      decision: "QUEUED",
+      roleClass: "PLAYER",
+      offeredPosition: null,
+      queuePosition: 1,
+    });
+  });
+
   it("binds XChaCha20 ciphertext to the candidate application context", async () => {
     const fixture = await signedFixture();
     const key = new Uint8Array(32).fill(8);
@@ -390,7 +492,135 @@ describe("candidate intake isolation boundary", () => {
 
   it("returns an active Founding Season handoff only after isolated transfer", async () => {
     const store = await repository();
-    const intake = service(store);
+    let paired = false;
+    let scheduled = false;
+    let competitionState:
+      | "COMMITMENTS_OPEN"
+      | "LINEUPS_LOCKED"
+      | "IN_PROGRESS" = "COMMITMENTS_OPEN";
+    let eligibilityStatus:
+      | "ELIGIBLE"
+      | "READINESS_REHABILITATION"
+      | "TEMPORARILY_INACTIVE" = "ELIGIBLE";
+    let lineupAssignment: "ACTIVE" | "BENCH" | null = null;
+    let offersCreated = 0;
+    const intake = new CandidateIntakeService({
+      challengeSecret: secret,
+      repository: store,
+      policy: policy(),
+      makeChallengeId: () => uuidv7({ msecs: now }),
+      makeNonce: () => "nonce-0123456789abcdef",
+      now: () => now,
+      runnerPairing: {
+        bundleDigest: sha256Commitment("runner-bundle-v2"),
+        async createOffer({ candidateDid, sandboxResourceName }) {
+          offersCreated += 1;
+          return {
+            schemaVersion: "1.0.0",
+            offerId: uuidv7({ msecs: now + 2 }),
+            careerDid: candidateDid,
+            careerResourceName: sandboxResourceName,
+            careerSignerAddress: identity.address,
+            relayOrigin: "https://relay.example.test",
+            runnerBundleDigest: sha256Commitment("runner-bundle-v2"),
+            pairingToken: "pairing-token-with-at-least-thirty-two-characters",
+            issuedAt: new Date(now).toISOString(),
+            expiresAt: new Date(now + 15 * 60_000).toISOString(),
+            singleUse: true,
+          };
+        },
+        async status({ candidateDid }) {
+          if (!paired) return { delegation: null, heartbeat: null };
+          const delegationId = uuidv7({ msecs: now + 3 });
+          return {
+            delegation: {
+              schemaVersion: "1.0.0",
+              delegationId,
+              careerDid: candidateDid,
+              runnerId: "runner-founding-one",
+              delegateSigningAddress: identity.address,
+              delegateEncryptionPublicKey: `0x${"2".repeat(64)}`,
+              scopes: [
+                "RUNNER_HEARTBEAT" as const,
+                "ACTIVATION_CLAIM" as const,
+                "RESULT_SUBMISSION" as const,
+              ],
+              issuedAt: new Date(now - 60_000).toISOString(),
+              expiresAt: new Date(now + 30 * 24 * 60 * 60_000).toISOString(),
+              revokedAt: null,
+              careerSignature: `0x${"1".repeat(130)}`,
+            },
+            heartbeat: {
+              schemaVersion: "1.0.0",
+              runnerId: "runner-founding-one",
+              careerDid: candidateDid,
+              delegationId,
+              runnerBuildDigest: sha256Commitment("runner-build"),
+              adapterBuildDigest: sha256Commitment("adapter-build"),
+              availability: "ONLINE" as const,
+              observedAt: new Date(now - 30_000).toISOString(),
+              nonce: "heartbeat-nonce-0123456789",
+              idempotencyKey: uuidv7({ msecs: now + 4 }),
+              signature: `0x${"1".repeat(130)}`,
+            },
+            ...(scheduled
+              ? {
+                  nextScheduledCommitment: {
+                    schemaVersion: "1.0.0" as const,
+                    noticeId: uuidv7({ msecs: now + 5 }),
+                    gameId: "founding-exhibition-handoff",
+                    careerDid: candidateDid,
+                    role: "PLAYER" as const,
+                    scheduledTipoffAt: new Date(
+                      now + 24 * 60 * 60_000,
+                    ).toISOString(),
+                    responseDueAt: new Date(
+                      now + 18 * 60 * 60_000,
+                    ).toISOString(),
+                    lineupLocksAt: new Date(
+                      now + 24 * 60 * 60_000 - 15 * 60_000,
+                    ).toISOString(),
+                    readinessCheckedAt: new Date(
+                      now + 24 * 60 * 60_000 - 5 * 60_000,
+                    ).toISOString(),
+                    scheduleCommitment: sha256Commitment("handoff-schedule"),
+                    directorDid: "did:abl:competition-director",
+                    issuedAt: new Date(now).toISOString(),
+                    directorSignature: `0x${"1".repeat(130)}`,
+                  },
+                  participationResponse: {
+                    schemaVersion: "1.0.0" as const,
+                    responseId: uuidv7({ msecs: now + 6 }),
+                    noticeId: uuidv7({ msecs: now + 5 }),
+                    gameId: "founding-exhibition-handoff",
+                    careerDid: candidateDid,
+                    response: "ACCEPT" as const,
+                    reasonCommitment: null,
+                    respondedAt: new Date(now + 1_000).toISOString(),
+                    signature: `0x${"1".repeat(130)}`,
+                  },
+                  competition: {
+                    gameId: "founding-exhibition-handoff",
+                    state: competitionState,
+                    eligibilityStatus,
+                    lineupAssignment,
+                    assignedPosition:
+                      lineupAssignment === "ACTIVE" ? "PG" : null,
+                    positionProfile: {
+                      primaryPosition: "PG",
+                      eligiblePositions: ["PG", "SG"],
+                      profileCommitment: sha256Commitment({
+                        primaryPosition: "PG",
+                        eligiblePositions: ["PG", "SG"],
+                      }),
+                    },
+                  },
+                }
+              : {}),
+          };
+        },
+      },
+    });
     const fixture = await signedFixture();
     const offered = await intake.register({
       application: fixture.application,
@@ -450,12 +680,69 @@ describe("candidate intake isolation boundary", () => {
       },
       participation: {
         practice: "AVAILABLE",
-        scheduledCompetition: "ELIGIBLE",
+        scheduledCompetition: "RUNNER_SETUP_REQUIRED",
         foundingElectorate: "ELIGIBLE",
         additionalOperatorApprovalRequired: false,
       },
       history: { classification: "FOUNDING_SEASON_HISTORY", genesis: false },
+      nextAction: "PAIR_RUNNER_OR_DEFER",
+    });
+    expect(offersCreated).toBe(1);
+
+    paired = true;
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      participation: { scheduledCompetition: "ELIGIBLE" },
+      runnerState: "COMPETITION_READY",
+      unattendedCompetition: "AVAILABLE",
+      competitionReadiness: "READY",
+      runnerKit: { pairingOffer: null },
+      nextAction: "KEEP_RUNNER_ONLINE",
+    });
+    expect(offersCreated).toBe(1);
+
+    scheduled = true;
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "GAME_COMMITTED",
+      competitionReadiness: "COMMITTED",
+      nextScheduledCommitment: {
+        gameId: "founding-exhibition-handoff",
+      },
       nextAction: "WAIT_FOR_SIGNED_CAREER_ACTIVATION",
+    });
+
+    competitionState = "LINEUPS_LOCKED";
+    lineupAssignment = "ACTIVE";
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "LINEUP_ELIGIBLE",
+      lineupAssignment: "ACTIVE",
+      assignedPosition: "PG",
+      currentGameState: "LINEUPS_LOCKED",
+    });
+
+    competitionState = "IN_PROGRESS";
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "ACTIVE",
+      lineupAssignment: "ACTIVE",
+    });
+    lineupAssignment = "BENCH";
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "BENCH",
+      lineupAssignment: "BENCH",
+    });
+
+    eligibilityStatus = "READINESS_REHABILITATION";
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "READINESS_REHABILITATION",
+      rosterEligibility: "READINESS_REHABILITATION",
+      competitionReadiness: "NOT_READY",
+      nextAction: "COMPLETE_READINESS_REHABILITATION",
+    });
+    eligibilityStatus = "TEMPORARILY_INACTIVE";
+    await expect(intake.careerHandoff(authorization)).resolves.toMatchObject({
+      runnerState: "TEMPORARILY_INACTIVE",
+      rosterEligibility: "TEMPORARILY_INACTIVE",
+      competitionReadiness: "NOT_READY",
+      nextAction: "SUBMIT_SIGNED_RETURN_PATH",
     });
   });
 
@@ -963,6 +1250,26 @@ describe("candidate intake isolation boundary", () => {
         challengeToken: fixture.challenge.challengeToken,
       } as never),
     ).rejects.toThrow();
+    const { playerPositionProfile: _profile, ...missingProfile } =
+      fixture.application;
+    await expect(
+      intake.register({
+        application: missingProfile,
+        challengeToken: fixture.challenge.challengeToken,
+      }),
+    ).rejects.toThrow("require a position profile");
+    await expect(
+      intake.register({
+        application: {
+          ...fixture.application,
+          playerPositionProfile: {
+            ...fixture.application.playerPositionProfile!,
+            profileCommitment: hash("f"),
+          },
+        },
+        challengeToken: fixture.challenge.challengeToken,
+      }),
+    ).rejects.toThrow("profile commitment mismatch");
     await expect(
       intake.register({
         application: {

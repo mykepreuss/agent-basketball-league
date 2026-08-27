@@ -71,6 +71,7 @@ import {
 } from "./social-envelope.js";
 import type { PublicSocialProjectionWriter } from "./social-repository.js";
 import {
+  createCanonicalPossessionEvidenceReader,
   finalGameProjectionEnvelopeFromOutbox,
   verifyFinalGameProjectionEvent,
 } from "./final-game-envelope.js";
@@ -648,6 +649,7 @@ export class PublicProjectionWorker {
       ...this.#authority,
       finalizerDids: this.#finalizedGameAuthorityDids,
       finalizedGameEvidence: this.#finalizedGameEvidence,
+      possessionEvidence: createCanonicalPossessionEvidenceReader(this.#store),
       ...(this.#finalizedGameScheduleEvidence === undefined
         ? {}
         : { scheduleEvidence: this.#finalizedGameScheduleEvidence }),

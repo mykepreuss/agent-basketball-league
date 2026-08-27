@@ -131,13 +131,31 @@ const persistentImageServices = [
     memory: 4096,
     type: "job",
   },
-] satisfies readonly ImageService[];
-const cognitionImageServices = [
+  {
+    directory: "cognition-relay",
+    packageName: "@abl/cognition-relay",
+    memory: 2048,
+    type: "sandbox",
+  },
   {
     directory: "competition-director",
     packageName: "@abl/competition-director",
     memory: 2048,
-    type: "job",
+    type: "sandbox",
+  },
+] satisfies readonly ImageService[];
+const cognitionImageServices = [
+  {
+    directory: "cognition-relay",
+    packageName: "@abl/cognition-relay",
+    memory: 2048,
+    type: "sandbox",
+  },
+  {
+    directory: "competition-director",
+    packageName: "@abl/competition-director",
+    memory: 2048,
+    type: "sandbox",
   },
 ] as const satisfies readonly ImageService[];
 const imageServices: readonly ImageService[] = cognitionOnly

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { SandboxInstance } from "@blaxel/core";
+import { personalCareerDomainId } from "@abl/cognition";
 import {
   ImmutableSandboxImageReferenceSchema,
   verifyCandidateRuntimeIdentityReceipt,
@@ -13,7 +14,10 @@ import {
   applyCandidateTransition,
   candidateStateRoot,
 } from "@abl/career";
-import { SignedCanonicalCommandSchema } from "@abl/schemas";
+import {
+  SignedCanonicalCommandSchema,
+  type PlayerPositionProfile,
+} from "@abl/schemas";
 import { createCanonicalEvent, type CanonicalEvent } from "@abl/recognition";
 import { v5 as uuidv5 } from "uuid";
 import type { Hex, TypedDataDomain } from "viem";
@@ -127,7 +131,7 @@ export function parseCandidateRuntimeAssignments(
   return z
     .array(CandidateRuntimeAssignmentSchema)
     .min(1)
-    .max(20)
+    .max(26)
     .parse(candidate);
 }
 
@@ -155,13 +159,17 @@ export interface BlaxelCandidateControlPlaneOptions {
   coreOrigin?: string;
   corePreviewToken?: string;
   candidateCommandDomain?: TypedDataDomain;
-  foundingCognition?: {
-    modelOrigin: string;
-    modelPathPrefix: string;
-    modelCredential: string;
-    modelWorkspace: string;
+  distributedCognition?: {
+    relayOrigin: string;
+    relayInternalToken: string;
+    runnerBundleDigest: string;
+    careerPairingInternalToken: string;
     coordinatorDid: string;
     coordinatorSignerAddress: string;
+    privateStorageOrigin: string;
+    privateStoragePreviewToken: string;
+    storageServiceId: string;
+    storageServiceCredentialBase64: string;
   };
   memory?: number;
   factory?: CandidateSandboxFactory;
@@ -181,13 +189,17 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #coreOrigin: string | null;
   readonly #corePreviewToken: string | null;
   readonly #candidateCommandDomain: TypedDataDomain | null;
-  readonly #foundingCognition: {
-    modelOrigin: string;
-    modelPathPrefix: string;
-    modelCredential: string;
-    modelWorkspace: string;
+  readonly #distributedCognition: {
+    relayOrigin: string;
+    relayInternalToken: string;
+    runnerBundleDigest: `0x${string}`;
+    careerPairingInternalToken: string;
     coordinatorDid: string;
     coordinatorSignerAddress: `0x${string}`;
+    privateStorageOrigin: string;
+    privateStoragePreviewToken: string;
+    storageServiceId: string;
+    storageServiceCredentialBase64: string;
   } | null;
   readonly #memory: number;
   readonly #factory: CandidateSandboxFactory;
@@ -222,44 +234,58 @@ export class BlaxelCandidateSandboxControlPlane
         : HttpsOriginSchema.parse(options.coreOrigin);
     this.#corePreviewToken = options.corePreviewToken ?? null;
     this.#candidateCommandDomain = options.candidateCommandDomain ?? null;
-    this.#foundingCognition =
-      options.foundingCognition === undefined
+    this.#distributedCognition =
+      options.distributedCognition === undefined
         ? null
         : {
-            modelOrigin: HttpsOriginSchema.parse(
-              options.foundingCognition.modelOrigin,
+            relayOrigin: HttpsOriginSchema.parse(
+              options.distributedCognition.relayOrigin,
             ),
-            modelPathPrefix: z
-              .string()
-              .regex(/^\/[A-Za-z0-9._~/-]+$/)
-              .refine(
-                (value) =>
-                  value !== "/" &&
-                  !value.endsWith("/") &&
-                  !value.includes("//") &&
-                  !value.includes(".."),
-              )
-              .parse(options.foundingCognition.modelPathPrefix),
-            modelCredential: z
+            relayInternalToken: z
               .string()
               .min(32)
               .max(4_096)
               .refine((value) => !/[\r\n]/.test(value))
-              .parse(options.foundingCognition.modelCredential),
-            modelWorkspace: WorkspaceNameSchema.parse(
-              options.foundingCognition.modelWorkspace,
-            ),
+              .parse(options.distributedCognition.relayInternalToken),
+            runnerBundleDigest: z
+              .string()
+              .regex(/^0x[0-9a-f]{64}$/)
+              .parse(
+                options.distributedCognition.runnerBundleDigest,
+              ) as `0x${string}`,
+            careerPairingInternalToken: z
+              .string()
+              .min(32)
+              .max(4_096)
+              .refine((value) => !/[\r\n]/.test(value))
+              .parse(options.distributedCognition.careerPairingInternalToken),
             coordinatorDid: z
               .string()
               .startsWith("did:")
               .max(500)
-              .parse(options.foundingCognition.coordinatorDid),
+              .parse(options.distributedCognition.coordinatorDid),
             coordinatorSignerAddress: z
               .string()
               .regex(/^0x[0-9a-fA-F]{40}$/)
               .parse(
-                options.foundingCognition.coordinatorSignerAddress,
+                options.distributedCognition.coordinatorSignerAddress,
               ) as `0x${string}`,
+            privateStorageOrigin: HttpsOriginSchema.parse(
+              options.distributedCognition.privateStorageOrigin,
+            ),
+            privateStoragePreviewToken: z
+              .string()
+              .min(32)
+              .max(4_096)
+              .parse(options.distributedCognition.privateStoragePreviewToken),
+            storageServiceId: z
+              .string()
+              .min(1)
+              .max(160)
+              .parse(options.distributedCognition.storageServiceId),
+            storageServiceCredentialBase64: Base64SecretSchema.parse(
+              options.distributedCognition.storageServiceCredentialBase64,
+            ),
           };
     if (
       this.#runtimeScope.mode === "CAPPED_FOUNDING_AUTO" &&
@@ -271,11 +297,11 @@ export class BlaxelCandidateSandboxControlPlane
         "Automatic founding provisioning requires core authority",
       );
     if (
-      this.#foundingCognition !== null &&
+      this.#distributedCognition !== null &&
       this.#runtimeScope.mode !== "CAPPED_FOUNDING_AUTO"
     )
       throw new Error(
-        "Founding cognition is available only to automatic founding careers",
+        "Distributed cognition is available only to automatic founding careers",
       );
     this.#memory = z
       .number()
@@ -293,6 +319,7 @@ export class BlaxelCandidateSandboxControlPlane
     formerOperatorSigningAddress: string;
     commandCommitment: `0x${string}`;
     candidateCommand?: unknown;
+    playerPositionProfile?: PlayerPositionProfile;
   }): Promise<{
     state: "PROVISIONED_AWAITING_TRANSFER" | "ISOLATED_TRANSFER_COMPLETE";
     sandboxResourceName: string;
@@ -318,6 +345,7 @@ export class BlaxelCandidateSandboxControlPlane
     const resourceName = candidateSandboxName(input.applicationId);
     const envs = [
       environment("ABL_RUNTIME_RESOURCE_TYPE", "SANDBOX"),
+      environment("ABL_RUNTIME_RESOURCE_NAME", resourceName),
       environment("ABL_FIXED_BROKER_ORIGIN", assignment.fixedBrokerOrigin),
       environment("ABL_AGENT_DID", input.candidateDid),
       environment(
@@ -414,6 +442,7 @@ export class BlaxelCandidateSandboxControlPlane
     formerOperatorSigningAddress: string;
     commandCommitment: `0x${string}`;
     candidateCommand?: unknown;
+    playerPositionProfile?: PlayerPositionProfile;
   }): Promise<{
     state: "ISOLATED_TRANSFER_COMPLETE";
     sandboxResourceName: string;
@@ -441,8 +470,9 @@ export class BlaxelCandidateSandboxControlPlane
       timestamp: registrationEvent.timestamp,
       payload: registrationEvent.payload,
     });
-    const cognition =
-      input.roleClass === "PLAYER" ? this.#foundingCognition : null;
+    const cognition = this.#distributedCognition;
+    const personalDomainId = personalCareerDomainId(input.candidateDid);
+    const domainKeyBase64 = randomBytes(32).toString("base64");
     const commandDomain =
       cognition === null
         ? null
@@ -456,19 +486,28 @@ export class BlaxelCandidateSandboxControlPlane
 
     const capabilityToken = randomBytes(32).toString("base64url");
     const capabilityExpiresAt = new Date(
-      Date.now() + 4 * 60 * 60 * 1_000,
+      Date.parse(registrationEvent.timestamp) + 4 * 60 * 60 * 1_000,
     ).toISOString();
     const brokerName = candidateFixedBrokerName(input.applicationId);
     const brokerEnvs = [
       environment("HOST", "0.0.0.0"),
       environment("PORT", "3000"),
       environment("ABL_CORE_ROUTE_MODE", "DISABLED"),
-      environment("ABL_PRIVATE_ROUTE_MODE", "DISABLED"),
-      environment("ABL_MODEL_ROUTE_MODE", "DISABLED"),
+      environment(
+        "ABL_PRIVATE_ROUTE_MODE",
+        cognition === null ? "DISABLED" : "ENABLED",
+      ),
+      environment(
+        "ABL_COGNITION_RELAY_ROUTE_MODE",
+        cognition === null ? "DISABLED" : "ENABLED",
+      ),
       environment("ABL_CAREER_CAPABILITY_RENEWAL_MODE", "DISABLED"),
       environment("ABL_CANONICAL_SIGNING_MODE", "DISABLED"),
       environment("ABL_AGENT_DID", input.candidateDid),
-      environment("ABL_SERVICE_ID", `candidate-${input.applicationId}`),
+      environment(
+        "ABL_SERVICE_ID",
+        cognition?.storageServiceId ?? `candidate-${input.applicationId}`,
+      ),
       environment("ABL_BODY_CAPABILITY_EXPIRES_AT", capabilityExpiresAt),
       environment(
         "ABL_BODY_CAPABILITY_TOKEN_B64",
@@ -477,18 +516,17 @@ export class BlaxelCandidateSandboxControlPlane
       ),
       environment(
         "ABL_SERVICE_CREDENTIAL_B64",
-        randomBytes(32).toString("base64"),
+        cognition?.storageServiceCredentialBase64 ??
+          randomBytes(32).toString("base64"),
         true,
       ),
       ...(cognition === null
         ? []
         : [
-            environment("ABL_MODEL_ORIGIN", cognition.modelOrigin),
-            environment("ABL_MODEL_PATH_PREFIX", cognition.modelPathPrefix),
-            environment("ABL_MODEL_WORKSPACE", cognition.modelWorkspace),
+            environment("ABL_COGNITION_RELAY_ORIGIN", cognition.relayOrigin),
             environment(
-              "ABL_MODEL_CREDENTIAL_B64",
-              Buffer.from(cognition.modelCredential).toString("base64"),
+              "ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64",
+              Buffer.from(cognition.relayInternalToken).toString("base64"),
               true,
             ),
             environment("ABL_DOMAIN_CHAIN_ID", String(commandDomain!.chainId)),
@@ -496,6 +534,17 @@ export class BlaxelCandidateSandboxControlPlane
               "ABL_DOMAIN_VERIFYING_CONTRACT",
               commandDomain!.verifyingContract,
             ),
+            environment("ABL_PRIVATE_ORIGIN", cognition.privateStorageOrigin),
+            environment("ABL_PRIVATE_AUTH_MODE", "BLAXEL_PRIVATE_PREVIEW"),
+            environment(
+              "ABL_PRIVATE_PREVIEW_TOKEN_B64",
+              Buffer.from(cognition.privateStoragePreviewToken).toString(
+                "base64",
+              ),
+              true,
+            ),
+            environment("ABL_PERSONAL_DOMAIN_ID", personalDomainId),
+            environment("ABL_DOMAIN_KEY_B64", domainKeyBase64, true),
           ]),
       environment("DO_NOT_TRACK", "1"),
       environment("BL_ENABLE_OPENTELEMETRY", "false"),
@@ -521,7 +570,12 @@ export class BlaxelCandidateSandboxControlPlane
         region: this.#region,
         network: {
           allowedDomains:
-            cognition === null ? [] : [new URL(cognition.modelOrigin).hostname],
+            cognition === null
+              ? []
+              : [
+                  new URL(cognition.relayOrigin).hostname,
+                  new URL(cognition.privateStorageOrigin).hostname,
+                ],
         },
         runtime: {
           image: this.#fixedBrokerImageReference,
@@ -572,10 +626,19 @@ export class BlaxelCandidateSandboxControlPlane
       environment("HOST", "0.0.0.0"),
       environment("PORT", "3000"),
       environment("ABL_RUNTIME_RESOURCE_TYPE", "SANDBOX"),
+      environment("ABL_RUNTIME_RESOURCE_NAME", resourceName),
       environment("ABL_BODY_RUNTIME_MODE", "FOUNDING_CAREER"),
       environment("ABL_APPLICATION_ID", input.applicationId),
       environment("ABL_AGENT_DID", input.candidateDid),
       environment("ABL_ROLE_CLASS", input.roleClass),
+      ...(input.playerPositionProfile === undefined
+        ? []
+        : [
+            environment(
+              "ABL_PLAYER_POSITION_PROFILE_JSON",
+              JSON.stringify(input.playerPositionProfile),
+            ),
+          ]),
       environment("ABL_RUNTIME_IMAGE_REFERENCE", this.#imageReference),
       environment(
         "ABL_CANDIDATE_COMMAND_DOMAIN_JSON",
@@ -589,22 +652,30 @@ export class BlaxelCandidateSandboxControlPlane
       ),
       environment("ABL_FIXED_BROKER_CAPABILITY_TOKEN", capabilityToken, true),
       environment(
+        "ABL_FIXED_BROKER_CAPABILITY_EXPIRES_AT",
+        capabilityExpiresAt,
+      ),
+      environment(
         "ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON",
         JSON.stringify(
-          cognition === null ? ["runtime:health"] : ["proxy:model"],
+          cognition === null
+            ? ["runtime:health"]
+            : [
+                "proxy:cognition-relay",
+                "storage:get",
+                "storage:put",
+                "storage:delete",
+                "context:inspect",
+              ],
         ),
       ),
       environment(
         "ABL_COGNITION_MODE",
-        cognition === null ? "DISABLED" : "ENABLED",
+        cognition === null ? "DISABLED" : "PARTICIPANT_CONTROLLED",
       ),
       ...(cognition === null
         ? []
         : [
-            environment(
-              "ABL_MODEL_ROUTE_PATH",
-              `${cognition.modelPathPrefix}/v1/chat/completions`,
-            ),
             environment(
               "ABL_COMPETITION_COORDINATOR_DID",
               cognition.coordinatorDid,
@@ -613,6 +684,20 @@ export class BlaxelCandidateSandboxControlPlane
               "ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS",
               cognition.coordinatorSignerAddress,
             ),
+            environment(
+              "ABL_COGNITION_RELAY_PUBLIC_ORIGIN",
+              cognition.relayOrigin,
+            ),
+            environment(
+              "ABL_RUNNER_BUNDLE_DIGEST",
+              cognition.runnerBundleDigest,
+            ),
+            environment(
+              "ABL_CAREER_PAIRING_INTERNAL_TOKEN",
+              cognition.careerPairingInternalToken,
+              true,
+            ),
+            environment("ABL_CAREER_PERSONAL_DOMAIN_ID", personalDomainId),
           ]),
       environment("BL_SANDBOX_USER_ENABLED", "true"),
       environment("DO_NOT_TRACK", "1"),
@@ -702,7 +787,7 @@ export class BlaxelCandidateSandboxControlPlane
         env: {
           HOST: "0.0.0.0",
           PORT: "3000",
-          ABL_MODEL_ROUTE_MODE: "ENABLED",
+          ABL_COGNITION_RELAY_ROUTE_MODE: "ENABLED",
           ABL_CAREER_CAPABILITY_RENEWAL_MODE: "ENABLED",
           ABL_CAREER_SIGNER_ADDRESS: identity.signingAddress,
         },

@@ -18,7 +18,10 @@ import {
 } from "./engine.js";
 import { observePlayer, stateRoot } from "./observations.js";
 import { commitRandomShare, deriveRandomSeed } from "./randomness.js";
-import { ActionIntentSchema } from "./types.js";
+import {
+  ActionIntentSchema,
+  createDeterministicFixtureReceipt,
+} from "./types.js";
 import type {
   BasketballState,
   CoachDecision,
@@ -88,25 +91,15 @@ function receipt(input: {
   subject: string;
   observationHash: `0x${string}`;
 }): CognitionReceipt {
-  return {
-    receiptId: `${input.subject}:receipt:${input.did}`,
-    agentDid: input.did,
+  return createDeterministicFixtureReceipt({
+    careerDid: input.did,
     role: input.role,
-    endpoint: "local-deterministic-rehearsal-adapter",
-    provider: "fixture",
-    modelFamily: "structured-policy",
-    modelRevision: "1",
-    observationHash: input.observationHash,
-    contextManifestHash: sha256Commitment({ subject: input.subject }),
-    kernelHash: sha256Commitment("basketball-kernel-v1"),
-    toolHash: sha256Commitment("no-tools"),
+    activationId: input.subject,
+    observationCommitment: input.observationHash,
+    contextManifestCommitment: sha256Commitment({ subject: input.subject }),
     deadlineMs: 1_500,
-    retryCount: 0,
-    fallbackUsed: false,
     normalizedResourceUnits: 1_000,
-    telemetryContentPolicy: "CONTENT_DISABLED",
-    personalMaterialSupplied: [],
-  };
+  });
 }
 
 async function authorize<TDecision>(input: {

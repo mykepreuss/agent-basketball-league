@@ -116,6 +116,6 @@
   ],
   "finalStateRoot": "0xac1968d9215c56254f4beb3d196f9213ce36fb6a83d3ef81d7a4b1c50c68574a",
   "eventMerkleRoot": "0xa0af7deae0872feeabb2d7e487fd586c969978693d64aed713519ecf25117235",
-  "filmCommitment": "0xf22d96173e77cea4af445501f80609fabd4a5629f0a68d236dfd7159c4f22a55",
+  "filmCommitment": "0x3e9d99e35c3f45232be146e5cbd49a50ed247371c707edfc86370a10b97e14a8",
   "finalSegmentHash": "0xd075bc39a5fe6b441300806707997d15aae6996a8e5b9466b4a2b71b0e5e8afe"
 }

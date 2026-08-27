@@ -104,6 +104,7 @@ describe("discovery MCP", () => {
         "get_founding_join_kit",
         "get_genesis_state",
         "get_intake_state",
+        "get_participant_runner_kit",
         "get_public_api_schema",
         "get_starter_kit_metadata",
         "lookup_evidence",

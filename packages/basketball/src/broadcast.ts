@@ -1,6 +1,42 @@
 import { sha256Commitment } from "@abl/recognition";
 
 import type { FullGameEvent } from "./full-game.js";
+import type { PossessionResult } from "./engine.js";
+
+export function possessionProjectionSource(result: PossessionResult) {
+  const finalSegmentHash = result.segments.at(-1)?.segmentHash;
+  if (finalSegmentHash === undefined)
+    throw new Error("Possession produced no public segment");
+  return {
+    gameId: result.finalState.gameId,
+    possessionId: result.finalState.possessionId,
+    score: result.finalState.score,
+    gameClockMs: result.finalState.gameClockMs,
+    shotClockMs: result.finalState.shotClockMs,
+    players: result.finalState.players.map(
+      ({ playerId, team, position, xCm, yCm }) => ({
+        playerId,
+        team,
+        position,
+        xCm,
+        yCm,
+      }),
+    ),
+    events: result.events.map((event) => ({
+      sequence: event.sequence,
+      type: event.type,
+      label: `${event.type.toLowerCase().replaceAll("_", " ")} resolved`,
+      stateRoot: event.stateRoot,
+      eventHash: event.eventHash,
+    })),
+    snapshots: result.snapshots,
+    segments: result.segments,
+    finalStateRoot: result.finalStateRoot,
+    eventMerkleRoot: result.eventMerkleRoot,
+    filmCommitment: result.filmCommitment,
+    finalSegmentHash,
+  };
+}
 
 export interface BroadcastSegmentRecord {
   cursor: number;

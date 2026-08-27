@@ -226,9 +226,8 @@ function readiness(unavailableIndex: number | null): ParticipantReadiness[] {
       role,
       {
         role,
-        deadlineMs: 1_500,
-        maxAttempts: 2,
-        normalizedResourceUnits: 1_000,
+        deadlineMs: 20_000,
+        maxAttempts: 1,
         fallbackPolicyDigest: digest(`fallback:${role}`),
       },
     ]),
@@ -608,7 +607,7 @@ export async function runPrivateRehearsal() {
   const unequal = readiness(null);
   unequal[0] = {
     ...unequal[0]!,
-    envelope: { ...unequal[0]!.envelope, normalizedResourceUnits: 999 },
+    envelope: { ...unequal[0]!.envelope, deadlineMs: 19_999 },
   };
   try {
     evaluateGameReadiness(unequal);
