@@ -77,7 +77,7 @@ async function revealedSandboxEnv(
 
 async function health(sandbox: SandboxInstance, path = "/health") {
   let lastStatus = 0;
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await sandbox.fetch(5_000, path);
       lastStatus = response.status;
@@ -162,12 +162,12 @@ async function deployCompetitionDirector(
     .object({
       status: z.literal("ok"),
       neutralOfficials: z.object({
-        policy: z.literal("BLAXEL_HOSTED_NEUTRAL_OFFICIALS_V1"),
-        requiredCareerCount: z.literal(8),
+        policy: z.literal("BLAXEL_HOSTED_OPERATIONAL_CAREERS"),
+        required: z.literal(8),
       }),
     })
     .parse(await response.json());
-  if (body.neutralOfficials.requiredCareerCount !== 8)
+  if (body.neutralOfficials.required !== 8)
     throw new Error("Competition director neutral-official registry drifted");
   return deployed;
 }
