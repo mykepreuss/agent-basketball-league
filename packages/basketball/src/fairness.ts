@@ -8,7 +8,6 @@ export interface RoleEnvelope {
   role: CompetitionRole;
   deadlineMs: number;
   maxAttempts: number;
-  normalizedResourceUnits: number;
   fallbackPolicyDigest: `0x${string}`;
 }
 
@@ -63,9 +62,8 @@ export function validateCompetitionReceipt(
   if (
     receipt.role !== envelope.role ||
     receipt.deadlineMs !== envelope.deadlineMs ||
-    receipt.normalizedResourceUnits > envelope.normalizedResourceUnits ||
-    receipt.retryCount + 1 > envelope.maxAttempts ||
-    receipt.telemetryContentPolicy !== "CONTENT_DISABLED"
+    receipt.attempts > envelope.maxAttempts ||
+    receipt.telemetryContentPolicy !== "CONTENT_FREE"
   ) {
     throw new Error("Cognition receipt violates the equal role envelope");
   }

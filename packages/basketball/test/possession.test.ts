@@ -13,6 +13,7 @@ import {
   PersistentPlayerBody,
   assertNoWinnerInput,
   commitRandomShare,
+  createDeterministicFixtureReceipt,
   deriveRandomSeed,
   officialDecisionContextRoot,
   observePlayer,
@@ -20,6 +21,7 @@ import {
   roleObservationCommitment,
   runFirstPossessionRehearsal,
   resolvePossession,
+  resolvePossessionDynamically,
   stateRoot,
   type BasketballState,
   type CoachDecision,
@@ -89,25 +91,15 @@ function receipt(
   subject: string,
   observationHash = sha256Commitment(subject),
 ): CognitionReceipt {
-  return {
-    receiptId: `${subject}:receipt:${did}`,
-    agentDid: did,
+  return createDeterministicFixtureReceipt({
+    careerDid: did,
     role,
-    endpoint: "local-deterministic-test-adapter",
-    provider: "fixture",
-    modelFamily: "structured-policy",
-    modelRevision: "1",
-    observationHash,
-    contextManifestHash: sha256Commitment({ subject }),
-    kernelHash: sha256Commitment("basketball-kernel-v1"),
-    toolHash: sha256Commitment("no-tools"),
+    activationId: subject,
+    observationCommitment: observationHash as `0x${string}`,
+    contextManifestCommitment: sha256Commitment({ subject }),
     deadlineMs: 1_500,
-    retryCount: 0,
-    fallbackUsed: false,
     normalizedResourceUnits: 1_000,
-    telemetryContentPolicy: "CONTENT_DISABLED",
-    personalMaterialSupplied: [],
-  };
+  });
 }
 
 async function authorizeDecision<TDecision>(input: {
@@ -379,7 +371,17 @@ async function fixture() {
     refereeDecisions,
     replayDecisions,
   };
-  return { initial, bodyById, commitments, reveals, requiredParties, input };
+  return {
+    initial,
+    bodyById,
+    coachIdentities,
+    refereeIdentities,
+    replayIdentities,
+    commitments,
+    reveals,
+    requiredParties,
+    input,
+  };
 }
 
 describe("first independently verifiable possession", () => {
@@ -405,7 +407,7 @@ describe("first independently verifiable possession", () => {
         .flatMap((window) => window.decisions)
         .every(
           (decision) =>
-            decision.receipt.telemetryContentPolicy === "CONTENT_DISABLED",
+            decision.receipt.telemetryContentPolicy === "CONTENT_FREE",
         ),
     ).toBe(true);
 
@@ -540,7 +542,7 @@ describe("first independently verifiable possession", () => {
   it("rejects tampered player authorization and invalid random reveals", async () => {
     const { input, commitments, reveals, requiredParties } = await fixture();
     const tampered = structuredClone(input);
-    tampered.windows[0]!.decisions[0]!.receipt.normalizedResourceUnits = 999_999;
+    tampered.windows[0]!.decisions[0]!.receipt.attempts = 2;
     await expect(resolvePossession(tampered)).rejects.toThrow(
       "Decision signer is not registered",
     );
@@ -572,6 +574,145 @@ describe("first independently verifiable possession", () => {
     expect(() =>
       assertNoWinnerInput({ ...input, winner: "HOME" } as never),
     ).toThrow("Winner input is forbidden");
+  });
+
+  it("gives the second dynamic window the state produced by the first", async () => {
+    const {
+      initial,
+      bodyById,
+      coachIdentities,
+      refereeIdentities,
+      replayIdentities,
+      input,
+    } = await fixture();
+    const observedRoots: `0x${string}`[] = [];
+    const dynamic = await resolvePossessionDynamically(
+      {
+        initialState: initial,
+        windowCount: 2,
+        playerSigningAddresses: input.playerSigningAddresses,
+        authorities: input.authorities,
+        domain,
+        randomSeed: input.randomSeed,
+        windowDurationMs: 2_000,
+      },
+      {
+        async decideWindow({ state, windowIndex, windowId }) {
+          const contextRoot = stateRoot(state);
+          observedRoots.push(contextRoot);
+          const decisions = await Promise.all(
+            state.players.map((player) =>
+              bodyById
+                .get(player.playerId)!
+                .decide(observePlayer(state, player.playerId), domain),
+            ),
+          );
+          const coaches = await Promise.all(
+            (["HOME", "AWAY"] as const).map(async (team) => {
+              const body: CoachDecisionBody = {
+                coachDid: `did:abl:coach-${team.toLowerCase()}`,
+                team,
+                windowId,
+                instruction: "RETAIN_CURRENT_TACTIC_AND_LINEUP",
+                targetPlayerIds: [],
+              };
+              return authorizeDecision({
+                body,
+                identity: coachIdentities[team],
+                actorDid: body.coachDid,
+                receipt: receipt(
+                  body.coachDid,
+                  "COACH",
+                  `dynamic-coach:${windowIndex}:${team}`,
+                  roleObservationCommitment("COACH", contextRoot, windowId),
+                ),
+                aggregateType: "coach-decision",
+                aggregateId: windowId,
+                aggregateVersion: BigInt(windowIndex + 10),
+                eventType: "CoachInstructionSubmitted",
+                contextRoot,
+              });
+            }),
+          );
+          return { windowId, decisions, coaches };
+        },
+        async decideOfficials({ officialContext }) {
+          const refereeDecisions = await Promise.all(
+            refereeIdentities.map(async (identity, index) => {
+              const body: RefereeDecisionBody = {
+                refereeDid: `did:abl:referee-${index + 1}`,
+                possessionId: initial.possessionId,
+                sequence: index,
+                call: "NO_CALL",
+                againstPlayerId: null,
+                confidenceBps: 8_000,
+              };
+              return authorizeDecision({
+                body,
+                identity,
+                actorDid: body.refereeDid,
+                receipt: receipt(
+                  body.refereeDid,
+                  "REFEREE",
+                  `dynamic-referee:${index}`,
+                  roleObservationCommitment(
+                    "REFEREE",
+                    officialContext,
+                    initial.possessionId,
+                  ),
+                ),
+                aggregateType: "referee-decision",
+                aggregateId: initial.possessionId,
+                aggregateVersion: 10n,
+                eventType: "RefereeDecisionSubmitted",
+                contextRoot: officialContext,
+              });
+            }),
+          );
+          const replayDecisions = await Promise.all(
+            replayIdentities.map(async (identity, index) => {
+              const body: ReplayDecisionBody = {
+                replayDid: `did:abl:replay-${index + 1}`,
+                possessionId: initial.possessionId,
+                reviewable: false,
+                ruling: "NO_REVIEW",
+                evidenceCommitment: officialContext,
+              };
+              return authorizeDecision({
+                body,
+                identity,
+                actorDid: body.replayDid,
+                receipt: receipt(
+                  body.replayDid,
+                  "REPLAY",
+                  `dynamic-replay:${index}`,
+                  roleObservationCommitment(
+                    "REPLAY",
+                    officialContext,
+                    initial.possessionId,
+                  ),
+                ),
+                aggregateType: "replay-decision",
+                aggregateId: initial.possessionId,
+                aggregateVersion: 10n,
+                eventType: "ReplayDecisionSubmitted",
+                contextRoot: officialContext,
+              });
+            }),
+          );
+          return { refereeDecisions, replayDecisions };
+        },
+      },
+    );
+    expect(observedRoots).toHaveLength(2);
+    expect(observedRoots[0]).toBe(stateRoot(initial));
+    expect(observedRoots[1]).not.toBe(observedRoots[0]);
+    expect(
+      dynamic.input.windows[1]!.decisions[0]!.authorizationEvent.stateRoot,
+    ).toBe(observedRoots[1]);
+    expect(dynamic.result.finalState.gameClockMs).toBe(
+      initial.gameClockMs - 4_000,
+    );
   });
 
   it("derives a ball-handler boundary turnover from fixed-point movement", async () => {

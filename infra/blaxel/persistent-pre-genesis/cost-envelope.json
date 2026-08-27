@@ -15,11 +15,11 @@
     "neonPostgresql17": "FREE_PLAN_ALLOWANCE"
   },
   "usageCaps": {
-    "sandboxAllocatedGiB": 21,
+    "sandboxAllocatedGiB": 25,
     "sandboxProbeIntervalSeconds": 600,
     "maximumSandboxActiveSecondsPerProbe": 15,
-    "sandboxSnapshotGiB": 21,
-    "imageGiB": 16,
+    "sandboxSnapshotGiB": 25,
+    "imageGiB": 18,
     "mcpAllocatedGiB": 8,
     "maximumMcpActiveSecondsPerProbe": 5,
     "jobAllocatedGiB": 6,
@@ -28,15 +28,15 @@
     "neonComputeCuHours": 100
   },
   "monthlyProjection": {
-    "sandboxActiveCompute": 15.6492,
-    "sandboxSnapshotStorage": 4.2,
-    "imageStorage": 0.72,
+    "sandboxActiveCompute": 18.63,
+    "sandboxSnapshotStorage": 5,
+    "imageStorage": 0.81,
     "mcpActiveCompute": 1.2096,
     "jobActiveCompute": 0.1296,
     "agentDrive": 0,
     "neonPostgresql17": 0,
-    "total": 21.9084,
-    "remainingContingency": 3.0916
+    "total": 25.7792,
+    "remainingContingency": null
   },
   "acceptance": {
     "method": "Replace every projected component with the greater of its declared cap projection or the first 24 hours of measured usage annualized to 30 days.",

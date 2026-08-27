@@ -45,6 +45,8 @@ const domain: TypedDataDomain = {
 const finalizerDid = "did:abl:game-finalizer";
 const finalizer = createSigningIdentity(`0x${"b".repeat(64)}`);
 const rogue = createSigningIdentity(`0x${"c".repeat(64)}`);
+const participantDid = "did:abl:projection-player-0";
+const participant = createSigningIdentity(`0x${"a".repeat(64)}`);
 const gameId = "0198f200-0000-7000-8000-000000000001";
 const finalizedAt = "2026-08-13T10:00:00.000Z";
 const uuid = (sequence: number) =>
@@ -130,6 +132,87 @@ async function finalizedGame(signer = finalizer) {
     signature: await signCanonicalEvent(signer, domain, event),
   } satisfies FinalGameProjectionEventEnvelope;
   return { payload, event, envelope };
+}
+
+async function participantFinalizedGame() {
+  const exhibition = runDeterministicExhibition(gameId);
+  const possessionProof = {
+    possessionId: "projection-participant-possession-1",
+    playerDecisionHashes: decisionHashes("participant-player", 20),
+    coachDecisionHashes: decisionHashes("participant-coach", 4),
+    refereeDecisionHashes: decisionHashes("participant-referee", 3),
+    replayDecisionHashes: decisionHashes("participant-replay", 2),
+    authorityDids: {
+      players: Array.from(
+        { length: 20 },
+        (_, index) => `did:abl:projection-player-${index % 10}`,
+      ),
+      coaches: Array.from(
+        { length: 4 },
+        (_, index) => `did:abl:projection-coach-${index % 2}`,
+      ),
+      referees: Array.from(
+        { length: 3 },
+        (_, index) => `did:abl:projection-referee-${index}`,
+      ),
+      replayOfficials: Array.from(
+        { length: 2 },
+        (_, index) => `did:abl:projection-replay-${index}`,
+      ),
+    },
+    eventMerkleRoot: sha256Commitment("participant-possession-events"),
+    finalStateRoot: sha256Commitment("participant-possession-state"),
+  };
+  const payload = FinalizedGamePayloadSchema.parse({
+    gameId,
+    finalizedAt,
+    competition: null,
+    input: exhibition.input,
+    commands: exhibition.commands,
+    proof: exhibition.proof,
+    agentEvidence: createAgentPlayedGameEvidence({
+      gameId,
+      gameInput: exhibition.input,
+      commands: exhibition.commands,
+      proof: exhibition.proof,
+      possessionProofs: [possessionProof],
+    }),
+    filmCommitment: sha256Commitment(exhibition.events),
+    broadcastStartedAt: finalizedAt,
+    broadcastIntervalMs: 0,
+  });
+  const event = createCanonicalEvent({
+    eventId: uuid(12),
+    actorDid: participantDid,
+    nonce: "participant-finalized-game-1",
+    idempotencyKey: uuid(13),
+    aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+    aggregateId: gameId,
+    aggregateVersion: 1n,
+    eventType: GAME_FINALIZED_EVENT_TYPE,
+    previousEventHash: null,
+    payload,
+    stateRoot: finalizedGameStateRoot(payload),
+    schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+    timestamp: finalizedAt,
+  });
+  return {
+    payload,
+    possessionProof,
+    envelope: {
+      version: "1.0.0",
+      topic: "public.finalized-game",
+      event: {
+        ...event,
+        aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+        aggregateVersion: "1",
+        eventType: GAME_FINALIZED_EVENT_TYPE,
+        previousEventHash: null,
+        schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+      },
+      signature: await signCanonicalEvent(participant, domain, event),
+    } satisfies FinalGameProjectionEventEnvelope,
+  };
 }
 
 function authority(
@@ -242,6 +325,46 @@ describe("durable finalized game projections", () => {
         rogueGame.envelope,
         authority(rogueGame.payload.agentEvidence),
       ),
+    ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
+
+    const participantGame = await participantFinalizedGame();
+    const participantAuthority: FinalGameProjectionVerificationAuthority = {
+      domain,
+      admittedAgents: new Map([
+        [
+          participantDid,
+          {
+            signerAddress: participant.address,
+            allowedAggregateTypes: [FINALIZED_GAME_AGGREGATE_TYPE],
+          },
+        ],
+      ]),
+      finalizerDids: new Set(),
+      finalizedGameEvidence: async () => null,
+      possessionEvidence: {
+        finalizedGamePossessionEvidence: async () => [
+          participantGame.possessionProof,
+        ],
+      },
+    };
+    await expect(
+      verifyFinalGameProjectionEvent(
+        participantGame.envelope,
+        participantAuthority,
+      ),
+    ).resolves.toMatchObject({ projection: { phase: "FINAL" } });
+    await expect(
+      verifyFinalGameProjectionEvent(participantGame.envelope, {
+        ...participantAuthority,
+        possessionEvidence: {
+          finalizedGamePossessionEvidence: async () => [
+            {
+              ...participantGame.possessionProof,
+              finalStateRoot: sha256Commitment("tampered-possession-state"),
+            },
+          ],
+        },
+      }),
     ).rejects.toBeInstanceOf(ProjectionAuthorizationError);
   });
 

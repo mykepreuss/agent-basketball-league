@@ -175,6 +175,32 @@
       "imageEnvironment": "ABL_RECOVERY_JOB_IMAGE_DIGEST",
       "memoryMiB": 4096,
       "privateEndpoint": false
+    },
+    {
+      "ordinal": 14,
+      "workspace": "agent-basketball-league",
+      "trustDomain": "abl-competition",
+      "kind": "Sandbox",
+      "name": "abl-cognition-relay",
+      "manifest": "infra/blaxel/abl-competition/cognition-relay.yaml",
+      "imageName": "abl-stage-c-cognition-relay-image",
+      "imageContext": "cognition-relay",
+      "imageEnvironment": "ABL_COGNITION_RELAY_IMAGE_DIGEST",
+      "memoryMiB": 2048,
+      "privateEndpoint": true
+    },
+    {
+      "ordinal": 15,
+      "workspace": "agent-basketball-league",
+      "trustDomain": "abl-competition",
+      "kind": "Sandbox",
+      "name": "abl-competition-director",
+      "manifest": "infra/blaxel/abl-competition/competition-director.yaml",
+      "imageName": "abl-stage-c-competition-director-image",
+      "imageContext": "competition-director",
+      "imageEnvironment": "ABL_COMPETITION_DIRECTOR_IMAGE_DIGEST",
+      "memoryMiB": 2048,
+      "privateEndpoint": true
     }
   ],
   "prohibitions": [

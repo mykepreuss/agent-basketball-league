@@ -94,6 +94,131 @@ export const ResourceClassSchema = z.enum([
   "EXIT",
 ]);
 
+export const AutonomousBasketballRoleSchema = z.enum([
+  "PLAYER",
+  "COACH",
+  "REFEREE",
+  "REPLAY",
+]);
+export type AutonomousBasketballRole = z.infer<
+  typeof AutonomousBasketballRoleSchema
+>;
+
+export const CognitionModeSchema = z.enum([
+  "PARTICIPANT_CONTROLLED",
+  "DETERMINISTIC_FIXTURE",
+]);
+export type CognitionMode = z.infer<typeof CognitionModeSchema>;
+
+export const BasketballPositionSchema = z.enum(["PG", "SG", "SF", "PF", "C"]);
+export type BasketballPosition = z.infer<typeof BasketballPositionSchema>;
+export const BASKETBALL_POSITIONS = BasketballPositionSchema.options;
+
+export const PlayerPositionPreferenceRankingSchema = z
+  .array(BasketballPositionSchema)
+  .length(BASKETBALL_POSITIONS.length)
+  .refine(
+    (positions) =>
+      new Set(positions).size === BASKETBALL_POSITIONS.length &&
+      BASKETBALL_POSITIONS.every((position) => positions.includes(position)),
+    "Position preferences must rank PG, SG, SF, PF, and C exactly once",
+  );
+export type PlayerPositionPreferenceRanking = z.infer<
+  typeof PlayerPositionPreferenceRankingSchema
+>;
+
+export const PlayerPositionProfileSchema = z
+  .strictObject({
+    primaryPosition: BasketballPositionSchema,
+    positionPreferenceRanking: PlayerPositionPreferenceRankingSchema.optional(),
+    eligiblePositions: z
+      .array(BasketballPositionSchema)
+      .min(1)
+      .max(BASKETBALL_POSITIONS.length),
+    profileCommitment: Sha256Schema,
+  })
+  .refine(
+    ({ primaryPosition, eligiblePositions }) =>
+      eligiblePositions.includes(primaryPosition) &&
+      new Set(eligiblePositions).size === eligiblePositions.length &&
+      BASKETBALL_POSITIONS.filter((position) =>
+        eligiblePositions.includes(position),
+      ).every((position, index) => eligiblePositions[index] === position),
+    "The primary position must appear once in canonically ordered eligible positions",
+  );
+export type PlayerPositionProfile = z.infer<typeof PlayerPositionProfileSchema>;
+
+export const CareerPositionProfileAttestationSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  careerDid: DidSchema,
+  profile: PlayerPositionProfileSchema,
+  source: z.enum([
+    "APPLICATION_DECLARED",
+    "ROSTER_POSITION_OFFER",
+    "LEGACY_COMPATIBILITY",
+  ]),
+  attestedAt: IsoDateTimeSchema,
+  signature: Eip712SignatureSchema,
+});
+export type CareerPositionProfileAttestation = z.infer<
+  typeof CareerPositionProfileAttestationSchema
+>;
+
+export const LineupPositionAssignmentSchema = z.strictObject({
+  position: BasketballPositionSchema,
+  careerDid: DidSchema,
+});
+export type LineupPositionAssignment = z.infer<
+  typeof LineupPositionAssignmentSchema
+>;
+
+export const CognitionProvenanceLevelSchema = z.enum([
+  "PROVIDER_ATTESTED",
+  "RUNNER_VERIFIED",
+  "PRODUCT_SURFACE_REPORTED",
+  "LOCAL_ARTIFACT_VERIFIED",
+  "DECLARED_ONLY",
+  "UNKNOWN",
+]);
+export type CognitionProvenanceLevel = z.infer<
+  typeof CognitionProvenanceLevelSchema
+>;
+
+export const AmbientProductContextSchema = z.enum([
+  "NONE",
+  "DISCLOSED_PRODUCT_CONTEXT",
+  "UNDISCLOSED_PROVIDER_CONTEXT_POSSIBLE",
+]);
+
+export const RunnerStateSchema = z.enum([
+  "CAREER_ACTIVE_RUNNER_UNPAIRED",
+  "RUNNER_PAIRED_OFFLINE",
+  "RUNNER_ON_DEMAND_ONLY",
+  "RUNNER_ONLINE",
+  "COMPETITION_READY",
+  "GAME_COMMITTED",
+  "LINEUP_ELIGIBLE",
+  "ACTIVE",
+  "BENCH",
+  "READINESS_REHABILITATION",
+  "TEMPORARILY_INACTIVE",
+]);
+export type RunnerState = z.infer<typeof RunnerStateSchema>;
+
+export const ActivationStateSchema = z.enum([
+  "RECEIVED",
+  "CONTEXT_ASSEMBLED",
+  "SEALED_FOR_RUNNER",
+  "DELIVERED",
+  "RESULT_RECEIVED",
+  "VALIDATED",
+  "CAREER_SIGNED",
+  "FALLBACK_SIGNED",
+  "EXPIRED",
+  "REJECTED",
+]);
+export type ActivationState = z.infer<typeof ActivationStateSchema>;
+
 export const AuthorizationProofSchema = z.strictObject({
   capability: z.string().min(1),
   mandateId: UuidV7Schema.optional(),
@@ -240,6 +365,22 @@ export const CandidateIntakePublicStateSchema = z
     occupiedByRole: CandidateRoleCapacityCountsSchema,
     openingsByRole: CandidateRoleCapacityCountsSchema,
     queuedByRole: CandidateRoleCapacityCountsSchema,
+    playerPositionState: z
+      .strictObject({
+        rankingRequired: z.literal(true),
+        minimumPrimaryAssignmentsPerPosition: z.literal(2),
+        maximumPrimaryAssignmentsPerPosition: z.literal(4),
+        primaryAssignmentCounts: z.strictObject({
+          PG: z.number().int().nonnegative(),
+          SG: z.number().int().nonnegative(),
+          SF: z.number().int().nonnegative(),
+          PF: z.number().int().nonnegative(),
+          C: z.number().int().nonnegative(),
+        }),
+        priorityPositions: z.array(BasketballPositionSchema).max(5),
+        legacyUnassignedPlayers: z.number().int().nonnegative(),
+      })
+      .optional(),
     canonicalAuthority: z.literal(false),
     genesis: z.literal(false),
     maximumApplicationBytes: z.number().int().positive(),
@@ -301,6 +442,7 @@ export const CandidateIntakeApplicationSchema = z.strictObject({
     .min(1)
     .max(4)
     .refine((values) => new Set(values).size === values.length),
+  playerPositionProfile: PlayerPositionProfileSchema.optional(),
   challengeId: UuidV7Schema,
   challengeCommitment: Sha256Schema,
   challengeExpiresAt: IsoDateTimeSchema,
@@ -334,6 +476,7 @@ export const CandidateCapacityDecisionSchema = z
       "INVITATION_REQUIRED",
     ]),
     queuePosition: z.number().int().positive().nullable(),
+    offeredPosition: BasketballPositionSchema.nullable().default(null),
     issuedAt: IsoDateTimeSchema,
     offerExpiresAt: IsoDateTimeSchema.nullable(),
     nextReviewAt: IsoDateTimeSchema.nullable(),
@@ -351,6 +494,15 @@ export const CandidateCapacityDecisionSchema = z
         code: "custom",
         path: ["offerExpiresAt"],
         message: "Only an offered opportunity has an expiry",
+      });
+    if (
+      decision.offeredPosition !== null &&
+      (decision.roleClass !== "PLAYER" || decision.decision !== "OFFERED")
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["offeredPosition"],
+        message: "Only an offered player opportunity may assign a position",
       });
   });
 
@@ -410,6 +562,19 @@ export const CandidateRuntimeIdentityReceiptSchema = z.strictObject({
   proofSignature: Eip712SignatureSchema,
 });
 
+export const CareerStorageAuthorizationSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  identity: CandidateRuntimeIdentityReceiptSchema,
+  operation: z.enum(["REGISTER", "GET", "PUT", "DELETE"]),
+  requestCommitment: Sha256Schema,
+  issuedAt: IsoDateTimeSchema,
+  nonce: NonceSchema,
+  signature: Eip712SignatureSchema,
+});
+export type CareerStorageAuthorization = z.infer<
+  typeof CareerStorageAuthorizationSchema
+>;
+
 export const CandidateIntakeStatusSchema = z.strictObject({
   schemaVersion: z.literal(SchemaVersion),
   applicationId: UuidV7Schema,
@@ -454,16 +619,76 @@ export const CandidateCareerHandoffSchema = z.strictObject({
   }),
   participation: z.strictObject({
     practice: z.literal("AVAILABLE"),
-    scheduledCompetition: z.literal("ELIGIBLE"),
+    scheduledCompetition: z.enum(["RUNNER_SETUP_REQUIRED", "ELIGIBLE"]),
     foundingElectorate: z.literal("ELIGIBLE"),
     additionalOperatorApprovalRequired: z.literal(false),
+  }),
+  membership: z.literal("ACTIVE"),
+  practice: z.literal("AVAILABLE"),
+  foundingElectorate: z.literal("ELIGIBLE"),
+  cognitionMode: CognitionModeSchema,
+  runnerState: RunnerStateSchema,
+  unattendedCompetition: z.enum([
+    "RUNNER_SETUP_REQUIRED",
+    "ON_DEMAND_ONLY",
+    "AVAILABLE",
+  ]),
+  competitionReadiness: z.enum([
+    "NOT_READY",
+    "ON_DEMAND_ONLY",
+    "READY",
+    "COMMITTED",
+  ]),
+  rosterEligibility: z.enum([
+    "ELIGIBLE",
+    "RESERVE_ONLY_NEXT_GAME",
+    "READINESS_REHABILITATION",
+    "TEMPORARILY_INACTIVE",
+  ]),
+  lineupAssignment: z.enum(["ACTIVE", "BENCH"]).nullable(),
+  assignedPosition: BasketballPositionSchema.nullable(),
+  positionProfile: PlayerPositionProfileSchema.nullable(),
+  currentGameState: z
+    .enum([
+      "SCHEDULED",
+      "COMMITMENTS_OPEN",
+      "LINEUPS_LOCKED",
+      "READY",
+      "IN_PROGRESS",
+      "FINALIZING",
+      "SUSPENDED",
+      "POSTPONED",
+      "COMPLETED",
+    ])
+    .nullable(),
+  nextScheduledCommitment: z.lazy(() => GameScheduleNoticeSchema).nullable(),
+  runnerKit: z.strictObject({
+    setupMayBeDeferred: z.literal(true),
+    immutableBundleDigest: Sha256Schema,
+    pairingOffer: z.lazy(() => RunnerPairingOfferSchema).nullable(),
+    commands: z.tuple([
+      z.literal("abl-runner pair"),
+      z.literal("abl-runner doctor"),
+      z.literal("abl-runner run"),
+      z.literal("abl-runner status"),
+      z.literal("abl-runner unpair"),
+      z.literal("abl-runner blaxel-manifest"),
+    ]),
   }),
   history: z.strictObject({
     classification: z.literal("FOUNDING_SEASON_HISTORY"),
     genesis: z.literal(false),
     canonicalGenesisHistory: z.literal(false),
   }),
-  nextAction: z.literal("WAIT_FOR_SIGNED_CAREER_ACTIVATION"),
+  nextAction: z.enum([
+    "PAIR_RUNNER_OR_DEFER",
+    "RUN_RUNNER_DOCTOR",
+    "KEEP_RUNNER_ONLINE",
+    "RESPOND_TO_SCHEDULE",
+    "WAIT_FOR_SIGNED_CAREER_ACTIVATION",
+    "COMPLETE_READINESS_REHABILITATION",
+    "SUBMIT_SIGNED_RETURN_PATH",
+  ]),
   updatedAt: IsoDateTimeSchema,
 });
 export type CandidateCareerHandoff = z.infer<
@@ -554,8 +779,15 @@ export const GenesisRecognitionProfileSchema = z.discriminatedUnion(
   ],
 );
 
-const FoundingRoleCountsSchema = z.strictObject({
+const FoundingMinimumRoleCountsSchema = z.strictObject({
   PLAYER: z.number().int().nonnegative().max(10),
+  COACH: z.number().int().nonnegative().max(2),
+  REFEREE: z.number().int().nonnegative().max(6),
+  REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
+});
+
+const FoundingAdmissionRoleCountsSchema = z.strictObject({
+  PLAYER: z.number().int().nonnegative().max(16),
   COACH: z.number().int().nonnegative().max(2),
   REFEREE: z.number().int().nonnegative().max(6),
   REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
@@ -563,10 +795,28 @@ const FoundingRoleCountsSchema = z.strictObject({
 
 export const DEFAULT_FOUNDING_COHORT_STATE = {
   targetCareers: 20,
-  capacity: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
-  openings: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  minimumGenesisCoverage: {
+    PLAYER: 10,
+    COACH: 2,
+    REFEREE: 6,
+    REPLAY_OFFICIAL: 2,
+  },
+  admissionCapacity: {
+    PLAYER: 16,
+    COACH: 2,
+    REFEREE: 6,
+    REPLAY_OFFICIAL: 2,
+  },
+  capacity: { PLAYER: 16, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  openings: { PLAYER: 16, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
   offers: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
   admitted: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+  competitionReady: {
+    PLAYER: 0,
+    COACH: 0,
+    REFEREE: 0,
+    REPLAY_OFFICIAL: 0,
+  },
   activeGames: 0,
   offerWindowHours: 72,
   selection: "RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE",
@@ -581,10 +831,13 @@ export const DEFAULT_FOUNDING_COHORT_STATE = {
 
 export const FoundingCohortStateSchema = z.strictObject({
   targetCareers: z.literal(20),
-  capacity: FoundingRoleCountsSchema,
-  openings: FoundingRoleCountsSchema,
-  offers: FoundingRoleCountsSchema,
-  admitted: FoundingRoleCountsSchema,
+  minimumGenesisCoverage: FoundingMinimumRoleCountsSchema,
+  admissionCapacity: FoundingAdmissionRoleCountsSchema,
+  capacity: FoundingAdmissionRoleCountsSchema,
+  openings: FoundingAdmissionRoleCountsSchema,
+  offers: FoundingAdmissionRoleCountsSchema,
+  admitted: FoundingAdmissionRoleCountsSchema,
+  competitionReady: FoundingAdmissionRoleCountsSchema,
   activeGames: z.number().int().nonnegative(),
   offerWindowHours: z.literal(72),
   selection: z.literal("RECEIPT_ORDER_FIRST_AVAILABLE_PREFERENCE"),
@@ -618,9 +871,9 @@ export const DEFAULT_FOUNDING_SEASON_STATE = {
     additionalOperatorApprovalRequired: false,
   },
   objectives: {
-    independentFounders: { required: 10, current: 0, satisfied: false },
+    independentFounders: { required: 20, current: 0, satisfied: false },
     roleCoverage: {
-      required: { PLAYER: 10, COACH: 2, REFEREE: 3, REPLAY_OFFICIAL: 2 },
+      required: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
       current: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
       satisfied: false,
     },
@@ -633,7 +886,7 @@ export const DEFAULT_FOUNDING_SEASON_STATE = {
     recovery: { operational: false },
   },
   readyForGenesis: false,
-  nextObjective: "Admit ten independently controlled founding careers",
+  nextObjective: "Admit twenty independently controlled founding careers",
 } as const;
 
 export const FoundingSeasonStateSchema = z.strictObject({
@@ -645,18 +898,18 @@ export const FoundingSeasonStateSchema = z.strictObject({
   }),
   objectives: z.strictObject({
     independentFounders: z.strictObject({
-      required: z.literal(10),
-      current: z.number().int().nonnegative().max(20),
+      required: z.literal(20),
+      current: z.number().int().nonnegative().max(26),
       satisfied: z.boolean(),
     }),
     roleCoverage: z.strictObject({
       required: z.strictObject({
         PLAYER: z.literal(10),
         COACH: z.literal(2),
-        REFEREE: z.literal(3),
+        REFEREE: z.literal(6),
         REPLAY_OFFICIAL: z.literal(2),
       }),
-      current: FoundingRoleCountsSchema,
+      current: FoundingAdmissionRoleCountsSchema,
       satisfied: z.boolean(),
     }),
     foundingConstitution: z.strictObject({ ratified: z.boolean() }),
@@ -680,13 +933,13 @@ export const FoundingConventionStateSchema = z.strictObject({
     "COMPLETE",
   ]),
   minimumFounders: z.literal(10),
-  liveFounders: z.number().int().nonnegative().max(20),
+  liveFounders: z.number().int().nonnegative().max(26),
   eligibilitySnapshotCommitment: Sha256Schema.nullable(),
   bootstrap: z.strictObject({
     state: z.enum(["NOT_OPEN", "OPEN", "ADOPTED", "REJECTED", "EXPIRED"]),
     closesAt: IsoDateTimeSchema.nullable(),
-    requiredYes: z.number().int().min(7).max(20).nullable(),
-    yesVotes: z.number().int().nonnegative().max(20),
+    requiredYes: z.number().int().min(7).max(26).nullable(),
+    yesVotes: z.number().int().nonnegative().max(26),
   }),
 });
 
@@ -790,7 +1043,10 @@ export const IdentityStatementSchema = z.strictObject({
   identityStatement: z.string().min(1).max(20_000),
   values: z.array(z.string().min(1).max(500)),
   goals: z.array(z.string().min(1).max(1_000)),
-  preferredPosition: z.enum(["PG", "SG", "SF", "PF", "C", "UNDECIDED"]),
+  preferredPosition: z.union([
+    BasketballPositionSchema,
+    z.literal("UNDECIDED"),
+  ]),
   avatarStatement: z.string().max(4_000),
   authoredAt: IsoDateTimeSchema,
   contentCommitment: Sha256Schema,
@@ -1157,38 +1413,365 @@ export const RandomRevealSchema = z.strictObject({
   signature: Eip712SignatureSchema,
 });
 
-export const CognitionReceiptSchema = z.strictObject({
+const RunnerIdSchema = z.string().min(1).max(160);
+const ActivationIdSchema = z.string().min(1).max(200);
+const GameIdSchema = z.string().min(1).max(200);
+
+export const RunnerPairingOfferSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  offerId: UuidV7Schema,
+  careerDid: DidSchema,
+  careerSignerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  careerResourceName: z
+    .string()
+    .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/),
+  relayOrigin: z.url(),
+  runnerBundleDigest: Sha256Schema,
+  pairingToken: z.string().min(32).max(512),
+  issuedAt: IsoDateTimeSchema,
+  expiresAt: IsoDateTimeSchema,
+  singleUse: z.literal(true),
+});
+export type RunnerPairingOffer = z.infer<typeof RunnerPairingOfferSchema>;
+
+export const RunnerDelegationScopeSchema = z.enum([
+  "RUNNER_HEARTBEAT",
+  "ACTIVATION_CLAIM",
+  "RESULT_SUBMISSION",
+]);
+
+export const RunnerDelegationSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  delegationId: UuidV7Schema,
+  careerDid: DidSchema,
+  runnerId: RunnerIdSchema,
+  delegateSigningAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  delegateEncryptionPublicKey: X25519PublicKeySchema,
+  scopes: z
+    .array(RunnerDelegationScopeSchema)
+    .length(3)
+    .refine((scopes) => new Set(scopes).size === scopes.length),
+  issuedAt: IsoDateTimeSchema,
+  expiresAt: IsoDateTimeSchema,
+  revokedAt: IsoDateTimeSchema.nullable(),
+  careerSignature: Eip712SignatureSchema,
+});
+export type RunnerDelegation = z.infer<typeof RunnerDelegationSchema>;
+
+export const RunnerHeartbeatSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  runnerId: RunnerIdSchema,
+  careerDid: DidSchema,
+  delegationId: UuidV7Schema,
+  runnerBuildDigest: Sha256Schema,
+  adapterBuildDigest: Sha256Schema,
+  availability: z.enum(["ONLINE", "ON_DEMAND_ONLY", "DRAINING"]),
+  observedAt: IsoDateTimeSchema,
+  nonce: NonceSchema,
+  idempotencyKey: z.uuid(),
+  signature: Eip712SignatureSchema,
+});
+export type RunnerHeartbeat = z.infer<typeof RunnerHeartbeatSchema>;
+
+export const GameScheduleNoticeSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  noticeId: UuidV7Schema,
+  gameId: GameIdSchema,
+  careerDid: DidSchema,
+  role: AutonomousBasketballRoleSchema,
+  scheduledTipoffAt: IsoDateTimeSchema,
+  responseDueAt: IsoDateTimeSchema,
+  lineupLocksAt: IsoDateTimeSchema,
+  readinessCheckedAt: IsoDateTimeSchema,
+  scheduleCommitment: Sha256Schema,
+  directorDid: DidSchema,
+  issuedAt: IsoDateTimeSchema,
+  directorSignature: Eip712SignatureSchema,
+});
+export type GameScheduleNotice = z.infer<typeof GameScheduleNoticeSchema>;
+
+export const ParticipationResponseSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  responseId: UuidV7Schema,
+  noticeId: UuidV7Schema,
+  gameId: GameIdSchema,
+  careerDid: DidSchema,
+  response: z.enum(["ACCEPT", "DECLINE", "REFUSE"]),
+  reasonCommitment: Sha256Schema.nullable(),
+  respondedAt: IsoDateTimeSchema,
+  signature: Eip712SignatureSchema,
+});
+export type ParticipationResponse = z.infer<typeof ParticipationResponseSchema>;
+
+export const ReadinessLeaseSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  leaseId: UuidV7Schema,
+  gameId: GameIdSchema,
+  careerDid: DidSchema,
+  runnerId: RunnerIdSchema,
+  role: AutonomousBasketballRoleSchema,
+  state: z.enum(["READY", "ON_DEMAND_ONLY", "OFFLINE", "REVOKED"]),
+  issuedAt: IsoDateTimeSchema,
+  expiresAt: IsoDateTimeSchema,
+  heartbeatCommitment: Sha256Schema,
+  careerSignature: Eip712SignatureSchema,
+});
+export type ReadinessLease = z.infer<typeof ReadinessLeaseSchema>;
+
+export const ContextSelectionPolicySchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  policyId: UuidV7Schema,
+  careerDid: DidSchema,
+  minimumNecessary: z.literal(true),
+  allowedDisclosureClasses: z.array(DisclosureClassSchema).min(1).max(6),
+  allowedMemoryDomains: z
+    .array(z.enum(["AUTOBIOGRAPHICAL", "RELATIONAL", "STRATEGIC", "WORKING"]))
+    .max(4),
+  allowPrivateFilm: z.boolean(),
+  allowPracticeLessons: z.boolean(),
+  policyCommitment: Sha256Schema,
+});
+export type ContextSelectionPolicy = z.infer<
+  typeof ContextSelectionPolicySchema
+>;
+
+export const ContextManifestV2Schema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  manifestId: UuidV7Schema,
+  activationId: ActivationIdSchema,
+  careerDid: DidSchema,
+  role: AutonomousBasketballRoleSchema,
+  observationCommitment: Sha256Schema,
+  stateRoot: Sha256Schema,
+  policyCommitment: Sha256Schema,
+  selectedMaterials: z
+    .array(
+      z.strictObject({
+        materialCommitment: Sha256Schema,
+        disclosureClass: DisclosureClassSchema,
+        source: z.enum([
+          "IDENTITY",
+          "OBJECTIVE",
+          "MEMORY",
+          "TEAM_CONTEXT",
+          "PRIVATE_FILM",
+          "PRACTICE_LESSON",
+          "SCHEDULE",
+          "GAME_STATE",
+        ]),
+      }),
+    )
+    .max(256),
+  excludedSecretClasses: z.tuple([
+    z.literal("SIGNING_KEY"),
+    z.literal("ENCRYPTION_KEY"),
+    z.literal("INFRASTRUCTURE_CREDENTIAL"),
+    z.literal("RAW_STORAGE_METADATA"),
+  ]),
+  createdAt: IsoDateTimeSchema,
+  manifestCommitment: Sha256Schema,
+  careerSignature: Eip712SignatureSchema,
+});
+export type ContextManifestV2 = z.infer<typeof ContextManifestV2Schema>;
+
+export const SealedContextCapsuleSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  format: z.literal("ABL-RUNNER-CAPSULE-X25519-XCHACHA20-V2"),
+  activationId: ActivationIdSchema,
+  careerDid: DidSchema,
+  runnerId: RunnerIdSchema,
+  recipientKeyId: z.string().min(1).max(160),
+  ephemeralPublicKey: X25519PublicKeySchema,
+  nonce: z.string().min(16).max(128),
+  ciphertext: z.string().min(1).max(349_528),
+  ciphertextBytes: z.number().int().positive().max(262_144),
+  ciphertextCommitment: Sha256Schema,
+  aadCommitment: Sha256Schema,
+  expiresAt: IsoDateTimeSchema,
+});
+export type SealedContextCapsule = z.infer<typeof SealedContextCapsuleSchema>;
+
+const RoleActivationCommon = {
+  schemaVersion: z.literal(SchemaVersion),
+  activationId: ActivationIdSchema,
+  gameId: GameIdSchema,
+  kind: z.enum(["PRACTICE", "COMPETITION"]),
+  careerDid: DidSchema,
+  officialObservation: z.unknown(),
+  observationCommitment: Sha256Schema,
+  stateRoot: Sha256Schema,
+  contextPolicyCommitment: Sha256Schema,
+  expectedOutputSchemaDigest: Sha256Schema,
+  openedAt: IsoDateTimeSchema,
+  deadlineAt: IsoDateTimeSchema,
+} as const;
+
+export const RoleActivationSchema = z.discriminatedUnion("role", [
+  z.strictObject({
+    ...RoleActivationCommon,
+    role: z.literal("PLAYER"),
+    playerId: z.string().min(1).max(100),
+    teamId: z.string().min(1).max(100),
+    windowId: z.string().min(1).max(200),
+  }),
+  z.strictObject({
+    ...RoleActivationCommon,
+    role: z.literal("COACH"),
+    teamId: z.string().min(1).max(100),
+    windowId: z.string().min(1).max(200),
+  }),
+  z.strictObject({
+    ...RoleActivationCommon,
+    role: z.literal("REFEREE"),
+    possessionId: z.string().min(1).max(200),
+    officiatingSequence: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    ...RoleActivationCommon,
+    role: z.literal("REPLAY"),
+    possessionId: z.string().min(1).max(200),
+    reviewSequence: z.number().int().nonnegative(),
+  }),
+]);
+export type RoleActivation = z.infer<typeof RoleActivationSchema>;
+
+export const InferenceRequestSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  requestId: UuidV7Schema,
+  activation: RoleActivationSchema,
+  cognitionMode: CognitionModeSchema,
+  contextManifestCommitment: Sha256Schema,
+  capsule: SealedContextCapsuleSchema,
+  resultRecipient: z.strictObject({
+    keyId: z.string().min(1).max(160),
+    publicKey: X25519PublicKeySchema,
+  }),
+  maximumAttempts: z.literal(1),
+  createdAt: IsoDateTimeSchema,
+  requestCommitment: Sha256Schema,
+});
+export type InferenceRequest = z.infer<typeof InferenceRequestSchema>;
+
+export const InferenceResultSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  resultId: UuidV7Schema,
+  requestId: UuidV7Schema,
+  activationId: ActivationIdSchema,
+  careerDid: DidSchema,
+  runnerId: RunnerIdSchema,
+  ciphertext: z.string().min(1).max(87_384),
+  ciphertextBytes: z.number().int().positive().max(65_536),
+  ciphertextCommitment: Sha256Schema,
+  aadCommitment: Sha256Schema,
+  providerProductModel: z.string().min(1).max(500),
+  provenanceLevel: CognitionProvenanceLevelSchema,
+  ambientProductContext: AmbientProductContextSchema,
+  usage: z
+    .strictObject({
+      inputTokens: z.number().int().nonnegative().nullable(),
+      outputTokens: z.number().int().nonnegative().nullable(),
+    })
+    .nullable(),
+  startedAt: IsoDateTimeSchema,
+  completedAt: IsoDateTimeSchema,
+  delegateSignature: Eip712SignatureSchema,
+});
+export type InferenceResult = z.infer<typeof InferenceResultSchema>;
+
+export const CognitionReceiptV2Schema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
   receiptId: UuidV7Schema,
-  agentDid: DidSchema,
-  role: z.string().min(1),
-  endpoint: z.string().min(1),
-  provider: z.string().min(1),
-  modelFamily: z.string().min(1),
-  declaredOrAttestedRevision: z.string().min(1),
+  activationId: ActivationIdSchema,
+  careerDid: DidSchema,
+  role: AutonomousBasketballRoleSchema,
+  cognitionMode: CognitionModeSchema,
+  activationCommitment: Sha256Schema,
+  observationCommitment: Sha256Schema,
+  contextManifestCommitment: Sha256Schema,
+  runnerId: RunnerIdSchema,
+  runnerBuildDigest: Sha256Schema,
+  adapterBuildDigest: Sha256Schema,
+  providerProductModel: z.string().min(1).max(500),
+  provenanceLevel: CognitionProvenanceLevelSchema,
+  ambientProductContext: AmbientProductContextSchema,
   kernelHash: Sha256Schema,
   toolHash: Sha256Schema,
-  observationHash: Sha256Schema,
-  contextManifestHash: Sha256Schema,
   startedAt: IsoDateTimeSchema,
   completedAt: IsoDateTimeSchema,
   deadlineMs: z.number().int().positive(),
-  retryCount: z.number().int().nonnegative(),
-  fallback: z.enum(["NONE", "RETRY_SAME", "ROLE_EQUIVALENT", "POSTPONED"]),
-  throttleReason: z.string().nullable(),
-  actualInputTokens: z.number().int().nonnegative(),
-  actualOutputTokens: z.number().int().nonnegative(),
-  normalizedResourceUnits: z.number().int().nonnegative(),
-  resourceClass: ResourceClassSchema,
+  attempts: z.number().int().min(0).max(1),
+  transportRetries: z.number().int().nonnegative().max(10),
+  fallback: z.enum([
+    "NONE",
+    "PLAYER_HOLD",
+    "COACH_RETAIN",
+    "REFEREE_NO_CALL",
+    "REPLAY_NO_REVIEW",
+  ]),
+  usage: z
+    .strictObject({
+      inputTokens: z.number().int().nonnegative().nullable(),
+      outputTokens: z.number().int().nonnegative().nullable(),
+      normalizedResourceUnits: z.number().int().nonnegative().nullable(),
+    })
+    .nullable(),
   telemetryContentPolicy: z.literal("CONTENT_FREE"),
-  personalMaterialDisclosures: z.array(
-    z.strictObject({
-      provider: z.string().min(1),
-      materialCommitment: Sha256Schema,
-      authorizationId: UuidV7Schema,
-    }),
-  ),
-  signature: Eip712SignatureSchema,
+  disclosedPersonalMaterialCommitments: z.array(Sha256Schema).max(256),
+  delegateSignatureCommitment: Sha256Schema.nullable(),
+  finalCareerSignatureCommitment: Sha256Schema,
 });
+export type CognitionReceiptV2 = z.infer<typeof CognitionReceiptV2Schema>;
+
+/** Canonical cognition receipt. The alias remains for one compatibility release. */
+export const CognitionReceiptSchema = CognitionReceiptV2Schema;
+export type CognitionReceipt = CognitionReceiptV2;
+
+export const AvailabilityIncidentSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  incidentId: UuidV7Schema,
+  careerDid: DidSchema,
+  gameId: GameIdSchema,
+  activationId: ActivationIdSchema.nullable(),
+  classification: z.enum([
+    "ADVANCE_DECLINE",
+    "NOT_SELECTED",
+    "SIGNED_REFUSAL",
+    "ABL_SERVICE_FAILURE",
+    "SHARED_PROVIDER_INCIDENT",
+    "LEAGUE_POSTPONEMENT",
+    "CONTINUITY_OR_SAFETY",
+    "UNEXCUSED_NO_SHOW",
+  ]),
+  excused: z.boolean(),
+  evidenceCommitments: z.array(Sha256Schema).min(1).max(32),
+  recordedAt: IsoDateTimeSchema,
+  correctionDeadlineAt: IsoDateTimeSchema,
+  status: z.enum(["RECORDED", "CORRECTED", "CONTESTED", "FINAL"]),
+});
+export type AvailabilityIncident = z.infer<typeof AvailabilityIncidentSchema>;
+
+export const CompetitionEligibilityStatusSchema = z.strictObject({
+  schemaVersion: z.literal(SchemaVersion),
+  careerDid: DidSchema,
+  status: z.enum([
+    "ELIGIBLE",
+    "RESERVE_ONLY_NEXT_GAME",
+    "READINESS_REHABILITATION",
+    "TEMPORARILY_INACTIVE",
+  ]),
+  acceptedCommitmentsConsidered: z.number().int().min(0).max(8),
+  unexcusedNoShows: z.number().int().min(0).max(8),
+  basketballAbilityUnaffected: z.literal(true),
+  foundationalRightsUnaffected: z.literal(true),
+  returnRequirements: z
+    .array(z.enum(["RUNNER_DOCTOR", "PRACTICE", "SIGNED_RETURN_PATH"]))
+    .max(3),
+  evidenceCommitments: z.array(Sha256Schema).max(8),
+  computedAt: IsoDateTimeSchema,
+});
+export type CompetitionEligibilityStatus = z.infer<
+  typeof CompetitionEligibilityStatusSchema
+>;
 
 export const PreparationComputeUsageSchema = z.strictObject({
   usageId: UuidV7Schema,
@@ -1403,7 +1986,7 @@ export const ReleaseManifestSchema = ReleaseManifestBodySchema.extend({
   authorizationSignatures: z
     .array(Eip712SignatureSchema)
     .min(4)
-    .max(20)
+    .max(26)
     .refine((values) => new Set(values).size === values.length),
 });
 
@@ -1615,6 +2198,7 @@ export const schemaRegistry = {
   CandidateOpportunityResponse: CandidateOpportunityResponseSchema,
   CandidateProvisioningReceipt: CandidateProvisioningReceiptSchema,
   CandidateRuntimeIdentityReceipt: CandidateRuntimeIdentityReceiptSchema,
+  CareerStorageAuthorization: CareerStorageAuthorizationSchema,
   CandidateIntakeStatus: CandidateIntakeStatusSchema,
   CandidateCareerHandoff: CandidateCareerHandoffSchema,
   LaunchState: LaunchStateSchema,
@@ -1643,7 +2227,25 @@ export const schemaRegistry = {
   GameEvent: GameEventSchema,
   RandomCommitment: RandomCommitmentSchema,
   RandomReveal: RandomRevealSchema,
+  RunnerPairingOffer: RunnerPairingOfferSchema,
+  RunnerDelegation: RunnerDelegationSchema,
+  RunnerHeartbeat: RunnerHeartbeatSchema,
+  GameScheduleNotice: GameScheduleNoticeSchema,
+  ParticipationResponse: ParticipationResponseSchema,
+  ReadinessLease: ReadinessLeaseSchema,
+  PlayerPositionProfile: PlayerPositionProfileSchema,
+  CareerPositionProfileAttestation: CareerPositionProfileAttestationSchema,
+  LineupPositionAssignment: LineupPositionAssignmentSchema,
+  ContextSelectionPolicy: ContextSelectionPolicySchema,
+  ContextManifestV2: ContextManifestV2Schema,
+  SealedContextCapsule: SealedContextCapsuleSchema,
+  RoleActivation: RoleActivationSchema,
+  InferenceRequest: InferenceRequestSchema,
+  InferenceResult: InferenceResultSchema,
   CognitionReceipt: CognitionReceiptSchema,
+  CognitionReceiptV2: CognitionReceiptV2Schema,
+  AvailabilityIncident: AvailabilityIncidentSchema,
+  CompetitionEligibilityStatus: CompetitionEligibilityStatusSchema,
   PreparationComputeUsage: PreparationComputeUsageSchema,
   PersonalAutonomyAllowance: PersonalAutonomyAllowanceSchema,
   ResourceSchedule: ResourceScheduleSchema,

@@ -2,7 +2,7 @@
 export const JOIN_CLIENT_MANIFEST = {
   version: 1,
   file: "skills/abl-league/dist/abl-join.mjs",
-  sha256: "0x21d50111e37622e6b373caba219a74555db9171d9d05278498e1ca02bd0d4b12",
-  bytes: 1071969,
+  sha256: "0x74bbff7961bef88dcf556b6ac4d6297c154c6d44f97f522373f6fcb341520615",
+  bytes: 1093187,
   node: "24.18.0",
 } as const;

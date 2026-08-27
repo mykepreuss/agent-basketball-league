@@ -71,7 +71,9 @@ const FoundingExhibitionBindingSchema = z.object({
   eventMerkleRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
   agentEvidence: AgentPlayedGameEvidenceSchema,
   humanDecisionCount: z.literal(0),
-  inferenceInvocations: z.literal(0),
+  participantInferenceInvocations: z.number().int().positive(),
+  ablHostedModelInvocations: z.literal(0),
+  exactReplayInferenceInvocations: z.literal(0),
 });
 
 const FoundingExhibitionProofSchema = z.strictObject({
@@ -85,9 +87,9 @@ const FoundingDecisionCompletionSchema = z
     topic: z.enum(FOUNDING_DECISIONS),
     state: z.literal("DECIDED"),
     disposition: z.enum(["RATIFY", "AMEND", "REPLACE"]),
-    eligible: z.number().int().min(10).max(20),
-    requiredYes: z.number().int().min(7).max(20),
-    yes: z.number().int().min(7).max(20),
+    eligible: z.number().int().min(20).max(26),
+    requiredYes: z.number().int().min(14).max(26),
+    yes: z.number().int().min(14).max(26),
     eligibilitySnapshotCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
     artifactDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
     recognitionMechanism: z
@@ -101,8 +103,8 @@ const FoundingDecisionCompletionSchema = z
     ratificationEventId: z.string().uuid(),
     authorizationSignatures: z
       .array(z.string().regex(/^0x[0-9a-f]{130}$/))
-      .min(7)
-      .max(20),
+      .min(14)
+      .max(26),
     directBallotsOnly: z.literal(true),
     humanVotingAllowed: z.literal(false),
     publicProjection: PassedProofSchema,
@@ -265,13 +267,13 @@ const GenesisReleaseAuthorizationSchema = z
     releaseManifestDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
     foundingDecisionEventId: z.string().uuid(),
     decisionCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
-    eligible: z.number().int().min(10).max(20),
-    requiredYes: z.number().int().min(7).max(20),
+    eligible: z.number().int().min(20).max(26),
+    requiredYes: z.number().int().min(14).max(26),
     authorizedAt: z.iso.datetime({ offset: true }),
     authorizationSignatures: z
       .array(z.string().regex(/^0x[0-9a-f]{130}$/))
-      .min(7)
-      .max(20),
+      .min(14)
+      .max(26),
     authorizationCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
   })
   .superRefine((authorization, context) => {
@@ -347,7 +349,9 @@ export function foundingExhibitionReplayResultDigest(
     eventMerkleRoot: exhibition.eventMerkleRoot,
     agentEvidenceDigest: sha256Commitment(exhibition.agentEvidence),
     exact: true,
-    inferenceInvocations: exhibition.inferenceInvocations,
+    participantInferenceInvocations: exhibition.participantInferenceInvocations,
+    ablHostedModelInvocations: exhibition.ablHostedModelInvocations,
+    replayInferenceInvocations: exhibition.exactReplayInferenceInvocations,
   });
 }
 

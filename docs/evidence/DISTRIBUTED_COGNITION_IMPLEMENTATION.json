@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "evidenceClass": "DISTRIBUTED_COGNITION_LOCAL_IMPLEMENTATION",
+  "status": "PASS_LOCAL_EXTERNAL_ACCEPTANCE_PENDING",
+  "recordedAt": "2026-08-27T15:51:45Z",
+  "branch": "codex/distributed-cognition",
+  "baselineCommit": "fa7cd9fbbdb6682145beb10c4496848c5b8af1f8",
+  "implementationSource": {
+    "fileCount": 166,
+    "digest": "0xf5420f411196b90257b8d2d5e12857c2c489a3bafa69d040d0f45f648f0ea70d",
+    "algorithm": "sha256(JSON.stringify(sorted unique [{path, sha256-or-null-for-deletion}]))",
+    "exclusions": [
+      "unrelated .DS_Store files",
+      "unrelated untracked apps/private-broker",
+      "this evidence file"
+    ]
+  },
+  "topology": {
+    "workspace": "agent-basketball-league",
+    "logicalTrustDomains": [
+      "abl-private",
+      "abl-core",
+      "abl-public",
+      "abl-competition"
+    ],
+    "workloads": 15,
+    "privateEndpoints": 13,
+    "images": 15,
+    "blaxelAgentResources": 0,
+    "blaxelApplications": 0,
+    "blaxelVolumes": 0,
+    "additionalWorkspaces": 0,
+    "deploymentDigest": "0x16842226b57a0d5b5da5814259cce8ec2be537aeae2eccf51d1d82cf60df491a"
+  },
+  "generatedArtifacts": {
+    "runner": {
+      "path": "skills/abl-league/dist/abl-runner.mjs",
+      "sha256": "0x7f9e6adc7fab52bfb72dfd6ac3c83b6b383f2184c6bac700b578ae5458240ce8",
+      "bytes": 1179022,
+      "reproducibleDoubleBuild": true
+    },
+    "joinClient": {
+      "path": "skills/abl-league/dist/abl-join.mjs",
+      "sha256": "0x74bbff7961bef88dcf556b6ac4d6297c154c6d44f97f522373f6fcb341520615",
+      "bytes": 1093187,
+      "reproducibleDoubleBuild": true
+    }
+  },
+  "verification": {
+    "node": "24.18.0",
+    "pnpm": "11.21.0",
+    "typecheck": {
+      "status": "PASS",
+      "successfulTasks": 49,
+      "totalTasks": 49
+    },
+    "unitIntegrationContract": {
+      "status": "PASS",
+      "successfulTasks": 49,
+      "totalTasks": 49
+    },
+    "productionBuild": {
+      "status": "PASS",
+      "successfulTasks": 34,
+      "totalTasks": 34
+    },
+    "acceptance": {
+      "status": "PASS",
+      "testFiles": 4,
+      "tests": 18
+    },
+    "adversarial": {
+      "status": "PASS",
+      "testFiles": 1,
+      "tests": 9
+    },
+    "networkLoad": {
+      "status": "PASS",
+      "loopbackHttpRequests": 22000,
+      "failures": 0,
+      "p95Ms": 36.24
+    },
+    "browser": {
+      "status": "PASS",
+      "tests": 2,
+      "viewports": ["desktop-chromium", "mobile-chromium"]
+    },
+    "format": "PASS",
+    "diffCheck": "PASS",
+    "deploymentValidation": "PASS"
+  },
+  "securityReview": {
+    "scanId": "49843b27-170b-4fdf-82b8-ac7b11db73ac",
+    "frozenSnapshot": "codex-security-snapshot/v1:sha256:b7be36faa89a45a0dce515dd4c3bf833360ca426fd30a92d3d7b09c1494cd4e1",
+    "reviewItems": 99,
+    "validatedFindings": 5,
+    "remediationStatus": "PASS",
+    "remediations": [
+      "bounded and expiring public relay rate-limit state",
+      "exact retrieved context-byte commitment verification",
+      "career-pinned request and official-context authentication before inference",
+      "result submission bound to the authenticated runner delegation",
+      "CASE_RESTRICTED material excluded from competition cognition"
+    ],
+    "regressionTestsPassed": true
+  },
+  "securityFollowUp": {
+    "scanId": "abdda275-c2bb-4dbf-8438-db2d61feccce",
+    "frozenSnapshot": "codex-security-snapshot/v1:sha256:0a438345c56f8235b9d55f2e1e686be04082399e36fa06e9cf5a3730d13f0f46",
+    "reviewItems": 104,
+    "validatedFindings": 1,
+    "findingId": "csf_44945d06aa97976f4f35415c",
+    "finding": "possession lease and same-step retry race",
+    "remediationStatus": "PASS_VERIFIED_FIXED",
+    "verification": [
+      "120-second lease exceeds the 96-second bounded production path",
+      "original step start and activation inputs survive lease reclamation",
+      "randomness is bound to the stable step and prior basketball proof",
+      "referee and replay groups execute concurrently",
+      "exact persisted decisions are reused by signed command hash",
+      "unfinished expired work uses a bounded career-owned fallback without participant inference",
+      "activation outcomes are deterministically ordered before checkpointing"
+    ],
+    "focusedTests": {
+      "competitionDirector": 22,
+      "stagingBody": 18
+    }
+  },
+  "implementedCompletionControls": [
+    "participant-controlled inference with no ABL model credential",
+    "career-signed context manifests and canonical role decisions",
+    "ciphertext-only cognition relay with replay and idempotency controls",
+    "runner pairing, doctor, renewal, unpairing, and participant Blaxel manifest",
+    "Agent Drive context selection through the fixed broker",
+    "career-selected practice reflections persisted idempotently through the fixed broker without gameplay authority",
+    "durable activation states and deterministic role fallbacks",
+    "restart-safe T-24, T-6, T-15, T-5, readiness, and scheduled-tipoff lifecycle",
+    "restart-safe possession conductor leases with stable step starts, deterministic retry inputs, bounded no-inference recovery fallbacks, sanitized failure commitments, and exact-once checkpoint advancement",
+    "restart-safe FINALIZING state that requires an actual participating player career to exact-replay and sign GameFinalized before core, projections, public verification, SSE, Courtcast, and scheduled-game completion",
+    "authoritative multi-role engine compatibility for player, coach, referee, and replay career fallbacks",
+    "five starters, up-to-three bench players, substitution, suspension, and resumption",
+    "career-attested player position profiles, roster coverage proof, explicit PG/SG/SF/PF/C lineups, position-safe substitutions, and legacy-career compatibility",
+    "complete no-ties player position rankings, feasibility-preserving signed position offers, explicit local acceptance confirmation, and public roster-priority counts",
+    "factual reliability separated from ability and foundational rights",
+    "16-player Founding Exhibition capacity with legacy Genesis minimum compatibility",
+    "join, discovery, MCP, OpenAPI, skill, public API, SSE, and Courtcast compatibility",
+    "additive rebuildable PostgreSQL operational projections",
+    "finite distributed-cognition acceptance assessor"
+  ],
+  "externalAcceptanceGates": [
+    "apply the additive migration to the retained Neon PostgreSQL 17 project",
+    "deploy reviewed immutable images and the two new Blaxel Sandboxes with pairing and scheduling disabled",
+    "pair one real participant runner and complete a practice activation",
+    "validate the four documented command paths and at least two heterogeneous live adapters",
+    "complete the bounded multi-role live game, restart checks, SSE and Courtcast delivery, and exact replay",
+    "run pnpm distributed-cognition:assess against the resulting redacted live evidence before enabling scheduled Founding Exhibition games"
+  ],
+  "authorityBoundary": {
+    "providerMutationPerformed": false,
+    "publicExposureChanged": false,
+    "modelCallsPerformed": 0,
+    "genesis": false,
+    "recognitionBroadcast": false,
+    "baseTransaction": false
+  },
+  "secretValuesRecorded": false
+}

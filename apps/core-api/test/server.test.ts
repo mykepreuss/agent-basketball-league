@@ -2,9 +2,11 @@ import {
   FINALIZED_GAME_AGGREGATE_TYPE,
   FINALIZED_GAME_SCHEMA_DIGEST,
   GAME_FINALIZED_EVENT_TYPE,
+  POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
   FinalizedGamePayloadSchema,
   createAgentPlayedGameEvidence,
   finalizedGameStateRoot,
+  possessionProjectionSource,
   runFirstPossessionRehearsal,
   runDeterministicExhibition,
 } from "@abl/basketball";
@@ -347,6 +349,149 @@ describe("core finalized-game command path", () => {
     });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: "invalid_command" });
+    await app.close();
+  });
+
+  it("allows an actual player to finalize only the canonical possession evidence", async () => {
+    const participantDid = "did:abl:participant-player-0";
+    const participant = createSigningIdentity(`0x${"a".repeat(64)}`);
+    const rehearsal = await runFirstPossessionRehearsal();
+    const possessionId = "core-participant-possession-1";
+    const authorityDids = {
+      players: Array.from(
+        { length: 20 },
+        (_, index) => `did:abl:participant-player-${index % 10}`,
+      ),
+      coaches: Array.from(
+        { length: 4 },
+        (_, index) => `did:abl:participant-coach-${index % 2}`,
+      ),
+      referees: Array.from(
+        { length: 3 },
+        (_, index) => `did:abl:participant-referee-${index}`,
+      ),
+      replayOfficials: Array.from(
+        { length: 2 },
+        (_, index) => `did:abl:participant-replay-${index}`,
+      ),
+    };
+    const proof = {
+      playerDecisionHashes: decisionHashes("participant-player", 20),
+      coachDecisionHashes: decisionHashes("participant-coach", 4),
+      refereeDecisionHashes: decisionHashes("participant-referee", 3),
+      replayDecisionHashes: decisionHashes("participant-replay", 2),
+      authorityDids,
+    };
+    const source = {
+      ...possessionProjectionSource(rehearsal.result),
+      gameId,
+      possessionId,
+      snapshots: rehearsal.result.snapshots.map((snapshot) => ({
+        ...snapshot,
+        gameId,
+        possessionId,
+      })),
+    };
+    const possession = createCanonicalEvent({
+      eventId: "0198f300-0000-7000-8000-000000000031",
+      actorDid: participantDid,
+      nonce: "participant-possession-1",
+      idempotencyKey: "0198f300-0000-7000-8000-000000000032",
+      aggregateType: "game-possession",
+      aggregateId: gameId,
+      aggregateVersion: 1n,
+      eventType: "PossessionResolved",
+      previousEventHash: null,
+      payload: { source, decisionProof: proof },
+      stateRoot: source.finalStateRoot,
+      schemaDigest: POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
+      timestamp: finalizedAt,
+    });
+    const game = runDeterministicExhibition(gameId);
+    const payload = FinalizedGamePayloadSchema.parse({
+      gameId,
+      finalizedAt,
+      input: game.input,
+      commands: game.commands,
+      proof: game.proof,
+      agentEvidence: createAgentPlayedGameEvidence({
+        gameId,
+        gameInput: game.input,
+        commands: game.commands,
+        proof: game.proof,
+        possessionProofs: [
+          {
+            possessionId,
+            ...proof,
+            eventMerkleRoot: source.eventMerkleRoot,
+            finalStateRoot: source.finalStateRoot,
+          },
+        ],
+      }),
+      filmCommitment: sha256Commitment("participant-film"),
+      broadcastStartedAt: finalizedAt,
+      broadcastIntervalMs: 0,
+    });
+    const finalEvent = createCanonicalEvent({
+      eventId: "0198f300-0000-7000-8000-000000000033",
+      actorDid: participantDid,
+      nonce: "participant-finalization-1",
+      idempotencyKey: "0198f300-0000-7000-8000-000000000034",
+      aggregateType: FINALIZED_GAME_AGGREGATE_TYPE,
+      aggregateId: gameId,
+      aggregateVersion: 1n,
+      eventType: GAME_FINALIZED_EVENT_TYPE,
+      previousEventHash: null,
+      payload,
+      stateRoot: finalizedGameStateRoot(payload),
+      schemaDigest: FINALIZED_GAME_SCHEMA_DIGEST,
+      timestamp: finalizedAt,
+    });
+    const store = new InMemoryCanonicalStore();
+    const app = createLiveCoreApi({
+      store,
+      domain,
+      admittedAgents: new Map([
+        [
+          participantDid,
+          {
+            signerAddress: participant.address,
+            allowedAggregateTypes: [
+              "game-possession",
+              FINALIZED_GAME_AGGREGATE_TYPE,
+            ],
+          },
+        ],
+      ]),
+      competitionId: "season-zero",
+      seasonId: "pre-genesis",
+      now: () => Date.parse(finalizedAt),
+      finalizedGames: {
+        finalizerDids: new Set(),
+        evidence: { finalizedGameEvidence: async () => null },
+      },
+    });
+    const possessionResponse = await app.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: {
+        event: { ...possession, aggregateVersion: "1" },
+        signatures: [await signCanonicalEvent(participant, domain, possession)],
+      },
+    });
+    expect(possessionResponse.statusCode, possessionResponse.body).toBe(201);
+    const accepted = await app.inject({
+      method: "POST",
+      url: "/v1/commands",
+      payload: {
+        event: { ...finalEvent, aggregateVersion: "1" },
+        signatures: [await signCanonicalEvent(participant, domain, finalEvent)],
+      },
+    });
+    expect(accepted.statusCode, accepted.body).toBe(201);
+    expect(
+      await store.pendingProjectionEvents(10, "public.finalized-game"),
+    ).toHaveLength(1);
     await app.close();
   });
 });

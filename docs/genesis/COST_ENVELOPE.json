@@ -22,20 +22,6 @@
       "validUntil": null,
       "seasonZeroCost": null,
       "thirtyDayEssentialCost": null
-    },
-    {
-      "provider": "MODEL_PRIMARY",
-      "quoteReference": null,
-      "validUntil": null,
-      "seasonZeroCost": null,
-      "thirtyDayEssentialCost": null
-    },
-    {
-      "provider": "MODEL_ALTERNATE",
-      "quoteReference": null,
-      "validUntil": null,
-      "seasonZeroCost": null,
-      "thirtyDayEssentialCost": null
     }
   ],
   "seasonZeroEnvelope": null,

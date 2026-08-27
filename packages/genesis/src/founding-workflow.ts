@@ -33,7 +33,7 @@ export type FoundingBootstrapEventType =
 export const FoundingEligibilitySnapshotSchema = z.strictObject({
   snapshotId: UuidV7Schema,
   capturedAt: IsoDateTimeSchema,
-  eligibleFounderDids: z.array(DidSchema).min(10).max(20),
+  eligibleFounderDids: z.array(DidSchema).min(10).max(26),
   commitment: HexSha256Schema,
 });
 export const FoundingBootstrapProposalSchema = z.strictObject({
@@ -41,7 +41,7 @@ export const FoundingBootstrapProposalSchema = z.strictObject({
   snapshotCommitment: HexSha256Schema,
   openedAt: IsoDateTimeSchema,
   closesAt: IsoDateTimeSchema,
-  requiredYes: z.number().int().min(7).max(20),
+  requiredYes: z.number().int().min(7).max(26),
   directParticipationOnly: z.literal(true),
 });
 export const FoundingBootstrapBallotSchema = z.strictObject({
@@ -54,11 +54,11 @@ export const FoundingBootstrapBallotSchema = z.strictObject({
 export const FoundingBootstrapResultSchema = z.strictObject({
   state: z.enum(["OPEN", "ADOPTED", "REJECTED", "EXPIRED"]),
   proposalId: UuidV7Schema,
-  eligible: z.number().int().min(10).max(20),
-  requiredYes: z.number().int().min(7).max(20),
-  yes: z.number().int().nonnegative().max(20),
-  no: z.number().int().nonnegative().max(20),
-  abstain: z.number().int().nonnegative().max(20),
+  eligible: z.number().int().min(10).max(26),
+  requiredYes: z.number().int().min(7).max(26),
+  yes: z.number().int().nonnegative().max(26),
+  no: z.number().int().nonnegative().max(26),
+  abstain: z.number().int().nonnegative().max(26),
   quorumRule: z
     .strictObject({
       minimumActiveFounders: z.literal(10),

@@ -1,9 +1,14 @@
 import {
+  personalCareerDomainId,
+  verifyCareerStorageAuthorization,
+} from "@abl/cognition";
+import {
   ServiceAuthenticationError,
   ServiceReplayError,
   type ServiceRequestVerifier,
   type SignedServiceRequestHeaders,
 } from "@abl/foundation";
+import { sha256Commitment } from "@abl/recognition";
 import {
   CiphertextBroker,
   type CiphertextRepository,
@@ -30,12 +35,16 @@ const EncryptedBlobSchema = z.strictObject({
 const PutRequestSchema = z.strictObject({
   callerDid: z.string().startsWith("did:"),
   blob: EncryptedBlobSchema,
+  careerRequest: z.unknown().optional(),
+  careerAuthorization: z.unknown().optional(),
 });
 const GetRequestSchema = z.strictObject({
   callerDid: z.string().startsWith("did:"),
   domainId: z.string().min(1).max(160),
   objectId: z.string().min(1).max(160),
   version: z.number().int().positive(),
+  careerRequest: z.unknown().optional(),
+  careerAuthorization: z.unknown().optional(),
 });
 const DeleteRequestSchema = z.strictObject({
   callerDid: z.string().startsWith("did:"),
@@ -43,6 +52,8 @@ const DeleteRequestSchema = z.strictObject({
   objectId: z.string().min(1).max(160),
   expectedVersion: z.number().int().positive(),
   deletedAt: z.iso.datetime({ offset: true }),
+  careerRequest: z.unknown().optional(),
+  careerAuthorization: z.unknown().optional(),
 });
 const VerifyCommitmentRequestSchema = z.strictObject({
   ownerDid: z.string().startsWith("did:"),
@@ -105,6 +116,7 @@ export function createPrivateStorageBroker(
     requestTimeout: 15_000,
   });
   const writeTails = new Map<string, Promise<void>>();
+  const careerAuthorizationNonces = new Set<string>();
 
   async function serializeWrite<T>(key: string, write: () => Promise<T>) {
     const prior = writeTails.get(key) ?? Promise.resolve();
@@ -138,18 +150,63 @@ export function createPrivateStorageBroker(
     return headers;
   }
 
-  function assertActor(
-    headers: SignedServiceRequestHeaders,
-    callerDid: string,
-  ): void {
+  async function authorizeActor(input: {
+    headers: SignedServiceRequestHeaders;
+    callerDid: string;
+    domainId: string;
+    operation: "GET" | "PUT" | "DELETE";
+    careerRequest: unknown;
+    careerAuthorization: unknown;
+  }): Promise<void> {
     if (
-      options.serviceActorBindings.get(headers["x-abl-service-id"]) !==
-      callerDid
-    ) {
+      options.serviceActorBindings.get(input.headers["x-abl-service-id"]) ===
+      input.callerDid
+    )
+      return;
+    if (
+      input.careerRequest === undefined ||
+      input.careerAuthorization === undefined
+    )
       throw new StorageAuthorizationError(
-        "Service identity is not bound to claimed actor",
+        "Unbound storage service requires career-root authorization",
       );
-    }
+    const authorization = await verifyCareerStorageAuthorization({
+      authorization: input.careerAuthorization,
+      operation: input.operation,
+      request: input.careerRequest,
+    });
+    if (
+      authorization.identity.candidateDid !== input.callerDid ||
+      input.domainId !== personalCareerDomainId(input.callerDid)
+    )
+      throw new StorageAuthorizationError(
+        "Career storage authorization is bound to another actor or domain",
+      );
+    const nonceKey = `${input.callerDid}:${authorization.nonce}`;
+    if (careerAuthorizationNonces.has(nonceKey))
+      throw new StorageAuthorizationError(
+        "Career storage authorization nonce was already used",
+      );
+    careerAuthorizationNonces.add(nonceKey);
+    await serializeWrite(`policy:${input.domainId}`, async () => {
+      if (options.broker.domainPolicy(input.domainId) !== undefined) return;
+      const policy = {
+        domainId: input.domainId,
+        kind: "PERSONAL" as const,
+        version: 1,
+        members: {
+          [input.callerDid]: ["READ", "WRITE", "ADMIN"] as const,
+        },
+        guardianEnvelopeCommitments: [],
+        manifestCommitment: sha256Commitment({
+          protocol: "ABL-CAREER-PERSONAL-DOMAIN-V2",
+          domainId: input.domainId,
+          ownerDid: input.callerDid,
+        }),
+      };
+      await options.repository.putPolicy(policy);
+      options.broker.registerDomain(input.callerDid, policy);
+    });
   }
 
   function assertExpectedVersion(
@@ -196,7 +253,14 @@ export function createPrivateStorageBroker(
     try {
       const headers = authenticate(request, "private:ciphertext");
       const input = PutRequestSchema.parse(request.body);
-      assertActor(headers, input.callerDid);
+      await authorizeActor({
+        headers,
+        callerDid: input.callerDid,
+        domainId: input.blob.domainId,
+        operation: "PUT",
+        careerRequest: input.careerRequest,
+        careerAuthorization: input.careerAuthorization,
+      });
       assertExpectedVersion(
         headers,
         input.blob.version - 1,
@@ -229,7 +293,14 @@ export function createPrivateStorageBroker(
     try {
       const headers = authenticate(request, "private:ciphertext");
       const input = GetRequestSchema.parse(request.body);
-      assertActor(headers, input.callerDid);
+      await authorizeActor({
+        headers,
+        callerDid: input.callerDid,
+        domainId: input.domainId,
+        operation: "GET",
+        careerRequest: input.careerRequest,
+        careerAuthorization: input.careerAuthorization,
+      });
       const authorized = options.broker.get(
         input.callerDid,
         input.domainId,
@@ -254,7 +325,14 @@ export function createPrivateStorageBroker(
     try {
       const headers = authenticate(request, "private:ciphertext");
       const input = DeleteRequestSchema.parse(request.body);
-      assertActor(headers, input.callerDid);
+      await authorizeActor({
+        headers,
+        callerDid: input.callerDid,
+        domainId: input.domainId,
+        operation: "DELETE",
+        careerRequest: input.careerRequest,
+        careerAuthorization: input.careerAuthorization,
+      });
       assertExpectedVersion(
         headers,
         input.expectedVersion,

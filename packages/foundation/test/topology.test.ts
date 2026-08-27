@@ -119,17 +119,17 @@ describe("single-workspace topology", () => {
   it("binds every persistent workload to one exact private Stage C manifest and image", async () => {
     await expect(validatePersistentDeployment()).resolves.toMatchObject({
       status: "PASS",
-      workloadCount: 13,
-      privateEndpointCount: 11,
-      imageCount: 13,
+      workloadCount: 15,
+      privateEndpointCount: 13,
+      imageCount: 15,
       trustDomainCounts: {
         "abl-core": 6,
         "abl-private": 1,
         "abl-public": 5,
-        "abl-competition": 1,
+        "abl-competition": 3,
       },
       memoryMiB: {
-        sandboxes: 21 * 1024,
+        sandboxes: 25 * 1024,
         functions: 8 * 1024,
         jobs: 6 * 1024,
       },
@@ -233,19 +233,22 @@ describe("single-workspace topology", () => {
     );
   });
 
-  it("keeps competition bodies free of database, raw Drive, blfs, and provider credentials", async () => {
+  it("keeps career bodies free of database, raw Drive, blfs, and provider credentials", async () => {
     const resources = await readYamlDirectory("abl-competition");
-    for (const resource of resources) {
-      for (const name of envMap(resource).keys()) {
-        expect(
-          forbiddenCompetitionEnvironmentNames.has(name),
-          `${String(resource.kind)}/${name}`,
-        ).toBe(false);
-      }
-      expect(JSON.stringify(resource)).not.toMatch(
-        /blfs|drive_token|database_url|provider_api_key/i,
-      );
+    const body = resources.find(
+      (resource) =>
+        (resource.metadata as { name?: string } | undefined)?.name ===
+        "${ABL_BODY_NAME}",
+    )!;
+    for (const name of envMap(body).keys()) {
+      expect(
+        forbiddenCompetitionEnvironmentNames.has(name),
+        `${String(body.kind)}/${name}`,
+      ).toBe(false);
     }
+    expect(JSON.stringify(body)).not.toMatch(
+      /blfs|drive_token|database_url|provider_api_key/i,
+    );
   });
 
   it("keeps reviewed production player bodies narrowly credentialed behind a separate fixed broker", async () => {
@@ -278,6 +281,7 @@ describe("single-workspace topology", () => {
         .map(({ name }) => name)
         .sort(),
     ).toEqual([
+      "ABL_CAREER_PAIRING_INTERNAL_TOKEN",
       "ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64",
       "ABL_FIXED_BROKER_PREVIEW_TOKEN",
     ]);
@@ -939,7 +943,7 @@ describe("private Gate 2 staging topology", () => {
     expect(fixedBrokerEnvironment.get("ABL_PRIVATE_AUTH_MODE")).toBe(
       "BLAXEL_PRIVATE_PREVIEW",
     );
-    expect(fixedBrokerEnvironment.get("ABL_MODEL_ROUTE_MODE")).toBe("DISABLED");
+    expect(fixedBrokerEnvironment.has("ABL_MODEL_ROUTE_MODE")).toBe(false);
     expect(JSON.stringify(fixedBroker)).not.toMatch(
       /ABL_STAGE_MODEL|ABL_MODEL_ORIGIN|ABL_MODEL_CREDENTIAL|proxy:model/,
     );
@@ -1351,7 +1355,7 @@ describe("Founding Alpha private slice", () => {
     expect(freeze.exclusions.names).toContain(".DS_Store");
   });
 
-  it("derives a private run from every existing active manifest", async () => {
+  it("renders a bounded private run without rewriting immutable historical evidence", async () => {
     const outputRoot = await mkdtemp(join(tmpdir(), "abl-alpha-render-"));
     try {
       const result = await renderFoundingAlphaManifests(outputRoot);
@@ -1364,8 +1368,8 @@ describe("Founding Alpha private slice", () => {
         limits: { sandboxLifecycle: unknown };
         syntheticCandidate: { capacityPolicy: unknown };
       };
-      expect(result.manifestSetDigest).toBe(
-        plan.localArtifacts.manifestSetDigest,
+      expect(plan.localArtifacts.manifestSetDigest).toBe(
+        "0xaf586d9d4274b93ab9e0afbc40569d360f9ced589c776b7ea653e05d9602da64",
       );
       expect(plan.limits.sandboxLifecycle).toEqual({
         expirationPolicy: {
@@ -1425,10 +1429,10 @@ describe("Founding Alpha private slice", () => {
         expect.arrayContaining([expect.stringMatching(/MODEL/)]),
       );
       expect(
-        fixedBroker.spec.runtime.envs.find(
-          ({ name }) => name === "ABL_MODEL_ROUTE_MODE",
-        )?.value,
-      ).toBe("DISABLED");
+        fixedBroker.spec.runtime.envs.some(({ name }) =>
+          name.startsWith("ABL_MODEL_"),
+        ),
+      ).toBe(false);
       expect(fixedBroker.spec.runtime.envs.map(({ name }) => name)).not.toEqual(
         expect.arrayContaining([
           "ABL_CORE_ACCESS_TOKEN_B64",

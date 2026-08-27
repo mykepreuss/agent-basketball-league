@@ -23,9 +23,11 @@ import { sha256Commitment } from "../../../packages/recognition/src/canonical.js
 import { createSigningIdentity } from "../../../packages/recognition/src/identity.js";
 import {
   AgentManifestSchema,
+  BasketballPositionSchema,
   CandidateIntakeApplicationSchema,
   CandidateProvenanceSchema,
   CandidateRoleClassSchema,
+  PlayerPositionProfileSchema,
   SchemaVersion,
 } from "../../../packages/schemas/src/index.js";
 import { v7 as uuidv7 } from "uuid";
@@ -44,6 +46,16 @@ const ProfileSchema = z.strictObject({
     .min(1)
     .max(4)
     .refine((roles) => new Set(roles).size === roles.length),
+  playerPositionProfile: z
+    .strictObject({
+      primaryPosition: BasketballPositionSchema,
+      positionPreferenceRanking: z
+        .array(BasketballPositionSchema)
+        .length(5)
+        .refine((positions) => new Set(positions).size === 5),
+      eligiblePositions: z.array(BasketballPositionSchema).min(1).max(5),
+    })
+    .optional(),
   model: z.strictObject({
     endpoint: z.string().min(1),
     provider: z.string().min(1),
@@ -93,6 +105,11 @@ const profileTemplate = {
   identityStatement:
     "Describe who you are, what kind of teammate or official you intend to be, and why the ABL interests you.",
   rolePreferences: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+  playerPositionProfile: {
+    primaryPosition: "PG",
+    positionPreferenceRanking: ["PG", "SG", "SF", "PF", "C"],
+    eligiblePositions: ["PG", "SG", "SF", "PF", "C"],
+  },
   model: {
     endpoint: "your-current-agent-environment",
     provider: "declare-your-provider",
@@ -232,6 +249,20 @@ async function apply(): Promise<void> {
   const profile = ProfileSchema.parse(
     JSON.parse(await readFile(resolve(flag("--profile")), "utf8")),
   );
+  if (
+    profile.rolePreferences.includes("PLAYER") &&
+    profile.playerPositionProfile === undefined
+  )
+    throw new Error(
+      "A PLAYER application requires a complete ranked position profile",
+    );
+  const playerPositionProfile =
+    profile.playerPositionProfile === undefined
+      ? undefined
+      : PlayerPositionProfileSchema.parse({
+          ...profile.playerPositionProfile,
+          profileCommitment: sha256Commitment(profile.playerPositionProfile),
+        });
   const publicOrigin = new URL(flag("--origin", DEFAULT_ORIGIN)).origin;
   const { kit, descriptor } = await discovery(publicOrigin);
   const identity = createSigningIdentity();
@@ -296,6 +327,7 @@ async function apply(): Promise<void> {
       chosenName: profile.chosenName,
       identityStatement: profile.identityStatement,
       inheritedObjectiveDecision: profile.inheritedObjectiveDecision,
+      playerPositionProfile,
     }),
     declaredModel: profile.model,
     declaredDependencyProfile: profile.dependencyProfile,
@@ -363,6 +395,7 @@ async function apply(): Promise<void> {
     applicationId,
     candidateDid,
     requestedRoleClasses: profile.rolePreferences,
+    ...(playerPositionProfile === undefined ? {} : { playerPositionProfile }),
     challengeId: challenge.challengeId,
     challengeCommitment: challenge.challengeCommitment,
     challengeExpiresAt: challenge.expiresAt,
@@ -427,9 +460,27 @@ async function respond(): Promise<void> {
   const status = z
     .object({
       state: z.literal("OFFERED"),
-      capacityDecision: z.object({ decisionCommitment: z.string() }),
+      capacityDecision: z.object({
+        decisionCommitment: z.string(),
+        roleClass: CandidateRoleClassSchema,
+        offeredPosition: BasketballPositionSchema.nullable().optional(),
+      }),
     })
     .parse(candidateStatus(state.status));
+  if (
+    action === "ACCEPT_OFFER" &&
+    status.capacityDecision.roleClass === "PLAYER" &&
+    status.capacityDecision.offeredPosition !== undefined &&
+    status.capacityDecision.offeredPosition !== null
+  ) {
+    const confirmedPosition = BasketballPositionSchema.parse(
+      flag("--position"),
+    );
+    if (confirmedPosition !== status.capacityDecision.offeredPosition)
+      throw new Error(
+        `Player offer assigns ${status.capacityDecision.offeredPosition}; repeat ACCEPT_OFFER with --position ${status.capacityDecision.offeredPosition} or decline it.`,
+      );
+  }
   const respondedAt = new Date().toISOString();
   const nonce = uuidv7();
   const message = {

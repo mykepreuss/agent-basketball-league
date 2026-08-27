@@ -1,0 +1,26 @@
+{
+  "name": "@abl/cognition-relay",
+  "version": "0.0.0-pre-genesis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist coverage *.tsbuildinfo",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@abl/cognition": "workspace:*",
+    "@abl/recognition": "workspace:*",
+    "@abl/schemas": "workspace:*",
+    "fastify": "catalog:",
+    "postgres": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,4 +1,10 @@
 import { sha256Commitment, type CanonicalEvent } from "@abl/recognition";
+import {
+  BasketballPositionSchema,
+  CognitionReceiptV2Schema,
+  type BasketballPosition,
+  type CognitionReceiptV2,
+} from "@abl/schemas";
 import { z } from "zod";
 
 const Sha256HexSchema = z
@@ -17,8 +23,8 @@ export const POSSESSION_RESOLVED_SCHEMA_DIGEST_V2 = sha256Commitment({
 
 export const TeamSchema = z.enum(["HOME", "AWAY"]);
 export type Team = z.infer<typeof TeamSchema>;
-export const PositionSchema = z.enum(["PG", "SG", "SF", "PF", "C"]);
-export type Position = z.infer<typeof PositionSchema>;
+export const PositionSchema = BasketballPositionSchema;
+export type Position = BasketballPosition;
 
 export interface PlayerState {
   playerId: string;
@@ -91,10 +97,18 @@ export const BasketballStateSchema = z
       new Set(careerDids).size === state.players.length &&
       state.players.filter(({ team }) => team === "HOME").length === 5 &&
       state.players.filter(({ team }) => team === "AWAY").length === 5 &&
+      (["HOME", "AWAY"] as const).every((team) =>
+        PositionSchema.options.every(
+          (position) =>
+            state.players.filter(
+              (player) => player.team === team && player.position === position,
+            ).length === 1,
+        ),
+      ) &&
       (state.ball.possessorId === null ||
         playerIds.includes(state.ball.possessorId))
     );
-  }, "Basketball state player identities and possessor must be consistent") satisfies z.ZodType<BasketballState>;
+  }, "Basketball state identities, position coverage, and possessor must be consistent") satisfies z.ZodType<BasketballState>;
 
 const VectorSchema = z.strictObject({
   dx: z.number().int().min(-1_000).max(1_000),
@@ -175,47 +189,76 @@ export const PlayerObservationSchema = z.strictObject({
   stateCommitment: Sha256HexSchema,
 }) satisfies z.ZodType<PlayerObservation>;
 
-export interface CognitionReceipt {
-  receiptId: string;
-  agentDid: string;
-  role: "PLAYER" | "COACH" | "REFEREE" | "REPLAY";
-  endpoint: string;
-  provider: string;
-  modelFamily: string;
-  modelRevision: string;
-  observationHash: string;
-  contextManifestHash: string;
-  kernelHash: string;
-  toolHash: string;
-  deadlineMs: number;
-  retryCount: number;
-  fallbackUsed: boolean;
-  normalizedResourceUnits: number;
-  telemetryContentPolicy: "CONTENT_DISABLED";
-  personalMaterialSupplied: string[];
+export type CognitionReceipt = CognitionReceiptV2;
+export const CognitionReceiptSchema = CognitionReceiptV2Schema;
+
+function deterministicReceiptId(seed: string): string {
+  const hash = sha256Commitment(seed).slice(2);
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-7${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
 }
 
-export const CognitionReceiptSchema = z.strictObject({
-  receiptId: z.string().min(1).max(300),
-  agentDid: z.string().startsWith("did:"),
-  role: z.enum(["PLAYER", "COACH", "REFEREE", "REPLAY"]),
-  endpoint: z.string().min(1).max(4_096),
-  provider: z.string().min(1).max(200),
-  modelFamily: z.string().min(1).max(200),
-  modelRevision: z.string().min(1).max(200),
-  observationHash: z.string().regex(/^0x[0-9a-f]{64}$/),
-  contextManifestHash: z.string().regex(/^0x[0-9a-f]{64}$/),
-  kernelHash: z.string().regex(/^0x[0-9a-f]{64}$/),
-  toolHash: z.string().regex(/^0x[0-9a-f]{64}$/),
-  deadlineMs: z.number().int().positive().max(60_000),
-  retryCount: z.number().int().nonnegative().max(10),
-  fallbackUsed: z.boolean(),
-  normalizedResourceUnits: z.number().int().nonnegative().max(1_000_000_000),
-  telemetryContentPolicy: z.literal("CONTENT_DISABLED"),
-  personalMaterialSupplied: z
-    .array(z.string().regex(/^0x[0-9a-f]{64}$/))
-    .max(100),
-}) satisfies z.ZodType<CognitionReceipt>;
+export function createDeterministicFixtureReceipt(input: {
+  careerDid: string;
+  role: CognitionReceipt["role"];
+  activationId: string;
+  observationCommitment: `0x${string}`;
+  contextManifestCommitment?: `0x${string}`;
+  deadlineMs?: number;
+  fallback?: CognitionReceipt["fallback"];
+  transportRetries?: number;
+  normalizedResourceUnits?: number;
+  startedAt?: string;
+  completedAt?: string;
+}): CognitionReceipt {
+  const contextManifestCommitment =
+    input.contextManifestCommitment ??
+    sha256Commitment({ activationId: input.activationId, source: "fixture" });
+  const fallback = input.fallback ?? "NONE";
+  return {
+    schemaVersion: "1.0.0",
+    receiptId: deterministicReceiptId(
+      `${input.careerDid}:${input.activationId}:${input.role}`,
+    ),
+    activationId: input.activationId,
+    careerDid: input.careerDid,
+    role: input.role,
+    cognitionMode: "DETERMINISTIC_FIXTURE",
+    activationCommitment: sha256Commitment({
+      activationId: input.activationId,
+      careerDid: input.careerDid,
+      role: input.role,
+    }),
+    observationCommitment: input.observationCommitment,
+    contextManifestCommitment,
+    runnerId: "abl-deterministic-fixture",
+    runnerBuildDigest: sha256Commitment("abl-deterministic-fixture:v2"),
+    adapterBuildDigest: sha256Commitment("structured-policy:v2"),
+    providerProductModel: "fixture/deterministic/structured-policy-v2",
+    provenanceLevel: "LOCAL_ARTIFACT_VERIFIED",
+    ambientProductContext: "NONE",
+    kernelHash: sha256Commitment("basketball-kernel-v2"),
+    toolHash: sha256Commitment("no-tools"),
+    startedAt: input.startedAt ?? "2026-08-26T10:00:00.000Z",
+    completedAt: input.completedAt ?? "2026-08-26T10:00:00.001Z",
+    deadlineMs: input.deadlineMs ?? 20_000,
+    attempts: fallback === "NONE" ? 1 : 0,
+    transportRetries: input.transportRetries ?? 0,
+    fallback,
+    usage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      normalizedResourceUnits: input.normalizedResourceUnits ?? 0,
+    },
+    telemetryContentPolicy: "CONTENT_FREE",
+    disclosedPersonalMaterialCommitments: [],
+    delegateSignatureCommitment: null,
+    finalCareerSignatureCommitment: sha256Commitment({
+      activationId: input.activationId,
+      signer: input.careerDid,
+      classification: fallback === "NONE" ? "FIXTURE_RESULT" : "FALLBACK",
+    }),
+  };
+}
 
 export interface SignedPlayerDecision {
   intent: ActionIntent;
@@ -244,14 +287,25 @@ export interface CoachDecisionBody {
   coachDid: string;
   team: Team;
   windowId: string;
-  instruction: "PACE" | "SPACE" | "SWITCH" | "PROTECT_RIM";
+  instruction:
+    | "PACE"
+    | "SPACE"
+    | "SWITCH"
+    | "PROTECT_RIM"
+    | "RETAIN_CURRENT_TACTIC_AND_LINEUP";
   targetPlayerIds: string[];
 }
 export const CoachDecisionBodySchema = z.strictObject({
   coachDid: z.string().startsWith("did:"),
   team: TeamSchema,
   windowId: z.string().min(1).max(200),
-  instruction: z.enum(["PACE", "SPACE", "SWITCH", "PROTECT_RIM"]),
+  instruction: z.enum([
+    "PACE",
+    "SPACE",
+    "SWITCH",
+    "PROTECT_RIM",
+    "RETAIN_CURRENT_TACTIC_AND_LINEUP",
+  ]),
   targetPlayerIds: z.array(z.string().min(1).max(100)).max(10),
 }) satisfies z.ZodType<CoachDecisionBody>;
 export type CoachDecision = CoachDecisionBody &

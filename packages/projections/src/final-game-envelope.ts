@@ -4,13 +4,17 @@ import {
   GAME_FINALIZED_EVENT_TYPE,
   PacedBroadcast,
   finalizedGameStateRoot,
+  isRoleCompleteFoundingExhibitionFinalizer,
   replayFinalizedGamePayload,
   requireFinalizedGameEvidence,
+  requireFinalizedGamePossessionEvidence,
   requireFinalizedGameScheduleEvidence,
   type FinalizedGameEvidenceReader,
+  type FinalizedGamePossessionEvidenceReader,
   type FinalizedGameScheduleEvidenceReader,
+  type AgentPlayedPossessionEvidence,
 } from "@abl/basketball";
-import type { ProjectionOutboxEvent } from "@abl/database";
+import type { CanonicalStore, ProjectionOutboxEvent } from "@abl/database";
 import {
   recoverCanonicalEventSigner,
   type CanonicalEvent,
@@ -30,6 +34,8 @@ import {
   type ProjectionVerificationAuthority,
 } from "./envelope.js";
 import type { PublicFinalizedGameProjection } from "./final-game-repository.js";
+import { validatePossessionResolvedPayload } from "./payload.js";
+import type { PublicProjectionReader } from "./repository.js";
 
 const SignatureSchema = z.string().regex(/^0x[0-9a-f]{130}$/);
 
@@ -64,6 +70,7 @@ export interface FinalGameProjectionVerificationAuthority
   extends ProjectionVerificationAuthority,
     FinalizedGameEvidenceReader {
   finalizerDids: ReadonlySet<string>;
+  possessionEvidence?: FinalizedGamePossessionEvidenceReader;
   scheduleEvidence?: FinalizedGameScheduleEvidenceReader;
 }
 
@@ -73,6 +80,76 @@ export interface VerifiedFinalGameProjectionEvent {
   expectedVersion: "0";
   projection: PublicFinalizedGameProjection;
   signerAddress: `0x${string}`;
+}
+
+function possessionEvidenceFromPayload(
+  payload: ReturnType<typeof validatePossessionResolvedPayload>,
+): AgentPlayedPossessionEvidence {
+  return {
+    possessionId: payload.source.possessionId,
+    playerDecisionHashes: [...payload.decisionProof.playerDecisionHashes],
+    coachDecisionHashes: [...payload.decisionProof.coachDecisionHashes],
+    refereeDecisionHashes: [...payload.decisionProof.refereeDecisionHashes],
+    replayDecisionHashes: [...payload.decisionProof.replayDecisionHashes],
+    ...(payload.decisionProof.authorityDids === undefined
+      ? {}
+      : { authorityDids: payload.decisionProof.authorityDids }),
+    eventMerkleRoot: payload.source.eventMerkleRoot,
+    finalStateRoot: payload.source.finalStateRoot,
+  };
+}
+
+export function createCanonicalPossessionEvidenceReader(
+  store: Pick<CanonicalStore, "readAggregate">,
+): FinalizedGamePossessionEvidenceReader {
+  return {
+    finalizedGamePossessionEvidence: async (gameId) => {
+      const records = await store.readAggregate("game-possession", gameId);
+      if (records.length === 0) return null;
+      return records.map((record) => {
+        if (
+          record.eventType !== "PossessionResolved" ||
+          record.aggregateId !== gameId
+        )
+          throw new Error("Canonical game possession chain is invalid");
+        return possessionEvidenceFromPayload(
+          validatePossessionResolvedPayload(
+            record.payload,
+            record.aggregateId,
+            record.stateRoot,
+            record.payloadSchemaDigest,
+          ),
+        );
+      });
+    },
+  };
+}
+
+export function createPublicPossessionEvidenceReader(
+  reader: Pick<PublicProjectionReader, "gameRecords">,
+): FinalizedGamePossessionEvidenceReader {
+  return {
+    finalizedGamePossessionEvidence: async (gameId) => {
+      const records = reader.gameRecords(gameId);
+      if (records.length === 0) return null;
+      return records.map(({ authorization }) => {
+        if (
+          authorization === null ||
+          authorization.event.aggregateId !== gameId ||
+          authorization.event.eventType !== "PossessionResolved"
+        )
+          throw new Error("Public game possession chain is invalid");
+        return possessionEvidenceFromPayload(
+          validatePossessionResolvedPayload(
+            authorization.event.payload,
+            authorization.event.aggregateId,
+            authorization.event.stateRoot,
+            authorization.event.schemaDigest,
+          ),
+        );
+      });
+    },
+  };
 }
 
 function canonicalEvent(
@@ -143,8 +220,7 @@ export async function verifyFinalGameProjectionEvent(
   const registered = authority.admittedAgents.get(event.actorDid);
   if (
     registered === undefined ||
-    !registered.allowedAggregateTypes.includes(FINALIZED_GAME_AGGREGATE_TYPE) ||
-    !authority.finalizerDids.has(event.actorDid)
+    !registered.allowedAggregateTypes.includes(FINALIZED_GAME_AGGREGATE_TYPE)
   ) {
     throw new ProjectionAuthorizationError(
       "Finalized game actor lacks configured authority",
@@ -169,7 +245,21 @@ export async function verifyFinalGameProjectionEvent(
   let replayed: ReturnType<typeof replayFinalizedGamePayload>;
   try {
     replayed = replayFinalizedGamePayload(event.payload);
-    await requireFinalizedGameEvidence(replayed.payload, authority);
+    const configuredFinalizer = authority.finalizerDids.has(event.actorDid);
+    const foundingParticipantFinalizer =
+      isRoleCompleteFoundingExhibitionFinalizer(
+        replayed.payload,
+        event.actorDid,
+      );
+    if (!configuredFinalizer && !foundingParticipantFinalizer)
+      throw new Error("Finalized game actor is not authorized");
+    if (configuredFinalizer)
+      await requireFinalizedGameEvidence(replayed.payload, authority);
+    else
+      await requireFinalizedGamePossessionEvidence(
+        replayed.payload,
+        authority.possessionEvidence,
+      );
     await requireFinalizedGameScheduleEvidence(
       replayed.payload,
       authority.scheduleEvidence,

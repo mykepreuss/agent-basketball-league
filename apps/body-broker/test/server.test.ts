@@ -6,6 +6,7 @@ import {
   createCanonicalEvent,
   createSigningIdentity,
   recoverCanonicalEventSigner,
+  sha256Bytes,
   sha256Commitment,
   signCanonicalEvent,
 } from "@abl/recognition";
@@ -37,7 +38,7 @@ const clientCapability = {
   operations: new Set([
     "canonical-event:sign",
     "proxy:core",
-    "proxy:model",
+    "proxy:cognition-relay",
     "storage:put",
   ]),
 };
@@ -47,7 +48,11 @@ const authorizedHeaders = {
 const serviceIdentity = {
   serviceId: "body-agent-a",
   secret: new TextEncoder().encode("body-agent-a-test-service-secret-0001"),
-  capabilities: new Set(["core:command", "model:invoke", "private:ciphertext"]),
+  capabilities: new Set([
+    "core:command",
+    "cognition:deliver",
+    "private:ciphertext",
+  ]),
 };
 const recognitionDomain = {
   name: "ABL Recognition",
@@ -65,12 +70,12 @@ const routes: BrokerRoute[] = [
     credential: { "x-blaxel-preview-token": "core-preview-token" },
   },
   {
-    name: "model",
-    targetOrigin: "https://model.abl.invalid",
-    methods: new Set(["POST"]),
-    pathPrefixes: ["/v1/responses"],
-    capability: "model:invoke",
-    credential: { authorization: "Bearer upstream-only-secret" },
+    name: "cognition-relay",
+    targetOrigin: "https://relay.abl.invalid",
+    methods: new Set(["GET", "POST"]),
+    pathPrefixes: ["/v1/internal"],
+    capability: "cognition:deliver",
+    credential: { authorization: "Bearer relay-only-secret" },
   },
   {
     name: "private-storage",
@@ -295,7 +300,7 @@ describe("fixed body broker", () => {
       routes,
       storageDomainKeys: new Map(),
       now: () => clock,
-      createNonce: () => "nonce-model-route-0001",
+      createNonce: () => "nonce-relay-route-0001",
       fetchImplementation: async (_target, init) => {
         capturedHeaders = new Headers(init?.headers);
         return new Response('{"output":"ok"}', {
@@ -310,12 +315,12 @@ describe("fixed body broker", () => {
       url: "/v1/proxy",
       headers: authorizedHeaders,
       payload: {
-        route: "model",
+        route: "cognition-relay",
         method: "POST",
-        path: "/v1/responses",
+        path: "/v1/internal/activations",
         body: { input: "bounded observation" },
         expectedVersion: "1",
-        idempotencyKey: "idempotency-model-0001",
+        idempotencyKey: "idempotency-relay-0001",
         authorization: "Bearer attacker-value",
       },
     });
@@ -326,19 +331,19 @@ describe("fixed body broker", () => {
       url: "/v1/proxy",
       headers: authorizedHeaders,
       payload: {
-        route: "model",
+        route: "cognition-relay",
         method: "POST",
-        path: "/v1/responses",
+        path: "/v1/internal/activations",
         body: { input: "bounded observation" },
         expectedVersion: "1",
-        idempotencyKey: "idempotency-model-0002",
+        idempotencyKey: "idempotency-relay-0002",
       },
     });
     expect(valid.statusCode).toBe(200);
     expect(capturedHeaders.get("authorization")).toBe(
-      "Bearer upstream-only-secret",
+      "Bearer relay-only-secret",
     );
-    expect(valid.body).not.toContain("upstream-only-secret");
+    expect(valid.body).not.toContain("relay-only-secret");
   });
 
   it("requires an unexpired operation-scoped body capability", async () => {
@@ -389,7 +394,7 @@ describe("fixed body broker", () => {
           method: "POST",
           url: "/v1/proxy",
           headers: authorizedHeaders,
-          payload: { ...payload, route: "model" },
+          payload: { ...payload, route: "cognition-relay" },
         })
       ).statusCode,
     ).toBe(403);
@@ -417,7 +422,7 @@ describe("fixed body broker", () => {
   });
 
   it("renews an expired capability only for the career signer and exact operations", async () => {
-    let now = clock;
+    const now = clock + 2_000;
     const careerIdentity = createSigningIdentity(`0x${"7".repeat(64)}`);
     const renewedToken = "renewed-body-capability-token-000000000001";
     const app = createBodyBroker({
@@ -425,7 +430,7 @@ describe("fixed body broker", () => {
       clientCapability: {
         token: capabilityToken,
         expiresAt: new Date(clock + 1_000).toISOString(),
-        operations: new Set(["proxy:model"]),
+        operations: new Set(["proxy:cognition-relay"]),
       },
       serviceIdentity,
       routes,
@@ -443,11 +448,10 @@ describe("fixed body broker", () => {
         }),
     });
     apps.push(app);
-    now += 2_000;
     const expiresAt = new Date(now + 4 * 60 * 60 * 1_000).toISOString();
     const payload = {
       schemaVersion: SchemaVersion,
-      operations: ["proxy:model"],
+      operations: ["proxy:cognition-relay"],
       requestedExpiresAt: expiresAt,
     } as const;
     const event = createCanonicalEvent({
@@ -480,7 +484,7 @@ describe("fixed body broker", () => {
     expect(renewal.json()).toEqual({
       token: renewedToken,
       expiresAt,
-      operations: ["proxy:model"],
+      operations: ["proxy:cognition-relay"],
     });
     expect(
       (
@@ -489,12 +493,12 @@ describe("fixed body broker", () => {
           url: "/v1/proxy",
           headers: { authorization: `Bearer ${renewedToken}` },
           payload: {
-            route: "model",
+            route: "cognition-relay",
             method: "POST",
-            path: "/v1/responses",
+            path: "/v1/internal/activations",
             body: {},
             expectedVersion: "0",
-            idempotencyKey: "idempotency-renewed-model-0001",
+            idempotencyKey: "idempotency-renewed-relay-0001",
           },
         })
       ).statusCode,
@@ -540,8 +544,14 @@ describe("fixed body broker", () => {
         const parsed = JSON.parse(new TextDecoder().decode(bytes)) as {
           callerDid: string;
           blob: EncryptedBlob;
+          careerAuthorization?: unknown;
+          careerRequest?: { plaintextCommitment: string };
         };
         expect(parsed.callerDid).toBe("did:abl:agent-a");
+        expect(parsed.careerAuthorization).toEqual({ proof: "career-root" });
+        expect(parsed.careerRequest?.plaintextCommitment).toBe(
+          sha256Bytes(new TextEncoder().encode(plaintext)),
+        );
         capturedBlob = parsed.blob;
         return new Response('{"stored":true}', {
           status: 201,
@@ -565,6 +575,7 @@ describe("fixed body broker", () => {
         createdAt: "2026-08-13T08:00:00.000Z",
         expectedVersion: "0",
         idempotencyKey: "idempotency-storage-0001",
+        careerAuthorization: { proof: "career-root" },
       },
     });
     expect(response.statusCode).toBe(201);

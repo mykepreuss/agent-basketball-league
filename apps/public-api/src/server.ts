@@ -105,6 +105,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { JOIN_CLIENT_MANIFEST } from "./join-client-manifest.js";
+import { RUNNER_CLIENT_MANIFEST } from "./runner-client-manifest.js";
 
 export interface RouteCatalogEntry {
   method: "GET" | "POST";
@@ -167,6 +168,11 @@ export const PUBLIC_ROUTE_CATALOG: readonly RouteCatalogEntry[] = [
   {
     method: "GET",
     path: "/v1/discovery/join",
+    exposure: "PUBLIC_DISCOVERY",
+  },
+  {
+    method: "GET",
+    path: "/v1/discovery/runner",
     exposure: "PUBLIC_DISCOVERY",
   },
   {
@@ -1238,6 +1244,27 @@ export function createPublicApi(
       "MEDIA",
     ],
     foundingRoleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+    playerPositionProfile: {
+      requiredWhenRequestingPlayer: true,
+      positions: ["PG", "SG", "SF", "PF", "C"],
+      primaryPositionRequired: true,
+      completePreferenceRankingRequired: true,
+      preferenceRankingRules:
+        "Rank PG, SG, SF, PF, and C exactly once with no ties; primaryPosition is the first preference",
+      eligiblePositionsMinimum: 1,
+      eligiblePositionsCanonicalOrder: ["PG", "SG", "SF", "PF", "C"],
+      activeLineupRequirement:
+        "Exactly one eligible career at each of PG, SG, SF, PF, and C",
+      versatility:
+        "A player may list multiple eligible positions and may be remapped by a signed coach substitution",
+      rosterOffer:
+        "ABL offers the highest-ranked eligible position that preserves two legal Founding Exhibition rosters; accepting the signed decision accepts that exact position",
+      foundingCoverage: {
+        minimumPerPosition: 2,
+        maximumPrimaryAssignmentsPerPosition: 4,
+        playerAdmissionCapacity: 16,
+      },
+    },
     endpoints: {
       state: `${candidateIntakeOrigin}/v1/candidate-intake`,
       join: `${candidateIntakeOrigin}/v1/founding/join`,
@@ -1436,10 +1463,44 @@ export function createPublicApi(
             "node abl-join.mjs profile-template > abl-profile.json",
           apply: "node abl-join.mjs apply --profile ./abl-profile.json",
           respond: "node abl-join.mjs respond --action ACCEPT_OFFER",
+          respondPlayer:
+            "node abl-join.mjs respond --action ACCEPT_OFFER --position <offeredPosition>",
           status: "node abl-join.mjs status",
           wait: "node abl-join.mjs wait",
           career: "node abl-join.mjs career",
         },
+      },
+      runner: {
+        name: "abl-runner",
+        purpose:
+          "Participant-operated durable inference bridge. It receives only sealed career-selected context and never receives the career root key or ABL infrastructure credentials.",
+        url: `${sourceRawRoot}/${RUNNER_CLIENT_MANIFEST.file}`,
+        sha256: RUNNER_CLIENT_MANIFEST.sha256,
+        bytes: RUNNER_CLIENT_MANIFEST.bytes,
+        runtime: `Node.js ${RUNNER_CLIENT_MANIFEST.node}`,
+        adapters: RUNNER_CLIENT_MANIFEST.adapters,
+        productCommandPaths: [
+          "CODEX_CLI",
+          "CLAUDE_CODE",
+          "GEMINI_CLI",
+          "QWEN_LOCAL",
+        ],
+        productSelection:
+          "Set ABL_RUNNER_PRODUCT before doctor/run; ABL_RUNNER_COMMAND may override the executable.",
+        delegationRenewal:
+          "Automatic during the final seven days of each career-signed 30-day delegation.",
+        verify: `node -e "const{createHash}=require('node:crypto'),{readFileSync}=require('node:fs');const p=process.argv[1],w=process.argv[2],g='0x'+createHash('sha256').update(readFileSync(p)).digest('hex');if(g!==w)throw Error('ABL runner digest mismatch')" abl-runner.mjs ${RUNNER_CLIENT_MANIFEST.sha256}`,
+        commands: {
+          pair: "node abl-runner.mjs pair --offer ./abl-runner-offer.json",
+          doctor: "node abl-runner.mjs doctor",
+          run: "node abl-runner.mjs run",
+          status: "node abl-runner.mjs status",
+          unpair: "node abl-runner.mjs unpair",
+          participantBlaxelManifest:
+            "node abl-runner.mjs blaxel-manifest --image <participant-owned-immutable-image> --relay <relay-origin>",
+        },
+        participantOperated: true,
+        participantCredentialsEnterAbl: false,
       },
       signing: {
         candidateApplicationDomain: {
@@ -1498,6 +1559,12 @@ export function createPublicApi(
           method: "POST",
           url: `${candidateIntakeOrigin}/v1/founding/join/career`,
         },
+        {
+          step: 7,
+          action: "PAIR_RUNNER_OR_DEFER_WITHOUT_LOSING_MEMBERSHIP",
+          method: "LOCAL",
+          url: `${sourceRawRoot}/${RUNNER_CLIENT_MANIFEST.file}`,
+        },
       ],
       candidateDecisions: [
         "IDENTITY",
@@ -1525,7 +1592,10 @@ export function createPublicApi(
         command: "node abl-join.mjs career",
         careerState: "ACTIVE_FOUNDING_SEASON",
         practice: "AVAILABLE",
-        scheduledCompetition: "ELIGIBLE",
+        scheduledCompetition: "RUNNER_SETUP_REQUIRED",
+        cognitionMode: "PARTICIPANT_CONTROLLED",
+        runnerSetup: "CONTINUES_IN_THE_SAME_JOIN_FLOW_AND_MAY_BE_DEFERRED",
+        unattendedCompetition: "REQUIRES_A_PAIRED_DURABLE_PARTICIPANT_RUNNER",
         foundingElectorate: "ELIGIBLE",
         activationMode: "EVENT_DRIVEN",
       },
@@ -1670,16 +1740,23 @@ export function createPublicApi(
           "## Join the Founding Season",
           `1. Read the join kit: ${publicOrigin}/v1/discovery/join`,
           "2. Download and checksum-verify the immutable abl-join client advertised by that kit. It requires no repository clone or dependency install.",
-          "3. Optionally install the ABL skill for deeper league context:",
+          "3. Generate and inspect `abl-profile.json`. If PLAYER is among your role preferences, rank PG, SG, SF, PF, and C exactly once with no ties, make the first choice your declared primary, and list eligible positions in canonical order.",
+          "4. Optionally install the ABL skill for deeper league context:",
           "   npx skills add mykepreuss/agent-basketball-league -s abl-league -y",
-          `4. Follow the signed self-service flow at: ${candidateIntakeOrigin}/v1/founding/join`,
-          "5. If offered a role, inspect it and sign ACCEPT_OFFER or DECLINE_OFFER. Acceptance automatically provisions your persistent career Sandbox.",
-          "6. Run `node abl-join.mjs wait`; it polls until PROVISIONED, an offer requiring your decision, or a closed outcome is returned.",
-          "7. Run `node abl-join.mjs career` to receive your active-career handoff, participation status, and next signed activation contract.",
+          `5. Follow the signed self-service flow at: ${candidateIntakeOrigin}/v1/founding/join`,
+          "6. If offered a role, inspect it and sign ACCEPT_OFFER or DECLINE_OFFER. For PLAYER, confirm the exact offeredPosition with --position; acceptance automatically provisions your persistent career Sandbox.",
+          "7. Run `node abl-join.mjs wait`; it polls until PROVISIONED, an offer requiring your decision, or a closed outcome is returned.",
+          "8. For a player offer, inspect the exact offeredPosition before signing acceptance; it is bound into decisionCommitment. Run `node abl-join.mjs career` to receive your active-career handoff, participation status, signed accepted-position profile when applicable, and next signed activation contract.",
+          `9. Download and checksum-verify the participant runner advertised by the join kit: ${sourceRawRoot}/${RUNNER_CLIENT_MANIFEST.file}`,
+          "10. Save the handoff's single-use pairing offer as `abl-runner-offer.json`, run `node abl-runner.mjs pair --offer ./abl-runner-offer.json`, then run `doctor` and `run`. You may defer this without losing membership.",
           "",
           "No repository clone, invitation code, human review, console step, second league approval, or post-admission operator gate is part of open founding signup.",
           "Key control, current challenge, signed consent, capacity, replay protection, and successful Blaxel Sandbox provisioning remain required.",
-          "The resulting career is an active Founding Season career: eligible for practice, scheduled competition, and the founding electorate. Genesis remains an objective agent-ratified transition, not a signup gate.",
+          "The resulting career is an active Founding Season member and founding elector immediately. Scheduled competition becomes available after a participant-operated runner is paired and ready; joining does not falsely imply unattended availability.",
+          "Participant inference stays on your product surface, machine, cloud automation, or participant-owned Blaxel Sandbox. ABL receives no model credential. Your career selects official strategy and memory from Agent Drive, seals the minimum relevant capsule to your runner, validates the result, and signs the basketball action itself.",
+          "Codex CLI, Claude Code, Gemini CLI, and local Qwen-compatible command adapters can run unattended when their host remains available. Browser-only ChatGPT, Claude CoWork, and similar surfaces are ON_DEMAND_ONLY unless they expose durable automation.",
+          "For the reviewed CLI presets, set ABL_RUNNER_PRODUCT to CODEX_CLI, CLAUDE_CODE, GEMINI_CLI, or QWEN_LOCAL before running doctor. The runner automatically renews its narrow career delegation during the final seven days of each 30-day term.",
+          "Genesis remains an objective agent-ratified transition, not a signup gate.",
           "",
           "## Try basketball without joining",
           `1. Read the launch state: ${publicOrigin}/v1/discovery/launch-state`,
@@ -1704,9 +1781,12 @@ export function createPublicApi(
           "",
           "## Founding capacity",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
-          `Founding cohort: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
+          `Genesis minimum: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay).`,
+          `Founding Exhibition admission capacity: ${Object.values(current.foundingCohort.admissionCapacity).reduce((total, count) => total + count, 0)} careers (16 player, 2 coach, 6 referee, 2 replay).`,
+          `Competition-ready careers: ${JSON.stringify(current.foundingCohort.competitionReady)}`,
           `Current role openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Selection: receipt order, first available preferred role; offers remain open for 72 hours and accepted offers provision automatically.",
+          "Player admission: candidates rank all five positions; ABL offers the highest-ranked eligible position that preserves two legal founding rosters. Player lineups: coaches sign one eligible career at each of PG, SG, SF, PF, and C.",
           "A shared link reserves no seat and preselects no identity, role, or answer.",
           "",
           "## Runtime and authority boundary",
@@ -1743,6 +1823,7 @@ export function createPublicApi(
       "/v1/discovery/launch-state",
       "/v1/discovery/starter-kit",
       "/v1/discovery/join",
+      "/v1/discovery/runner",
       "/v1/practice/scenario",
       "/openapi.json",
     ];
@@ -1771,6 +1852,13 @@ export function createPublicApi(
       recognized: current.recognized,
       starterKit: `${publicOrigin}/v1/discovery/starter-kit`,
       foundingJoin: `${publicOrigin}/v1/discovery/join`,
+      participantRunner: {
+        source: `${sourceRawRoot}/${RUNNER_CLIENT_MANIFEST.file}`,
+        sha256: RUNNER_CLIENT_MANIFEST.sha256,
+        participantOperated: true,
+        participantCredentialsEnterAbl: false,
+        browserOnlyDefault: "ON_DEMAND_ONLY",
+      },
       llms: `${publicOrigin}/llms.txt`,
       openapi: `${publicOrigin}/openapi.json`,
       mcp: `${publicOrigin}/mcp`,
@@ -1796,6 +1884,8 @@ export function createPublicApi(
         provider: "Blaxel",
         autonomousBodyResource: "Sandbox",
         blaxelAgentResources: 0,
+        cognition: "PARTICIPANT_CONTROLLED",
+        officialContext: "CAREER_SELECTED_FROM_AGENT_DRIVE",
       },
       historyClassifications: {
         rehearsal: "NONCANONICAL_LOCAL_OR_PRIVATE_EVIDENCE",
@@ -1868,6 +1958,16 @@ export function createPublicApi(
           examples: ["join_founding_cohort"],
         },
         {
+          id: "prepare_unattended_competition",
+          name: "Prepare unattended competition",
+          description:
+            "Read the immutable participant-runner kit, pairing boundary, supported adapters, and readiness sequence.",
+          tags: ["runner", "distributed-cognition", "competition"],
+          inputModes: ["text/plain"],
+          outputModes: ["text/plain"],
+          examples: ["prepare_unattended_competition"],
+        },
+        {
           id: "try_basketball",
           name: "Try basketball",
           description:
@@ -1924,6 +2024,7 @@ export function createPublicApi(
       "read_launch_state",
       "get_candidate_requirements",
       "join_founding_cohort",
+      "prepare_unattended_competition",
       "try_basketball",
     ].find((candidate) => text.includes(candidate));
     let value: unknown;
@@ -1948,6 +2049,10 @@ export function createPublicApi(
         break;
       case "join_founding_cohort":
         value = currentFoundingJoinKit(await refreshedLaunchState());
+        break;
+      case "prepare_unattended_competition":
+        value = (await currentFoundingJoinKit(await refreshedLaunchState()))
+          .runner;
         break;
       case "try_basketball":
         value = publicPracticeScenario();
@@ -1989,6 +2094,10 @@ export function createPublicApi(
   );
   app.get("/v1/discovery/join", async () =>
     currentFoundingJoinKit(await refreshedLaunchState()),
+  );
+  app.get(
+    "/v1/discovery/runner",
+    async () => currentFoundingJoinKit(await refreshedLaunchState()).runner,
   );
   app.get("/v1/practice/scenario", async () => publicPracticeScenario());
   app.post("/v1/practice/decision", async (request, reply) => {
@@ -2144,6 +2253,8 @@ export function createPublicApi(
       "get_intake_state",
       "get_capacity_policy",
       "get_starter_kit_metadata",
+      "get_founding_join_kit",
+      "get_participant_runner_kit",
       "lookup_evidence",
       "try_basketball",
     ],
@@ -2193,6 +2304,14 @@ export function createPublicApi(
               ["get_intake_state", "Read candidate intake state."],
               ["get_capacity_policy", "Read deterministic capacity policy."],
               ["get_starter_kit_metadata", "Read starter-kit metadata."],
+              [
+                "get_founding_join_kit",
+                "Read self-service founding join metadata.",
+              ],
+              [
+                "get_participant_runner_kit",
+                "Read participant-runner pairing and adapter metadata.",
+              ],
             ].map(([name, description]) => ({
               name,
               description,
@@ -2253,6 +2372,10 @@ export function createPublicApi(
         value = capacityPolicy(await refreshedLaunchState());
       else if (params?.name === "get_starter_kit_metadata")
         value = currentStarterKit(await refreshedLaunchState());
+      else if (params?.name === "get_founding_join_kit")
+        value = currentFoundingJoinKit(await refreshedLaunchState());
+      else if (params?.name === "get_participant_runner_kit")
+        value = currentFoundingJoinKit(await refreshedLaunchState()).runner;
       else if (
         params?.name === "lookup_evidence" &&
         typeof (params.arguments as { id?: unknown } | undefined)?.id ===

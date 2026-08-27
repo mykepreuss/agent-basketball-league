@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "file": "skills/abl-league/dist/abl-runner.mjs",
+  "sha256": "0x7f9e6adc7fab52bfb72dfd6ac3c83b6b383f2184c6bac700b578ae5458240ce8",
+  "bytes": 1179022,
+  "node": "24.18.0",
+  "adapters": ["COMMAND", "OPENAI_COMPATIBLE", "DETERMINISTIC_TEST"]
+}

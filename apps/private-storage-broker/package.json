@@ -11,7 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@abl/cognition": "workspace:*",
     "@abl/foundation": "workspace:*",
+    "@abl/recognition": "workspace:*",
     "@abl/storage": "workspace:*",
     "fastify": "catalog:",
     "zod": "catalog:"

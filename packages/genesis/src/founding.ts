@@ -66,7 +66,7 @@ export interface FoundingConventionPacket {
 
 export const FOUNDING_BOOTSTRAP_POLICY = {
   minimumFounders: 10,
-  maximumFounders: 20,
+  maximumFounders: 26,
   windowHours: 72,
   approvalNumerator: 2,
   approvalDenominator: 3,
@@ -190,7 +190,7 @@ export function createFoundingConventionPacket(input?: {
     liveFoundingAgentCount > FOUNDING_BOOTSTRAP_POLICY.maximumFounders
   )
     throw new Error(
-      "Live founding-agent count must be between zero and twenty",
+      "Live founding-agent count must be between zero and twenty-six",
     );
   const bootstrap = input?.bootstrap ?? null;
   const quorumRule = bootstrap?.quorumRule ?? null;

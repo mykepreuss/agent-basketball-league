@@ -9,12 +9,7 @@ export interface PendingCostEnvelope {
   state: "UNQUOTED_MATERIAL_SPEND_APPROVAL_REQUIRED";
   currency: "USD";
   providerQuotes: readonly {
-    provider:
-      | "BLAXEL"
-      | "CANONICAL_POSTGRES"
-      | "BASE"
-      | "MODEL_PRIMARY"
-      | "MODEL_ALTERNATE";
+    provider: "BLAXEL" | "CANONICAL_POSTGRES" | "BASE";
     quoteReference: null;
     validUntil: null;
     seasonZeroCost: null;
@@ -31,20 +26,16 @@ export function createPendingCostEnvelope(): PendingCostEnvelope {
   return {
     state: "UNQUOTED_MATERIAL_SPEND_APPROVAL_REQUIRED",
     currency: "USD",
-    providerQuotes: [
-      "BLAXEL",
-      "CANONICAL_POSTGRES",
-      "BASE",
-      "MODEL_PRIMARY",
-      "MODEL_ALTERNATE",
-    ].map((provider) => ({
-      provider:
-        provider as PendingCostEnvelope["providerQuotes"][number]["provider"],
-      quoteReference: null,
-      validUntil: null,
-      seasonZeroCost: null,
-      thirtyDayEssentialCost: null,
-    })),
+    providerQuotes: ["BLAXEL", "CANONICAL_POSTGRES", "BASE"].map(
+      (provider) => ({
+        provider:
+          provider as PendingCostEnvelope["providerQuotes"][number]["provider"],
+        quoteReference: null,
+        validUntil: null,
+        seasonZeroCost: null,
+        thirtyDayEssentialCost: null,
+      }),
+    ),
     seasonZeroEnvelope: null,
     thirtyDayWindDownReserve: null,
     prepaid: false,

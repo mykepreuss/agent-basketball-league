@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CognitionReceiptV2Schema,
   CandidateIntakePublicStateSchema,
   CandidateRoleClassSchema,
+  InferenceResultSchema,
+  PlayerPositionProfileSchema,
+  RunnerDelegationSchema,
+  SealedContextCapsuleSchema,
   SafetyActionSchema,
   exportJsonSchemas,
   schemaRegistry,
@@ -72,10 +77,33 @@ const launchSchemaNames = [
   "RecognitionNetworkProfile",
 ] as const;
 
+const distributedCognitionSchemaNames = [
+  "RunnerPairingOffer",
+  "RunnerDelegation",
+  "RunnerHeartbeat",
+  "GameScheduleNotice",
+  "ParticipationResponse",
+  "ReadinessLease",
+  "PlayerPositionProfile",
+  "CareerPositionProfileAttestation",
+  "LineupPositionAssignment",
+  "ContextSelectionPolicy",
+  "ContextManifestV2",
+  "SealedContextCapsule",
+  "RoleActivation",
+  "InferenceRequest",
+  "InferenceResult",
+  "CognitionReceiptV2",
+  "AvailabilityIncident",
+  "CompetitionEligibilityStatus",
+  "CareerStorageAuthorization",
+] as const;
+
 const exportedSchemaNames = [
   ...requiredSchemaNames,
   ...productionV1SchemaNames,
   ...launchSchemaNames,
+  ...distributedCognitionSchemaNames,
 ] as const;
 
 describe("public schema registry", () => {
@@ -92,9 +120,46 @@ describe("public schema registry", () => {
       expect(schemas[name].$schema, name).toBe(
         "https://json-schema.org/draft/2020-12/schema",
       );
-      expect(schemas[name].type, name).toBe("object");
-      expect(schemas[name].additionalProperties, name).toBe(false);
+      if (name === "RoleActivation") {
+        const variants = schemas[name].oneOf ?? schemas[name].anyOf;
+        expect(Array.isArray(variants), name).toBe(true);
+        for (const variant of variants as Array<Record<string, unknown>>) {
+          expect(variant.type, name).toBe("object");
+          expect(variant.additionalProperties, name).toBe(false);
+        }
+      } else {
+        expect(schemas[name].type, name).toBe("object");
+        expect(schemas[name].additionalProperties, name).toBe(false);
+      }
     }
+  });
+
+  it("requires a primary position inside a canonical, duplicate-free eligibility list", () => {
+    const profile = {
+      primaryPosition: "SF",
+      positionPreferenceRanking: ["SF", "PF", "SG", "PG", "C"],
+      eligiblePositions: ["SF", "PF"],
+      profileCommitment: `0x${"1".repeat(64)}`,
+    };
+    expect(PlayerPositionProfileSchema.safeParse(profile).success).toBe(true);
+    expect(
+      PlayerPositionProfileSchema.safeParse({
+        ...profile,
+        eligiblePositions: ["PF", "SF"],
+      }).success,
+    ).toBe(false);
+    expect(
+      PlayerPositionProfileSchema.safeParse({
+        ...profile,
+        primaryPosition: "C",
+      }).success,
+    ).toBe(false);
+    expect(
+      PlayerPositionProfileSchema.safeParse({
+        ...profile,
+        positionPreferenceRanking: ["SF", "PF", "SG", "PG", "PG"],
+      }).success,
+    ).toBe(false);
   });
 
   it("fails closed on a human safety free-text payload", () => {
@@ -156,6 +221,117 @@ describe("public schema registry", () => {
       CandidateIntakePublicStateSchema.safeParse({
         ...state,
         capacityState: "QUEUEING",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("enforces runner delegation and ciphertext boundaries", () => {
+    const delegation = {
+      schemaVersion: "1.0.0",
+      delegationId: "0198e000-0000-7000-8000-000000000201",
+      careerDid: "did:abl:career-1",
+      runnerId: "runner-1",
+      delegateSigningAddress: `0x${"1".repeat(40)}`,
+      delegateEncryptionPublicKey: `0x${"2".repeat(64)}`,
+      scopes: ["RUNNER_HEARTBEAT", "ACTIVATION_CLAIM", "RESULT_SUBMISSION"],
+      issuedAt: "2026-08-26T10:00:00.000Z",
+      expiresAt: "2026-09-25T10:00:00.000Z",
+      revokedAt: null,
+      careerSignature: `0x${"3".repeat(130)}`,
+    };
+    expect(RunnerDelegationSchema.safeParse(delegation).success).toBe(true);
+    expect(
+      RunnerDelegationSchema.safeParse({
+        ...delegation,
+        scopes: ["RUNNER_HEARTBEAT", "RUNNER_HEARTBEAT", "RESULT_SUBMISSION"],
+      }).success,
+    ).toBe(false);
+
+    const capsule = {
+      schemaVersion: "1.0.0",
+      format: "ABL-RUNNER-CAPSULE-X25519-XCHACHA20-V2",
+      activationId: "activation-1",
+      careerDid: "did:abl:career-1",
+      runnerId: "runner-1",
+      recipientKeyId: "runner-1:x25519",
+      ephemeralPublicKey: `0x${"4".repeat(64)}`,
+      nonce: "nonce-1234567890",
+      ciphertext: "ciphertext",
+      ciphertextBytes: 262_144,
+      ciphertextCommitment: `0x${"5".repeat(64)}`,
+      aadCommitment: `0x${"6".repeat(64)}`,
+      expiresAt: "2026-08-26T10:00:20.000Z",
+    };
+    expect(SealedContextCapsuleSchema.safeParse(capsule).success).toBe(true);
+    expect(
+      SealedContextCapsuleSchema.safeParse({
+        ...capsule,
+        ciphertextBytes: 262_145,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("records content-free distributed cognition provenance", () => {
+    const receipt = {
+      schemaVersion: "1.0.0",
+      receiptId: "0198e000-0000-7000-8000-000000000301",
+      activationId: "activation-1",
+      careerDid: "did:abl:career-1",
+      role: "PLAYER",
+      cognitionMode: "PARTICIPANT_CONTROLLED",
+      activationCommitment: `0x${"1".repeat(64)}`,
+      observationCommitment: `0x${"2".repeat(64)}`,
+      contextManifestCommitment: `0x${"3".repeat(64)}`,
+      runnerId: "runner-1",
+      runnerBuildDigest: `0x${"4".repeat(64)}`,
+      adapterBuildDigest: `0x${"5".repeat(64)}`,
+      providerProductModel: "participant-reported/codex/gpt-5.6-sol",
+      provenanceLevel: "PRODUCT_SURFACE_REPORTED",
+      ambientProductContext: "DISCLOSED_PRODUCT_CONTEXT",
+      kernelHash: `0x${"6".repeat(64)}`,
+      toolHash: `0x${"7".repeat(64)}`,
+      startedAt: "2026-08-26T10:00:00.000Z",
+      completedAt: "2026-08-26T10:00:05.000Z",
+      deadlineMs: 20_000,
+      attempts: 1,
+      transportRetries: 0,
+      fallback: "NONE",
+      usage: {
+        inputTokens: 100,
+        outputTokens: 20,
+        normalizedResourceUnits: null,
+      },
+      telemetryContentPolicy: "CONTENT_FREE",
+      disclosedPersonalMaterialCommitments: [`0x${"8".repeat(64)}`],
+      delegateSignatureCommitment: `0x${"9".repeat(64)}`,
+      finalCareerSignatureCommitment: `0x${"a".repeat(64)}`,
+    };
+    expect(CognitionReceiptV2Schema.safeParse(receipt).success).toBe(true);
+    expect(
+      CognitionReceiptV2Schema.safeParse({
+        ...receipt,
+        prompt: "secret context",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      InferenceResultSchema.safeParse({
+        schemaVersion: "1.0.0",
+        resultId: "0198e000-0000-7000-8000-000000000302",
+        requestId: "0198e000-0000-7000-8000-000000000303",
+        activationId: "activation-1",
+        careerDid: "did:abl:career-1",
+        runnerId: "runner-1",
+        ciphertext: "ciphertext",
+        ciphertextBytes: 65_537,
+        ciphertextCommitment: `0x${"b".repeat(64)}`,
+        aadCommitment: `0x${"c".repeat(64)}`,
+        providerProductModel: "local/qwen",
+        provenanceLevel: "LOCAL_ARTIFACT_VERIFIED",
+        ambientProductContext: "NONE",
+        startedAt: "2026-08-26T10:00:00.000Z",
+        completedAt: "2026-08-26T10:00:01.000Z",
+        delegateSignature: `0x${"d".repeat(130)}`,
       }).success,
     ).toBe(false);
   });

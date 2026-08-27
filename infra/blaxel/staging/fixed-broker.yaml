@@ -47,9 +47,6 @@ spec:
       - name: ABL_PRIVATE_AUTH_MODE
         value: BLAXEL_PRIVATE_PREVIEW
         secret: false
-      - name: ABL_MODEL_ROUTE_MODE
-        value: DISABLED
-        secret: false
       - name: ABL_AGENT_DID
         value: ${ABL_STAGE_AGENT_DID}
         secret: false

@@ -13,6 +13,7 @@ import {
   PreparationComputeLedger,
   PrivatePracticeLab,
   assertCalibrationCeiling,
+  createDeterministicFixtureReceipt,
   createAgentPlayedGameEvidence,
   createFinalizedGameScheduleEvidence,
   createFinalizedGameScheduleEvidenceReader,
@@ -763,8 +764,7 @@ describe("persistent avatars, equivalent compute, film, and broadcast", () => {
         {
           role,
           deadlineMs: 1_500,
-          maxAttempts: 2,
-          normalizedResourceUnits: 1_000,
+          maxAttempts: 1,
           fallbackPolicyDigest: digest(`fallback:${role}`),
         },
       ]),
@@ -790,29 +790,20 @@ describe("persistent avatars, equivalent compute, film, and broadcast", () => {
     });
 
     const envelope = envelopes.get("PLAYER")!;
-    const receipt: CognitionReceipt = {
-      receiptId: "receipt-1",
-      agentDid: "did:abl:player-1",
+    const receipt: CognitionReceipt = createDeterministicFixtureReceipt({
+      careerDid: "did:abl:player-1",
       role: "PLAYER",
-      endpoint: "private-body",
-      provider: "provider-a",
-      modelFamily: "family-a",
-      modelRevision: "r1",
-      observationHash: digest("observation"),
-      contextManifestHash: digest("context"),
-      kernelHash: digest("kernel"),
-      toolHash: digest("tool"),
+      activationId: "receipt-test-activation",
+      observationCommitment: digest("observation"),
+      contextManifestCommitment: digest("context"),
       deadlineMs: 1_500,
-      retryCount: 1,
-      fallbackUsed: true,
+      transportRetries: 1,
       normalizedResourceUnits: 1_000,
-      telemetryContentPolicy: "CONTENT_DISABLED",
-      personalMaterialSupplied: [],
-    };
+    });
     expect(() => validateCompetitionReceipt(receipt, envelope)).not.toThrow();
     const preparation = new PreparationComputeLedger(5_000);
-    expect(preparation.charge(receipt.agentDid, 4_000)).toBe(1_000);
-    expect(() => preparation.charge(receipt.agentDid, 1_001)).toThrow(
+    expect(preparation.charge(receipt.careerDid, 4_000)).toBe(1_000);
+    expect(() => preparation.charge(receipt.careerDid, 1_001)).toThrow(
       "cap exceeded",
     );
   });

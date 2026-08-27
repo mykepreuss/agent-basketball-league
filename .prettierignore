@@ -1,0 +1,3 @@
+# Generated immutable executable bundles. Format their TypeScript sources and
+# rebuild them with the checked-in deterministic builders instead.
+skills/abl-league/dist/*.mjs

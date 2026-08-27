@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@abl/career": "workspace:*",
+    "@abl/cognition": "workspace:*",
     "@abl/launch": "workspace:*",
     "@abl/recognition": "workspace:*",
     "@abl/schemas": "workspace:*",

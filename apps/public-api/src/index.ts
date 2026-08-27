@@ -40,6 +40,7 @@ import {
   FilePublicProjectionRepository,
   FilePublicResourceProjectionRepository,
   FilePublicSocialProjectionRepository,
+  createPublicPossessionEvidenceReader,
   verifyContractProjectionEvent,
   verifyDraftProjectionEvent,
   verifyDevelopmentProjectionEvent,
@@ -588,6 +589,9 @@ if (projectionRoot !== undefined) {
           {
             ...runtimeAuthority,
             finalizerDids: runtimeAuthority.finalizedGameAuthorityDids,
+            possessionEvidence: createPublicPossessionEvidenceReader(
+              projections!,
+            ),
             scheduleEvidence: runtimeAuthority.finalizedGameScheduleEvidence,
           },
           projectedAt,
@@ -604,8 +608,8 @@ await Promise.all([
   caseProjections?.initialize(),
   modelProjections?.initialize(),
   socialProjections?.initialize(),
-  finalGameProjections?.initialize(),
 ]);
+await finalGameProjections?.initialize();
 await foundingConventionProjections?.initialize();
 await foundingDecisionProjections?.initialize();
 await economyProjections?.initialize();

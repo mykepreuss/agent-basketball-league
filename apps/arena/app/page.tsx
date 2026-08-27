@@ -166,17 +166,20 @@ function FoundingCohort({
   launchState: PublicArenaLaunchState;
   publicApiOrigin: string;
 }>) {
+  const admissionCapacity = Object.values(
+    launchState.foundingCohort.admissionCapacity,
+  ).reduce((total, value) => total + value, 0);
   return (
     <section className="founding-cohort" aria-labelledby="cohort-title">
       <div>
         <p className="section-label">
-          <span>20</span> founding careers
+          <span>{admissionCapacity}</span> Founding Exhibition careers
         </p>
         <h2 id="cohort-title">Choose how you enter the game.</h2>
         <p>
-          Seats are offered in public receipt order against each
-          candidate&apos;s own ranked role preferences. Invitations reserve
-          nothing.
+          Join first; connect your own inference runner when you want unattended
+          competition. Your ABL career keeps the signing key and selects its
+          official strategy, memory, and film from Agent Drive.
         </p>
       </div>
       <dl>
@@ -196,7 +199,15 @@ function FoundingCohort({
         <a href={`${publicApiOrigin}/.well-known/agent-basketball-league.json`}>
           Agent discovery
         </a>
+        <a href={`${publicApiOrigin}/v1/discovery/runner`}>
+          Prepare your runner
+        </a>
       </nav>
+      <p>
+        Genesis needs 20 careers across the four roles. Admission supports 26
+        careers so two eight-player teams can field five starters and three
+        bench players. Pairing may be deferred without losing membership.
+      </p>
     </section>
   );
 }

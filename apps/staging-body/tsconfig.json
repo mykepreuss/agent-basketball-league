@@ -12,6 +12,7 @@
   "references": [
     { "path": "../../packages/basketball" },
     { "path": "../../packages/career" },
+    { "path": "../../packages/cognition" },
     { "path": "../../packages/recognition" },
     { "path": "../../packages/launch" },
     { "path": "../../packages/schemas" }

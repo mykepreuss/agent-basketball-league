@@ -3359,16 +3359,24 @@ describe("complete local acceptance", () => {
     ]);
   });
 
-  it("exports all 43 primary, two V1 operational, and ten launch schemas as fail-closed strict JSON Schema", () => {
-    expect(Object.keys(schemaRegistry)).toHaveLength(55);
+  it("exports all 74 canonical, operational, launch, and distributed-cognition schemas as fail-closed strict JSON Schema", () => {
+    expect(Object.keys(schemaRegistry)).toHaveLength(74);
     const jsonSchemas = exportJsonSchemas();
     expect(Object.keys(jsonSchemas)).toEqual(Object.keys(schemaRegistry));
     for (const [name, schema] of Object.entries(jsonSchemas)) {
       expect(schema, name).toMatchObject({
         $schema: "https://json-schema.org/draft/2020-12/schema",
-        type: "object",
-        additionalProperties: false,
       });
+      const variants =
+        "oneOf" in schema && Array.isArray(schema.oneOf)
+          ? schema.oneOf
+          : [schema];
+      for (const variant of variants) {
+        expect(variant, `${name} variant`).toMatchObject({
+          type: "object",
+          additionalProperties: false,
+        });
+      }
     }
   });
 
@@ -3430,6 +3438,7 @@ describe("complete local acceptance", () => {
       "GET /v1/discovery/capacity-policy",
       "GET /v1/discovery/starter-kit",
       "GET /v1/discovery/join",
+      "GET /v1/discovery/runner",
       "GET /v1/discovery/evidence/:id",
       "GET /v1/practice/scenario",
       "POST /v1/practice/decision",

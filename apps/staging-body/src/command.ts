@@ -2,6 +2,8 @@ import {
   REHEARSAL_RECOGNITION_DOMAIN,
   POSSESSION_RESOLVED_SCHEMA_DIGEST_V2,
   createRehearsalPlayerBodies,
+  createDeterministicFixtureReceipt,
+  possessionProjectionSource,
   runFirstPossessionRehearsal,
   type CognitionReceipt,
   type PlayerObservation,
@@ -55,27 +57,19 @@ class StagingPlayerBody implements RehearsalPlayerBody {
             action: "SHOOT",
             shot: "LAYUP",
           } as const);
-    const receipt: CognitionReceipt = {
-      receiptId: `${observation.observationId}:receipt`,
-      agentDid: this.#actorDid,
+    const receipt: CognitionReceipt = createDeterministicFixtureReceipt({
+      careerDid: this.#actorDid,
       role: "PLAYER",
-      endpoint: "fixed-local-broker",
-      provider: "deterministic-stage",
-      modelFamily: "structured-policy",
-      modelRevision: "1",
-      observationHash: sha256Commitment(observation),
-      contextManifestHash: sha256Commitment({
+      activationId: observation.observationId,
+      observationCommitment: sha256Commitment(observation),
+      contextManifestCommitment: sha256Commitment({
         supplied: [observation.observationId],
       }),
-      kernelHash: sha256Commitment("basketball-kernel-v1"),
-      toolHash: sha256Commitment("fixed-local-broker"),
       deadlineMs: 1_500,
-      retryCount: 0,
-      fallbackUsed: false,
       normalizedResourceUnits: 1_000,
-      telemetryContentPolicy: "CONTENT_DISABLED",
-      personalMaterialSupplied: [],
-    };
+      startedAt: this.#timestamp,
+      completedAt: this.#timestamp,
+    });
     const version = this.#version + 1n;
     const event = createCanonicalEvent({
       eventId: `${observation.observationId}:decision`,
@@ -134,38 +128,7 @@ export async function createStagingPossessionCommand(input: {
     playerDidOverrides: { H1: input.actorDid },
   });
   const { result } = rehearsal;
-  const finalSegmentHash = result.segments.at(-1)?.segmentHash;
-  if (finalSegmentHash === undefined)
-    throw new Error("Staging possession produced no public segment");
-  const source = {
-    gameId: result.finalState.gameId,
-    possessionId: result.finalState.possessionId,
-    score: result.finalState.score,
-    gameClockMs: result.finalState.gameClockMs,
-    shotClockMs: result.finalState.shotClockMs,
-    players: result.finalState.players.map(
-      ({ playerId, team, position, xCm, yCm }) => ({
-        playerId,
-        team,
-        position,
-        xCm,
-        yCm,
-      }),
-    ),
-    events: result.events.map((event) => ({
-      sequence: event.sequence,
-      type: event.type,
-      label: `${event.type.toLowerCase().replaceAll("_", " ")} resolved`,
-      stateRoot: event.stateRoot,
-      eventHash: event.eventHash,
-    })),
-    snapshots: result.snapshots,
-    segments: result.segments,
-    finalStateRoot: result.finalStateRoot,
-    eventMerkleRoot: result.eventMerkleRoot,
-    filmCommitment: result.filmCommitment,
-    finalSegmentHash,
-  };
+  const source = possessionProjectionSource(result);
   const event = createCanonicalEvent({
     eventId: "0198a000-0000-7000-8000-000000000301",
     actorDid: input.actorDid,

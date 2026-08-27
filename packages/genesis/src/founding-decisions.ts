@@ -156,7 +156,7 @@ export const FoundingDecisionOpenPayloadSchema = z.strictObject({
   snapshot: z.strictObject({
     snapshotId: UuidV7Schema,
     capturedAt: IsoDateTimeSchema,
-    eligibleFounderDids: z.array(DidSchema).min(10).max(20),
+    eligibleFounderDids: z.array(DidSchema).min(10).max(26),
     commitment: HexSha256Schema,
   }),
   quorumRule: z.strictObject({
@@ -186,15 +186,15 @@ const FoundingDecisionResultSchema = z.strictObject({
   state: z.enum(["OPEN", "DECIDED", "PROPOSAL_REJECTED", "EXPIRED"]),
   proposal: FoundingDecisionProposalSchema,
   proposalCommitment: HexSha256Schema,
-  eligible: z.number().int().min(10).max(20),
-  requiredYes: z.number().int().min(7).max(20),
-  yes: z.number().int().nonnegative().max(20),
-  no: z.number().int().nonnegative().max(20),
-  abstain: z.number().int().nonnegative().max(20),
+  eligible: z.number().int().min(10).max(26),
+  requiredYes: z.number().int().min(7).max(26),
+  yes: z.number().int().nonnegative().max(26),
+  no: z.number().int().nonnegative().max(26),
+  abstain: z.number().int().nonnegative().max(26),
   decisionCommitment: HexSha256Schema.nullable(),
   ratificationEventId: UuidV7Schema.nullable(),
   decidedAt: IsoDateTimeSchema.nullable(),
-  authorizationSignatures: z.array(HexSignatureSchema).max(20),
+  authorizationSignatures: z.array(HexSignatureSchema).max(26),
 });
 
 export type FoundingDecisionWorkflowPayload =

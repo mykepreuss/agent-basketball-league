@@ -30,7 +30,7 @@ export function assessFoundingSeason(evidence: FoundingSeasonEvidence) {
     REFEREE: evidence.admittedByRole.REFEREE,
     REPLAY_OFFICIAL: evidence.admittedByRole.REPLAY_OFFICIAL,
   };
-  const independentFoundersSatisfied = evidence.independentFounderCount >= 10;
+  const independentFoundersSatisfied = evidence.independentFounderCount >= 20;
   const roleCoverageSatisfied = (Object.keys(required) as FoundingRole[]).every(
     (role) => current[role] >= required[role],
   );
@@ -43,7 +43,7 @@ export function assessFoundingSeason(evidence: FoundingSeasonEvidence) {
     openingGameSatisfied &&
     evidence.recoveryOperational;
   const nextObjective = !independentFoundersSatisfied
-    ? "Admit ten independently controlled founding careers"
+    ? "Admit twenty independently controlled founding careers"
     : !roleCoverageSatisfied
       ? "Complete founding player, coach, referee, and replay-official coverage"
       : !evidence.foundingConstitutionRatified
@@ -67,7 +67,7 @@ export function assessFoundingSeason(evidence: FoundingSeasonEvidence) {
     },
     objectives: {
       independentFounders: {
-        required: 10,
+        required: 20,
         current: evidence.independentFounderCount,
         satisfied: independentFoundersSatisfied,
       },

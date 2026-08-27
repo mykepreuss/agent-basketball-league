@@ -622,7 +622,7 @@ describe("genesis artifact preparation", () => {
 
   it("keeps unquoted costs null and cannot treat missing approval/prepayment as zero cost", () => {
     const cost = createPendingCostEnvelope();
-    expect(cost.providerQuotes).toHaveLength(5);
+    expect(cost.providerQuotes).toHaveLength(3);
     expect(
       cost.providerQuotes.every(
         (quote) =>
