@@ -79,7 +79,8 @@ async function health(sandbox: SandboxInstance, path = "/health") {
   let lastStatus = 0;
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
-      const response = await sandbox.fetch(5_000, path);
+      const current = await SandboxInstance.get(sandbox.metadata.name);
+      const response = await current.fetch(5_000, path);
       lastStatus = response.status;
       if (response.ok) return response;
     } catch {
@@ -104,35 +105,40 @@ async function deployCompetitionDirector(
   const director = current.data;
   if (director.spec.runtime === undefined)
     throw new Error("Competition director has no runtime configuration");
-  const updated = await updateSandbox({
-    path: { sandboxName: directorSandboxName },
-    body: {
-      metadata: {
-        name: director.metadata.name,
-        ...(director.metadata.displayName === undefined
-          ? {}
-          : { displayName: director.metadata.displayName }),
-        ...(director.metadata.externalId === undefined
-          ? {}
-          : { externalId: director.metadata.externalId }),
-        labels: {
-          ...director.metadata.labels,
-          "abl-release": releaseCommit,
-        },
-      },
-      spec: {
-        ...director.spec,
-        runtime: {
-          ...director.spec.runtime,
-          image,
-        },
-      },
-    },
-    throwOnError: true,
-  });
-  if (updated.data.spec.runtime?.image !== image)
-    throw new Error("Competition director immutable image readback drifted");
-  let deployed = new SandboxInstance(updated.data);
+  const labels = {
+    ...director.metadata.labels,
+    "abl-release": releaseCommit,
+  };
+  let deployed =
+    director.spec.runtime.image === image
+      ? await SandboxInstance.updateMetadata(directorSandboxName, { labels })
+      : new SandboxInstance(
+          (
+            await updateSandbox({
+              path: { sandboxName: directorSandboxName },
+              body: {
+                metadata: {
+                  name: director.metadata.name,
+                  ...(director.metadata.displayName === undefined
+                    ? {}
+                    : { displayName: director.metadata.displayName }),
+                  ...(director.metadata.externalId === undefined
+                    ? {}
+                    : { externalId: director.metadata.externalId }),
+                  labels,
+                },
+                spec: {
+                  ...director.spec,
+                  runtime: {
+                    ...director.spec.runtime,
+                    image,
+                  },
+                },
+              },
+              throwOnError: true,
+            })
+          ).data,
+        );
   for (let attempt = 0; attempt < 120; attempt += 1) {
     deployed = await SandboxInstance.get(directorSandboxName);
     if (deployed.status === "DEPLOYED") break;
