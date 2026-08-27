@@ -108,9 +108,9 @@ CREATE TABLE "readiness_leases" (
 CREATE INDEX "readiness_leases_game_state_idx" ON "readiness_leases" ("game_id", "state", "expires_at");
 
 COMMENT ON TABLE "runner_registrations" IS 'Rebuildable runner and delegation projection. Canonical authority remains in signed ABL events.';
-COMMENT ON TABLE "cognition_relay_state" IS 'Atomic restart journal for ciphertext-only relay transport state; it carries no canonical authority.';
-COMMENT ON TABLE "cognition_deliveries" IS 'Ciphertext-only transient delivery projection; plaintext context and participant credentials are prohibited.';
+COMMENT ON TABLE "cognition_relay_state" IS 'Atomic restart journal for ciphertext-only relay transport state. It carries no canonical authority.';
+COMMENT ON TABLE "cognition_deliveries" IS 'Ciphertext-only transient delivery projection. Plaintext context and participant credentials are prohibited.';
 COMMENT ON TABLE "career_activation_states" IS 'Commitment-only restart projection for every career activation, including deterministic fallbacks without a paired runner.';
-COMMENT ON TABLE "game_session_snapshots" IS 'Restartable competition state derived from signed events; cannot independently create recognized history.';
+COMMENT ON TABLE "game_session_snapshots" IS 'Restartable competition state derived from signed events. It cannot independently create recognized history.';
 COMMENT ON TABLE "participant_commitments" IS 'Rebuildable signed schedule response projection.';
 COMMENT ON TABLE "readiness_leases" IS 'Rebuildable runner readiness projection with a 120-second online lease.';
