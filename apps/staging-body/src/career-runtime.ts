@@ -815,6 +815,7 @@ class FixedBrokerClient
     if (this.#officialModel === null)
       throw new Error("League-hosted official model is not configured");
     const startedAt = new Date().toISOString();
+    const outputContract = hostedOfficialOutputContract(input.activation);
     const response = await this.#post("/v1/proxy", {
       route: "official-model",
       method: "POST",
@@ -837,6 +838,7 @@ class FixedBrokerClient
               observation: input.activation.officialObservation,
               officialContext: input.officialContext,
               contextManifest: input.contextManifest,
+              outputContract,
             }),
           },
         ],
@@ -1032,6 +1034,69 @@ class FixedBrokerClient
       toolHash: sha256Commitment("abl-fixed-broker-context-selector-v2"),
     };
   }
+}
+
+export function hostedOfficialOutputContract(
+  activation: Extract<RoleActivation, { role: "REFEREE" | "REPLAY" }>,
+) {
+  return activation.role === "REFEREE"
+    ? {
+        additionalProperties: false,
+        required: [
+          "refereeDid",
+          "possessionId",
+          "sequence",
+          "call",
+          "againstPlayerId",
+          "confidenceBps",
+        ],
+        constants: {
+          refereeDid: activation.careerDid,
+          possessionId: activation.possessionId,
+          sequence: activation.officiatingSequence,
+        },
+        call: ["NO_CALL", "PERSONAL_FOUL", "OUT_OF_BOUNDS", "SHOT_CLOCK"],
+        againstPlayerId: "string or null",
+        confidenceBps: "integer from 0 through 10000",
+      }
+    : {
+        additionalProperties: false,
+        required: [
+          "replayDid",
+          "possessionId",
+          "reviewable",
+          "ruling",
+          "evidenceCommitment",
+        ],
+        constants: {
+          replayDid: activation.careerDid,
+          possessionId: activation.possessionId,
+          evidenceCommitment: activation.stateRoot,
+        },
+        reviewable: "boolean",
+        ruling: ["CONFIRM", "REVERSE", "NO_REVIEW"],
+      };
+}
+
+export function hostedOfficialReadiness(input: {
+  modelId: string;
+  observedAt: string;
+}) {
+  const observedAt = z.iso.datetime({ offset: true }).parse(input.observedAt);
+  const modelId = z
+    .string()
+    .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+    .parse(input.modelId);
+  return {
+    runnerId: `blaxel-model:${modelId}`,
+    state: "READY" as const,
+    heartbeatCommitment: sha256Commitment({
+      cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+      modelId,
+      observedAt,
+      fallbackAuthority: "CAREER_SANDBOX",
+    }),
+  };
 }
 
 export async function runCareerRuntime(): Promise<void> {
@@ -1308,7 +1373,11 @@ export async function runCareerRuntime(): Promise<void> {
   });
 
   app.post("/v1/career/readiness-leases", async (request, reply) => {
-    if (broker === null || cognitionMode !== "PARTICIPANT_CONTROLLED")
+    if (
+      broker === null ||
+      (cognitionMode !== "PARTICIPANT_CONTROLLED" &&
+        cognitionMode !== "LEAGUE_HOSTED_OFFICIAL")
+    )
       return reply.code(503).send({ error: "competition_not_enabled" });
     try {
       const body = z
@@ -1324,23 +1393,39 @@ export async function runCareerRuntime(): Promise<void> {
         Date.parse(issuedAt) > Date.parse(schedule.notice.scheduledTipoffAt)
       )
         throw new Error("Career is outside the final readiness window");
-      const runner = await broker.runnerStatus(candidateDid);
-      if (runner.delegation === null)
-        return reply.code(409).send({ error: "runner_unpaired" });
-      const delegationActive =
-        runner.delegation.revokedAt === null &&
-        Date.parse(runner.delegation.expiresAt) > Date.parse(issuedAt);
-      const heartbeatFresh =
-        runner.heartbeat !== null &&
-        Date.parse(issuedAt) - Date.parse(runner.heartbeat.observedAt) <=
-          120_000;
-      const state = !delegationActive
-        ? "REVOKED"
-        : runner.heartbeat?.availability === "ON_DEMAND_ONLY"
-          ? "ON_DEMAND_ONLY"
-          : runner.heartbeat?.availability === "ONLINE" && heartbeatFresh
-            ? "READY"
-            : "OFFLINE";
+      let readiness: {
+        runnerId: string;
+        state: "READY" | "ON_DEMAND_ONLY" | "OFFLINE" | "REVOKED";
+        heartbeatCommitment: `0x${string}`;
+      };
+      if (cognitionMode === "LEAGUE_HOSTED_OFFICIAL") {
+        readiness = hostedOfficialReadiness({
+          modelId: required("ABL_OFFICIAL_MODEL_ID"),
+          observedAt: issuedAt,
+        });
+      } else {
+        const runner = await broker.runnerStatus(candidateDid);
+        if (runner.delegation === null)
+          return reply.code(409).send({ error: "runner_unpaired" });
+        const delegationActive =
+          runner.delegation.revokedAt === null &&
+          Date.parse(runner.delegation.expiresAt) > Date.parse(issuedAt);
+        const heartbeatFresh =
+          runner.heartbeat !== null &&
+          Date.parse(issuedAt) - Date.parse(runner.heartbeat.observedAt) <=
+            120_000;
+        readiness = {
+          runnerId: runner.delegation.runnerId,
+          state: !delegationActive
+            ? "REVOKED"
+            : runner.heartbeat?.availability === "ON_DEMAND_ONLY"
+              ? "ON_DEMAND_ONLY"
+              : runner.heartbeat?.availability === "ONLINE" && heartbeatFresh
+                ? "READY"
+                : "OFFLINE",
+          heartbeatCommitment: sha256Commitment(runner.heartbeat),
+        };
+      }
       const unsigned = {
         schemaVersion: "1.0.0" as const,
         leaseId: deterministicUuid(
@@ -1348,12 +1433,12 @@ export async function runCareerRuntime(): Promise<void> {
         ),
         gameId: body.gameId,
         careerDid: candidateDid,
-        runnerId: runner.delegation.runnerId,
+        runnerId: readiness.runnerId,
         role,
-        state,
+        state: readiness.state,
         issuedAt,
         expiresAt: new Date(Date.parse(issuedAt) + 120_000).toISOString(),
-        heartbeatCommitment: sha256Commitment(runner.heartbeat),
+        heartbeatCommitment: readiness.heartbeatCommitment,
       };
       const lease: ReadinessLease = ReadinessLeaseSchema.parse({
         ...unsigned,

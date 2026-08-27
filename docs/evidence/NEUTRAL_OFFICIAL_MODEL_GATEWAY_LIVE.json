@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "evidenceClass": "NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE",
+  "recordedAt": "2026-08-27T22:55:25.000Z",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "releaseCommit": "c7d28b4b9bb48c1edd67c1f57f8e5f54580431c0",
+  "modelResource": {
+    "name": "abl-neutral-official-model",
+    "status": "DEPLOYED",
+    "sandbox": false,
+    "integrationConnection": "abl-neutral-official-model",
+    "providerEndpointName": "sad-sheep",
+    "generation": "mk2",
+    "providerType": "openai",
+    "providerModel": "gpt-4.1-mini",
+    "providerOrganization": "",
+    "createdAt": "2026-08-27T22:51:21.845800488Z",
+    "authority": "ADVISORY_ONLY"
+  },
+  "structuredProbe": {
+    "passed": true,
+    "providerReportedModel": "gpt-4.1-mini-2025-04-14",
+    "finishReason": "stop",
+    "usageObserved": true,
+    "validatedDecisionSchema": "NEUTRAL_REFEREE_TEST_V1",
+    "decision": "NO_CALL",
+    "confidence": 1
+  },
+  "isolation": {
+    "providerCredentialRecorded": false,
+    "providerCredentialExposedToCareer": false,
+    "modelMaySignCanonicalAction": false,
+    "participantInferenceRoutedThroughModel": false,
+    "unrelatedSandboxOpenAiRouteReused": false,
+    "unrelatedSandboxOpenAiRouteChanged": false,
+    "unrelatedSandboxOpenAiStatus": "DEPLOYED",
+    "unrelatedSandboxOpenAiModel": "gpt-4o-mini"
+  },
+  "policy": {
+    "officialRoles": ["REFEREE", "REPLAY_OFFICIAL"],
+    "foundingElectorateEligible": false,
+    "governanceVotingPower": false,
+    "basketballAbilityAffected": false,
+    "careerRootSignsFinalDecision": true,
+    "objectiveRulesRemainDeterministic": true
+  },
+  "authorityBoundary": {
+    "preGenesisExperiment": true,
+    "genesis": false,
+    "canonicalHistoryClaim": false,
+    "recognitionBroadcast": false,
+    "baseTransaction": false,
+    "secretValuesRecorded": false
+  }
+}

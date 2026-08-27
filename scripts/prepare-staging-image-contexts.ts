@@ -146,6 +146,12 @@ const persistentImageServices = [
 ] satisfies readonly ImageService[];
 const cognitionImageServices = [
   {
+    directory: "career-body",
+    packageName: "@abl/staging-body",
+    memory: 4096,
+    type: "sandbox",
+  },
+  {
     directory: "cognition-relay",
     packageName: "@abl/cognition-relay",
     memory: 2048,

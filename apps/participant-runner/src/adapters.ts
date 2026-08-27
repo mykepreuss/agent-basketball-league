@@ -193,16 +193,16 @@ export function productCommandAdapter(input: {
   });
 }
 
-const OpenAiResponseSchema = z.strictObject({
+const OpenAiResponseSchema = z.object({
   choices: z
     .array(
-      z.strictObject({
-        message: z.strictObject({ content: z.string() }),
+      z.object({
+        message: z.object({ content: z.string() }),
       }),
     )
     .min(1),
   usage: z
-    .strictObject({
+    .object({
       prompt_tokens: z.number().int().nonnegative(),
       completion_tokens: z.number().int().nonnegative(),
     })

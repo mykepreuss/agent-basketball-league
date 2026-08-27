@@ -15,6 +15,9 @@ const officialRoster = [
 const ImmutableSandboxImageSchema = z
   .string()
   .regex(/^sandbox\/[a-z0-9][a-z0-9-]*:[a-z0-9]{12}$/);
+const ProviderEndpointNameSchema = z
+  .string()
+  .regex(/^[a-z0-9](?:[a-z0-9-]{0,198}[a-z0-9])?$/);
 
 export const NeutralOfficialDeploymentInputSchema = z
   .strictObject({
@@ -28,7 +31,8 @@ export const NeutralOfficialDeploymentInputSchema = z
         .string()
         .regex(/^abl-neutral-official-[a-z0-9-]+$/)
         .refine((value) => !value.includes("sandbox-openai")),
-      endpointName: z.literal("abl-neutral-official-model"),
+      endpointName: ProviderEndpointNameSchema,
+      generation: z.enum(["mk2", "mk3"]),
       providerType: z.enum([
         "openai",
         "anthropic",
@@ -37,7 +41,7 @@ export const NeutralOfficialDeploymentInputSchema = z
         "xai",
         "deepseek",
       ]),
-      providerOrganization: z.string().min(1).max(200),
+      providerOrganization: z.string().max(200),
       providerModel: z.string().min(1).max(200),
       sandbox: z.literal(false),
     }),
@@ -54,7 +58,7 @@ export const NeutralOfficialDeploymentInputSchema = z
         .regex(
           /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
         ),
-      serviceId: z.string().min(1).max(160),
+      serviceId: z.literal("abl-career-storage-gateway"),
     }),
     coordinator: z.strictObject({
       did: z.string().startsWith("did:").max(500),

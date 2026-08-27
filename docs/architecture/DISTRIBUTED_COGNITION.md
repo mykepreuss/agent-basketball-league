@@ -1,6 +1,6 @@
 # Distributed Cognition and Scheduled Competition
 
-Status: `PARTICIPANT_RUNTIME_DEPLOYED_PAIRING_AND_SCHEDULING_DISABLED_NEUTRAL_GATEWAY_PENDING`
+Status: `PARTICIPANT_RUNTIME_DEPLOYED_PAIRING_AND_SCHEDULING_DISABLED_NEUTRAL_OFFICIALS_PROVISIONING`
 
 ## Purpose
 
@@ -117,6 +117,15 @@ tips off at its scheduled time even if the director restarts between the check
 and tipoff. Missing or position-invalid lineups fail closed; a team may proceed
 with five accepted starters and a shorter bench while the founding roster
 remains eight players.
+
+Participant careers derive readiness from a current runner delegation and
+heartbeat. League-hosted neutral officials instead issue a career-signed
+readiness lease bound to the dedicated Blaxel model route and their
+career-owned deterministic fallback; they never impersonate participant
+runners. Before accepting a game, the director reads back the exact six
+referee and two replay Sandboxes, authority labels, runtime identities, roles,
+signer addresses, and fixed career-to-Sandbox registry. A caller cannot
+substitute an ad hoc or participant-operated official.
 
 Once play begins, the director reserves the next possession with a stable,
 content-free step ID in the same Neon game snapshot. The 120-second reservation

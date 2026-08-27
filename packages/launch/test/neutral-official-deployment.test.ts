@@ -11,9 +11,10 @@ function input() {
     modelGateway: {
       name: "abl-neutral-official-model",
       integrationConnection: "abl-neutral-official-openai",
-      endpointName: "abl-neutral-official-model",
+      endpointName: "sad-sheep",
+      generation: "mk2",
       providerType: "openai",
-      providerOrganization: "abl",
+      providerOrganization: "",
       providerModel: "structured-official-model",
       sandbox: false,
     },
@@ -24,7 +25,7 @@ function input() {
     privateStorage: {
       origin: "https://private.example.test",
       host: "private.example.test",
-      serviceId: "abl-career-storage",
+      serviceId: "abl-career-storage-gateway",
     },
     coordinator: {
       did: "did:abl:competition-director",
