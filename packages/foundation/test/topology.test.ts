@@ -696,7 +696,12 @@ describe("single-workspace topology", () => {
           path: string;
         }>;
       }>;
-      mounts: Array<{ resource: string; kind: string }>;
+      mounts: Array<{
+        resource: string;
+        kind: string;
+        uidMap: string;
+        gidMap: string;
+      }>;
       careerBodyMounts: unknown[];
     };
     expect(driveAccess.drives).toEqual(
@@ -739,6 +744,11 @@ describe("single-workspace topology", () => {
         }),
       ]),
     );
+    expect(
+      driveAccess.mounts.every(
+        ({ uidMap, gidMap }) => uidMap === "1000" && gidMap === "1000",
+      ),
+    ).toBe(true);
     expect(driveAccess.careerBodyMounts).toEqual([]);
     expect(
       driveAccess.drives.flatMap(({ permissions }) => permissions),

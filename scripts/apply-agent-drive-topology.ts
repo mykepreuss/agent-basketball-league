@@ -40,6 +40,8 @@ const ConfigurationSchema = z.strictObject({
       drive: z.string().min(1).max(49),
       drivePath: z.string().startsWith("/"),
       mountPath: z.string().startsWith("/"),
+      uidMap: z.literal("1000"),
+      gidMap: z.literal("1000"),
       mode: z.enum(["read-only", "read-write"]),
     }),
   ),
@@ -124,6 +126,8 @@ const mounted: Array<{
   drivePath: string;
   mountPath: string;
   readOnly: boolean;
+  uidMap: string;
+  gidMap: string;
 }> = [];
 for (const policy of source.mounts.filter(
   (candidate) => candidate.workspace === workspace,
@@ -150,15 +154,28 @@ for (const policy of source.mounts.filter(
     drivePath: policy.drivePath,
     mountPath: policy.mountPath,
     readOnly: policy.mode === "read-only",
+    uidMap: policy.uidMap,
+    gidMap: policy.gidMap,
   };
   const existing = (await sandbox.drives.list()).find(
     (candidate) => candidate.mountPath === policy.mountPath,
   );
-  if (existing === undefined) await sandbox.drives.mount(desired);
-  else if (
+  if (existing === undefined) {
+    const applied = await sandbox.drives.mount(desired);
+    if (applied.uidMap !== desired.uidMap || applied.gidMap !== desired.gidMap)
+      throw new Error(
+        `Agent Drive identity mapping failed on ${policy.resource}`,
+      );
+  } else if (
     existing.driveName !== desired.driveName ||
     existing.drivePath !== desired.drivePath ||
-    (existing.readOnly ?? false) !== desired.readOnly
+    (existing.readOnly ?? false) !== desired.readOnly ||
+    (existing.uidMap !== undefined &&
+      existing.uidMap !== "" &&
+      existing.uidMap !== desired.uidMap) ||
+    (existing.gidMap !== undefined &&
+      existing.gidMap !== "" &&
+      existing.gidMap !== desired.gidMap)
   )
     throw new Error(`Agent Drive mount drifted on ${policy.resource}`);
   mounted.push({
@@ -166,6 +183,8 @@ for (const policy of source.mounts.filter(
     drivePath: policy.drivePath,
     mountPath: policy.mountPath,
     readOnly: desired.readOnly,
+    uidMap: desired.uidMap,
+    gidMap: desired.gidMap,
   });
 }
 

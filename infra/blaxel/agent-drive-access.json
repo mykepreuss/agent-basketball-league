@@ -53,6 +53,8 @@
       "drive": "abl-private-state",
       "drivePath": "/ciphertext",
       "mountPath": "/mnt/abl-ciphertext",
+      "uidMap": "1000",
+      "gidMap": "1000",
       "mode": "read-write"
     },
     {
@@ -62,6 +64,8 @@
       "drive": "abl-core-state",
       "drivePath": "/safety",
       "mountPath": "/mnt/abl-safety",
+      "uidMap": "1000",
+      "gidMap": "1000",
       "mode": "read-write"
     },
     {
@@ -71,6 +75,8 @@
       "drive": "abl-public-state",
       "drivePath": "/projections",
       "mountPath": "/mnt/abl-public-projections",
+      "uidMap": "1000",
+      "gidMap": "1000",
       "mode": "read-write"
     },
     {
@@ -80,6 +86,8 @@
       "drive": "abl-public-state",
       "drivePath": "/candidate-intake",
       "mountPath": "/mnt/abl-candidate-intake",
+      "uidMap": "1000",
+      "gidMap": "1000",
       "mode": "read-write"
     }
   ],
