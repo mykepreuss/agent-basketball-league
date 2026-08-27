@@ -54,6 +54,7 @@
     "distributed-cognition:assess": "tsx scripts/assess-distributed-cognition.ts",
     "neutral-officials:assess": "tsx scripts/assess-neutral-officials.ts",
     "neutral-officials:prepare": "tsx scripts/prepare-neutral-official-deployment.ts",
+    "neutral-officials:provision": "tsx scripts/provision-neutral-officials.ts",
     "founding-alpha:prepare-images": "tsx scripts/prepare-staging-image-contexts.ts",
     "staging:upload-body": "tsx scripts/upload-sandbox-file-multipart.ts",
     "test": "turbo run test",

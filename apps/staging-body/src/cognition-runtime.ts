@@ -642,13 +642,27 @@ export async function executeDistributedCareerActivation(input: {
     }
   }
 
+  let normalizedDecision: z.infer<typeof RoleDecisionSchema>;
+  try {
+    normalizedDecision = roleDecision(
+      activation,
+      input.identity.candidateDid,
+      rawDecision,
+      safeFallback(activation, assembly.fallbackDecision),
+    );
+  } catch {
+    participantResultAccepted = false;
+    rawDecision = null;
+    inferenceResult = null;
+    hostedResult = null;
+    normalizedDecision = roleDecision(
+      activation,
+      input.identity.candidateDid,
+      null,
+      safeFallback(activation, assembly.fallbackDecision),
+    );
+  }
   const fallback = !participantResultAccepted;
-  const normalizedDecision = roleDecision(
-    activation,
-    input.identity.candidateDid,
-    rawDecision,
-    safeFallback(activation, assembly.fallbackDecision),
-  );
   if (participantResultAccepted)
     await transition("VALIDATED", manifestCommitment);
   const completedAt =

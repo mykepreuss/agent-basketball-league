@@ -35,6 +35,12 @@ function evidence() {
       unrelatedSandboxOpenAiRouteReused: false,
       unrelatedSandboxOpenAiRouteChanged: false,
     },
+    runtimeContractEvidence: {
+      sourceCommit: "a".repeat(40),
+      nodeVersion: "v24.18.0",
+      testSuite: "apps/staging-body/test/cognition-runtime.test.ts",
+      passed: true,
+    },
     careers: roster.map(([careerId, role], index) => ({
       careerId,
       role,
@@ -56,7 +62,7 @@ function evidence() {
       brokerCanonicalSigningEnabled: false,
       foundingElectorateEligible: false,
       governanceVotingPower: false,
-      invalidModelResultFallbackPassed: true,
+      invalidModelResultFallbackContractTestPassed: true,
       signedDecisionVerified: true,
     })),
     isolation: {
@@ -66,11 +72,11 @@ function evidence() {
       distinctIdentityCommitments: 8,
       distinctCareerSandboxes: 8,
       distinctFixedBrokerSandboxes: 8,
-      crossCareerModelSubmissionRejected: true,
-      modelDirectCoreMutationRejected: true,
-      modelDirectStorageAccessRejected: true,
-      modelDirectCareerSigningRejected: true,
-      plaintextContextLeaks: 0,
+      crossCareerActivationRejectedLive: true,
+      modelCoreMutationAuthorityAbsent: true,
+      modelStorageAuthorityAbsent: true,
+      modelCanonicalSigningAuthorityAbsent: true,
+      plaintextContextRecordingDisabled: true,
     },
     runtime: {
       blaxelAgentResources: 0,

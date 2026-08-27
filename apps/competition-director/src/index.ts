@@ -19,6 +19,7 @@ import {
 } from "@abl/recognition";
 import {
   CareerPositionProfileAttestationSchema,
+  CandidateRuntimeIdentityReceiptSchema,
   GameScheduleNoticeSchema,
   ParticipationResponseSchema,
   ReadinessLeaseSchema,
@@ -56,6 +57,10 @@ import {
   type ReadinessCollection,
 } from "./scheduler.js";
 import { FoundingLiveGameExecutor } from "./live-game.js";
+import {
+  NEUTRAL_OFFICIAL_REGISTRY,
+  assertNeutralOfficialSchedule,
+} from "./neutral-official-registry.js";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -365,6 +370,12 @@ app.get("/health", async () => ({
   hostedModelCredentials: false,
   genesis: false,
   canonicalHistoryAuthority: false,
+  neutralOfficials: {
+    policy: "BLAXEL_HOSTED_OPERATIONAL_CAREERS",
+    required: NEUTRAL_OFFICIAL_REGISTRY.length,
+    participantInferenceRequired: false,
+    governanceAuthority: false,
+  },
   scheduler: scheduler.status(),
   conductor: conductor.status(),
 }));
@@ -536,6 +547,7 @@ app.post("/v1/internal/games", async (request, reply) => {
     return reply.code(503).send({ error: "competition_scheduling_disabled" });
   try {
     const input = CreateGameSchema.parse(request.body);
+    assertNeutralOfficialSchedule(input);
     const scheduledCareers = input.participants
       .map(({ careerDid }) => careerDid)
       .sort();
@@ -546,6 +558,40 @@ app.post("/v1/internal/games", async (request, reply) => {
       throw new Error(
         "Every scheduled career requires one exact Sandbox resource",
       );
+    await Promise.all(
+      NEUTRAL_OFFICIAL_REGISTRY.map(async (official) => {
+        const participant = input.participants.find(
+          ({ careerDid }) => careerDid === official.careerDid,
+        );
+        if (participant === undefined)
+          throw new Error("Neutral official is missing from the game roster");
+        const sandbox = await SandboxInstance.get(official.careerResourceName);
+        if (
+          sandbox.status !== "DEPLOYED" ||
+          sandbox.metadata.labels?.["abl-trust-domain"] !== "abl-competition" ||
+          sandbox.metadata.labels?.["abl-workspace-role"] !==
+            "neutral-official-career" ||
+          sandbox.metadata.labels?.["abl-official-role"] !==
+            official.role.toLowerCase() ||
+          sandbox.metadata.labels?.["abl-governance-authority"] !== "none"
+        )
+          throw new Error("Neutral-official Sandbox authority labels drifted");
+        const response = await sandbox.fetch(5_000, "/v1/career/identity");
+        if (!response.ok)
+          throw new Error("Neutral-official identity is unavailable");
+        const identity = CandidateRuntimeIdentityReceiptSchema.parse(
+          await response.json(),
+        );
+        if (
+          identity.applicationId !== official.applicationId ||
+          identity.candidateDid !== official.careerDid ||
+          identity.roleClass !== official.roleClass ||
+          identity.signingAddress.toLowerCase() !==
+            participant.signerAddress.toLowerCase()
+        )
+          throw new Error("Neutral-official career identity drifted");
+      }),
+    );
     const participants = await Promise.all(
       input.participants.map(async (participant) => {
         if (participant.role !== "PLAYER")

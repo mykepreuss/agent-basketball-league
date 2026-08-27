@@ -1,4 +1,5 @@
 import { mkdtemp, rm, stat } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -15,6 +16,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   CommandAdapter,
   DeterministicTestAdapter,
+  OpenAiCompatibleAdapter,
   RUNNER_BUILD_DIGEST,
   openVerifiedCareerContext,
   pairRunner,
@@ -355,6 +357,80 @@ describe("participant runner", () => {
       else process.env.ABL_RUNNER_STORE_B64 = priorStore;
       if (priorPath === undefined) delete process.env.ABL_RUNNER_STORE_PATH;
       else process.env.ABL_RUNNER_STORE_PATH = priorPath;
+    }
+  });
+
+  it("accepts standard OpenAI-compatible response metadata", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "chatcmpl-local-qwen",
+          object: "chat.completion",
+          created: 1_777_777_777,
+          model: "qwen-compatible-test",
+          system_fingerprint: "fixture",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: JSON.stringify({
+                  windowId: "window-1",
+                  playerId: "H1",
+                  action: "HOLD",
+                }),
+                reasoning: "",
+              },
+              finish_reason: "stop",
+            },
+          ],
+          usage: {
+            prompt_tokens: 20,
+            completion_tokens: 10,
+            total_tokens: 30,
+          },
+        }),
+      );
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    try {
+      const address = server.address();
+      if (address === null || typeof address === "string")
+        throw new Error("OpenAI-compatible fixture did not bind");
+      const adapter = new OpenAiCompatibleAdapter({
+        endpoint: `http://127.0.0.1:${address.port}/v1/chat/completions`,
+        model: "qwen-compatible-test",
+        buildDigest: sha256Commitment("qwen-compatible-test"),
+      });
+      await expect(
+        adapter.invoke(
+          {
+            role: "PLAYER",
+            activation: { windowId: "window-1", playerId: "H1" },
+            context: { instruction: "Hold the ball" },
+          },
+          new AbortController().signal,
+        ),
+      ).resolves.toMatchObject({
+        decision: {
+          windowId: "window-1",
+          playerId: "H1",
+          action: "HOLD",
+        },
+        providerProductModel: "openai-compatible/qwen-compatible-test",
+        provenanceLevel: "RUNNER_VERIFIED",
+        usage: { inputTokens: 20, outputTokens: 10 },
+      });
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) =>
+          error === undefined ? resolve() : reject(error),
+        ),
+      );
     }
   });
 });

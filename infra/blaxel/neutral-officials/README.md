@@ -4,7 +4,8 @@ These templates extend the existing career-body and fixed-broker runtime; they
 do not define a parallel career implementation. Resolve one career and one
 fixed-broker manifest for each exact career in `resource-plan.json`.
 
-Deployment remains disabled until all of the following are true:
+The dedicated Model Gateway is now deployed. Official-career provisioning
+remains disabled until all of the following are true:
 
 - a dedicated `abl-neutral-official-model` Model Gateway exists in the existing
   `agent-basketball-league` workspace;
@@ -21,6 +22,13 @@ boundary. Its normal production mode still requires a dedicated external model
 provider integration; it is not permission to reuse the workspace's unrelated
 `sandbox-openai` route. Provider credentials remain in that integration and
 never enter a career Sandbox, an evidence artifact, or the repository.
+
+Blaxel assigns a provider endpoint name independently from the ABL Model
+resource name. The preparation packet therefore binds both the league resource
+`abl-neutral-official-model` and the provider-returned endpoint/generation
+readback. Fixed brokers use the dedicated
+`abl-neutral-official-model-broker` service account; its API key is stored only
+as a Blaxel Sandbox secret and is never present in a career Sandbox.
 
 Provisioning is deliberately two-phase. Apply each fixed-broker Sandbox first,
 create its private preview and short-lived bootstrap capability, then create the
@@ -56,6 +64,22 @@ It requires the exact six-referee/two-replay roster, eight distinct career and
 broker identities, the dedicated nonsandbox Model Gateway, isolation and
 fallback checks, no authority leakage, and an explicit pre-Genesis boundary.
 It does not activate scheduled games or Genesis.
+
+The live provisioner is intentionally bound to an already-reviewed merged
+release and immutable career/fixed-broker image references. Its read-only mode
+must pass before apply. Apply creates the exact eight broker/career pairs,
+proves one real model-backed signed practice decision per career, proves a live
+cross-career denial, and writes only secret-free evidence outside the
+repository:
+
+```sh
+pnpm neutral-officials:provision
+```
+
+The competition director independently binds future schedules to these exact
+eight provider-read careers and gives hosted officials career-signed readiness
+without requiring a participant runner. Scheduling remains disabled until its
+separate release gate.
 
 The templates use no Blaxel Agent, Application, Volume, or additional
 workspace.

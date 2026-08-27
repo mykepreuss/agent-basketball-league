@@ -32,6 +32,8 @@ import {
   type CareerRelayClient,
 } from "../src/cognition-runtime.js";
 import {
+  hostedOfficialOutputContract,
+  hostedOfficialReadiness,
   selectCompetitionCatalogEntries,
   verifyCatalogPlaintext,
 } from "../src/career-runtime.js";
@@ -277,6 +279,48 @@ function identity(role: RoleActivation["role"]) {
 }
 
 describe("distributed career cognition runtime", () => {
+  it("treats a hosted official as competition-ready without participant inference", () => {
+    const readiness = hostedOfficialReadiness({
+      modelId: "abl-neutral-official-model",
+      observedAt: openedAt,
+    });
+    expect(readiness).toEqual({
+      runnerId: "blaxel-model:abl-neutral-official-model",
+      state: "READY",
+      heartbeatCommitment: sha256Commitment({
+        cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+        modelId: "abl-neutral-official-model",
+        observedAt: openedAt,
+        fallbackAuthority: "CAREER_SANDBOX",
+      }),
+    });
+  });
+
+  it("binds hosted-official output contracts to the exact activation", async () => {
+    const referee = (await activationCommand("REFEREE")).activation;
+    const replay = (await activationCommand("REPLAY")).activation;
+    if (referee.role !== "REFEREE" || replay.role !== "REPLAY")
+      throw new Error("Official activation fixture changed role");
+    expect(hostedOfficialOutputContract(referee)).toMatchObject({
+      additionalProperties: false,
+      constants: {
+        refereeDid: careerDid,
+        possessionId: "possession-1",
+        sequence: 1,
+      },
+      call: ["NO_CALL", "PERSONAL_FOUL", "OUT_OF_BOUNDS", "SHOT_CLOCK"],
+    });
+    expect(hostedOfficialOutputContract(replay)).toMatchObject({
+      additionalProperties: false,
+      constants: {
+        replayDid: careerDid,
+        possessionId: "possession-1",
+        evidenceCommitment: replay.stateRoot,
+      },
+      ruling: ["CONFIRM", "REVERSE", "NO_REVIEW"],
+    });
+  });
+
   it("excludes case-restricted context and verifies retrieved bytes", () => {
     const allowedBytes = Buffer.from("switch every screen", "utf8");
     const allowed = {
@@ -434,6 +478,52 @@ describe("distributed career cognition runtime", () => {
       ).resolves.toBe(career.address);
     });
   }
+
+  it("turns malformed hosted-official advice into the career-owned referee fallback", async () => {
+    const { command } = await activationCommand("REFEREE");
+    const result = await executeDistributedCareerActivation({
+      command,
+      identity: identity("REFEREE"),
+      coordinatorDid,
+      coordinatorSignerAddress: coordinator.address,
+      domain,
+      runner: null,
+      cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
+      hostedOfficial: {
+        async decide() {
+          return {
+            decision: { call: "INVENTED_CALL" },
+            serviceId: "abl-neutral-official-model",
+            serviceBuildDigest: sha256Commitment("official-service-v1"),
+            adapterBuildDigest: sha256Commitment("official-adapter-v1"),
+            providerProductModel: "blaxel/abl-neutral-official-model",
+            provenanceLevel: "PROVIDER_ATTESTED",
+            startedAt: "2026-08-26T12:00:01.000Z",
+            completedAt,
+            usage: {
+              inputTokens: 10,
+              outputTokens: 2,
+              normalizedResourceUnits: null,
+            },
+          };
+        },
+      },
+      contextProvider,
+      relay: await relayFor("REFEREE"),
+      now: () => now,
+    });
+    expect(result).toMatchObject({
+      state: "FALLBACK_SIGNED",
+      participantResultAccepted: false,
+      decision: {
+        call: "NO_CALL",
+        receipt: {
+          fallback: "REFEREE_NO_CALL",
+          providerProductModel: "career/deterministic/fallback-v2",
+        },
+      },
+    });
+  });
 
   it("rejects league-hosted cognition for a player career", async () => {
     const { command } = await activationCommand("PLAYER");

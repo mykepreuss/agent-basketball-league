@@ -18,7 +18,7 @@ spec:
   policies: []
   runtime:
     endpointName: ${ABL_OFFICIAL_MODEL_ENDPOINT_NAME}
-    generation: mk3
+    generation: ${ABL_OFFICIAL_MODEL_GENERATION}
     model: ${ABL_OFFICIAL_MODEL_PROVIDER_MODEL}
     organization: ${ABL_OFFICIAL_MODEL_PROVIDER_ORGANIZATION}
     type: ${ABL_OFFICIAL_MODEL_PROVIDER_TYPE}

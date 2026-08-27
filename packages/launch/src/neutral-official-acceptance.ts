@@ -40,7 +40,7 @@ const NeutralOfficialCareerEvidenceSchema = z.strictObject({
   brokerCanonicalSigningEnabled: z.literal(false),
   foundingElectorateEligible: z.literal(false),
   governanceVotingPower: z.literal(false),
-  invalidModelResultFallbackPassed: z.literal(true),
+  invalidModelResultFallbackContractTestPassed: z.literal(true),
   signedDecisionVerified: z.literal(true),
 });
 
@@ -69,6 +69,12 @@ export const NeutralOfficialAcceptanceEvidenceSchema = z
       unrelatedSandboxOpenAiRouteReused: z.literal(false),
       unrelatedSandboxOpenAiRouteChanged: z.literal(false),
     }),
+    runtimeContractEvidence: z.strictObject({
+      sourceCommit: CommitSchema,
+      nodeVersion: z.literal("v24.18.0"),
+      testSuite: z.literal("apps/staging-body/test/cognition-runtime.test.ts"),
+      passed: z.literal(true),
+    }),
     careers: z.array(NeutralOfficialCareerEvidenceSchema).length(8),
     isolation: z.strictObject({
       distinctApplicationIds: z.literal(8),
@@ -77,11 +83,11 @@ export const NeutralOfficialAcceptanceEvidenceSchema = z
       distinctIdentityCommitments: z.literal(8),
       distinctCareerSandboxes: z.literal(8),
       distinctFixedBrokerSandboxes: z.literal(8),
-      crossCareerModelSubmissionRejected: z.literal(true),
-      modelDirectCoreMutationRejected: z.literal(true),
-      modelDirectStorageAccessRejected: z.literal(true),
-      modelDirectCareerSigningRejected: z.literal(true),
-      plaintextContextLeaks: z.literal(0),
+      crossCareerActivationRejectedLive: z.literal(true),
+      modelCoreMutationAuthorityAbsent: z.literal(true),
+      modelStorageAuthorityAbsent: z.literal(true),
+      modelCanonicalSigningAuthorityAbsent: z.literal(true),
+      plaintextContextRecordingDisabled: z.literal(true),
     }),
     runtime: z.strictObject({
       blaxelAgentResources: z.literal(0),
@@ -108,6 +114,14 @@ export const NeutralOfficialAcceptanceEvidenceSchema = z
         code: "custom",
         path: ["endedAt"],
         message: "Acceptance timestamps are not monotonic",
+      });
+    if (
+      evidence.runtimeContractEvidence.sourceCommit !== evidence.releaseCommit
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["runtimeContractEvidence", "sourceCommit"],
+        message: "Runtime contract evidence is not bound to the release",
       });
 
     const expectedRoster = new Map<string, string>(officialRoster);

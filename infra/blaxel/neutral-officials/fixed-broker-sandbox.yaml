@@ -70,11 +70,11 @@ spec:
       - name: ABL_AGENT_DID
         value: ${ABL_OFFICIAL_CAREER_DID}
         secret: false
-      - name: ABL_AGENT_SIGNER_ADDRESS
+      - name: ABL_CAREER_SIGNER_ADDRESS
         value: ${ABL_OFFICIAL_CAREER_SIGNER_ADDRESS}
         secret: false
       - name: ABL_SERVICE_ID
-        value: ${ABL_OFFICIAL_FIXED_BROKER_RESOURCE_NAME}
+        value: abl-career-storage-gateway
         secret: false
       - name: ABL_PERSONAL_DOMAIN_ID
         value: ${ABL_OFFICIAL_PERSONAL_DOMAIN_ID}
