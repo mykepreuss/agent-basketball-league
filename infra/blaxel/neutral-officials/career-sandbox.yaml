@@ -17,7 +17,20 @@ spec:
   runtime:
     image: ${ABL_BODY_SANDBOX_IMAGE_DIGEST}
     memory: 4096
+    ports:
+      - name: http
+        protocol: HTTP
+        target: 3000
     envs:
+      - name: HOST
+        value: "0.0.0.0"
+        secret: false
+      - name: PORT
+        value: "3000"
+        secret: false
+      - name: ABL_BODY_RUNTIME_MODE
+        value: FOUNDING_CAREER
+        secret: false
       - name: ABL_RUNTIME_RESOURCE_TYPE
         value: SANDBOX
         secret: false
@@ -32,9 +45,6 @@ spec:
         secret: false
       - name: ABL_AGENT_DID
         value: ${ABL_OFFICIAL_CAREER_DID}
-        secret: false
-      - name: ABL_AGENT_SIGNER_ADDRESS
-        value: ${ABL_OFFICIAL_CAREER_SIGNER_ADDRESS}
         secret: false
       - name: ABL_ROLE_CLASS
         value: ${ABL_OFFICIAL_ROLE_CLASS}
@@ -66,9 +76,15 @@ spec:
       - name: ABL_FIXED_BROKER_ORIGIN
         value: ${ABL_OFFICIAL_FIXED_BROKER_ORIGIN}
         secret: false
-      - name: ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64
-        value: ${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_TOKEN_B64}
+      - name: ABL_FIXED_BROKER_CAPABILITY_TOKEN
+        value: ${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_TOKEN}
         secret: true
+      - name: ABL_FIXED_BROKER_CAPABILITY_EXPIRES_AT
+        value: ${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_EXPIRES_AT}
+        secret: false
+      - name: ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON
+        value: '["proxy:official-model","storage:get","storage:put","storage:delete","context:inspect"]'
+        secret: false
       - name: ABL_FIXED_BROKER_PREVIEW_TOKEN
         value: ${ABL_OFFICIAL_FIXED_BROKER_PREVIEW_TOKEN}
         secret: true

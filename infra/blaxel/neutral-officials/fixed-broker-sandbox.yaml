@@ -12,7 +12,6 @@ spec:
   region: us-was-1
   network:
     allowedDomains:
-      - ${ABL_CORE_HOST}
       - ${ABL_PRIVATE_HOST}
       - run.blaxel.ai
     proxy:
@@ -32,29 +31,17 @@ spec:
       - name: PORT
         value: "3000"
         secret: false
-      - name: ABL_CORE_ORIGIN
-        value: ${ABL_CORE_ORIGIN}
+      - name: ABL_CORE_ROUTE_MODE
+        value: DISABLED
         secret: false
-      - name: ABL_CORE_AUTH_MODE
-        value: BLAXEL_ACCESS_TOKEN
-        secret: false
-      - name: ABL_CORE_WORKSPACE
-        value: agent-basketball-league
-        secret: false
-      - name: ABL_CORE_ACCESS_TOKEN_B64
-        value: ${ABL_CORE_ACCESS_TOKEN_B64}
-        secret: true
       - name: ABL_PRIVATE_ORIGIN
         value: ${ABL_PRIVATE_ORIGIN}
         secret: false
       - name: ABL_PRIVATE_AUTH_MODE
-        value: BLAXEL_ACCESS_TOKEN
+        value: BLAXEL_PRIVATE_PREVIEW
         secret: false
-      - name: ABL_PRIVATE_WORKSPACE
-        value: agent-basketball-league
-        secret: false
-      - name: ABL_PRIVATE_ACCESS_TOKEN_B64
-        value: ${ABL_PRIVATE_ACCESS_TOKEN_B64}
+      - name: ABL_PRIVATE_PREVIEW_TOKEN_B64
+        value: ${ABL_PRIVATE_PREVIEW_TOKEN_B64}
         secret: true
       - name: ABL_COGNITION_RELAY_ROUTE_MODE
         value: DISABLED
@@ -75,6 +62,9 @@ spec:
         value: ${ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64}
         secret: true
       - name: ABL_CANONICAL_SIGNING_MODE
+        value: DISABLED
+        secret: false
+      - name: ABL_CAREER_CAPABILITY_RENEWAL_MODE
         value: DISABLED
         secret: false
       - name: ABL_AGENT_DID

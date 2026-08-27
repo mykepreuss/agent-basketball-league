@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "evidenceClass": "NEUTRAL_OFFICIAL_PROVISIONING_LOCAL",
+  "recordedAt": "2026-08-27T22:35:09.000Z",
+  "status": "PASS_LOCAL_EXTERNAL_PROVIDER_AND_POLICY_PENDING",
+  "baselineCommit": "ed7219734a6236e708c4aca2db5dff7108913a34",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "implemented": {
+    "exactRoster": {
+      "referees": 6,
+      "replayOfficials": 2,
+      "careerSandboxes": 8,
+      "fixedBrokerSandboxes": 8
+    },
+    "dedicatedModelGatewayManifest": "infra/blaxel/neutral-officials/model-gateway.yaml",
+    "deploymentPreparationCommand": "pnpm neutral-officials:prepare <external-input.json>",
+    "acceptanceCommand": "pnpm neutral-officials:assess <external-evidence.json>",
+    "careerIdentityGeneratedInsideSandbox": true,
+    "careerRootKeyExported": false,
+    "modelCanonicalSigningEnabled": false,
+    "modelCredentialAvailableToCareer": false,
+    "agentDriveMountedInCareer": false,
+    "unrelatedSandboxOpenAiRouteReusable": false
+  },
+  "verification": {
+    "runtime": "Node.js 24.18.0",
+    "commands": [
+      "pnpm --filter @abl/launch check",
+      "pnpm --filter @abl/launch test",
+      "pnpm --filter @abl/foundation check",
+      "pnpm --filter @abl/foundation test",
+      "pnpm exec tsc --noEmit -p tsconfig.tools.json",
+      "pnpm neutral-officials:prepare <mode-0600-external-input>",
+      "pnpm check",
+      "pnpm test",
+      "pnpm test:acceptance",
+      "pnpm test:adversarial",
+      "pnpm build",
+      "pnpm format:check"
+    ],
+    "focusedLaunchTests": 95,
+    "focusedFoundationTests": 41,
+    "preparationFixture": {
+      "status": "PREPARED",
+      "careerCount": 8,
+      "phaseCount": 5,
+      "secretValuesRecorded": false,
+      "packetDigest": "0xf6caaac65daa1ef50246f280831987240dc217028153cf82775e24bddaadd57f"
+    },
+    "completePinnedPipeline": "PASS"
+  },
+  "remainingExternalGates": [
+    "Create a dedicated Blaxel provider integration whose name begins with abl-neutral-official-; do not reuse sandbox-openai.",
+    "Resolve the dedicated non-sandbox Blaxel Model Gateway endpoint to a supported provider and model.",
+    "Provision and read back the exact eight career and eight fixed-broker Sandboxes.",
+    "Run the structured-advice, fallback, cross-career, direct-mutation, storage, and signing denial matrix.",
+    "Pass pnpm neutral-officials:assess against redacted live evidence.",
+    "Complete the bounded heterogeneous live game.",
+    "Obtain an explicit founding-policy decision before neutral operational careers change Genesis coverage."
+  ],
+  "authorityBoundary": {
+    "providerMutation": false,
+    "modelCalls": 0,
+    "newBlaxelAgentResources": 0,
+    "newBlaxelApplications": 0,
+    "newBlaxelVolumes": 0,
+    "additionalWorkspaces": 0,
+    "genesis": false,
+    "recognitionBroadcast": false,
+    "baseTransaction": false,
+    "canonicalHistoryClaim": false,
+    "secretValuesRecorded": false,
+    "unrelatedSandboxOpenAiRouteChanged": false
+  },
+  "limitations": [
+    "The preparation fixture used synthetic non-secret configuration and is not provider evidence.",
+    "Blaxel Model Gateway provides the ABL-hosted access boundary; the underlying inference provider remains external unless a separately available self-hosted model product is used.",
+    "This record does not authorize provisioning, model spend, Genesis, voting eligibility, or recognition."
+  ]
+}
