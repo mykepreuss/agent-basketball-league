@@ -162,6 +162,7 @@ export interface BlaxelCandidateControlPlaneOptions {
   distributedCognition?: {
     relayOrigin: string;
     relayInternalToken: string;
+    relayPreviewToken: string;
     runnerBundleDigest: string;
     careerPairingInternalToken: string;
     coordinatorDid: string;
@@ -192,6 +193,7 @@ export class BlaxelCandidateSandboxControlPlane
   readonly #distributedCognition: {
     relayOrigin: string;
     relayInternalToken: string;
+    relayPreviewToken: string;
     runnerBundleDigest: `0x${string}`;
     careerPairingInternalToken: string;
     coordinatorDid: string;
@@ -247,6 +249,12 @@ export class BlaxelCandidateSandboxControlPlane
               .max(4_096)
               .refine((value) => !/[\r\n]/.test(value))
               .parse(options.distributedCognition.relayInternalToken),
+            relayPreviewToken: z
+              .string()
+              .min(32)
+              .max(4_096)
+              .refine((value) => !/[\r\n]/.test(value))
+              .parse(options.distributedCognition.relayPreviewToken),
             runnerBundleDigest: z
               .string()
               .regex(/^0x[0-9a-f]{64}$/)
@@ -527,6 +535,11 @@ export class BlaxelCandidateSandboxControlPlane
             environment(
               "ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64",
               Buffer.from(cognition.relayInternalToken).toString("base64"),
+              true,
+            ),
+            environment(
+              "ABL_COGNITION_RELAY_PREVIEW_TOKEN_B64",
+              Buffer.from(cognition.relayPreviewToken).toString("base64"),
               true,
             ),
             environment("ABL_DOMAIN_CHAIN_ID", String(commandDomain!.chainId)),

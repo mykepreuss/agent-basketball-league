@@ -122,6 +122,7 @@ if (cognitionRelayEnabled)
     capability: "cognition:deliver",
     credential: {
       authorization: `Bearer ${secretText("ABL_COGNITION_RELAY_INTERNAL_TOKEN")}`,
+      "x-blaxel-preview-token": secretText("ABL_COGNITION_RELAY_PREVIEW_TOKEN"),
     },
   });
 

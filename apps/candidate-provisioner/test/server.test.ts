@@ -463,6 +463,11 @@ describe("candidate provisioner private boundary", () => {
                 value: expect.any(String),
                 secret: true,
               },
+              {
+                name: "ABL_COGNITION_RELAY_PREVIEW_TOKEN_B64",
+                value: expect.any(String),
+                secret: true,
+              },
             ]),
           );
           expect(resource.spec.network?.allowedDomains).toEqual([
@@ -571,6 +576,7 @@ describe("candidate provisioner private boundary", () => {
       distributedCognition: {
         relayOrigin: "https://relay.example/",
         relayInternalToken: "r".repeat(48),
+        relayPreviewToken: "v".repeat(48),
         runnerBundleDigest: `0x${"f".repeat(64)}`,
         careerPairingInternalToken: "p".repeat(48),
         coordinatorDid: "did:abl:competition-director",

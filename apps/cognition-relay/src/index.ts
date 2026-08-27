@@ -13,6 +13,7 @@ function required(name: string): string {
 
 const careerOrigin = new URL(required("ABL_CAREER_PAIRING_ROUTER_ORIGIN"));
 const careerToken = required("ABL_CAREER_PAIRING_TOKEN");
+const careerPreviewToken = required("ABL_CAREER_PAIRING_ROUTER_PREVIEW_TOKEN");
 const pairingEnabled = process.env.ABL_RUNNER_PAIRING_ENABLED === "true";
 const stateStore = new PostgresRelayStateStore(required("DATABASE_URL"));
 const relay = await DurableCognitionRelay.open(stateStore);
@@ -31,6 +32,7 @@ const app = createCognitionRelayServer({
         headers: {
           authorization: `Bearer ${careerToken}`,
           "content-type": "application/json",
+          "x-blaxel-preview-token": careerPreviewToken,
         },
         body: JSON.stringify({ careerDid: offer.careerDid, submission }),
         redirect: "error",
@@ -52,6 +54,7 @@ const app = createCognitionRelayServer({
         headers: {
           authorization: `Bearer ${careerToken}`,
           "content-type": "application/json",
+          "x-blaxel-preview-token": careerPreviewToken,
         },
         body: JSON.stringify({ delegation: current }),
         redirect: "error",
