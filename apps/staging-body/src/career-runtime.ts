@@ -1278,7 +1278,19 @@ export async function runCareerRuntime(): Promise<void> {
               required("ABL_COMPETITION_COORDINATOR_SIGNER_ADDRESS"),
             ) as `0x${string}`,
         };
-  if (broker !== null) await broker.ensureFoundation();
+  let foundationStatus: "DISABLED" | "PENDING" | "READY" | "RETRYING" =
+    broker === null ? "DISABLED" : "PENDING";
+  async function initializeFoundation(): Promise<void> {
+    if (broker === null) return;
+    try {
+      await broker.ensureFoundation();
+      foundationStatus = "READY";
+    } catch {
+      foundationStatus = "RETRYING";
+      setTimeout(() => void initializeFoundation(), 5_000).unref();
+    }
+  }
+  void initializeFoundation();
   const pendingActivations = new Map<
     string,
     { commandEventHash: string; result: Promise<unknown> }
@@ -1393,6 +1405,7 @@ export async function runCareerRuntime(): Promise<void> {
   app.get("/health", async () => ({
     status: "ok",
     runtime: "ABL_FOUNDING_CAREER",
+    foundationStatus,
     keyReady: true,
     candidateDid,
     applicationId,
