@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import {
   SandboxInstance,
@@ -13,6 +15,7 @@ const workspace = "agent-basketball-league";
 const region = "us-was-1";
 const imageReference = /^sandbox\/[a-z0-9-]+:[a-z0-9]{12}$/;
 const releaseCommit = /^[0-9a-f]{40}$/;
+const sha256Digest = /^0x[0-9a-f]{64}$/;
 const exactRoles = z.enum(["REFEREE", "REPLAY"]);
 const resourcePlanSchema = z
   .object({
@@ -145,6 +148,55 @@ async function startProcess(
   await sandbox.process.exec(input);
 }
 
+async function installCareerRuntime(input: {
+  sandbox: SandboxInstance;
+  sourcePath: string;
+  expectedDigest: string;
+}): Promise<void> {
+  const sourcePath = resolve(input.sourcePath);
+  if (
+    !sourcePath.startsWith("/private/tmp/abl-neutral-release-") ||
+    !sourcePath.endsWith("/career-body/app/dist/career-runtime.js")
+  )
+    throw new Error(
+      "Career runtime must come from a reviewed temporary image context",
+    );
+  if (!sha256Digest.test(input.expectedDigest))
+    throw new Error("Career runtime digest must be a SHA-256 commitment");
+  const contents = await readFile(sourcePath);
+  const actualDigest = `0x${createHash("sha256").update(contents).digest("hex")}`;
+  if (actualDigest !== input.expectedDigest)
+    throw new Error("Career runtime source digest drifted");
+  const temporaryPath = "/tmp/abl-career-runtime-next.js";
+  const targetPath = "/opt/abl/dist/career-runtime.js";
+  await input.sandbox.fs.writeBinary(temporaryPath, contents);
+  const uploaded = Buffer.from(
+    await (await input.sandbox.fs.readBinary(temporaryPath)).arrayBuffer(),
+  );
+  if (
+    `0x${createHash("sha256").update(uploaded).digest("hex")}` !==
+    input.expectedDigest
+  )
+    throw new Error(`${input.sandbox.metadata.name} runtime upload drifted`);
+  const installation = await input.sandbox.process.exec({
+    name: `abl-install-career-runtime-${Date.now()}`,
+    command:
+      "install -m 0444 /tmp/abl-career-runtime-next.js /opt/abl/dist/career-runtime.js.next && mv -f /opt/abl/dist/career-runtime.js.next /opt/abl/dist/career-runtime.js",
+    waitForCompletion: true,
+    timeout: 30,
+  });
+  if (installation.status !== "completed" || installation.exitCode !== 0)
+    throw new Error(`${input.sandbox.metadata.name} runtime install failed`);
+  const installed = Buffer.from(
+    await (await input.sandbox.fs.readBinary(targetPath)).arrayBuffer(),
+  );
+  if (
+    `0x${createHash("sha256").update(installed).digest("hex")}` !==
+    input.expectedDigest
+  )
+    throw new Error(`${input.sandbox.metadata.name} installed runtime drifted`);
+}
+
 async function publicIdentity(name: string) {
   let lastStatus = 0;
   const attempts = 30;
@@ -248,6 +300,12 @@ async function main() {
   const deploymentToolCommit = assertRuntimeAncestry(runtimeRelease);
   const careerImage = required("ABL_NEUTRAL_OFFICIAL_CAREER_IMAGE");
   const brokerImage = required("ABL_NEUTRAL_OFFICIAL_BROKER_IMAGE");
+  const careerRuntimeFile = required(
+    "ABL_NEUTRAL_OFFICIAL_CAREER_RUNTIME_FILE",
+  );
+  const careerRuntimeDigest = required(
+    "ABL_NEUTRAL_OFFICIAL_CAREER_RUNTIME_DIGEST",
+  );
   const apply = process.argv.includes("--apply");
   await Promise.all([assertImage(careerImage), assertImage(brokerImage)]);
   const plan = resourcePlanSchema.parse(
@@ -292,9 +350,10 @@ async function main() {
       career.metadata.labels?.["abl-governance-authority"] !== "none"
     )
       throw new Error(`${official.careerId} runtime inventory drifted`);
-    const identityBefore =
-      baselineIdentities.get(official.careerId) ??
-      (await publicIdentity(official.careerResourceName));
+    const identityBefore = apply
+      ? await publicIdentity(official.careerResourceName)
+      : (baselineIdentities.get(official.careerId) ??
+        (await publicIdentity(official.careerResourceName)));
     if (apply) {
       const brokerEnvs = withEnvironmentValue(
         broker.spec.runtime?.envs,
@@ -325,21 +384,22 @@ async function main() {
       });
       await waitForHealth(official.fixedBrokerResourceName);
 
-      const careerEnvs = withEnvironmentValue(
-        career.spec.runtime?.envs,
-        "ABL_RUNTIME_IMAGE_REFERENCE",
-        careerImage,
+      const deployedCareer = await SandboxInstance.get(
+        official.careerResourceName,
       );
-      const deployedCareer = await updateExactSandbox({
-        sandbox: career,
-        image: careerImage,
-        runtimeRelease,
-        envs: careerEnvs,
+      await installCareerRuntime({
+        sandbox: deployedCareer,
+        sourcePath: careerRuntimeFile,
+        expectedDigest: careerRuntimeDigest,
       });
       await startProcess(deployedCareer, {
         name: "abl-career-runtime",
         command: "node dist/index.js",
-        env: { HOST: "0.0.0.0", PORT: "3000" },
+        env: {
+          HOST: "0.0.0.0",
+          PORT: "3000",
+          ABL_RUNTIME_IMAGE_REFERENCE: careerImage,
+        },
         workingDir: "/opt/abl",
         waitForCompletion: false,
         keepAlive: true,
@@ -363,9 +423,7 @@ async function main() {
       identityAfter.signingAddress.toLowerCase() !==
         identityBefore.signingAddress.toLowerCase() ||
       (apply &&
-        (currentCareer.spec.runtime?.image !== careerImage ||
-          currentBroker.spec.runtime?.image !== brokerImage ||
-          currentCareer.metadata.labels?.["abl-release"] !== runtimeRelease ||
+        (currentBroker.spec.runtime?.image !== brokerImage ||
           currentBroker.metadata.labels?.["abl-release"] !== runtimeRelease))
     )
       throw new Error(`${official.careerId} immutable runtime update drifted`);
@@ -375,6 +433,7 @@ async function main() {
       careerStatus: currentCareer.status,
       brokerStatus: currentBroker.status,
       identityPreserved: true,
+      ...(apply ? { careerRuntimeDigest } : {}),
     });
   }
   process.stdout.write(
