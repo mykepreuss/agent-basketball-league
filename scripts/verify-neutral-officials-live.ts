@@ -19,7 +19,8 @@ const region = "us-was-1";
 const modelName = "abl-neutral-official-model";
 const directorName = "abl-competition-director";
 const evidencePath =
-  "/private/tmp/abl-neutral-official-live-acceptance-r2.json";
+  process.env.ABL_NEUTRAL_OFFICIAL_ACCEPTANCE_EVIDENCE_PATH ??
+  "/private/tmp/abl-neutral-official-live-acceptance-r3.json";
 const planSchema = z.object({
   officialCareers: z
     .array(
@@ -93,8 +94,8 @@ function activation(input: {
   };
   return RoleActivationSchema.parse({
     schemaVersion: "1.0.0",
-    activationId: `neutral-official-acceptance-r2-${input.ordinal}-${openedAtMs}`,
-    gameId: "neutral-official-live-acceptance-r2",
+    activationId: `neutral-official-acceptance-r3-${input.ordinal}-${openedAtMs}`,
+    gameId: "neutral-official-live-acceptance-r3",
     kind: "PRACTICE",
     careerDid: input.careerDid,
     role: input.role,
