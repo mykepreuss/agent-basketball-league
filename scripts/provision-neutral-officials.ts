@@ -30,6 +30,7 @@ const modelName = "abl-neutral-official-model";
 const integrationName = "abl-neutral-official-model";
 const serviceAccountName = "abl-neutral-official-model-broker";
 const storageSandboxName = "abl-private-storage-broker";
+const relaySandboxName = "abl-cognition-relay";
 const directorSandboxName = "abl-competition-director";
 const evidencePath = "/private/tmp/abl-neutral-official-live-evidence.json";
 const commandDomainSchema = z.strictObject({
@@ -399,7 +400,7 @@ function assertOfficialCareerConfiguration(
   if (
     broker.status !== "DEPLOYED" ||
     brokerEnvironment.get("ABL_CORE_ROUTE_MODE") !== "DISABLED" ||
-    brokerEnvironment.get("ABL_COGNITION_RELAY_ROUTE_MODE") !== "DISABLED" ||
+    brokerEnvironment.get("ABL_COGNITION_RELAY_ROUTE_MODE") !== "ENABLED" ||
     brokerEnvironment.get("ABL_OFFICIAL_MODEL_ROUTE_MODE") !== "ENABLED" ||
     brokerEnvironment.get("ABL_CANONICAL_SIGNING_MODE") !== "DISABLED" ||
     brokerEnvironment.get("ABL_OFFICIAL_MODEL_ID") !== modelName
@@ -563,12 +564,21 @@ if (mode === "APPLY" && existingTargets.length > 0)
   );
 
 const storage = await SandboxInstance.get(storageSandboxName);
+const relay = await SandboxInstance.get(relaySandboxName);
 const director = await SandboxInstance.get(directorSandboxName);
-if (storage.status !== "DEPLOYED" || director.status !== "DEPLOYED")
+if (
+  storage.status !== "DEPLOYED" ||
+  relay.status !== "DEPLOYED" ||
+  director.status !== "DEPLOYED"
+)
   throw new Error("Required retained service is not DEPLOYED");
 const storageCredential = await revealedSandboxEnv(
   storageSandboxName,
   "ABL_CAREER_STORAGE_SERVICE_CREDENTIAL_B64",
+);
+const relayInternalToken = await revealedSandboxEnv(
+  relaySandboxName,
+  "ABL_COGNITION_RELAY_INTERNAL_TOKEN",
 );
 if (
   Buffer.from(storageCredential, "base64").length < 32 ||
@@ -602,6 +612,15 @@ if (
   storagePreview.spec.url === undefined
 )
   throw new Error("Private-storage preview readback drifted");
+const relayPreview = (await relay.previews.list()).find(
+  (candidate) => candidate.name === "abl-cognition-relay-private",
+);
+if (
+  relayPreview === undefined ||
+  relayPreview.spec.public !== false ||
+  relayPreview.spec.url === undefined
+)
+  throw new Error("Cognition-relay preview readback drifted");
 const serviceBuildDigest = sha256Commitment({
   name: model.metadata?.name,
   integrationConnections: model.spec?.integrationConnections,
@@ -670,6 +689,11 @@ const storageToken = await storagePreview.tokens.create(
 );
 if (storageToken.value.length < 32)
   throw new Error("Private-storage preview token is malformed");
+const relayToken = await relayPreview.tokens.create(
+  new Date(Date.now() + 365 * 24 * 60 * 60_000),
+);
+if (relayToken.value.length < 32)
+  throw new Error("Cognition-relay preview token is malformed");
 
 const careerEvidence: Array<Record<string, unknown>> = [];
 const liveCareers: Array<{
@@ -701,6 +725,7 @@ for (const [index, official] of preparation.officials.entries()) {
       network: {
         allowedDomains: [
           new URL(storagePreview.spec.url).hostname,
+          new URL(relayPreview.spec.url).hostname,
           "run.blaxel.ai",
         ],
         proxy: { routing: [], bypass: [] },
@@ -720,7 +745,21 @@ for (const [index, official] of preparation.officials.entries()) {
             Buffer.from(storageToken.value).toString("base64"),
             true,
           ),
-          env("ABL_COGNITION_RELAY_ROUTE_MODE", "DISABLED"),
+          env("ABL_COGNITION_RELAY_ROUTE_MODE", "ENABLED"),
+          env(
+            "ABL_COGNITION_RELAY_ORIGIN",
+            new URL(relayPreview.spec.url).origin,
+          ),
+          env(
+            "ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64",
+            Buffer.from(relayInternalToken).toString("base64"),
+            true,
+          ),
+          env(
+            "ABL_COGNITION_RELAY_PREVIEW_TOKEN_B64",
+            Buffer.from(relayToken.value).toString("base64"),
+            true,
+          ),
           env("ABL_OFFICIAL_MODEL_ROUTE_MODE", "ENABLED"),
           env("ABL_OFFICIAL_MODEL_ORIGIN", "https://run.blaxel.ai"),
           env("ABL_OFFICIAL_MODEL_WORKSPACE", workspace),
@@ -821,6 +860,7 @@ for (const [index, official] of preparation.officials.entries()) {
             "ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON",
             JSON.stringify([
               "proxy:official-model",
+              "proxy:cognition-relay",
               "storage:get",
               "storage:put",
               "storage:delete",
