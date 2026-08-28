@@ -13,6 +13,7 @@ spec:
   network:
     allowedDomains:
       - ${ABL_PRIVATE_HOST}
+      - ${ABL_COGNITION_RELAY_HOST}
       - run.blaxel.ai
     proxy:
       routing: []
@@ -44,8 +45,17 @@ spec:
         value: ${ABL_PRIVATE_PREVIEW_TOKEN_B64}
         secret: true
       - name: ABL_COGNITION_RELAY_ROUTE_MODE
-        value: DISABLED
+        value: ENABLED
         secret: false
+      - name: ABL_COGNITION_RELAY_ORIGIN
+        value: ${ABL_COGNITION_RELAY_ORIGIN}
+        secret: false
+      - name: ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64
+        value: ${ABL_COGNITION_RELAY_INTERNAL_TOKEN_B64}
+        secret: true
+      - name: ABL_COGNITION_RELAY_PREVIEW_TOKEN_B64
+        value: ${ABL_COGNITION_RELAY_PREVIEW_TOKEN_B64}
+        secret: true
       - name: ABL_OFFICIAL_MODEL_ROUTE_MODE
         value: ENABLED
         secret: false

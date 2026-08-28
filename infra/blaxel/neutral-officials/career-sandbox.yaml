@@ -83,7 +83,7 @@ spec:
         value: ${ABL_OFFICIAL_FIXED_BROKER_CAPABILITY_EXPIRES_AT}
         secret: false
       - name: ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON
-        value: '["proxy:official-model","storage:get","storage:put","storage:delete","context:inspect"]'
+        value: '["proxy:official-model","proxy:cognition-relay","storage:get","storage:put","storage:delete","context:inspect"]'
         secret: false
       - name: ABL_FIXED_BROKER_PREVIEW_TOKEN
         value: ${ABL_OFFICIAL_FIXED_BROKER_PREVIEW_TOKEN}

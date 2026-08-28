@@ -2166,7 +2166,7 @@ describe("hardened sandbox image policy", () => {
         modelGateway: z.object({
           name: z.literal("abl-neutral-official-model"),
           sandbox: z.literal(false),
-          externalProviderIntegrationRequired: z.literal(true),
+          externalProviderIntegrationRequired: z.literal(false),
           integrationConnectionNamePattern: z.literal(
             "^abl-neutral-official-[a-z0-9-]+$",
           ),
@@ -2264,7 +2264,7 @@ describe("hardened sandbox image policy", () => {
     expect(
       envMap(career).get("ABL_FIXED_BROKER_CAPABILITY_OPERATIONS_JSON"),
     ).toBe(
-      '["proxy:official-model","storage:get","storage:put","storage:delete","context:inspect"]',
+      '["proxy:official-model","proxy:cognition-relay","storage:get","storage:put","storage:delete","context:inspect"]',
     );
     expect(envMap(career).has("ABL_AGENT_SIGNER_ADDRESS")).toBe(false);
     expect(envMap(career).has("ABL_FIXED_BROKER_CAPABILITY_TOKEN_B64")).toBe(
@@ -2279,6 +2279,12 @@ describe("hardened sandbox image policy", () => {
       "BLAXEL_PRIVATE_PREVIEW",
     );
     expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ROUTE_MODE")).toBe("ENABLED");
+    expect(envMap(broker).get("ABL_COGNITION_RELAY_ROUTE_MODE")).toBe(
+      "ENABLED",
+    );
+    expect(envMap(broker).get("ABL_COGNITION_RELAY_ORIGIN")).toBe(
+      "${ABL_COGNITION_RELAY_ORIGIN}",
+    );
     expect(envMap(broker).get("ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64")).toBe(
       "${ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64}",
     );
