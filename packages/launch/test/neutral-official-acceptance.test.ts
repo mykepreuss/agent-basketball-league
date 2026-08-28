@@ -64,6 +64,10 @@ function evidence() {
       governanceVotingPower: false,
       invalidModelResultFallbackContractTestPassed: true,
       signedDecisionVerified: true,
+      activationState: "CAREER_SIGNED",
+      participantResultAccepted: true,
+      fallback: "NONE",
+      provenanceEvidenceLevel: "PROVIDER_ATTESTED",
     })),
     isolation: {
       distinctApplicationIds: 8,

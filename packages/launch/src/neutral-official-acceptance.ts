@@ -42,6 +42,10 @@ const NeutralOfficialCareerEvidenceSchema = z.strictObject({
   governanceVotingPower: z.literal(false),
   invalidModelResultFallbackContractTestPassed: z.literal(true),
   signedDecisionVerified: z.literal(true),
+  activationState: z.literal("CAREER_SIGNED"),
+  participantResultAccepted: z.literal(true),
+  fallback: z.literal("NONE"),
+  provenanceEvidenceLevel: z.literal("PROVIDER_ATTESTED"),
 });
 
 export const NeutralOfficialAcceptanceEvidenceSchema = z
