@@ -185,10 +185,9 @@ async function installCareerRuntime(input: {
       await readFile(resolve(sourceRoot, file)),
     );
   }
-  await input.sandbox.fs.write(
-    `${runtimeRoot}/package.json`,
-    '{"type":"module"}\n',
-  );
+  const packagePath = `${runtimeRoot}/package.json`;
+  await input.sandbox.fs.rm(packagePath).catch(() => undefined);
+  await input.sandbox.fs.write(packagePath, '{"type":"module"}\n');
   const uploaded = Buffer.from(
     await (await input.sandbox.fs.readBinary(targetPath)).arrayBuffer(),
   );
