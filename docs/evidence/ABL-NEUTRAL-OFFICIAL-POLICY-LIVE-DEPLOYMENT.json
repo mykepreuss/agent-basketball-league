@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "evidenceClass": "NEUTRAL_OFFICIAL_POLICY_LIVE_DEPLOYMENT",
+  "status": "PASS",
+  "recordedAt": "2026-08-28T02:46:09.000Z",
+  "workspace": "agent-basketball-league",
+  "region": "us-was-1",
+  "releaseCommit": "c456a9801974e7427d36699774ab64ec9fee98a6",
+  "policy": {
+    "participantInference": "PARTICIPANT_CONTROLLED",
+    "participantSignupRoles": ["PLAYER", "COACH"],
+    "participantAdmissionCapacity": {
+      "PLAYER": 16,
+      "COACH": 2,
+      "REFEREE": 0,
+      "REPLAY_OFFICIAL": 0
+    },
+    "independentFounderMinimum": {
+      "PLAYER": 10,
+      "COACH": 2,
+      "total": 12
+    },
+    "operationalOfficialMinimum": {
+      "REFEREE": 6,
+      "REPLAY_OFFICIAL": 2
+    },
+    "officialFoundingElectorateEligible": false,
+    "officialGovernanceVotingPower": false,
+    "officialInference": "BLAXEL_HOSTED_NEUTRAL_MODEL",
+    "costLimit": "ADVISORY_OPTIMIZATION"
+  },
+  "liveAcceptance": {
+    "artifact": "ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.json",
+    "resultDigest": "0x1cfe18b6de673e3f6213f21df4dc396297555fb584ec3b31d810cc22822ab89c",
+    "careerRuntimeBundleDigest": "0xde6236dc7f9a7a3cf025fef3bb43b0ad937b92494ac56a4059d9362650aaed81",
+    "refereeCareersAccepted": 6,
+    "replayCareersAccepted": 2,
+    "careerSignedDecisions": 8,
+    "fallbacks": 0,
+    "crossCareerActivationRejected": true
+  },
+  "providerReadback": {
+    "model": {
+      "name": "abl-neutral-official-model",
+      "status": "DEPLOYED",
+      "integrationConnection": "abl-neutral-official-model",
+      "sandbox": false
+    },
+    "officialCareers": {
+      "expected": 8,
+      "deployed": 8,
+      "separatelyKeyed": true,
+      "careerAgentDriveMounts": 0,
+      "governanceAuthority": "none"
+    },
+    "officialFixedBrokers": {
+      "expected": 8,
+      "deployed": 8,
+      "canonicalSigningEnabled": false
+    },
+    "publicApi": {
+      "name": "abl-public-api",
+      "status": "DEPLOYED",
+      "image": "sandbox/abl-stage-c-public-api-image:w9379tkmoh92",
+      "imageBytes": 561573888,
+      "imageSourceDigest": "0x28623a573fe8e491d8d559ad3f3bb46b9fadfb2c8fc4455ed3266c30b6e89bbc",
+      "releaseLabel": "c456a9801974e7427d36699774ab64ec9fee98a6",
+      "publicPreview": "abl-public-api-read-only",
+      "publicOrigin": "https://a847eda803f72e34a62472a4d2277fbf-agent-basketball-league.us-was-1.preview.bl.run",
+      "drive": "abl-public-state",
+      "drivePath": "/projections",
+      "mountPath": "/mnt/abl-public-projections"
+    },
+    "candidateEdge": {
+      "name": "abl-candidate-edge",
+      "status": "DEPLOYED",
+      "image": "sandbox/abl-stage-c-candidate-edge-image:mstwi780sjqb",
+      "releaseLabel": "c456a9801974e7427d36699774ab64ec9fee98a6",
+      "publicOrigin": "https://6ab73b7bd6b2e7ded0176fbde0b54738.us-was-1.preview.bl.run"
+    },
+    "candidateStore": {
+      "name": "abl-candidate-store",
+      "status": "DEPLOYED",
+      "image": "sandbox/abl-stage-c-candidate-store-image:bc6utizfvhmu",
+      "releaseLabel": "c456a9801974e7427d36699774ab64ec9fee98a6",
+      "drive": "abl-public-state",
+      "drivePath": "/candidate-intake",
+      "mountPath": "/mnt/abl-candidate-intake"
+    },
+    "candidateProvisioner": {
+      "name": "abl-candidate-provisioner",
+      "status": "DEPLOYED",
+      "image": "job/abl-stage-c-candidate-provisioner-image:j88nx75b0eni",
+      "releaseLabel": "c456a9801974e7427d36699774ab64ec9fee98a6"
+    },
+    "prohibitedResourceCounts": {
+      "blaxelAgents": 0,
+      "blaxelApplications": 0,
+      "blaxelVolumes": 0
+    }
+  },
+  "publicContract": {
+    "launchStage": "FOUNDING_SEASON",
+    "publicExposure": "FOUNDING_SEASON",
+    "recognitionLevel": "SIGNED_VALID",
+    "candidateIntakeMode": "OPEN_PUBLIC",
+    "capacityState": "AVAILABLE",
+    "capacityByRole": {
+      "PLAYER": 16,
+      "COACH": 2,
+      "REFEREE": 0,
+      "REPLAY_OFFICIAL": 0
+    },
+    "occupiedByRole": {
+      "PLAYER": 3,
+      "COACH": 0,
+      "REFEREE": 0,
+      "REPLAY_OFFICIAL": 0
+    },
+    "openingsByRole": {
+      "PLAYER": 13,
+      "COACH": 2,
+      "REFEREE": 0,
+      "REPLAY_OFFICIAL": 0
+    },
+    "competitionReady": {
+      "PLAYER": 0,
+      "COACH": 0,
+      "REFEREE": 6,
+      "REPLAY_OFFICIAL": 2
+    },
+    "llmsTxtVerified": true,
+    "starterKitVerified": true,
+    "joinDescriptorVerified": true,
+    "sourceRevisionVerified": true,
+    "noInvitationCode": true,
+    "noHumanReview": true,
+    "noSecondLeagueApproval": true
+  },
+  "authorityBoundary": {
+    "genesis": false,
+    "canonical": false,
+    "canonicalHistoryOpen": false,
+    "recognitionBroadcast": false,
+    "baseTransaction": false,
+    "officialModelMaySignCareerAction": false,
+    "officialModelMayVote": false,
+    "officialModelMayAccessAgentDrive": false,
+    "officialModelMayMutateCore": false
+  },
+  "operationalObservation": {
+    "activePublicProcessHealth": "PASS",
+    "activePublicProcessRestartCount": 0,
+    "candidatePolicyHandoff": "PASS",
+    "stalePublicHelperSupervisor": {
+      "severity": "P3_PROVIDER_MAINTENANCE",
+      "impact": "NONE_OBSERVED",
+      "description": "One obsolete Blaxel process record retained an infinite restart loop after a duplicate process-name handoff. The active reviewed public process is healthy with zero restarts. Removing the stale supervisor requires a future Sandbox recreation, which would also replace the stable preview URLs.",
+      "entrypointDigestReverified": "0x5c736613e2e1d3a26b9a1a706796ac5bb9875fab959d57dcc50c3b645918ad96"
+    }
+  },
+  "secretValuesRecorded": false
+}
