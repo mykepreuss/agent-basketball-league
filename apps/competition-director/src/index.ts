@@ -170,10 +170,11 @@ async function careerInvoker(resourceName: string) {
       return response.json();
     },
     async activate(command: unknown) {
-      const response = await sandbox.fetch(22_000, "/v1/career/activations", {
+      const response = await sandbox.fetch(3_000, "/v1/career/activations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(command),
+        signal: AbortSignal.timeout(22_000),
       });
       if (!response.ok) throw new Error("Career activation failed");
       return response.json();
@@ -188,10 +189,11 @@ async function collectCareerReadiness(input: {
 }): Promise<ReadinessCollection> {
   try {
     const sandbox = await SandboxInstance.get(input.careerResourceName);
-    const response = await sandbox.fetch(5_000, "/v1/career/readiness-leases", {
+    const response = await sandbox.fetch(3_000, "/v1/career/readiness-leases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ gameId: input.gameId }),
+      signal: AbortSignal.timeout(5_000),
     });
     if (response.ok)
       return {
@@ -280,7 +282,7 @@ const liveGameExecutor = new FoundingLiveGameExecutor({
         timestamp: input.recordedAt,
       });
       const sandbox = await SandboxInstance.get(input.careerResourceName);
-      const response = await sandbox.fetch(30_000, "/v1/career/possessions", {
+      const response = await sandbox.fetch(3_000, "/v1/career/possessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -289,6 +291,7 @@ const liveGameExecutor = new FoundingLiveGameExecutor({
             await signCanonicalEvent(coordinatorIdentity, domain, event),
           ],
         }),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok)
         throw new Error("Career possession authorization failed");
@@ -324,7 +327,7 @@ const liveGameExecutor = new FoundingLiveGameExecutor({
         timestamp: input.recordedAt,
       });
       const sandbox = await SandboxInstance.get(input.careerResourceName);
-      const response = await sandbox.fetch(30_000, "/v1/career/finalizations", {
+      const response = await sandbox.fetch(3_000, "/v1/career/finalizations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -333,6 +336,7 @@ const liveGameExecutor = new FoundingLiveGameExecutor({
             await signCanonicalEvent(coordinatorIdentity, domain, event),
           ],
         }),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok)
         throw new Error("Career game finalization authorization failed");
@@ -576,7 +580,7 @@ app.post("/v1/internal/games", async (request, reply) => {
           sandbox.metadata.labels?.["abl-governance-authority"] !== "none"
         )
           throw new Error("Neutral-official Sandbox authority labels drifted");
-        const response = await sandbox.fetch(5_000, "/v1/career/identity");
+        const response = await sandbox.fetch(3_000, "/v1/career/identity");
         if (!response.ok)
           throw new Error("Neutral-official identity is unavailable");
         const identity = CandidateRuntimeIdentityReceiptSchema.parse(

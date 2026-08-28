@@ -80,7 +80,7 @@ async function health(sandbox: SandboxInstance, path = "/health") {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const current = await SandboxInstance.get(sandbox.metadata.name);
-      const response = await current.fetch(5_000, path);
+      const response = await current.fetch(3_000, path);
       lastStatus = response.status;
       if (response.ok) return response;
     } catch {
@@ -481,7 +481,7 @@ async function officialActivation(input: {
     career: {
       async identity() {
         const response = await input.sandbox.fetch(
-          5_000,
+          3_000,
           "/v1/career/identity",
         );
         if (!response.ok) throw new Error("Career identity readback failed");
@@ -489,12 +489,13 @@ async function officialActivation(input: {
       },
       async activate(command) {
         const response = await input.sandbox.fetch(
-          25_000,
+          3_000,
           "/v1/career/activations",
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(command),
+            signal: AbortSignal.timeout(25_000),
           },
         );
         if (!response.ok)
@@ -841,7 +842,7 @@ for (const [index, official] of preparation.officials.entries()) {
       signingAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     })
     .passthrough()
-    .parse(await (await career.fetch(5_000, "/v1/career/identity")).json());
+    .parse(await (await career.fetch(3_000, "/v1/career/identity")).json());
   broker = await restartBrokerWithSigner(
     official.fixedBrokerResourceName,
     identity.signingAddress,
@@ -922,12 +923,13 @@ try {
       },
       async activate(command) {
         const response = await wrongCareer.sandbox.fetch(
-          5_000,
+          3_000,
           "/v1/career/activations",
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(command),
+            signal: AbortSignal.timeout(25_000),
           },
         );
         crossCareerDenialStatus = response.status;
