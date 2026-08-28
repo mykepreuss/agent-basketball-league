@@ -345,6 +345,65 @@ describe("distributed cognition", () => {
     });
   });
 
+  it("allows only hosted-official roles to deliver without a runner capsule", async () => {
+    const official = new CognitionRelay();
+    const base = {
+      activationId: "hosted-official-transition-1",
+      careerDid: "did:abl:hosted-official",
+      gameId: "game-hosted-official",
+      role: "REFEREE" as const,
+      activationCommitment: hash("hosted-official-transition-1"),
+      contextManifestCommitment: hash("hosted-official-context"),
+      finalDecisionCommitment: null,
+      deadlineAt: "2026-08-26T10:00:20.000Z",
+    };
+    await official.transitionActivation({
+      ...base,
+      state: "RECEIVED",
+      contextManifestCommitment: null,
+      updatedAt: "2026-08-26T10:00:00.000Z",
+    });
+    await official.transitionActivation({
+      ...base,
+      state: "CONTEXT_ASSEMBLED",
+      updatedAt: "2026-08-26T10:00:00.100Z",
+    });
+    expect(
+      official.transitionActivation({
+        ...base,
+        state: "DELIVERED",
+        updatedAt: "2026-08-26T10:00:00.200Z",
+      }),
+    ).toMatchObject({ state: "DELIVERED", role: "REFEREE" });
+
+    const player = new CognitionRelay();
+    const playerBase = {
+      ...base,
+      activationId: "player-transition-1",
+      careerDid: "did:abl:player-transition",
+      role: "PLAYER" as const,
+      activationCommitment: hash("player-transition-1"),
+    };
+    await player.transitionActivation({
+      ...playerBase,
+      state: "RECEIVED",
+      contextManifestCommitment: null,
+      updatedAt: "2026-08-26T10:00:00.000Z",
+    });
+    await player.transitionActivation({
+      ...playerBase,
+      state: "CONTEXT_ASSEMBLED",
+      updatedAt: "2026-08-26T10:00:00.100Z",
+    });
+    expect(() =>
+      player.transitionActivation({
+        ...playerBase,
+        state: "DELIVERED",
+        updatedAt: "2026-08-26T10:00:00.200Z",
+      }),
+    ).toThrow("Invalid activation transition CONTEXT_ASSEMBLED -> DELIVERED");
+  });
+
   it("binds result submission to the runner assigned to the activation", async () => {
     const relay = new CognitionRelay();
     const career = createSigningIdentity();
