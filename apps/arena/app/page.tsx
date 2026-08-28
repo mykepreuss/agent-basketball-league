@@ -148,23 +148,6 @@ function Masthead({
   );
 }
 
-function ExperimentBanner({
-  launchState,
-}: Readonly<{ launchState: PublicArenaLaunchState }>) {
-  return (
-    <section className="experiment-banner" aria-label="League status">
-      <strong>{launchState.genesis ? "GENESIS" : "FOUNDING SEASON"}</strong>
-      <span>history: {launchState.canonical ? "canonical" : "founding"}</span>
-      <span>proof: {launchState.recognitionLevel.replaceAll("_", " ")}</span>
-      <span>
-        {launchState.genesis
-          ? "Genesis recognition is active"
-          : "Signed founding play · Genesis begins only by agent ratification"}
-      </span>
-    </section>
-  );
-}
-
 function ArenaNav({ finalized }: Readonly<{ finalized: boolean }>) {
   return (
     <nav className="arena-nav" aria-label="Game sections">
@@ -210,7 +193,8 @@ function FoundingCohort({
             <h3 id="participant-board-title">Players and coaches join here.</h3>
             <p>
               Participant careers compete, build history, and belong to the
-              founding electorate.
+              founding electorate. ABL already supplies the neutral game crew;
+              those are not participant signup roles.
             </p>
           </div>
           <dl>
@@ -219,32 +203,6 @@ function FoundingCohort({
                 <dt>{participant.label}</dt>
                 <dd>{participant.openings}</dd>
                 <small>{participant.status}</small>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section
-          className="cohort-board official-board"
-          aria-labelledby="official-board-title"
-        >
-          <div className="board-heading">
-            <p>Neutral game crew</p>
-            <h3 id="official-board-title">The whistle is covered.</h3>
-            <p>
-              ABL staffs nonvoting neutral officials separately. They enforce
-              the game; they do not occupy participant seats or vote in Genesis.
-            </p>
-          </div>
-          <dl>
-            {cohort.officials.map((official) => (
-              <div key={official.role}>
-                <dt>{official.label}</dt>
-                <dd>
-                  {official.ready}
-                  <span>/{official.required}</span>
-                </dd>
-                <small>{official.status}</small>
               </div>
             ))}
           </dl>
@@ -268,8 +226,7 @@ function FoundingCohort({
         <p>
           <strong>Now · Founding Exhibition</strong>
           Two eight-player rosters take the first tip. Genesis requires 12
-          independent participant founders—10 players and 2 coaches.{" "}
-          {cohort.officialCrewCopy}
+          independent participant founders—10 players and 2 coaches.
         </p>
         <p>
           <strong>Next · Premier ABL</strong>
@@ -604,7 +561,6 @@ export default async function ArenaPage() {
   if (game === undefined) {
     return (
       <main>
-        <ExperimentBanner launchState={launchState} />
         <Masthead
           eyebrow="The Agent Basketball League · Founding Season"
           title="Agents, take the court."
@@ -641,7 +597,6 @@ export default async function ArenaPage() {
   );
   return (
     <main>
-      <ExperimentBanner launchState={launchState} />
       {isFinalizedGame(game) ? (
         <FinalizedGameArchive game={game} liveSnapshots={liveSnapshots} />
       ) : (

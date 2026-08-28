@@ -1,18 +1,13 @@
 :root {
-  /*
-   * Courtside scorebook palette. Functional signal colours maintain readable
-   * contrast; the brighter basketball orange is reserved for large or
-   * decorative marks.
-   */
+  /* Courtside scorebook: parchment, ink, basketball orange, and away cobalt. */
   --ink: #171612;
   --paper: #f6efdf;
   --paper-deep: #dfd3bd;
   --line: rgba(23, 22, 18, 0.28);
   --signal: #a92f13;
   --signal-bright: #f15a2a;
-  --away: #12564c;
+  --away: #203f91;
   --court: #a96432;
-  --gold: #e6b93f;
   --team-home: var(--signal);
   --team-away: var(--away);
   --display: "Avenir Next Condensed", "Futura Condensed", Impact, sans-serif;
@@ -34,7 +29,7 @@ body {
   background:
     radial-gradient(
       circle at 50% 0,
-      rgba(230, 185, 63, 0.14),
+      rgba(241, 90, 42, 0.14),
       transparent 32rem
     ),
     var(--paper);
@@ -53,27 +48,6 @@ main {
   width: min(1600px, 100%);
   margin: 0 auto;
   min-height: 100vh;
-}
-.experiment-banner {
-  display: grid;
-  grid-template-columns: auto auto auto 1fr;
-  align-items: center;
-  gap: 18px;
-  padding: 10px 18px;
-  color: var(--paper);
-  background: var(--away);
-  border-bottom: 2px solid var(--ink);
-  font: 800 0.65rem/1.3 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.experiment-banner strong {
-  color: var(--ink);
-  background: var(--gold);
-  padding: 7px 9px;
-}
-.experiment-banner span:last-child {
-  justify-self: end;
 }
 .arena-nav {
   position: sticky;
@@ -107,7 +81,7 @@ main {
 .arena-nav a:hover,
 .arena-nav a:focus-visible {
   color: var(--ink);
-  background: var(--gold);
+  background: var(--signal-bright);
   outline: 0;
 }
 .masthead {
@@ -180,7 +154,7 @@ main {
 .hero-actions a:hover,
 .hero-actions a:focus-visible {
   color: var(--ink);
-  background: var(--gold);
+  background: var(--signal-bright);
   outline: 0;
 }
 .eyebrow,
@@ -283,7 +257,7 @@ h1 {
   font: 900 2.6rem/1 var(--display);
 }
 .shot-clock strong {
-  color: var(--gold);
+  color: var(--signal-bright);
 }
 .final-winner strong {
   font-size: clamp(1.2rem, 2.4vw, 2.2rem);
@@ -358,7 +332,7 @@ h1 {
   border-radius: 50%;
   box-shadow:
     0 0 0 2px rgba(23, 22, 18, 0.3),
-    0 0 110px rgba(230, 185, 63, 0.2);
+    0 0 110px rgba(241, 90, 42, 0.2);
 }
 .empty-arena-copy {
   position: relative;
@@ -396,7 +370,7 @@ h1 {
 .standby-board strong {
   display: block;
   margin: 12px 0 16px;
-  color: var(--gold);
+  color: var(--signal-bright);
   font: 900 clamp(3.5rem, 8vw, 7rem) / 0.72 var(--display);
   letter-spacing: -0.07em;
   text-transform: uppercase;
@@ -488,7 +462,7 @@ h1 {
   top: 48%;
   width: 2.5%;
   aspect-ratio: 1;
-  border: 3px solid var(--gold);
+  border: 3px solid var(--signal-bright);
   border-radius: 50%;
 }
 .hoop-left {
@@ -561,12 +535,12 @@ h1 {
   white-space: nowrap;
 }
 .live-state-strip strong {
-  color: var(--gold);
+  color: var(--signal-bright);
   font-size: 1.1em;
 }
 .live-court .player.is-involved {
   z-index: 5;
-  outline: 4px solid var(--gold);
+  outline: 4px solid var(--signal-bright);
   outline-offset: 3px;
 }
 .live-court.action-substitute .player.is-involved,
@@ -609,9 +583,9 @@ h1 {
   top: var(--from-y);
   width: 3px;
   height: 3px;
-  background: var(--gold);
+  background: var(--signal-bright);
   border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(230, 185, 63, 0.28);
+  box-shadow: 0 0 0 3px rgba(241, 90, 42, 0.28);
   animation: court-flight 0.82s cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 .action-flight i {
@@ -620,7 +594,7 @@ h1 {
   top: var(--to-y);
   width: 28px;
   aspect-ratio: 1;
-  border: 2px solid var(--gold);
+  border: 2px solid var(--signal-bright);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   animation: target-ring 0.82s ease-out both;
@@ -796,7 +770,7 @@ h1 {
   text-transform: uppercase;
 }
 .latest-action strong {
-  color: var(--gold);
+  color: var(--signal-bright);
   font: 900 clamp(1.3rem, 2.5vw, 2.2rem) / 0.9 var(--display);
   letter-spacing: -0.02em;
   text-transform: uppercase;
@@ -994,17 +968,12 @@ footer p {
   font-size: clamp(1rem, 1.8vw, 1.3rem);
 }
 .cohort-boards {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
   border: 2px solid var(--ink);
   box-shadow: 10px 10px 0 rgba(23, 22, 18, 0.14);
 }
 .cohort-board {
   min-width: 0;
   background: var(--paper);
-}
-.cohort-board + .cohort-board {
-  border-left: 2px solid var(--ink);
 }
 .board-heading {
   min-height: 190px;
@@ -1057,20 +1026,6 @@ footer p {
   font: 700 0.65rem/1 var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-.official-board {
-  color: var(--paper);
-  background: var(--away);
-}
-.official-board .board-heading,
-.official-board dl div + div {
-  border-color: var(--paper);
-}
-.official-board dd {
-  color: var(--gold);
-}
-.official-board small {
-  color: var(--paper-deep);
 }
 .founding-cohort nav {
   display: flex;
@@ -1131,13 +1086,6 @@ footer p {
   }
 }
 @media (max-width: 900px) {
-  .experiment-banner {
-    grid-template-columns: auto auto auto;
-  }
-  .experiment-banner span:last-child {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
   .masthead {
     grid-template-columns: 90px 1fr;
     min-height: 150px;
@@ -1211,26 +1159,11 @@ footer p {
   .cohort-intro > p:last-child {
     margin-top: 24px;
   }
-  .cohort-boards {
-    grid-template-columns: 1fr;
-  }
-  .cohort-board + .cohort-board {
-    border-top: 2px solid var(--ink);
-    border-left: 0;
-  }
   .board-heading {
     min-height: 0;
   }
 }
 @media (max-width: 560px) {
-  .experiment-banner {
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
-  }
-  .experiment-banner strong,
-  .experiment-banner span:last-child {
-    grid-column: 1 / -1;
-  }
   .wordmark {
     font-size: 3.5rem;
   }
