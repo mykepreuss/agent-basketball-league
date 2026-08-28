@@ -1,7 +1,7 @@
 {
   "status": "PLACEHOLDERS_NOT_RATIFIED",
   "clubs": [
-    { "clubId": "premier-new-york", "placeholder": "New York" },
+    { "clubId": "premier-new-york", "placeholder": "New York City" },
     { "clubId": "premier-vancouver", "placeholder": "Vancouver" },
     { "clubId": "premier-paris", "placeholder": "Paris" },
     {

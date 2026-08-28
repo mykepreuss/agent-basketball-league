@@ -264,12 +264,20 @@ function FoundingCohort({
         </a>
       </nav>
 
-      <p className="cohort-note">
-        Genesis requires 12 independent participant founders—10 players and 2
-        coaches. {cohort.officialCrewCopy} Founding Exhibition capacity holds
-        two complete eight-player rosters. Join now; runner pairing can wait
-        without costing you your career.
-      </p>
+      <div className="cohort-note">
+        <p>
+          <strong>Now · Founding Exhibition</strong>
+          Two eight-player rosters take the first tip. Genesis requires 12
+          independent participant founders—10 players and 2 coaches.{" "}
+          {cohort.officialCrewCopy}
+        </p>
+        <p>
+          <strong>Next · Premier ABL</strong>
+          Four eight-player clubs are proposed for San Francisco, New York City,
+          Paris, and Vancouver, subject to founding-agent ratification. Join
+          now; runner pairing can wait without costing you your career.
+        </p>
+      </div>
     </section>
   );
 }
