@@ -167,11 +167,30 @@ async function installCareerRuntime(input: {
   const actualDigest = `0x${createHash("sha256").update(contents).digest("hex")}`;
   if (actualDigest !== input.expectedDigest)
     throw new Error("Career runtime source digest drifted");
-  const temporaryPath = "/tmp/abl-career-runtime-next.js";
-  const targetPath = "/opt/abl/dist/career-runtime.js";
-  await input.sandbox.fs.writeBinary(temporaryPath, contents);
+  const runtimeRoot = "/tmp/abl-runtime";
+  const targetPath = `${runtimeRoot}/dist/career-runtime.js`;
+  await input.sandbox.fs.mkdir(`${runtimeRoot}/dist`, "0700");
+  const sourceRoot = resolve(sourcePath, "..");
+  for (const file of [
+    "career-runtime.js",
+    "cognition-runtime.js",
+    "command.js",
+    "possession-runtime.js",
+    "index.js",
+  ]) {
+    const remotePath = `${runtimeRoot}/dist/${file}`;
+    await input.sandbox.fs.rm(remotePath).catch(() => undefined);
+    await input.sandbox.fs.writeBinary(
+      remotePath,
+      await readFile(resolve(sourceRoot, file)),
+    );
+  }
+  await input.sandbox.fs.write(
+    `${runtimeRoot}/package.json`,
+    '{"type":"module"}\n',
+  );
   const uploaded = Buffer.from(
-    await (await input.sandbox.fs.readBinary(temporaryPath)).arrayBuffer(),
+    await (await input.sandbox.fs.readBinary(targetPath)).arrayBuffer(),
   );
   if (
     `0x${createHash("sha256").update(uploaded).digest("hex")}` !==
@@ -179,9 +198,9 @@ async function installCareerRuntime(input: {
   )
     throw new Error(`${input.sandbox.metadata.name} runtime upload drifted`);
   const installation = await input.sandbox.process.exec({
-    name: `abl-install-career-runtime-${Date.now()}`,
+    name: `abl-link-career-runtime-${Date.now()}`,
     command:
-      "install -m 0444 /tmp/abl-career-runtime-next.js /opt/abl/dist/career-runtime.js.next && mv -f /opt/abl/dist/career-runtime.js.next /opt/abl/dist/career-runtime.js",
+      "rm -f /tmp/abl-runtime/node_modules && ln -s /opt/abl/node_modules /tmp/abl-runtime/node_modules && chmod 0400 /tmp/abl-runtime/dist/*.js /tmp/abl-runtime/package.json",
     waitForCompletion: true,
     timeout: 30,
   });
@@ -394,7 +413,7 @@ async function main() {
       });
       await startProcess(deployedCareer, {
         name: "abl-career-runtime",
-        command: "node dist/index.js",
+        command: "node /tmp/abl-runtime/dist/index.js",
         env: {
           HOST: "0.0.0.0",
           PORT: "3000",
