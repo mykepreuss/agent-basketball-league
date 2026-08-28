@@ -144,6 +144,45 @@ main {
   align-self: end;
   padding: 30px 42px;
 }
+.masthead-invite {
+  min-height: 310px;
+}
+.hero-deck {
+  max-width: 700px;
+  margin: 22px 0 0;
+  font-size: clamp(1rem, 1.35vw, 1.3rem);
+  line-height: 1.4;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.hero-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 12px 16px 10px;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  background: transparent;
+  font: 800 0.66rem/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.hero-actions .hero-action-primary {
+  color: var(--paper);
+  background: var(--ink);
+}
+.hero-actions a:hover,
+.hero-actions a:focus-visible {
+  color: var(--ink);
+  background: var(--gold);
+  outline: 0;
+}
 .eyebrow,
 .section-label,
 .canonical-stamp,
@@ -1090,6 +1129,9 @@ footer p {
     grid-template-columns: 90px 1fr;
     min-height: 150px;
   }
+  .masthead-invite {
+    min-height: 280px;
+  }
   .masthead::after {
     inset: 0 0 0 90px;
   }
@@ -1186,11 +1228,29 @@ footer p {
     grid-template-columns: 68px 1fr;
     min-height: 130px;
   }
+  .masthead-invite {
+    min-height: 310px;
+  }
   .masthead::after {
     inset: 0 0 0 68px;
   }
   .title-block {
     padding: 18px;
+  }
+  .hero-deck {
+    margin-top: 16px;
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 18px;
+  }
+  .hero-actions a {
+    min-height: 38px;
+    padding: 10px 12px 8px;
   }
   h1 {
     font-size: 2.6rem;
