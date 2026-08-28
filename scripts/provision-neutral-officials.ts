@@ -5,6 +5,7 @@ import {
   SandboxInstance,
   createApiKeyForServiceAccount,
   createWorkspaceServiceAccount,
+  deleteApiKeyForServiceAccount,
   getSandbox,
   getModel,
   getWorkspaceServiceAccounts,
@@ -233,18 +234,31 @@ async function modelServiceApiKey(apply: boolean) {
       path: { clientId: account.client_id },
     })
   ).data?.find(({ name }) => name === "neutral-official-model-runtime");
+  if (
+    existing?.id !== undefined &&
+    (existing.apiKey === undefined || existing.apiKey.includes("*"))
+  )
+    await deleteApiKeyForServiceAccount({
+      path: { clientId: account.client_id, apiKeyId: existing.id },
+      throwOnError: true,
+    });
   const key =
-    existing ??
-    (
-      await createApiKeyForServiceAccount({
-        path: { clientId: account.client_id },
-        body: {
-          name: "neutral-official-model-runtime",
-          expires_in: "365d",
-        },
-      })
-    ).data;
-  if (key?.apiKey === undefined || key.apiKey === "")
+    existing?.apiKey !== undefined && !existing.apiKey.includes("*")
+      ? existing
+      : (
+          await createApiKeyForServiceAccount({
+            path: { clientId: account.client_id },
+            body: {
+              name: "neutral-official-model-runtime",
+              expires_in: "365d",
+            },
+          })
+        ).data;
+  if (
+    key?.apiKey === undefined ||
+    key.apiKey === "" ||
+    key.apiKey.includes("*")
+  )
     throw new Error("Neutral-official service account API key is unreadable");
   return {
     apiKey: key.apiKey,
@@ -254,33 +268,41 @@ async function modelServiceApiKey(apply: boolean) {
 }
 
 async function verifyModelCredential(apiKey: string) {
-  const response = await fetch(
-    `https://run.blaxel.ai/${workspace}/models/${modelName}/v1/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-blaxel-authorization": `Bearer ${apiKey}`,
-        "x-blaxel-workspace": workspace,
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    response = await fetch(
+      `https://run.blaxel.ai/${workspace}/models/${modelName}/v1/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-blaxel-authorization": `Bearer ${apiKey}`,
+          "x-blaxel-workspace": workspace,
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini",
+          temperature: 0,
+          max_tokens: 32,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: "Return only JSON matching {ok:true}.",
+            },
+            { role: "user", content: "Credential readiness probe." },
+          ],
+        }),
+        signal: AbortSignal.timeout(60_000),
       },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        temperature: 0,
-        max_tokens: 32,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: "Return only JSON matching {ok:true}.",
-          },
-          { role: "user", content: "Credential readiness probe." },
-        ],
-      }),
-      signal: AbortSignal.timeout(60_000),
-    },
-  );
-  if (!response.ok)
-    throw new Error(`Dedicated model credential failed: ${response.status}`);
+    );
+    if (response.ok) break;
+    if (![401, 403].includes(response.status)) break;
+    await new Promise((resolve) => setTimeout(resolve, 5_000));
+  }
+  if (response === null || !response.ok)
+    throw new Error(
+      `Dedicated model credential failed: ${response?.status ?? "NO_RESPONSE"}`,
+    );
   const body = z
     .object({
       choices: z
