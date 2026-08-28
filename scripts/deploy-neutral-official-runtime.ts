@@ -145,7 +145,21 @@ async function startProcess(
     } catch {
       // An immutable update can leave a stale process readback briefly visible.
     }
-  await sandbox.process.exec(input);
+  try {
+    await sandbox.process.exec(input);
+  } catch (error) {
+    const current = await sandbox.process.list();
+    if (
+      current.some(
+        (candidate) =>
+          candidate.name === input.name &&
+          candidate.status === "running" &&
+          candidate.command === input.command,
+      )
+    )
+      return;
+    throw error;
+  }
 }
 
 async function installCareerRuntime(input: {
