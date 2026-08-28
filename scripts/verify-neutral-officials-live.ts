@@ -27,8 +27,6 @@ const planSchema = z.object({
         careerId: z.string().min(1),
         careerResourceName: z.string().min(1),
         fixedBrokerResourceName: z.string().min(1),
-        applicationId: z.uuid(),
-        careerDid: z.string().startsWith("did:abl:"),
         role: z.enum(["REFEREE", "REPLAY"]),
       }),
     )
@@ -42,6 +40,7 @@ const domainSchema = z.object({
 });
 const identitySchema = z
   .object({
+    applicationId: z.uuid(),
     candidateDid: z.string().startsWith("did:abl:"),
     signingAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   })
@@ -201,13 +200,11 @@ async function main() {
       .parse(await healthResponse.json());
     const identityResponse = await career.fetch(3_000, "/v1/career/identity");
     const identity = identitySchema.parse(await identityResponse.json());
-    if (identity.candidateDid !== official.careerDid)
-      throw new Error(`${official.careerId} DID drifted`);
     if ((await career.drives.list()).length !== 0)
       throw new Error(`${official.careerId} unexpectedly has a Drive mount`);
     const result = await dispatchCareerActivation({
       activation: activation({
-        careerDid: official.careerDid,
+        careerDid: identity.candidateDid,
         role: official.role,
         ordinal: index + 1,
       }),
@@ -248,7 +245,7 @@ async function main() {
     )
       throw new Error(`${official.careerId} did not accept model cognition`);
     live.push({
-      careerDid: official.careerDid,
+      careerDid: identity.candidateDid,
       role: official.role,
       sandbox: career,
       identity,
@@ -256,8 +253,8 @@ async function main() {
     careers.push({
       careerId: official.careerId,
       role: official.role,
-      applicationId: official.applicationId,
-      careerDid: official.careerDid,
+      applicationId: identity.applicationId,
+      careerDid: identity.candidateDid,
       signerAddress: identity.signingAddress,
       identityCommitment: health.identityCommitment,
       careerSandbox: official.careerResourceName,
