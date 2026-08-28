@@ -453,7 +453,7 @@ describe("distributed career cognition runtime", () => {
       });
       expect(result).toMatchObject({
         state: "CAREER_SIGNED",
-        participantInferenceAttempted: false,
+        participantInferenceAttempted: true,
         participantResultAccepted: true,
         decision: {
           receipt: {
