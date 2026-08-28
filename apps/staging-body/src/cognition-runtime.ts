@@ -53,6 +53,13 @@ const RoleDecisionSchema = z.union([
   RefereeDecisionBodySchema,
   ReplayDecisionBodySchema,
 ]);
+const ActivationFailureStageSchema = z.enum([
+  "CONTEXT_MANIFEST",
+  "RELAY_DELIVERY",
+  "HOSTED_MODEL",
+  "RESULT_VALIDATION",
+  "DECISION_VALIDATION",
+]);
 
 export const CareerActivationResultSchema = z.strictObject({
   activationId: z.string().min(1).max(200),
@@ -64,6 +71,7 @@ export const CareerActivationResultSchema = z.strictObject({
   genesis: z.literal(false),
   participantInferenceAttempted: z.boolean(),
   participantResultAccepted: z.boolean(),
+  failureStage: ActivationFailureStageSchema.nullable(),
   decision: z
     .object({
       receipt: z.unknown(),
@@ -493,6 +501,7 @@ export async function executeDistributedCareerActivation(input: {
   await transition("CONTEXT_ASSEMBLED", null);
   let participantInferenceAttempted = false;
   let participantResultAccepted = false;
+  let failureStage: z.infer<typeof ActivationFailureStageSchema> | null = null;
   let rawDecision: unknown = null;
   let inferenceResult: InferenceResult | null = null;
   let hostedResult: HostedOfficialInferenceResult | null = null;
@@ -611,6 +620,7 @@ export async function executeDistributedCareerActivation(input: {
     (activation.role === "REFEREE" || activation.role === "REPLAY")
   ) {
     try {
+      failureStage = "CONTEXT_MANIFEST";
       const current = new Date(now()).toISOString();
       const manifest = await signedContextManifest({
         identity: input.identity,
@@ -619,13 +629,17 @@ export async function executeDistributedCareerActivation(input: {
         now: current,
       });
       manifestCommitment = sha256Commitment(manifest);
+      failureStage = "RELAY_DELIVERY";
       await transition("DELIVERED", manifestCommitment);
+      failureStage = "HOSTED_MODEL";
+      participantInferenceAttempted = true;
       hostedResult = await input.hostedOfficial.decide({
         activation,
         contextManifest: manifest,
         officialContext: assembly.officialContext,
         deadlineAt: activation.deadlineAt,
       });
+      failureStage = "RESULT_VALIDATION";
       if (
         Date.parse(hostedResult.completedAt) >
           Date.parse(activation.deadlineAt) ||
@@ -635,6 +649,7 @@ export async function executeDistributedCareerActivation(input: {
       await transition("RESULT_RECEIVED", manifestCommitment);
       rawDecision = hostedResult.decision;
       participantResultAccepted = true;
+      failureStage = null;
     } catch {
       participantResultAccepted = false;
       rawDecision = null;
@@ -652,6 +667,7 @@ export async function executeDistributedCareerActivation(input: {
     );
   } catch {
     participantResultAccepted = false;
+    failureStage = "DECISION_VALIDATION";
     rawDecision = null;
     inferenceResult = null;
     hostedResult = null;
@@ -831,6 +847,7 @@ export async function executeDistributedCareerActivation(input: {
     genesis: false,
     participantInferenceAttempted,
     participantResultAccepted,
+    failureStage,
     decision,
   }) as CareerActivationResult;
 }

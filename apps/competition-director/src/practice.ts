@@ -33,6 +33,16 @@ const ActivationResponseSchema = z.strictObject({
   genesis: z.literal(false),
   participantInferenceAttempted: z.boolean(),
   participantResultAccepted: z.boolean(),
+  failureStage: z
+    .enum([
+      "CONTEXT_MANIFEST",
+      "RELAY_DELIVERY",
+      "HOSTED_MODEL",
+      "RESULT_VALIDATION",
+      "DECISION_VALIDATION",
+    ])
+    .nullable()
+    .default(null),
   decision: z.unknown(),
 });
 
