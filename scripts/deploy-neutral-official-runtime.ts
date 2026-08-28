@@ -145,12 +145,9 @@ async function startProcess(
   await sandbox.process.exec(input);
 }
 
-async function publicIdentity(
-  name: string,
-  fallback?: z.infer<typeof identitySchema>,
-) {
+async function publicIdentity(name: string) {
   let lastStatus = 0;
-  const attempts = fallback === undefined ? 30 : 1;
+  const attempts = 30;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const sandbox = await SandboxInstance.get(name);
@@ -163,7 +160,6 @@ async function publicIdentity(
     if (attempt + 1 < attempts)
       await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
-  if (fallback !== undefined) return fallback;
   throw new Error(`${name} identity readback failed (last ${lastStatus})`);
 }
 
@@ -296,10 +292,9 @@ async function main() {
       career.metadata.labels?.["abl-governance-authority"] !== "none"
     )
       throw new Error(`${official.careerId} runtime inventory drifted`);
-    const identityBefore = await publicIdentity(
-      official.careerResourceName,
-      baselineIdentities.get(official.careerId),
-    );
+    const identityBefore =
+      baselineIdentities.get(official.careerId) ??
+      (await publicIdentity(official.careerResourceName));
     if (apply) {
       const brokerEnvs = withEnvironmentValue(
         broker.spec.runtime?.envs,
@@ -354,7 +349,9 @@ async function main() {
       });
       await waitForHealth(official.careerResourceName);
     }
-    const identityAfter = await publicIdentity(official.careerResourceName);
+    const identityAfter = apply
+      ? await publicIdentity(official.careerResourceName)
+      : identityBefore;
     const currentCareer = await SandboxInstance.get(
       official.careerResourceName,
     );
