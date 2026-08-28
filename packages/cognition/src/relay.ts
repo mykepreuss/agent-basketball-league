@@ -162,6 +162,9 @@ export class CognitionRelay {
         CONTEXT_ASSEMBLED: [
           "CONTEXT_ASSEMBLED",
           "SEALED_FOR_RUNNER",
+          ...(next.role === "REFEREE" || next.role === "REPLAY"
+            ? (["DELIVERED"] as const)
+            : []),
           "FALLBACK_SIGNED",
           "EXPIRED",
           "REJECTED",
