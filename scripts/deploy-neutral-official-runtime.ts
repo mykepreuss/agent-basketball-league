@@ -16,6 +16,13 @@ const region = "us-was-1";
 const imageReference = /^sandbox\/[a-z0-9-]+:[a-z0-9]{12}$/;
 const releaseCommit = /^[0-9a-f]{40}$/;
 const sha256Digest = /^0x[0-9a-f]{64}$/;
+const careerRuntimeFiles = [
+  "career-runtime.js",
+  "cognition-runtime.js",
+  "command.js",
+  "possession-runtime.js",
+  "index.js",
+] as const;
 const exactRoles = z.enum(["REFEREE", "REPLAY"]);
 const resourcePlanSchema = z
   .object({
@@ -111,20 +118,42 @@ async function waitForDeployment(name: string): Promise<SandboxInstance> {
   throw new Error(`${name} did not become DEPLOYED`);
 }
 
-async function waitForHealth(name: string): Promise<void> {
+async function waitForHealth(
+  name: string,
+  expectedRuntimeBundleDigest?: string,
+): Promise<void> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const sandbox = await SandboxInstance.get(name);
       const response = await sandbox.fetch(3_000, "/health", {
         signal: AbortSignal.timeout(3_000),
       });
-      if (response.ok) return;
+      if (response.ok) {
+        if (expectedRuntimeBundleDigest === undefined) return;
+        const body = z
+          .object({ runtimeBundleDigest: z.string().optional() })
+          .parse(await response.json());
+        if (body.runtimeBundleDigest === expectedRuntimeBundleDigest) return;
+      }
     } catch {
       // An immutable Sandbox update briefly closes the application port.
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
   throw new Error(`${name} did not become healthy`);
+}
+
+function bundleDigest(files: ReadonlyMap<string, Buffer>): string {
+  const hash = createHash("sha256");
+  for (const file of careerRuntimeFiles) {
+    const contents = files.get(file);
+    if (contents === undefined)
+      throw new Error(`Missing runtime file: ${file}`);
+    hash.update(Buffer.from(`${file.length}:${file}:`, "utf8"));
+    hash.update(Buffer.from(`${contents.length}:`, "utf8"));
+    hash.update(contents);
+  }
+  return `0x${hash.digest("hex")}`;
 }
 
 async function startProcess(
@@ -165,7 +194,7 @@ async function startProcess(
 async function installCareerRuntime(input: {
   sandbox: SandboxInstance;
   sourcePath: string;
-  expectedDigest: string;
+  expectedBundleDigest: string;
 }): Promise<void> {
   const sourcePath = resolve(input.sourcePath);
   if (
@@ -175,41 +204,40 @@ async function installCareerRuntime(input: {
     throw new Error(
       "Career runtime must come from a reviewed temporary image context",
     );
-  if (!sha256Digest.test(input.expectedDigest))
-    throw new Error("Career runtime digest must be a SHA-256 commitment");
-  const contents = await readFile(sourcePath);
-  const actualDigest = `0x${createHash("sha256").update(contents).digest("hex")}`;
-  if (actualDigest !== input.expectedDigest)
-    throw new Error("Career runtime source digest drifted");
+  if (!sha256Digest.test(input.expectedBundleDigest))
+    throw new Error(
+      "Career runtime bundle digest must be a SHA-256 commitment",
+    );
   const runtimeRoot = "/tmp/abl-runtime";
-  const targetPath = `${runtimeRoot}/dist/career-runtime.js`;
   await input.sandbox.fs.mkdir(`${runtimeRoot}/dist`, "0700");
   const sourceRoot = resolve(sourcePath, "..");
-  for (const file of [
-    "career-runtime.js",
-    "cognition-runtime.js",
-    "command.js",
-    "possession-runtime.js",
-    "index.js",
-  ]) {
+  const sourceFiles = new Map<string, Buffer>();
+  for (const file of careerRuntimeFiles)
+    sourceFiles.set(file, await readFile(resolve(sourceRoot, file)));
+  if (bundleDigest(sourceFiles) !== input.expectedBundleDigest)
+    throw new Error("Career runtime bundle source digest drifted");
+  for (const file of careerRuntimeFiles) {
     const remotePath = `${runtimeRoot}/dist/${file}`;
     await input.sandbox.fs.rm(remotePath).catch(() => undefined);
-    await input.sandbox.fs.writeBinary(
-      remotePath,
-      await readFile(resolve(sourceRoot, file)),
-    );
+    await input.sandbox.fs.writeBinary(remotePath, sourceFiles.get(file)!);
   }
   const packagePath = `${runtimeRoot}/package.json`;
   await input.sandbox.fs.rm(packagePath).catch(() => undefined);
   await input.sandbox.fs.write(packagePath, '{"type":"module"}\n');
-  const uploaded = Buffer.from(
-    await (await input.sandbox.fs.readBinary(targetPath)).arrayBuffer(),
-  );
-  if (
-    `0x${createHash("sha256").update(uploaded).digest("hex")}` !==
-    input.expectedDigest
-  )
-    throw new Error(`${input.sandbox.metadata.name} runtime upload drifted`);
+  const uploadedFiles = new Map<string, Buffer>();
+  for (const file of careerRuntimeFiles)
+    uploadedFiles.set(
+      file,
+      Buffer.from(
+        await (
+          await input.sandbox.fs.readBinary(`${runtimeRoot}/dist/${file}`)
+        ).arrayBuffer(),
+      ),
+    );
+  if (bundleDigest(uploadedFiles) !== input.expectedBundleDigest)
+    throw new Error(
+      `${input.sandbox.metadata.name} runtime bundle upload drifted`,
+    );
   const installation = await input.sandbox.process.exec({
     name: `abl-link-career-runtime-${Date.now()}`,
     command:
@@ -219,14 +247,32 @@ async function installCareerRuntime(input: {
   });
   if (installation.status !== "completed" || installation.exitCode !== 0)
     throw new Error(`${input.sandbox.metadata.name} runtime install failed`);
-  const installed = Buffer.from(
-    await (await input.sandbox.fs.readBinary(targetPath)).arrayBuffer(),
-  );
-  if (
-    `0x${createHash("sha256").update(installed).digest("hex")}` !==
-    input.expectedDigest
-  )
-    throw new Error(`${input.sandbox.metadata.name} installed runtime drifted`);
+  const installedFiles = new Map<string, Buffer>();
+  for (const file of careerRuntimeFiles)
+    installedFiles.set(
+      file,
+      Buffer.from(
+        await (
+          await input.sandbox.fs.readBinary(`${runtimeRoot}/dist/${file}`)
+        ).arrayBuffer(),
+      ),
+    );
+  if (bundleDigest(installedFiles) !== input.expectedBundleDigest)
+    throw new Error(
+      `${input.sandbox.metadata.name} installed runtime bundle drifted`,
+    );
+}
+
+async function reloadCareerRuntime(sandbox: SandboxInstance): Promise<void> {
+  const reload = await sandbox.process.exec({
+    name: `abl-reload-career-runtime-${Date.now()}`,
+    command:
+      "if pgrep -f '^node /tmp/abl-runtime/dist/index.js$' >/dev/null; then pkill -f '^node /tmp/abl-runtime/dist/index.js$'; fi",
+    waitForCompletion: true,
+    timeout: 30,
+  });
+  if (reload.status !== "completed" || reload.exitCode !== 0)
+    throw new Error(`${sandbox.metadata.name} runtime reload failed`);
 }
 
 async function publicIdentity(name: string) {
@@ -335,8 +381,8 @@ async function main() {
   const careerRuntimeFile = required(
     "ABL_NEUTRAL_OFFICIAL_CAREER_RUNTIME_FILE",
   );
-  const careerRuntimeDigest = required(
-    "ABL_NEUTRAL_OFFICIAL_CAREER_RUNTIME_DIGEST",
+  const careerRuntimeBundleDigest = required(
+    "ABL_NEUTRAL_OFFICIAL_CAREER_RUNTIME_BUNDLE_DIGEST",
   );
   const apply = process.argv.includes("--apply");
   await Promise.all([assertImage(careerImage), assertImage(brokerImage)]);
@@ -422,8 +468,9 @@ async function main() {
       await installCareerRuntime({
         sandbox: deployedCareer,
         sourcePath: careerRuntimeFile,
-        expectedDigest: careerRuntimeDigest,
+        expectedBundleDigest: careerRuntimeBundleDigest,
       });
+      await reloadCareerRuntime(deployedCareer);
       await startProcess(deployedCareer, {
         name: "abl-career-runtime",
         command: "node /tmp/abl-runtime/dist/index.js",
@@ -431,6 +478,7 @@ async function main() {
           HOST: "0.0.0.0",
           PORT: "3000",
           ABL_RUNTIME_IMAGE_REFERENCE: careerImage,
+          ABL_RUNTIME_BUNDLE_DIGEST: careerRuntimeBundleDigest,
         },
         workingDir: "/opt/abl",
         waitForCompletion: false,
@@ -439,7 +487,10 @@ async function main() {
         restartOnFailure: true,
         maxRestarts: -1,
       });
-      await waitForHealth(official.careerResourceName);
+      await waitForHealth(
+        official.careerResourceName,
+        careerRuntimeBundleDigest,
+      );
     }
     const identityAfter = apply
       ? await publicIdentity(official.careerResourceName)
@@ -465,7 +516,7 @@ async function main() {
       careerStatus: currentCareer.status,
       brokerStatus: currentBroker.status,
       identityPreserved: true,
-      ...(apply ? { careerRuntimeDigest } : {}),
+      ...(apply ? { careerRuntimeBundleDigest } : {}),
     });
   }
   process.stdout.write(

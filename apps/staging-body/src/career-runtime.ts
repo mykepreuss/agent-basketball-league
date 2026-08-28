@@ -1411,6 +1411,7 @@ export async function runCareerRuntime(): Promise<void> {
     applicationId,
     role,
     identityCommitment: sha256Commitment(identity.receipt),
+    runtimeBundleDigest: process.env.ABL_RUNTIME_BUNDLE_DIGEST,
     cognitionMode,
     hostedModelCredentials: false,
     positionProfileConfigured:
