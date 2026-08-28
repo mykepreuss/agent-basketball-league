@@ -68,6 +68,9 @@ spec:
       - name: ABL_OFFICIAL_MODEL_ID
         value: abl-neutral-official-model
         secret: false
+      - name: ABL_OFFICIAL_MODEL_STATE_DIRECTORY
+        value: /tmp/abl-official-model-state
+        secret: false
       - name: ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64
         value: ${ABL_OFFICIAL_MODEL_ACCESS_TOKEN_B64}
         secret: true

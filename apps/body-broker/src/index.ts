@@ -99,6 +99,9 @@ const officialModelEnabled =
     .enum(["DISABLED", "ENABLED"])
     .parse(process.env.ABL_OFFICIAL_MODEL_ROUTE_MODE ?? "DISABLED") ===
   "ENABLED";
+const officialModelStateDirectory =
+  process.env.ABL_OFFICIAL_MODEL_STATE_DIRECTORY ??
+  "/tmp/abl-official-model-state";
 const routes: BrokerRoute[] = [];
 if (coreRouteEnabled)
   routes.push({
@@ -220,6 +223,14 @@ const app = createBodyBroker({
           domain: recognitionDomain(),
         },
       }),
+  ...(officialModelEnabled
+    ? {
+        officialModelAsync: {
+          routeName: "official-model",
+          stateDirectory: officialModelStateDirectory,
+        },
+      }
+    : {}),
 });
 
 await app.listen({

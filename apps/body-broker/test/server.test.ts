@@ -87,11 +87,229 @@ const routes: BrokerRoute[] = [
 ];
 
 const apps: Array<ReturnType<typeof createBodyBroker>> = [];
-afterEach(async () =>
-  Promise.all(apps.splice(0).map(async (app) => app.close())),
-);
+const temporaryDirectories: string[] = [];
+afterEach(async () => {
+  await Promise.all(apps.splice(0).map(async (app) => app.close()));
+  await Promise.all(
+    temporaryDirectories
+      .splice(0)
+      .map(async (directory) =>
+        rm(directory, { recursive: true, force: true }),
+      ),
+  );
+});
 
 describe("fixed body broker", () => {
+  it("runs slow official-model requests asynchronously and idempotently", async () => {
+    const stateDirectory = await mkdtemp(
+      join(tmpdir(), "abl-official-model-test-"),
+    );
+    temporaryDirectories.push(stateDirectory);
+    let resolveUpstream!: (response: Response) => void;
+    let upstreamCalls = 0;
+    const upstream = new Promise<Response>((resolve) => {
+      resolveUpstream = resolve;
+    });
+    const officialRoute: BrokerRoute = {
+      name: "official-model",
+      targetOrigin: "https://run.blaxel.invalid",
+      methods: new Set(["POST"]),
+      pathPrefixes: ["/workspace/models/official/v1/chat/completions"],
+      capability: "official-model:infer",
+      credential: { "x-blaxel-authorization": "Bearer model-only-token" },
+    };
+    const app = createBodyBroker({
+      agentDid: "did:abl:official-a",
+      clientCapability: {
+        ...clientCapability,
+        operations: new Set(["proxy:official-model"]),
+      },
+      serviceIdentity: {
+        ...serviceIdentity,
+        capabilities: new Set(["official-model:infer"]),
+      },
+      routes: [officialRoute],
+      storageDomainKeys: new Map(),
+      officialModelAsync: {
+        routeName: "official-model",
+        stateDirectory,
+      },
+      now: () => clock,
+      fetchImplementation: async () => {
+        upstreamCalls += 1;
+        return upstream;
+      },
+    });
+    apps.push(app);
+    const payload = {
+      requestId: "official-request-00000001",
+      proxy: {
+        route: "official-model",
+        method: "POST",
+        path: "/workspace/models/official/v1/chat/completions",
+        body: { messages: [{ role: "user", content: "bounded" }] },
+        expectedVersion: "0",
+        idempotencyKey: "official-idempotency-00000001",
+      },
+    } as const;
+    const accepted = await app.inject({
+      method: "POST",
+      url: "/v1/official-model/requests",
+      headers: authorizedHeaders,
+      payload,
+    });
+    expect(accepted.statusCode).toBe(202);
+    expect(upstreamCalls).toBe(1);
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/v1/official-model/requests",
+      headers: authorizedHeaders,
+      payload,
+    });
+    expect(duplicate.statusCode).toBe(202);
+    expect(upstreamCalls).toBe(1);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/v1/official-model/requests/official-request-00000001/result",
+          headers: authorizedHeaders,
+          payload: {},
+        })
+      ).statusCode,
+    ).toBe(202);
+    resolveUpstream(
+      new Response(
+        '{"choices":[{"message":{"content":"{\\"call\\":\\"NO_CALL\\"}"}}]}',
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+    let completed;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      completed = await app.inject({
+        method: "POST",
+        url: "/v1/official-model/requests/official-request-00000001/result",
+        headers: authorizedHeaders,
+        payload: {},
+      });
+      if (completed.statusCode === 200) break;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect(completed?.statusCode).toBe(200);
+    expect(completed?.json()).toMatchObject({
+      requestId: payload.requestId,
+      state: "COMPLETED",
+      upstreamStatus: 200,
+      failureCode: null,
+    });
+    expect(completed?.json().responseBody).toContain("NO_CALL");
+    const acknowledged = await app.inject({
+      method: "POST",
+      url: "/v1/official-model/requests/official-request-00000001/acknowledge",
+      headers: authorizedHeaders,
+      payload: {},
+    });
+    expect(acknowledged.statusCode).toBe(204);
+    const redeliver = await app.inject({
+      method: "POST",
+      url: "/v1/official-model/requests/official-request-00000001/result",
+      headers: authorizedHeaders,
+      payload: {},
+    });
+    expect(redeliver.statusCode).toBe(410);
+    const conflict = await app.inject({
+      method: "POST",
+      url: "/v1/official-model/requests",
+      headers: authorizedHeaders,
+      payload: {
+        ...payload,
+        proxy: { ...payload.proxy, body: { messages: [] } },
+      },
+    });
+    expect(conflict.statusCode).toBe(409);
+    expect(upstreamCalls).toBe(1);
+  });
+
+  it("fails an orphaned official-model request closed after broker restart", async () => {
+    const stateDirectory = await mkdtemp(
+      join(tmpdir(), "abl-official-model-restart-test-"),
+    );
+    temporaryDirectories.push(stateDirectory);
+    const officialRoute: BrokerRoute = {
+      name: "official-model",
+      targetOrigin: "https://run.blaxel.invalid",
+      methods: new Set(["POST"]),
+      pathPrefixes: ["/workspace/models/official/v1/chat/completions"],
+      capability: "official-model:infer",
+    };
+    const options = {
+      agentDid: "did:abl:official-a",
+      clientCapability: {
+        ...clientCapability,
+        operations: new Set(["proxy:official-model"]),
+      },
+      serviceIdentity: {
+        ...serviceIdentity,
+        capabilities: new Set(["official-model:infer"]),
+      },
+      routes: [officialRoute],
+      storageDomainKeys: new Map(),
+      officialModelAsync: {
+        routeName: "official-model",
+        stateDirectory,
+      },
+      now: () => clock,
+    };
+    const first = createBodyBroker({
+      ...options,
+      fetchImplementation: async () => new Promise<Response>(() => {}),
+    });
+    apps.push(first);
+    expect(
+      (
+        await first.inject({
+          method: "POST",
+          url: "/v1/official-model/requests",
+          headers: authorizedHeaders,
+          payload: {
+            requestId: "official-request-restart-0001",
+            proxy: {
+              route: "official-model",
+              method: "POST",
+              path: "/workspace/models/official/v1/chat/completions",
+              body: {},
+              expectedVersion: "0",
+              idempotencyKey: "official-restart-idempotency-0001",
+            },
+          },
+        })
+      ).statusCode,
+    ).toBe(202);
+    const restarted = createBodyBroker({
+      ...options,
+      fetchImplementation: async () => {
+        throw new Error("must not reinvoke an orphaned model request");
+      },
+    });
+    apps.push(restarted);
+    const result = await restarted.inject({
+      method: "POST",
+      url: "/v1/official-model/requests/official-request-restart-0001/result",
+      headers: authorizedHeaders,
+      payload: {},
+    });
+    expect(result.statusCode).toBe(200);
+    expect(result.json()).toMatchObject({
+      state: "FAILED",
+      failureCode: "BROKER_RESTARTED",
+      upstreamStatus: null,
+      responseBody: null,
+    });
+  });
+
   it("builds only the two fixed Blaxel upstream authentication modes", () => {
     expect(
       createBlaxelUpstreamCredential({
@@ -603,3 +821,6 @@ describe("fixed body broker", () => {
     expect(malformed.statusCode).toBe(400);
   });
 });
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";

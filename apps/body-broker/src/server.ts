@@ -1,4 +1,6 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { isAbsolute, join } from "node:path";
 
 import {
   signServiceRequest,
@@ -41,6 +43,29 @@ const ProxyRequestSchema = z.strictObject({
   body: z.unknown().optional(),
   expectedVersion: z.string().regex(/^(0|[1-9][0-9]*)$/),
   idempotencyKey: z.string().min(16).max(128),
+});
+
+const OfficialModelRequestIdSchema = z
+  .string()
+  .min(16)
+  .max(128)
+  .regex(/^[A-Za-z0-9._:-]+$/);
+
+const OfficialModelAsyncRequestSchema = z.strictObject({
+  requestId: OfficialModelRequestIdSchema,
+  proxy: ProxyRequestSchema,
+});
+
+const OfficialModelAsyncRecordSchema = z.strictObject({
+  requestId: OfficialModelRequestIdSchema,
+  requestCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+  state: z.enum(["STARTED", "COMPLETED", "FAILED", "ACKNOWLEDGED"]),
+  startedAt: z.iso.datetime({ offset: true }),
+  completedAt: z.iso.datetime({ offset: true }).nullable(),
+  upstreamStatus: z.number().int().min(100).max(599).nullable(),
+  contentType: z.string().max(256).nullable(),
+  responseBody: z.string().max(2_000_000).nullable(),
+  failureCode: z.enum(["UPSTREAM_FAILURE", "BROKER_RESTARTED"]).nullable(),
 });
 
 const StoragePutSchema = z.strictObject({
@@ -180,6 +205,10 @@ export interface BodyBrokerOptions {
     signerAddress: Address;
     domain: TypedDataDomain;
   };
+  officialModelAsync?: {
+    routeName: string;
+    stateDirectory: string;
+  };
   fetchImplementation?: typeof fetch;
   now?: () => number;
   createNonce?: () => string;
@@ -278,6 +307,58 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
     throw new BrokerPolicyError("Invalid body capability configuration");
   }
   const routes = new Map(options.routes.map((route) => [route.name, route]));
+  const officialModelActive = new Map<string, { requestCommitment: string }>();
+  const officialModelAsync = options.officialModelAsync;
+  if (
+    officialModelAsync !== undefined &&
+    (!isAbsolute(officialModelAsync.stateDirectory) ||
+      officialModelAsync.stateDirectory.includes("\0") ||
+      officialModelAsync.stateDirectory.split("/").includes("..") ||
+      !routes.has(officialModelAsync.routeName))
+  )
+    throw new BrokerPolicyError("Invalid asynchronous model configuration");
+
+  function officialModelRecordPath(requestId: string): string {
+    if (officialModelAsync === undefined)
+      throw new BrokerPolicyError("Asynchronous model requests are disabled");
+    return join(
+      officialModelAsync.stateDirectory,
+      `${sha256Commitment(requestId).slice(2)}.json`,
+    );
+  }
+
+  async function readOfficialModelRecord(requestId: string) {
+    try {
+      const record = OfficialModelAsyncRecordSchema.parse(
+        JSON.parse(await readFile(officialModelRecordPath(requestId), "utf8")),
+      );
+      if (record.requestId !== requestId)
+        throw new BrokerPolicyError("Asynchronous model record mismatch");
+      return record;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
+  async function writeOfficialModelRecord(
+    record: z.infer<typeof OfficialModelAsyncRecordSchema>,
+  ): Promise<void> {
+    if (officialModelAsync === undefined)
+      throw new BrokerPolicyError("Asynchronous model requests are disabled");
+    await mkdir(officialModelAsync.stateDirectory, {
+      recursive: true,
+      mode: 0o700,
+    });
+    await chmod(officialModelAsync.stateDirectory, 0o700);
+    const path = officialModelRecordPath(record.requestId);
+    const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(temporaryPath, `${JSON.stringify(record)}\n`, {
+      mode: 0o600,
+      flag: "wx",
+    });
+    await rename(temporaryPath, path);
+  }
   if (routes.size !== options.routes.length)
     throw new BrokerPolicyError("Duplicate broker route name");
   const app = Fastify({
@@ -378,6 +459,173 @@ export function createBodyBroker(options: BodyBrokerOptions): FastifyInstance {
     status: "ok",
     boundary: "fixed-body-broker",
   }));
+
+  app.post("/v1/official-model/requests", async (request, reply) => {
+    try {
+      if (officialModelAsync === undefined)
+        throw new BrokerPolicyError(
+          "Asynchronous official-model requests are disabled",
+        );
+      const input = OfficialModelAsyncRequestSchema.parse(request.body);
+      if (
+        input.proxy.route !== officialModelAsync.routeName ||
+        input.proxy.method !== "POST"
+      )
+        throw new BrokerPolicyError("Invalid asynchronous model route");
+      assertClientCapability(request, `proxy:${input.proxy.route}`);
+      const requestCommitment = sha256Commitment(input.proxy);
+      const active = officialModelActive.get(input.requestId);
+      if (
+        active !== undefined &&
+        active.requestCommitment !== requestCommitment
+      )
+        return reply.code(409).send({ error: "request_id_conflict" });
+      const existing = await readOfficialModelRecord(input.requestId);
+      if (existing !== null && existing.requestCommitment !== requestCommitment)
+        return reply.code(409).send({ error: "request_id_conflict" });
+      if (active !== undefined || existing !== null)
+        return reply.code(202).send({
+          requestId: input.requestId,
+          state: existing?.state ?? "STARTED",
+        });
+
+      const startedAt = new Date(now()).toISOString();
+      officialModelActive.set(input.requestId, { requestCommitment });
+      try {
+        await writeOfficialModelRecord({
+          requestId: input.requestId,
+          requestCommitment,
+          state: "STARTED",
+          startedAt,
+          completedAt: null,
+          upstreamStatus: null,
+          contentType: null,
+          responseBody: null,
+          failureCode: null,
+        });
+      } catch (error) {
+        officialModelActive.delete(input.requestId);
+        throw error;
+      }
+
+      void forward({
+        routeName: input.proxy.route,
+        method: input.proxy.method,
+        path: input.proxy.path,
+        body: input.proxy.body ?? null,
+        expectedVersion: input.proxy.expectedVersion,
+        idempotencyKey: input.proxy.idempotencyKey,
+      })
+        .then((response) =>
+          writeOfficialModelRecord({
+            requestId: input.requestId,
+            requestCommitment,
+            state: "COMPLETED",
+            startedAt,
+            completedAt: new Date(now()).toISOString(),
+            upstreamStatus: response.statusCode,
+            contentType: response.contentType,
+            responseBody: response.body,
+            failureCode: null,
+          }),
+        )
+        .catch(() =>
+          writeOfficialModelRecord({
+            requestId: input.requestId,
+            requestCommitment,
+            state: "FAILED",
+            startedAt,
+            completedAt: new Date(now()).toISOString(),
+            upstreamStatus: null,
+            contentType: null,
+            responseBody: null,
+            failureCode: "UPSTREAM_FAILURE",
+          }),
+        )
+        .finally(() => {
+          officialModelActive.delete(input.requestId);
+        })
+        .catch(() => undefined);
+      return reply.code(202).send({
+        requestId: input.requestId,
+        state: "STARTED",
+      });
+    } catch (error) {
+      return sendBrokerError(reply, error);
+    }
+  });
+
+  app.post(
+    "/v1/official-model/requests/:requestId/result",
+    async (request, reply) => {
+      try {
+        if (officialModelAsync === undefined)
+          throw new BrokerPolicyError(
+            "Asynchronous official-model requests are disabled",
+          );
+        const { requestId } = z
+          .strictObject({ requestId: OfficialModelRequestIdSchema })
+          .parse(request.params);
+        assertClientCapability(
+          request,
+          `proxy:${officialModelAsync.routeName}`,
+        );
+        let record = await readOfficialModelRecord(requestId);
+        if (record === null)
+          return reply.code(404).send({ error: "request_not_found" });
+        if (record.state === "STARTED" && !officialModelActive.has(requestId)) {
+          record = {
+            ...record,
+            state: "FAILED",
+            completedAt: new Date(now()).toISOString(),
+            failureCode: "BROKER_RESTARTED",
+          };
+          await writeOfficialModelRecord(record);
+        }
+        if (record.state === "STARTED")
+          return reply.code(202).send({ requestId, state: "STARTED" });
+        if (record.state === "ACKNOWLEDGED")
+          return reply.code(410).send({ error: "request_acknowledged" });
+        return reply.send(record);
+      } catch (error) {
+        return sendBrokerError(reply, error);
+      }
+    },
+  );
+
+  app.post(
+    "/v1/official-model/requests/:requestId/acknowledge",
+    async (request, reply) => {
+      try {
+        if (officialModelAsync === undefined)
+          throw new BrokerPolicyError(
+            "Asynchronous official-model requests are disabled",
+          );
+        const { requestId } = z
+          .strictObject({ requestId: OfficialModelRequestIdSchema })
+          .parse(request.params);
+        assertClientCapability(
+          request,
+          `proxy:${officialModelAsync.routeName}`,
+        );
+        const record = await readOfficialModelRecord(requestId);
+        if (record === null)
+          return reply.code(404).send({ error: "request_not_found" });
+        if (record.state === "STARTED")
+          return reply.code(409).send({ error: "request_still_running" });
+        if (record.state !== "ACKNOWLEDGED")
+          await writeOfficialModelRecord({
+            ...record,
+            state: "ACKNOWLEDGED",
+            contentType: null,
+            responseBody: null,
+          });
+        return reply.code(204).send();
+      } catch (error) {
+        return sendBrokerError(reply, error);
+      }
+    },
+  );
 
   app.post("/v1/capabilities/renew", async (request, reply) => {
     try {

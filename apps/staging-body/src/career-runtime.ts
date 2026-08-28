@@ -814,13 +814,16 @@ class FixedBrokerClient
   }): Promise<HostedOfficialInferenceResult> {
     if (this.#officialModel === null)
       throw new Error("League-hosted official model is not configured");
-    const startedAt = new Date().toISOString();
     const outputContract = hostedOfficialOutputContract(input.activation);
-    const response = await this.#post("/v1/proxy", {
+    const requestId = deterministicUuid(
+      `${input.activation.activationId}:official-model`,
+    );
+    const proxy = {
       route: "official-model",
       method: "POST",
       path: `/${this.#officialModel.workspace}/models/${this.#officialModel.modelId}/v1/chat/completions`,
       body: {
+        model: this.#officialModel.modelId,
         messages: [
           {
             role: "system",
@@ -849,9 +852,54 @@ class FixedBrokerClient
       idempotencyKey: deterministicUuid(
         `${input.activation.activationId}:official-model`,
       ),
+    } as const;
+    const accepted = await this.#post("/v1/official-model/requests", {
+      requestId,
+      proxy,
     });
-    if (!response.ok)
-      throw new Error(`Official model request failed: ${response.status}`);
+    if (accepted.status !== 202)
+      throw new Error(`Official model request failed: ${accepted.status}`);
+    let resultResponse: Response | null = null;
+    while (Date.now() < Date.parse(input.deadlineAt)) {
+      const response = await this.#post(
+        `/v1/official-model/requests/${requestId}/result`,
+        {},
+      );
+      if (response.status === 202) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        continue;
+      }
+      resultResponse = response;
+      break;
+    }
+    if (resultResponse === null)
+      throw new Error("Official model request missed its decision window");
+    if (!resultResponse.ok)
+      throw new Error(`Official model result failed: ${resultResponse.status}`);
+    const delivered = z
+      .strictObject({
+        requestId: z.literal(requestId),
+        requestCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
+        state: z.enum(["COMPLETED", "FAILED"]),
+        startedAt: z.iso.datetime({ offset: true }),
+        completedAt: z.iso.datetime({ offset: true }).nullable(),
+        upstreamStatus: z.number().int().min(100).max(599).nullable(),
+        contentType: z.string().max(256).nullable(),
+        responseBody: z.string().max(2_000_000).nullable(),
+        failureCode: z
+          .enum(["UPSTREAM_FAILURE", "BROKER_RESTARTED"])
+          .nullable(),
+      })
+      .parse(await resultResponse.json());
+    if (
+      delivered.state !== "COMPLETED" ||
+      delivered.completedAt === null ||
+      delivered.upstreamStatus === null ||
+      delivered.upstreamStatus < 200 ||
+      delivered.upstreamStatus >= 300 ||
+      delivered.responseBody === null
+    )
+      throw new Error("Official model result was not completed successfully");
     const body = z
       .object({
         model: z.string().min(1).optional(),
@@ -870,18 +918,26 @@ class FixedBrokerClient
           })
           .optional(),
       })
-      .parse(await response.json());
-    const completedAt = new Date().toISOString();
+      .parse(JSON.parse(delivered.responseBody));
+    const decision = JSON.parse(body.choices[0]!.message.content) as unknown;
+    const acknowledged = await this.#post(
+      `/v1/official-model/requests/${requestId}/acknowledge`,
+      {},
+    );
+    if (acknowledged.status !== 204)
+      throw new Error(
+        `Official model acknowledgement failed: ${acknowledged.status}`,
+      );
     return {
-      decision: JSON.parse(body.choices[0]!.message.content) as unknown,
+      decision,
       serviceId: `abl-official-model:${this.#officialModel.modelId}`,
       serviceBuildDigest: this.#officialModel.serviceBuildDigest,
       adapterBuildDigest: this.#officialModel.adapterBuildDigest,
       providerProductModel:
         body.model ?? `blaxel/${this.#officialModel.modelId}`,
       provenanceLevel: "PROVIDER_ATTESTED",
-      startedAt,
-      completedAt,
+      startedAt: delivered.startedAt,
+      completedAt: delivered.completedAt,
       usage: {
         inputTokens: body.usage?.prompt_tokens ?? null,
         outputTokens: body.usage?.completion_tokens ?? null,

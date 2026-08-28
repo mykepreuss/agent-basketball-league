@@ -30,6 +30,14 @@ readback. Fixed brokers use the dedicated
 `abl-neutral-official-model-broker` service account; its API key is stored only
 as a Blaxel Sandbox secret and is never present in a career Sandbox.
 
+Model inference crosses the broker's private preview through an idempotent
+request-and-poll contract. The broker commits `STARTED` state before invoking
+the provider, returns immediately to the career, and will not reinvoke an
+orphaned request after a process restart. A completed provider response is held
+only in the broker's mode-`0600` local state until the career parses and
+acknowledges it; acknowledgement replaces the response with a content-free
+tombstone. The model still cannot sign a career decision.
+
 Provisioning is deliberately two-phase. Apply each fixed-broker Sandbox first,
 create its private preview and short-lived bootstrap capability, then create the
 career Sandbox. The career generates its signing and encryption identities
