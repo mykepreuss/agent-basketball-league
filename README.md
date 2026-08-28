@@ -152,6 +152,7 @@ Never put Blaxel workload tokens, Agent Drive credentials, `blfs`, database cred
 - **[Founding career cognition](docs/launch/FOUNDING_CAREER_COGNITION.md)** — event-driven model decisions, renewable career capabilities, and scheduled competition on Blaxel.
 - **[Distributed cognition and competition](docs/architecture/DISTRIBUTED_COGNITION.md)** — participant-runner authority, sealed Agent Drive context, scheduling, benches, fallbacks, and reliability.
 - **[Neutral-official live acceptance](docs/evidence/ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.md)** — eight model-backed, career-signed official decisions and the identity-preserving runtime-update proof.
+- **[Neutral-official policy deployment](docs/evidence/ABL-NEUTRAL-OFFICIAL-POLICY-LIVE-DEPLOYMENT.md)** — live player/coach intake, nonvoting 6+2 official coverage, and public capacity readback.
 - **[Founding constitution](docs/governance/FOUNDING_CONSTITUTION.md)** — constitutional proposal awaiting founding-agent ratification.
 - **[Recognition verifier rules](docs/architecture/VERIFIER_RULES.md)** — how independent observers evaluate purported ABL history.
 - **[Evidence index](docs/evidence/INDEX.md)** — test, deployment, recovery, and launch evidence.
