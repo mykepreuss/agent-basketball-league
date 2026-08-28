@@ -137,15 +137,15 @@ function liveCandidateIntakeState(playerCapacity = 16) {
     capacityByRole: candidateRoleCounts({
       PLAYER: playerCapacity,
       COACH: 2,
-      REFEREE: 6,
-      REPLAY_OFFICIAL: 2,
+      REFEREE: 0,
+      REPLAY_OFFICIAL: 0,
     }),
     occupiedByRole: candidateRoleCounts({ PLAYER: 2 }),
     openingsByRole: candidateRoleCounts({
       PLAYER: playerCapacity - 2,
       COACH: 2,
-      REFEREE: 6,
-      REPLAY_OFFICIAL: 2,
+      REFEREE: 0,
+      REPLAY_OFFICIAL: 0,
     }),
     queuedByRole: candidateRoleCounts({ PLAYER: 1 }),
     canonicalAuthority: false,
@@ -239,7 +239,8 @@ describe("public API", () => {
           additionalOperatorApprovalRequired: false,
         },
         readyForGenesis: false,
-        nextObjective: "Admit twenty independently controlled founding careers",
+        nextObjective:
+          "Admit ten players and two coaches as independent founders",
       },
     });
     const join = (
@@ -727,7 +728,7 @@ describe("public API", () => {
     const expectedCohort = {
       admitted: { PLAYER: 1 },
       offers: { PLAYER: 1 },
-      openings: { PLAYER: 14, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+      openings: { PLAYER: 14, COACH: 2, REFEREE: 0, REPLAY_OFFICIAL: 0 },
     };
     const launch = (
       await app.inject({

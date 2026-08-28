@@ -2,7 +2,14 @@
   "version": 1,
   "workspace": "agent-basketball-league",
   "region": "us-was-1",
-  "status": "MODEL_GATEWAY_DEPLOYED_OFFICIALS_NOT_PROVISIONED",
+  "status": "LIVE_PRE_GENESIS_ACCEPTANCE_PASSED",
+  "acceptance": {
+    "releaseCommit": "ba12733085f85276cfa2cb707fcecc640e7667db",
+    "careerImage": "sandbox/abl-career-body-image:lvyochwconwk",
+    "careerRuntimeBundleDigest": "0xde6236dc7f9a7a3cf025fef3bb43b0ad937b92494ac56a4059d9362650aaed81",
+    "resultDigest": "0x1cfe18b6de673e3f6213f21df4dc396297555fb584ec3b31d810cc22822ab89c",
+    "evidence": "docs/evidence/ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.json"
+  },
   "modelGateway": {
     "name": "abl-neutral-official-model",
     "resourceType": "MODEL",

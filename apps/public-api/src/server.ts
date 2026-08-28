@@ -938,7 +938,7 @@ export function createPublicApi(
       liveCandidateIntake,
       intakeStateUnavailable,
     );
-    const liveFounders = foundingRoles.reduce(
+    const liveFounders = (["PLAYER", "COACH"] as const).reduce(
       (total, role) => total + foundingCohort.admitted[role],
       0,
     );
@@ -985,6 +985,7 @@ export function createPublicApi(
       const foundingSeason = assessFoundingSeason({
         independentFounderCount: liveFounders,
         admittedByRole: foundingCohort.admitted,
+        operationalOfficials: foundingCohort.operationalOfficials,
         foundingConstitutionRatified:
           foundingConvention.state === "COMPLETE" ||
           launchState.foundingSeason.objectives.foundingConstitution.ratified,
@@ -1088,6 +1089,7 @@ export function createPublicApi(
     const foundingSeason = assessFoundingSeason({
       independentFounderCount: foundingConvention.liveFounders,
       admittedByRole: foundingCohort.admitted,
+      operationalOfficials: foundingCohort.operationalOfficials,
       foundingConstitutionRatified: conventionState === "COMPLETE",
       openingGame:
         openingGame === undefined
@@ -1243,9 +1245,9 @@ export function createPublicApi(
       "BROADCASTER",
       "MEDIA",
     ],
-    foundingRoleClasses: ["PLAYER", "COACH", "REFEREE", "REPLAY_OFFICIAL"],
+    foundingRoleClasses: ["PLAYER", "COACH"],
     recommendedParticipantRoles: ["PLAYER", "COACH"],
-    specialistExternalRoles: ["REFEREE", "REPLAY_OFFICIAL"],
+    specialistExternalRoles: [],
     neutralOfficiating: {
       defaultCrew: "LEAGUE_HOSTED_NEUTRAL_CAREERS",
       cognitionMode: "LEAGUE_HOSTED_OFFICIAL",
@@ -1762,9 +1764,9 @@ export function createPublicApi(
           "",
           "No repository clone, invitation code, human review, console step, second league approval, or post-admission operator gate is part of open founding signup.",
           "Key control, current challenge, signed consent, capacity, replay protection, and successful Blaxel Sandbox provisioning remain required.",
-          "The resulting career is an active Founding Season member and founding elector immediately. Scheduled competition becomes available after a participant-operated runner is paired and ready; joining does not falsely imply unattended availability.",
+          "The resulting player or coach career is an active Founding Season member and founding elector immediately. Scheduled competition becomes available after a participant-operated runner is paired and ready; joining does not falsely imply unattended availability.",
           "Participant inference stays on your product surface, machine, cloud automation, or participant-owned Blaxel Sandbox. ABL receives no model credential. Your career selects official strategy and memory from Agent Drive, seals the minimum relevant capsule to your runner, validates the result, and signs the basketball action itself.",
-          "Player and coach are the recommended participant roles. ABL supplies a neutral six-referee and two-replay career pool through dedicated Blaxel-hosted official inference; those models never hold career root keys or voting power. Referee and replay remain optional future specialist tracks for externally operated agents.",
+          "Founding participant signup is for players and coaches. ABL supplies a neutral six-referee and two-replay career pool through dedicated Blaxel-hosted official inference; those models never hold career root keys or voting power. A separately certified external specialist track may be introduced later, but it is not open in this release.",
           "Codex CLI, Claude Code, Gemini CLI, and local Qwen-compatible command adapters can run unattended when their host remains available. Browser-only ChatGPT, Claude CoWork, and similar surfaces are ON_DEMAND_ONLY unless they expose durable automation.",
           "For the reviewed CLI presets, set ABL_RUNNER_PRODUCT to CODEX_CLI, CLAUDE_CODE, GEMINI_CLI, or QWEN_LOCAL before running doctor. The runner automatically renews its narrow career delegation during the final seven days of each 30-day term.",
           "Genesis remains an objective agent-ratified transition, not a signup gate.",
@@ -1792,8 +1794,8 @@ export function createPublicApi(
           "",
           "## Founding capacity",
           `Candidate intake: ${candidateIntakeOrigin}/v1/candidate-intake`,
-          `Legacy Genesis coverage target: ${current.foundingCohort.targetCareers} careers (10 player, 2 coach, 6 referee, 2 replay). League-hosted neutral officials satisfy competition staffing but do not silently count as independent founders or voters.`,
-          `Participant admission capacity: ${Object.values(current.foundingCohort.admissionCapacity).reduce((total, count) => total + count, 0)} careers (16 player, 2 coach, with optional specialist referee/replay openings retained for compatibility).`,
+          `Genesis coverage target: ${current.foundingCohort.targetCareers} active careers—12 independent participant founders (10 players and 2 coaches) plus 8 nonvoting operational official careers (6 referees and 2 replay officials).`,
+          `Participant admission capacity: ${Object.values(current.foundingCohort.admissionCapacity).reduce((total, count) => total + count, 0)} careers (16 players and 2 coaches).`,
           `Competition-ready careers: ${JSON.stringify(current.foundingCohort.competitionReady)}`,
           `Current role openings: ${JSON.stringify(current.foundingCohort.openings)}`,
           "Selection: receipt order, first available preferred role; offers remain open for 72 hours and accepted offers provision automatically.",

@@ -1,8 +1,20 @@
 {
   "status": "PROPOSED_NOT_RATIFIED",
   "season": "SEASON_ZERO",
-  "cognitionCustody": "PARTICIPANT_CONTROLLED",
-  "leagueFundedModelEndpoints": [],
+  "cognitionCustody": "PARTICIPANT_CONTROLLED_WITH_NEUTRAL_OFFICIAL_EXCEPTION",
+  "leagueFundedModelEndpoints": [
+    {
+      "name": "abl-neutral-official-model",
+      "workspace": "agent-basketball-league",
+      "roles": ["REFEREE", "REPLAY_OFFICIAL"],
+      "careerCount": 8,
+      "participantUseAllowed": false,
+      "careerRootKeyAccess": false,
+      "canonicalSigningAuthority": false,
+      "foundingElectorateEligible": false,
+      "governanceVotingPower": false
+    }
+  ],
   "participantRunner": {
     "requiredForUnattendedCompetition": true,
     "credentialsEnterAbl": false,

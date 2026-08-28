@@ -194,8 +194,10 @@ export const OperationalFoundingAlphaEvidenceSchema = z
       falseCanonicalClaims: z.number().int().nonnegative(),
       falseGenesisClaims: z.number().int().nonnegative(),
       projectedInfrastructureCostUsd: z.number().nonnegative(),
-      approvedInfrastructureCostCeilingUsd: z.literal(25),
-      ablHostedModelCalls: z.literal(0),
+      costHardStopEnabled: z.literal(false),
+      costOptimizationRequired: z.literal(true),
+      ablHostedParticipantModelCalls: z.literal(0),
+      ablHostedOfficialModelCalls: z.number().int().nonnegative(),
       participantModelCredentialsHeld: z.literal(0),
       blaxelBalanceUsd: z.number().nonnegative(),
       minimumBlaxelBalanceUsd: z.literal(5),
@@ -261,8 +263,8 @@ function failureResult(blockers: readonly string[]) {
 const foundingCapacity = {
   PLAYER: 16,
   COACH: 2,
-  REFEREE: 6,
-  REPLAY_OFFICIAL: 2,
+  REFEREE: 0,
+  REPLAY_OFFICIAL: 0,
 } as const;
 
 export function createFoundingIntakeLaunchState(input: {
@@ -348,6 +350,7 @@ export function createFoundingIntakeLaunchState(input: {
     foundingSeason: assessFoundingSeason({
       independentFounderCount: firstAdmission === null ? 0 : 1,
       admittedByRole: foundingCohort.admitted,
+      operationalOfficials: foundingCohort.operationalOfficials,
       foundingConstitutionRatified: false,
       openingGame: null,
       recoveryOperational: true,
@@ -489,7 +492,7 @@ export function assessOperationalFoundingAlpha(
 
   const cohort = launchState.foundingCohort;
   if (!sameRoleCounts(cohort.capacity, foundingCapacity))
-    blockers.push("Founding admission capacity is not 16/2/6/2");
+    blockers.push("Founding participant admission capacity is not 16/2/0/0");
   for (const role of FoundingRoleSchema.options)
     if (
       cohort.openings[role] + cohort.offers[role] + cohort.admitted[role] !==

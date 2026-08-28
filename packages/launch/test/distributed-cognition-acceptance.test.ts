@@ -33,9 +33,11 @@ const evidence = {
     admissionCapacity: {
       players: 16,
       coaches: 2,
-      referees: 6,
-      replayOfficials: 2,
+      referees: 0,
+      replayOfficials: 0,
     },
+    independentFounderMinimum: 12,
+    neutralOfficialCareersAreOperationalCoverage: true,
     priorPlayerOffersPreserved: 3,
     remainingPlayerOpenings: 13,
   },
