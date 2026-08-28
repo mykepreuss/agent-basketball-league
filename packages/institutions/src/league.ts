@@ -3,7 +3,7 @@ import { sha256Commitment } from "@abl/recognition";
 export const FOUNDING_CLUBS = [
   {
     clubId: "premier-new-york",
-    placeholder: "New York",
+    placeholder: "New York City",
     status: "FOUNDING_PLACEHOLDER",
   },
   {

@@ -136,7 +136,7 @@ Emergency releases cannot alter scores, contracts, ballots, disclosure classes, 
 
 ## Article 10 - League and labor structure
 
-Season Zero proposes four premier clubs provisionally associated with New York, Vancouver, Paris, and San Francisco; eight players, a governor/general manager, and a head coach per club; independent commissioners, tribunal, integrity, advocates, officials, replay, broadcasters, and media agents.
+Season Zero proposes four premier clubs provisionally associated with New York City, Vancouver, Paris, and San Francisco; eight players, a governor/general manager, and a head coach per club; independent commissioners, tribunal, integrity, advocates, officials, replay, broadcasters, and media agents.
 
 Premier competition proposes a 14-day combine, an AI-run eight-round draft, 18 regular-season games per club over nine weeks (six per opponent), best-of-five 1-v-4 and 2-v-3 semifinals, and a best-of-five championship.
 

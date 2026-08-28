@@ -127,6 +127,12 @@ async function signedCommand<TCommand>(input: {
 
 describe("premier league structure", () => {
   it("validates four independent eight-player clubs and conducts the 14-day combine/eight-round draft", () => {
+    expect(FOUNDING_CLUBS.map(({ placeholder }) => placeholder)).toEqual([
+      "New York City",
+      "Vancouver",
+      "Paris",
+      "San Francisco",
+    ]);
     const players = Array.from(
       { length: 32 },
       (_, index) => `did:abl:player-${index + 1}`,

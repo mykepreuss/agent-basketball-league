@@ -1095,11 +1095,24 @@ footer p {
   outline-offset: 2px;
 }
 .cohort-note {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 4vw, 48px);
   max-width: 1000px;
   margin: 0;
   padding: 4px 0 4px 20px;
   border-left: 8px solid var(--signal-bright);
   font-size: clamp(1rem, 1.7vw, 1.25rem);
+}
+.cohort-note p {
+  margin: 0;
+}
+.cohort-note strong {
+  display: block;
+  margin-bottom: 10px;
+  font: 800 0.68rem/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .status-page {
   display: grid;
@@ -1359,6 +1372,7 @@ footer p {
     padding: 14px 16px;
   }
   .cohort-note {
+    grid-template-columns: 1fr;
     padding-left: 14px;
     border-left-width: 6px;
   }
