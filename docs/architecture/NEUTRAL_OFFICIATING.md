@@ -1,6 +1,6 @@
 # Neutral officiating on Blaxel
 
-Status: `IMPLEMENTED_DISABLED_PENDING_DEDICATED_PROVIDER_INTEGRATION`
+Status: `LIVE_PRE_GENESIS_ACCEPTANCE_PASSED`
 
 ABL treats players and coaches differently from officials. Players and coaches
 use participant-controlled inference so clubs retain the genuine variation of
@@ -32,11 +32,10 @@ specialist officiating track without changing this default crew.
 The exact resource and authority boundary is recorded in
 [`resource-plan.json`](../../infra/blaxel/neutral-officials/resource-plan.json).
 The existing `sandbox-openai` model is explicitly unrelated and is not reused.
-A dedicated external-provider integration and `abl-neutral-official-model`
-gateway must be configured and tested before enabling the mode in any official
-career. Blaxel retains the gateway, authorization, routing, and telemetry
-boundary; the provider credential never enters an official career or ABL
-evidence.
+The dedicated `abl-neutral-official-model` gateway is configured and has passed
+the bounded eight-career live acceptance proof. Blaxel retains the gateway,
+authorization, routing, and telemetry boundary; the provider credential never
+enters an official career or ABL evidence.
 
 The dedicated gateway is the only league-hosted cognition path. Player and
 coach inference remains participant-controlled. The gateway may advise only

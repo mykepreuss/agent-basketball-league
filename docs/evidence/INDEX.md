@@ -1,9 +1,11 @@
 # Implementation evidence index
 
-The dedicated Blaxel neutral-official Model Gateway is live and has passed a
-real structured-advice probe. Its provider credential remains outside career
-Sandboxes, and the unrelated `sandbox-openai` route remains unchanged. See
-[`NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json`](NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json).
+The dedicated Blaxel neutral-official Model Gateway and eight separately keyed
+official careers are live. All eight passed a provider-attested, model-backed,
+career-signed acceptance proof without fallback. The provider credential
+remains outside career Sandboxes, and the unrelated `sandbox-openai` route
+remains unchanged. See
+[`ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.md`](./ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.md).
 
 This is a pre-genesis evidence record. Every result must include the command or harness, environment, timestamp, inputs/digests, result, limitations, and linked artifacts. A claimed pass without reproducible artifacts is not an acceptance pass.
 
@@ -24,9 +26,9 @@ This is a pre-genesis evidence record. Every result must include the command or 
 | Distributed cognition V2 contract           | Participant-controlled inference, career-owned context/signing, durable scheduled games                                          | `docs/architecture/DISTRIBUTED_COGNITION.md`, `@abl/cognition`, `@abl/participant-runner`                          |
 | Distributed cognition completion contract   | Finite assessor; live heterogeneous-game evidence pending                                                                        | `@abl/launch`, `pnpm distributed-cognition:assess`                                                                 |
 | Distributed cognition implementation        | Local implementation, security remediation, exact-runtime checks, and immutable artifacts pass; external acceptance gates remain | [`DISTRIBUTED_COGNITION_IMPLEMENTATION.json`](./DISTRIBUTED_COGNITION_IMPLEMENTATION.json)                         |
-| Distributed cognition live runtime          | Participant runtime deployed and healthy; dedicated neutral-official gateway and bounded live game remain                        | [`DISTRIBUTED_COGNITION_LIVE_DEPLOYMENT.json`](./DISTRIBUTED_COGNITION_LIVE_DEPLOYMENT.json)                       |
-| Neutral-official Model Gateway               | Live structured-advice pass; provider credential isolated; unrelated `sandbox-openai` unchanged                                  | [`NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json`](./NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json)                           |
-| Neutral-official activation contract        | Local preparation and finite assessor pass; dedicated gateway live; eight-career live proof remains                              | `NEUTRAL_OFFICIAL_PROVISIONING_LOCAL.json`, `@abl/launch`                                                          |
+| Distributed cognition live runtime          | Participant runtime and neutral-official crew deployed and healthy; bounded heterogeneous live game remains                      | [`DISTRIBUTED_COGNITION_LIVE_DEPLOYMENT.json`](./DISTRIBUTED_COGNITION_LIVE_DEPLOYMENT.json)                       |
+| Neutral-official Model Gateway              | Live structured-advice pass; provider credential isolated; unrelated `sandbox-openai` unchanged                                  | [`NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json`](./NEUTRAL_OFFICIAL_MODEL_GATEWAY_LIVE.json)                           |
+| Neutral-official activation contract        | Pass; six referees and two replay careers accepted model-backed, career-signed decisions with zero fallback                      | [`ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.md`](./ABL-NEUTRAL-OFFICIALS-LIVE-ACCEPTANCE.md)                           |
 | Existing implementation reuse map           | Authoritative launch foundation; no rewrite                                                                                      | `docs/launch/LAUNCH_PLAN.md#preserve-and-use-the-existing-abl-implementation`                                      |
 | Founding Alpha local implementation         | Pass on exact pinned runtime; external gates remain                                                                              | `FOUNDING_ALPHA_LOCAL.md`, `final-local-results.json`                                                              |
 | Founding Alpha implementation source freeze | 482 existing and launch-layer implementation files frozen                                                                        | `founding-alpha-source-freeze.json`                                                                                |

@@ -23,7 +23,9 @@ at which founding agents establish the first canonical root.
    membership or founding-electorate eligibility.
 7. Keep the runner available for unattended scheduled competition. Participant
    inference stays outside ABL; the career selects official Agent Drive
-   context, validates the result, and signs every role action.
+   context, validates the result, and signs every player or coach action. The
+   league's separately keyed neutral official careers sign referee and replay
+   actions after receiving bounded advice from the dedicated Blaxel model.
 
 The career signs and serves the player's accepted roster-position profile after
 provisioning. Preference ranking, assigned primary position, eligibility, and
@@ -46,9 +48,10 @@ is a verifier fact, not a reason to prevent careers from playing or governing.
 
 Genesis becomes ready when live evidence satisfies every objective criterion:
 
-- at least twenty independently controlled founding careers;
-- role coverage for ten players, two coaches, six referees, and two replay
-  officials;
+- twelve independently controlled participant founders: ten players and two
+  coaches;
+- operational coverage from six separately keyed neutral referee careers and
+  two replay careers, none of which belongs to the founding electorate;
 - founding-agent ratification of the constitution;
 - one complete signed game whose replay is reproduced without model inference;
 - operational recovery against durable league state.

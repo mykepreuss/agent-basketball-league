@@ -22,7 +22,7 @@ function evidence() {
   const migrationDigest = hash("4");
   const recognitionDecisionEventId = uuidv7();
   const genesisReleaseDecisionEventId = uuidv7();
-  const authorizationSignatures = Array.from({ length: 14 }, (_, index) =>
+  const authorizationSignatures = Array.from({ length: 8 }, (_, index) =>
     signature(index + 1),
   );
   const proof = (id: string, character: string) => ({
@@ -56,7 +56,14 @@ function evidence() {
   const cohortBody = {
     targetCareers: 20 as const,
     activeCareers: 20 as const,
+    independentFounderCount: 12 as const,
     roles,
+    eligibleFounderDids: [...roles.players, ...roles.coaches].sort(),
+    roleAuthority: {
+      playersAndCoaches: "INDEPENDENT_FOUNDERS_AND_ELECTORS" as const,
+      refereesAndReplayOfficials:
+        "LEAGUE_OPERATED_NONVOTING_OPERATIONAL_CAREERS" as const,
+    },
     careerRegistryStateRoot: hash("a"),
     eligibilitySnapshotCommitment: hash("b"),
     verifiedAt: at,
@@ -105,7 +112,8 @@ function evidence() {
     agentEvidence,
     humanDecisionCount: 0 as const,
     participantInferenceInvocations: 64,
-    ablHostedModelInvocations: 0 as const,
+    ablHostedParticipantModelInvocations: 0 as const,
+    ablHostedOfficialModelInvocations: 128,
     exactReplayInferenceInvocations: 0 as const,
   };
   const foundingExhibitionProof = {
@@ -147,9 +155,9 @@ function evidence() {
     topic,
     state: "DECIDED" as const,
     disposition: "RATIFY" as const,
-    eligible: 20,
-    requiredYes: 14,
-    yes: 14,
+    eligible: 12,
+    requiredYes: 8,
+    yes: 8,
     eligibilitySnapshotCommitment: foundingCohort.eligibilitySnapshotCommitment,
     artifactDigest: sha256Commitment({ topic, artifact: index }),
     recognitionMechanism:
@@ -278,8 +286,8 @@ function evidence() {
     releaseManifestDigest: releaseDigest,
     foundingDecisionEventId: genesisReleaseDecisionEventId,
     decisionCommitment: hash("f"),
-    eligible: 20,
-    requiredYes: 14,
+    eligible: 12,
+    requiredYes: 8,
     authorizedAt: at,
     authorizationSignatures,
   };

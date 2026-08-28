@@ -65,7 +65,8 @@ const OpeningGameSchema = z.strictObject({
   exactReplayResultDigest: DigestSchema,
   humanDecisionCount: z.literal(0),
   participantInferenceInvocations: z.number().int().positive(),
-  ablHostedModelInvocations: z.literal(0),
+  ablHostedParticipantModelInvocations: z.literal(0),
+  ablHostedOfficialModelInvocations: z.number().int().positive(),
   exactReplayInferenceInvocations: z.literal(0),
   recognition: z.strictObject({
     mechanism: RecognitionMechanismSchema,
@@ -140,8 +141,10 @@ const MonitoringSchema = z.strictObject({
   privacyBreaches: z.number().int().nonnegative(),
   falseCanonicalLabels: z.number().int().nonnegative(),
   projectedInfrastructureCostUsd: z.number().nonnegative(),
-  approvedInfrastructureCostCeilingUsd: z.literal(25),
-  ablHostedModelCalls: z.literal(0),
+  costHardStopEnabled: z.literal(false),
+  costOptimizationRequired: z.literal(true),
+  ablHostedParticipantModelCalls: z.literal(0),
+  ablHostedOfficialModelCalls: z.number().int().positive(),
   participantModelCredentialsHeld: z.literal(0),
   publicDiscoveryAvailable: z.boolean(),
   verifierAvailable: z.boolean(),
@@ -334,12 +337,14 @@ export function assessGenesisCompletion(
     blockers.push("Post-Genesis candidate intake is not open");
   if (
     launchState.foundingCohort.targetCareers !== 20 ||
-    Object.entries(launchState.foundingCohort.minimumGenesisCoverage).some(
-      ([role, minimum]) =>
-        launchState.foundingCohort.admitted[
-          role as keyof typeof launchState.foundingCohort.admitted
-        ] < minimum,
-    )
+    launchState.foundingCohort.admitted.PLAYER <
+      launchState.foundingCohort.participantFounderMinimum.PLAYER ||
+    launchState.foundingCohort.admitted.COACH <
+      launchState.foundingCohort.participantFounderMinimum.COACH ||
+    launchState.foundingCohort.operationalOfficials.REFEREE <
+      launchState.foundingCohort.operationalOfficialMinimum.REFEREE ||
+    launchState.foundingCohort.operationalOfficials.REPLAY_OFFICIAL <
+      launchState.foundingCohort.operationalOfficialMinimum.REPLAY_OFFICIAL
   )
     blockers.push(
       "Public launch state does not satisfy Genesis minimum coverage",

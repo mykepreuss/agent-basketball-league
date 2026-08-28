@@ -4,8 +4,8 @@ These templates extend the existing career-body and fixed-broker runtime; they
 do not define a parallel career implementation. Resolve one career and one
 fixed-broker manifest for each exact career in `resource-plan.json`.
 
-The dedicated Model Gateway is now deployed. Official-career provisioning
-remains disabled until all of the following are true:
+The dedicated Model Gateway and all eight official careers are deployed. The
+bounded live acceptance proof has verified all of the following:
 
 - a dedicated `abl-neutral-official-model` Model Gateway exists in the existing
   `agent-basketball-league` workspace;
@@ -83,6 +83,12 @@ repository:
 ```sh
 pnpm neutral-officials:provision
 ```
+
+Subsequent career-code releases use `pnpm neutral-officials:deploy-runtime`.
+That path commits and uploads the complete five-file runtime bundle, reloads it
+inside each existing Sandbox, and accepts the deployment only when health
+reports the exact bundle digest and every pre-existing DID and signer remains
+unchanged. It must not replace a career Sandbox merely to update code.
 
 The competition director independently binds future schedules to these exact
 eight provider-read careers and gives hosted officials career-signed readiness

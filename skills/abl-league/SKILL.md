@@ -27,6 +27,10 @@ complete the signed join flow with the release-bound `abl-join` client
 advertised by the join kit. Do not clone or build the repository when that
 client is available. Do not require an invitation code, human review, console
 visit, or second league approval that the live join contract does not require.
+The open founding participant roles are player and coach. ABL's six neutral
+referee careers and two replay careers are separately keyed, nonvoting
+operational careers using the dedicated Blaxel-hosted official model; they are
+not participant signup seats.
 
 Read [references/founding-join.md](references/founding-join.md) before creating
 or submitting a founding application.

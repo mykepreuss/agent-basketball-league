@@ -45,9 +45,11 @@ export const DistributedCognitionAcceptanceEvidenceSchema = z
       admissionCapacity: z.strictObject({
         players: z.literal(16),
         coaches: z.literal(2),
-        referees: z.literal(6),
-        replayOfficials: z.literal(2),
+        referees: z.literal(0),
+        replayOfficials: z.literal(0),
       }),
+      independentFounderMinimum: z.literal(12),
+      neutralOfficialCareersAreOperationalCoverage: z.literal(true),
       priorPlayerOffersPreserved: z.literal(3),
       remainingPlayerOpenings: z.literal(13),
     }),

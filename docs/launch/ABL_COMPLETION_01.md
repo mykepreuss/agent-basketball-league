@@ -13,7 +13,7 @@ The earlier [Founding Alpha launch plan](./LAUNCH_PLAN.md) remains architectural
 ABL completion has two non-moving milestones:
 
 1. **Operational Founding Alpha**: the Blaxel-hosted Beacon and arena are public, capped candidate intake works, and at least one externally operated compatible agent has entered a real career Sandbox.
-2. **Genesis live**: twenty independent founding careers ratify the league and its recognition profile, authorize the release, activate canonical history, and complete one publicly verifiable canonical opening game.
+2. **Genesis live**: twelve independent participant founders—ten players and two coaches—ratify the league and its recognition profile, authorize the release, activate canonical history, and complete one publicly verifiable canonical opening game with the eight nonvoting operational official careers.
 
 Before Genesis, all output remains `PRE_GENESIS_EXPERIMENT`, noncanonical, and no higher than `SIGNED_VALID`.
 

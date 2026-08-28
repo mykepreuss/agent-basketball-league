@@ -46,7 +46,15 @@ const FoundingCohortProofSchema = z
   .strictObject({
     targetCareers: z.literal(20),
     activeCareers: z.literal(20),
+    independentFounderCount: z.literal(12),
     roles: FoundingRoleCohortSchema,
+    eligibleFounderDids: z.array(DidSchema).length(12),
+    roleAuthority: z.strictObject({
+      playersAndCoaches: z.literal("INDEPENDENT_FOUNDERS_AND_ELECTORS"),
+      refereesAndReplayOfficials: z.literal(
+        "LEAGUE_OPERATED_NONVOTING_OPERATIONAL_CAREERS",
+      ),
+    }),
     careerRegistryStateRoot: z.string().regex(/^0x[0-9a-f]{64}$/),
     eligibilitySnapshotCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
     verifiedAt: z.iso.datetime({ offset: true }),
@@ -60,6 +68,21 @@ const FoundingCohortProofSchema = z
         path: ["cohortCommitment"],
         message: "Founding cohort commitment is invalid",
       });
+    const expectedEligible = [
+      ...cohort.roles.players,
+      ...cohort.roles.coaches,
+    ].sort();
+    if (
+      new Set(cohort.eligibleFounderDids).size !== 12 ||
+      cohort.eligibleFounderDids.join("\u0000") !==
+        expectedEligible.join("\u0000")
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["eligibleFounderDids"],
+        message:
+          "Only the ten players and two coaches may be founding electors",
+      });
   });
 
 const FoundingExhibitionBindingSchema = z.object({
@@ -72,7 +95,8 @@ const FoundingExhibitionBindingSchema = z.object({
   agentEvidence: AgentPlayedGameEvidenceSchema,
   humanDecisionCount: z.literal(0),
   participantInferenceInvocations: z.number().int().positive(),
-  ablHostedModelInvocations: z.literal(0),
+  ablHostedParticipantModelInvocations: z.literal(0),
+  ablHostedOfficialModelInvocations: z.number().int().positive(),
   exactReplayInferenceInvocations: z.literal(0),
 });
 
@@ -87,9 +111,9 @@ const FoundingDecisionCompletionSchema = z
     topic: z.enum(FOUNDING_DECISIONS),
     state: z.literal("DECIDED"),
     disposition: z.enum(["RATIFY", "AMEND", "REPLACE"]),
-    eligible: z.number().int().min(20).max(26),
-    requiredYes: z.number().int().min(14).max(26),
-    yes: z.number().int().min(14).max(26),
+    eligible: z.number().int().min(12).max(18),
+    requiredYes: z.number().int().min(8).max(18),
+    yes: z.number().int().min(8).max(18),
     eligibilitySnapshotCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
     artifactDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
     recognitionMechanism: z
@@ -103,8 +127,8 @@ const FoundingDecisionCompletionSchema = z
     ratificationEventId: z.string().uuid(),
     authorizationSignatures: z
       .array(z.string().regex(/^0x[0-9a-f]{130}$/))
-      .min(14)
-      .max(26),
+      .min(8)
+      .max(18),
     directBallotsOnly: z.literal(true),
     humanVotingAllowed: z.literal(false),
     publicProjection: PassedProofSchema,
@@ -267,13 +291,13 @@ const GenesisReleaseAuthorizationSchema = z
     releaseManifestDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
     foundingDecisionEventId: z.string().uuid(),
     decisionCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
-    eligible: z.number().int().min(20).max(26),
-    requiredYes: z.number().int().min(14).max(26),
+    eligible: z.number().int().min(12).max(18),
+    requiredYes: z.number().int().min(8).max(18),
     authorizedAt: z.iso.datetime({ offset: true }),
     authorizationSignatures: z
       .array(z.string().regex(/^0x[0-9a-f]{130}$/))
-      .min(14)
-      .max(26),
+      .min(8)
+      .max(18),
     authorizationCommitment: z.string().regex(/^0x[0-9a-f]{64}$/),
   })
   .superRefine((authorization, context) => {
@@ -350,7 +374,10 @@ export function foundingExhibitionReplayResultDigest(
     agentEvidenceDigest: sha256Commitment(exhibition.agentEvidence),
     exact: true,
     participantInferenceInvocations: exhibition.participantInferenceInvocations,
-    ablHostedModelInvocations: exhibition.ablHostedModelInvocations,
+    ablHostedParticipantModelInvocations:
+      exhibition.ablHostedParticipantModelInvocations,
+    ablHostedOfficialModelInvocations:
+      exhibition.ablHostedOfficialModelInvocations,
     replayInferenceInvocations: exhibition.exactReplayInferenceInvocations,
   });
 }
@@ -526,7 +553,7 @@ export function assessGenesisStartupEvidence(
       releaseAuthorization.foundingDecisionEventId ||
     releaseDecision.decisionCommitment !==
       releaseAuthorization.decisionCommitment ||
-    releaseDecision.eligible !== 20 ||
+    releaseDecision.eligible !== 12 ||
     releaseDecision.eligibilitySnapshotCommitment !==
       evidence.foundingCohort.eligibilitySnapshotCommitment ||
     sha256Commitment(releaseDecision.authorizationSignatures) !==

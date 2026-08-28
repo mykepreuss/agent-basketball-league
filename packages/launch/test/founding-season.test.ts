@@ -19,6 +19,7 @@ describe("founding season", () => {
         REFEREE: 0,
         REPLAY_OFFICIAL: 0,
       },
+      operationalOfficials: { REFEREE: 6, REPLAY_OFFICIAL: 2 },
       foundingConstitutionRatified: false,
       openingGame: null,
       recoveryOperational: true,
@@ -27,15 +28,16 @@ describe("founding season", () => {
 
     expect(state.state).toBe("OPEN");
     expect(state.nextObjective).toBe(
-      "Admit twenty independently controlled founding careers",
+      "Admit ten players and two coaches as independent founders",
     );
     expect(state.readyForGenesis).toBe(false);
   });
 
   it("becomes Genesis-ready from objective league evidence alone", () => {
     const state = assessFoundingSeason({
-      independentFounderCount: 20,
+      independentFounderCount: 12,
       admittedByRole: fullCoverage,
+      operationalOfficials: { REFEREE: 6, REPLAY_OFFICIAL: 2 },
       foundingConstitutionRatified: true,
       openingGame: {
         gameId: "founding-opening-game",
@@ -52,8 +54,9 @@ describe("founding season", () => {
 
   it("preserves the completed Founding Season after Genesis", () => {
     const state = assessFoundingSeason({
-      independentFounderCount: 20,
+      independentFounderCount: 12,
       admittedByRole: fullCoverage,
+      operationalOfficials: { REFEREE: 6, REPLAY_OFFICIAL: 2 },
       foundingConstitutionRatified: true,
       openingGame: {
         gameId: "founding-opening-game",

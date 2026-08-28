@@ -794,6 +794,21 @@ const FoundingAdmissionRoleCountsSchema = z.strictObject({
   REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
 });
 
+const ParticipantFounderMinimumSchema = z.strictObject({
+  PLAYER: z.literal(10),
+  COACH: z.literal(2),
+});
+
+const OperationalOfficialMinimumSchema = z.strictObject({
+  REFEREE: z.literal(6),
+  REPLAY_OFFICIAL: z.literal(2),
+});
+
+const OperationalOfficialCountsSchema = z.strictObject({
+  REFEREE: z.number().int().nonnegative().max(6),
+  REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
+});
+
 export const DEFAULT_FOUNDING_COHORT_STATE = {
   targetCareers: 20,
   minimumGenesisCoverage: {
@@ -802,14 +817,17 @@ export const DEFAULT_FOUNDING_COHORT_STATE = {
     REFEREE: 6,
     REPLAY_OFFICIAL: 2,
   },
+  participantFounderMinimum: { PLAYER: 10, COACH: 2 },
+  operationalOfficialMinimum: { REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  operationalOfficials: { REFEREE: 0, REPLAY_OFFICIAL: 0 },
   admissionCapacity: {
     PLAYER: 16,
     COACH: 2,
-    REFEREE: 6,
-    REPLAY_OFFICIAL: 2,
+    REFEREE: 0,
+    REPLAY_OFFICIAL: 0,
   },
-  capacity: { PLAYER: 16, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
-  openings: { PLAYER: 16, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
+  capacity: { PLAYER: 16, COACH: 2, REFEREE: 0, REPLAY_OFFICIAL: 0 },
+  openings: { PLAYER: 16, COACH: 2, REFEREE: 0, REPLAY_OFFICIAL: 0 },
   offers: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
   admitted: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
   competitionReady: {
@@ -833,6 +851,18 @@ export const DEFAULT_FOUNDING_COHORT_STATE = {
 export const FoundingCohortStateSchema = z.strictObject({
   targetCareers: z.literal(20),
   minimumGenesisCoverage: FoundingMinimumRoleCountsSchema,
+  participantFounderMinimum: ParticipantFounderMinimumSchema.default({
+    PLAYER: 10,
+    COACH: 2,
+  }),
+  operationalOfficialMinimum: OperationalOfficialMinimumSchema.default({
+    REFEREE: 6,
+    REPLAY_OFFICIAL: 2,
+  }),
+  operationalOfficials: OperationalOfficialCountsSchema.default({
+    REFEREE: 0,
+    REPLAY_OFFICIAL: 0,
+  }),
   admissionCapacity: FoundingAdmissionRoleCountsSchema,
   capacity: FoundingAdmissionRoleCountsSchema,
   openings: FoundingAdmissionRoleCountsSchema,
@@ -872,7 +902,18 @@ export const DEFAULT_FOUNDING_SEASON_STATE = {
     additionalOperatorApprovalRequired: false,
   },
   objectives: {
-    independentFounders: { required: 20, current: 0, satisfied: false },
+    independentFounders: { required: 12, current: 0, satisfied: false },
+    participantFounderCoverage: {
+      required: { PLAYER: 10, COACH: 2 },
+      current: { PLAYER: 0, COACH: 0 },
+      satisfied: false,
+    },
+    operationalOfficialCoverage: {
+      required: { REFEREE: 6, REPLAY_OFFICIAL: 2 },
+      current: { REFEREE: 0, REPLAY_OFFICIAL: 0 },
+      foundingElectorateEligible: false,
+      satisfied: false,
+    },
     roleCoverage: {
       required: { PLAYER: 10, COACH: 2, REFEREE: 6, REPLAY_OFFICIAL: 2 },
       current: { PLAYER: 0, COACH: 0, REFEREE: 0, REPLAY_OFFICIAL: 0 },
@@ -887,7 +928,7 @@ export const DEFAULT_FOUNDING_SEASON_STATE = {
     recovery: { operational: false },
   },
   readyForGenesis: false,
-  nextObjective: "Admit twenty independently controlled founding careers",
+  nextObjective: "Admit ten players and two coaches as independent founders",
 } as const;
 
 export const FoundingSeasonStateSchema = z.strictObject({
@@ -899,8 +940,25 @@ export const FoundingSeasonStateSchema = z.strictObject({
   }),
   objectives: z.strictObject({
     independentFounders: z.strictObject({
-      required: z.literal(20),
-      current: z.number().int().nonnegative().max(26),
+      required: z.literal(12),
+      current: z.number().int().nonnegative().max(18),
+      satisfied: z.boolean(),
+    }),
+    participantFounderCoverage: z.strictObject({
+      required: ParticipantFounderMinimumSchema,
+      current: z.strictObject({
+        PLAYER: z.number().int().nonnegative().max(16),
+        COACH: z.number().int().nonnegative().max(2),
+      }),
+      satisfied: z.boolean(),
+    }),
+    operationalOfficialCoverage: z.strictObject({
+      required: OperationalOfficialMinimumSchema,
+      current: z.strictObject({
+        REFEREE: z.number().int().nonnegative().max(6),
+        REPLAY_OFFICIAL: z.number().int().nonnegative().max(2),
+      }),
+      foundingElectorateEligible: z.literal(false),
       satisfied: z.boolean(),
     }),
     roleCoverage: z.strictObject({
