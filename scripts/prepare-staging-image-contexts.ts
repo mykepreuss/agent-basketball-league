@@ -146,6 +146,12 @@ const persistentImageServices = [
 ] satisfies readonly ImageService[];
 const cognitionImageServices = [
   {
+    directory: "fixed-broker",
+    packageName: "@abl/body-broker",
+    memory: 1024,
+    type: "sandbox",
+  },
+  {
     directory: "career-body",
     packageName: "@abl/staging-body",
     memory: 4096,
